@@ -6,6 +6,7 @@ import (
 	"ent-pgvector/ent/predicate"
 
 	"entgo.io/ent/dialect/sql"
+	pgvector "github.com/pgvector/pgvector-go"
 )
 
 // ID filters vertices based on their ID field.
@@ -58,6 +59,16 @@ func Age(v int) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldAge, v))
 }
 
+// Description applies equality check predicate on the "description" field. It's identical to DescriptionEQ.
+func Description(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldDescription, v))
+}
+
+// Embedding applies equality check predicate on the "embedding" field. It's identical to EmbeddingEQ.
+func Embedding(v pgvector.Vector) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldEmbedding, v))
+}
+
 // AgeEQ applies the EQ predicate on the "age" field.
 func AgeEQ(v int) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldAge, v))
@@ -96,6 +107,131 @@ func AgeLT(v int) predicate.User {
 // AgeLTE applies the LTE predicate on the "age" field.
 func AgeLTE(v int) predicate.User {
 	return predicate.User(sql.FieldLTE(FieldAge, v))
+}
+
+// DescriptionEQ applies the EQ predicate on the "description" field.
+func DescriptionEQ(v string) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldDescription, v))
+}
+
+// DescriptionNEQ applies the NEQ predicate on the "description" field.
+func DescriptionNEQ(v string) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldDescription, v))
+}
+
+// DescriptionIn applies the In predicate on the "description" field.
+func DescriptionIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldIn(FieldDescription, vs...))
+}
+
+// DescriptionNotIn applies the NotIn predicate on the "description" field.
+func DescriptionNotIn(vs ...string) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldDescription, vs...))
+}
+
+// DescriptionGT applies the GT predicate on the "description" field.
+func DescriptionGT(v string) predicate.User {
+	return predicate.User(sql.FieldGT(FieldDescription, v))
+}
+
+// DescriptionGTE applies the GTE predicate on the "description" field.
+func DescriptionGTE(v string) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldDescription, v))
+}
+
+// DescriptionLT applies the LT predicate on the "description" field.
+func DescriptionLT(v string) predicate.User {
+	return predicate.User(sql.FieldLT(FieldDescription, v))
+}
+
+// DescriptionLTE applies the LTE predicate on the "description" field.
+func DescriptionLTE(v string) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldDescription, v))
+}
+
+// DescriptionContains applies the Contains predicate on the "description" field.
+func DescriptionContains(v string) predicate.User {
+	return predicate.User(sql.FieldContains(FieldDescription, v))
+}
+
+// DescriptionHasPrefix applies the HasPrefix predicate on the "description" field.
+func DescriptionHasPrefix(v string) predicate.User {
+	return predicate.User(sql.FieldHasPrefix(FieldDescription, v))
+}
+
+// DescriptionHasSuffix applies the HasSuffix predicate on the "description" field.
+func DescriptionHasSuffix(v string) predicate.User {
+	return predicate.User(sql.FieldHasSuffix(FieldDescription, v))
+}
+
+// DescriptionIsNil applies the IsNil predicate on the "description" field.
+func DescriptionIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldDescription))
+}
+
+// DescriptionNotNil applies the NotNil predicate on the "description" field.
+func DescriptionNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldDescription))
+}
+
+// DescriptionEqualFold applies the EqualFold predicate on the "description" field.
+func DescriptionEqualFold(v string) predicate.User {
+	return predicate.User(sql.FieldEqualFold(FieldDescription, v))
+}
+
+// DescriptionContainsFold applies the ContainsFold predicate on the "description" field.
+func DescriptionContainsFold(v string) predicate.User {
+	return predicate.User(sql.FieldContainsFold(FieldDescription, v))
+}
+
+// EmbeddingEQ applies the EQ predicate on the "embedding" field.
+func EmbeddingEQ(v pgvector.Vector) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldEmbedding, v))
+}
+
+// EmbeddingNEQ applies the NEQ predicate on the "embedding" field.
+func EmbeddingNEQ(v pgvector.Vector) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldEmbedding, v))
+}
+
+// EmbeddingIn applies the In predicate on the "embedding" field.
+func EmbeddingIn(vs ...pgvector.Vector) predicate.User {
+	return predicate.User(sql.FieldIn(FieldEmbedding, vs...))
+}
+
+// EmbeddingNotIn applies the NotIn predicate on the "embedding" field.
+func EmbeddingNotIn(vs ...pgvector.Vector) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldEmbedding, vs...))
+}
+
+// EmbeddingGT applies the GT predicate on the "embedding" field.
+func EmbeddingGT(v pgvector.Vector) predicate.User {
+	return predicate.User(sql.FieldGT(FieldEmbedding, v))
+}
+
+// EmbeddingGTE applies the GTE predicate on the "embedding" field.
+func EmbeddingGTE(v pgvector.Vector) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldEmbedding, v))
+}
+
+// EmbeddingLT applies the LT predicate on the "embedding" field.
+func EmbeddingLT(v pgvector.Vector) predicate.User {
+	return predicate.User(sql.FieldLT(FieldEmbedding, v))
+}
+
+// EmbeddingLTE applies the LTE predicate on the "embedding" field.
+func EmbeddingLTE(v pgvector.Vector) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldEmbedding, v))
+}
+
+// EmbeddingIsNil applies the IsNil predicate on the "embedding" field.
+func EmbeddingIsNil() predicate.User {
+	return predicate.User(sql.FieldIsNull(FieldEmbedding))
+}
+
+// EmbeddingNotNil applies the NotNil predicate on the "embedding" field.
+func EmbeddingNotNil() predicate.User {
+	return predicate.User(sql.FieldNotNull(FieldEmbedding))
 }
 
 // And groups predicates with the AND operator between them.

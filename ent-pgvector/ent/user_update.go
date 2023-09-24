@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	pgvector "github.com/pgvector/pgvector-go"
 )
 
 // UserUpdate is the builder for updating User entities.
@@ -37,6 +38,46 @@ func (uu *UserUpdate) SetAge(i int) *UserUpdate {
 // AddAge adds i to the "age" field.
 func (uu *UserUpdate) AddAge(i int) *UserUpdate {
 	uu.mutation.AddAge(i)
+	return uu
+}
+
+// SetDescription sets the "description" field.
+func (uu *UserUpdate) SetDescription(s string) *UserUpdate {
+	uu.mutation.SetDescription(s)
+	return uu
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableDescription(s *string) *UserUpdate {
+	if s != nil {
+		uu.SetDescription(*s)
+	}
+	return uu
+}
+
+// ClearDescription clears the value of the "description" field.
+func (uu *UserUpdate) ClearDescription() *UserUpdate {
+	uu.mutation.ClearDescription()
+	return uu
+}
+
+// SetEmbedding sets the "embedding" field.
+func (uu *UserUpdate) SetEmbedding(pg pgvector.Vector) *UserUpdate {
+	uu.mutation.SetEmbedding(pg)
+	return uu
+}
+
+// SetNillableEmbedding sets the "embedding" field if the given value is not nil.
+func (uu *UserUpdate) SetNillableEmbedding(pg *pgvector.Vector) *UserUpdate {
+	if pg != nil {
+		uu.SetEmbedding(*pg)
+	}
+	return uu
+}
+
+// ClearEmbedding clears the value of the "embedding" field.
+func (uu *UserUpdate) ClearEmbedding() *UserUpdate {
+	uu.mutation.ClearEmbedding()
 	return uu
 }
 
@@ -87,6 +128,18 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := uu.mutation.AddedAge(); ok {
 		_spec.AddField(user.FieldAge, field.TypeInt, value)
 	}
+	if value, ok := uu.mutation.Description(); ok {
+		_spec.SetField(user.FieldDescription, field.TypeString, value)
+	}
+	if uu.mutation.DescriptionCleared() {
+		_spec.ClearField(user.FieldDescription, field.TypeString)
+	}
+	if value, ok := uu.mutation.Embedding(); ok {
+		_spec.SetField(user.FieldEmbedding, field.TypeOther, value)
+	}
+	if uu.mutation.EmbeddingCleared() {
+		_spec.ClearField(user.FieldEmbedding, field.TypeOther)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -117,6 +170,46 @@ func (uuo *UserUpdateOne) SetAge(i int) *UserUpdateOne {
 // AddAge adds i to the "age" field.
 func (uuo *UserUpdateOne) AddAge(i int) *UserUpdateOne {
 	uuo.mutation.AddAge(i)
+	return uuo
+}
+
+// SetDescription sets the "description" field.
+func (uuo *UserUpdateOne) SetDescription(s string) *UserUpdateOne {
+	uuo.mutation.SetDescription(s)
+	return uuo
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableDescription(s *string) *UserUpdateOne {
+	if s != nil {
+		uuo.SetDescription(*s)
+	}
+	return uuo
+}
+
+// ClearDescription clears the value of the "description" field.
+func (uuo *UserUpdateOne) ClearDescription() *UserUpdateOne {
+	uuo.mutation.ClearDescription()
+	return uuo
+}
+
+// SetEmbedding sets the "embedding" field.
+func (uuo *UserUpdateOne) SetEmbedding(pg pgvector.Vector) *UserUpdateOne {
+	uuo.mutation.SetEmbedding(pg)
+	return uuo
+}
+
+// SetNillableEmbedding sets the "embedding" field if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableEmbedding(pg *pgvector.Vector) *UserUpdateOne {
+	if pg != nil {
+		uuo.SetEmbedding(*pg)
+	}
+	return uuo
+}
+
+// ClearEmbedding clears the value of the "embedding" field.
+func (uuo *UserUpdateOne) ClearEmbedding() *UserUpdateOne {
+	uuo.mutation.ClearEmbedding()
 	return uuo
 }
 
@@ -196,6 +289,18 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	}
 	if value, ok := uuo.mutation.AddedAge(); ok {
 		_spec.AddField(user.FieldAge, field.TypeInt, value)
+	}
+	if value, ok := uuo.mutation.Description(); ok {
+		_spec.SetField(user.FieldDescription, field.TypeString, value)
+	}
+	if uuo.mutation.DescriptionCleared() {
+		_spec.ClearField(user.FieldDescription, field.TypeString)
+	}
+	if value, ok := uuo.mutation.Embedding(); ok {
+		_spec.SetField(user.FieldEmbedding, field.TypeOther, value)
+	}
+	if uuo.mutation.EmbeddingCleared() {
+		_spec.ClearField(user.FieldEmbedding, field.TypeOther)
 	}
 	_node = &User{config: uuo.config}
 	_spec.Assign = _node.assignValues

@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	pgvector "github.com/pgvector/pgvector-go"
 )
 
 // User is the model entity for the User schema.
@@ -17,7 +18,11 @@ type User struct {
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
 	// Age holds the value of the "age" field.
-	Age          int `json:"age,omitempty"`
+	Age int `json:"age,omitempty"`
+	// Description holds the value of the "description" field.
+	Description string `json:"description,omitempty"`
+	// Embedding holds the value of the "embedding" field.
+	Embedding    pgvector.Vector `json:"embedding,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -26,8 +31,12 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case user.FieldEmbedding:
+			values[i] = new(pgvector.Vector)
 		case user.FieldID, user.FieldAge:
 			values[i] = new(sql.NullInt64)
+		case user.FieldDescription:
+			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -54,6 +63,18 @@ func (u *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field age", values[i])
 			} else if value.Valid {
 				u.Age = int(value.Int64)
+			}
+		case user.FieldDescription:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field description", values[i])
+			} else if value.Valid {
+				u.Description = value.String
+			}
+		case user.FieldEmbedding:
+			if value, ok := values[i].(*pgvector.Vector); !ok {
+				return fmt.Errorf("unexpected type %T for field embedding", values[i])
+			} else if value != nil {
+				u.Embedding = *value
 			}
 		default:
 			u.selectValues.Set(columns[i], values[i])
@@ -93,6 +114,12 @@ func (u *User) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", u.ID))
 	builder.WriteString("age=")
 	builder.WriteString(fmt.Sprintf("%v", u.Age))
+	builder.WriteString(", ")
+	builder.WriteString("description=")
+	builder.WriteString(u.Description)
+	builder.WriteString(", ")
+	builder.WriteString("embedding=")
+	builder.WriteString(fmt.Sprintf("%v", u.Embedding))
 	builder.WriteByte(')')
 	return builder.String()
 }

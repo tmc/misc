@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	pgvector "github.com/pgvector/pgvector-go"
 )
 
 // UserCreate is the builder for creating a User entity.
@@ -22,6 +23,34 @@ type UserCreate struct {
 // SetAge sets the "age" field.
 func (uc *UserCreate) SetAge(i int) *UserCreate {
 	uc.mutation.SetAge(i)
+	return uc
+}
+
+// SetDescription sets the "description" field.
+func (uc *UserCreate) SetDescription(s string) *UserCreate {
+	uc.mutation.SetDescription(s)
+	return uc
+}
+
+// SetNillableDescription sets the "description" field if the given value is not nil.
+func (uc *UserCreate) SetNillableDescription(s *string) *UserCreate {
+	if s != nil {
+		uc.SetDescription(*s)
+	}
+	return uc
+}
+
+// SetEmbedding sets the "embedding" field.
+func (uc *UserCreate) SetEmbedding(pg pgvector.Vector) *UserCreate {
+	uc.mutation.SetEmbedding(pg)
+	return uc
+}
+
+// SetNillableEmbedding sets the "embedding" field if the given value is not nil.
+func (uc *UserCreate) SetNillableEmbedding(pg *pgvector.Vector) *UserCreate {
+	if pg != nil {
+		uc.SetEmbedding(*pg)
+	}
 	return uc
 }
 
@@ -91,6 +120,14 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := uc.mutation.Age(); ok {
 		_spec.SetField(user.FieldAge, field.TypeInt, value)
 		_node.Age = value
+	}
+	if value, ok := uc.mutation.Description(); ok {
+		_spec.SetField(user.FieldDescription, field.TypeString, value)
+		_node.Description = value
+	}
+	if value, ok := uc.mutation.Embedding(); ok {
+		_spec.SetField(user.FieldEmbedding, field.TypeOther, value)
+		_node.Embedding = value
 	}
 	return _node, _spec
 }

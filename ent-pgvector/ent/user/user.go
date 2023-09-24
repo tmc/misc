@@ -13,6 +13,10 @@ const (
 	FieldID = "id"
 	// FieldAge holds the string denoting the age field in the database.
 	FieldAge = "age"
+	// FieldDescription holds the string denoting the description field in the database.
+	FieldDescription = "description"
+	// FieldEmbedding holds the string denoting the embedding field in the database.
+	FieldEmbedding = "embedding"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 )
@@ -21,6 +25,8 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldAge,
+	FieldDescription,
+	FieldEmbedding,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -44,4 +50,14 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByAge orders the results by the age field.
 func ByAge(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAge, opts...).ToFunc()
+}
+
+// ByDescription orders the results by the description field.
+func ByDescription(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDescription, opts...).ToFunc()
+}
+
+// ByEmbedding orders the results by the embedding field.
+func ByEmbedding(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldEmbedding, opts...).ToFunc()
 }
