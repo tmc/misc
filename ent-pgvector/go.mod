@@ -5,6 +5,7 @@ go 1.20
 require (
 	entgo.io/ent v0.12.4
 	github.com/lib/pq v1.10.9
+	github.com/pgvector/pgvector-go v0.1.1
 )
 
 require (
