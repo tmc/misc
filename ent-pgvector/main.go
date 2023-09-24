@@ -70,13 +70,5 @@ func main() {
 }
 
 func embed(description string) ([]float32, error) {
-	r, err := embedder.EmbedQuery(context.Background(), description)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]float32, len(r))
-	for i, v := range r {
-		result[i] = float32(v)
-	}
-	return result, nil
+	return embedder.EmbedQuery(context.Background(), description)
 }
