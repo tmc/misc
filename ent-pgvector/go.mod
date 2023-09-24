@@ -6,7 +6,7 @@ require (
 	entgo.io/ent v0.12.4
 	github.com/lib/pq v1.10.9
 	github.com/pgvector/pgvector-go v0.1.1
-	github.com/tmc/langchaingo v0.0.0-20230923172951-2c309cf27956
+	github.com/tmc/langchaingo v0.0.0-20230924224018-c94abc8e1ed1
 )
 
 require (

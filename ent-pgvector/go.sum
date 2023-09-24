@@ -64,6 +64,10 @@ github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An
 github.com/stretchr/testify v1.8.2 h1:+h33VjcLVPDHtOdpUCuF+7gSuG3yGIftsP1YvFihtJ8=
 github.com/tmc/langchaingo v0.0.0-20230923172951-2c309cf27956 h1:N6H+Jd6Hf9vL57N25s0nHYYouDj4wUpLDd6rMNDfU+Y=
 github.com/tmc/langchaingo v0.0.0-20230923172951-2c309cf27956/go.mod h1:vCdA1t5qnS5YPkDsznowOziBHFn0Ul11ZqfJ2GOAi0s=
+github.com/tmc/langchaingo v0.0.0-20230924221610-7162d66b1b14 h1:ufBvWjwG0NjpzCioNb6x50vZArbXyTj1m8fBLVSpYAw=
+github.com/tmc/langchaingo v0.0.0-20230924221610-7162d66b1b14/go.mod h1:vCdA1t5qnS5YPkDsznowOziBHFn0Ul11ZqfJ2GOAi0s=
+github.com/tmc/langchaingo v0.0.0-20230924224018-c94abc8e1ed1 h1:dCoqm6UJp2MCJeDEZxsz3CMCWKwllxWQxnOvaopuYEw=
+github.com/tmc/langchaingo v0.0.0-20230924224018-c94abc8e1ed1/go.mod h1:vCdA1t5qnS5YPkDsznowOziBHFn0Ul11ZqfJ2GOAi0s=
 github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc h1:9lRDQMhESg+zvGYmW5DyG0UqvY96Bu5QYsTLvCHdrgo=
 github.com/uptrace/bun v1.1.12 h1:sOjDVHxNTuM6dNGaba0wUuz7KvDE1BmNu9Gqs2gJSXQ=
 github.com/uptrace/bun/dialect/pgdialect v1.1.12 h1:m/CM1UfOkoBTglGO5CUTKnIKKOApOYxkcP2qn0F9tJk=
