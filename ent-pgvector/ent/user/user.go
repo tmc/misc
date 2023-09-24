@@ -11,6 +11,8 @@ const (
 	Label = "user"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldAge holds the string denoting the age field in the database.
+	FieldAge = "age"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 )
@@ -18,6 +20,7 @@ const (
 // Columns holds all SQL columns for user fields.
 var Columns = []string{
 	FieldID,
+	FieldAge,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -36,4 +39,9 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByAge orders the results by the age field.
+func ByAge(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAge, opts...).ToFunc()
 }

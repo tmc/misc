@@ -27,6 +27,19 @@ func (uu *UserUpdate) Where(ps ...predicate.User) *UserUpdate {
 	return uu
 }
 
+// SetAge sets the "age" field.
+func (uu *UserUpdate) SetAge(i int) *UserUpdate {
+	uu.mutation.ResetAge()
+	uu.mutation.SetAge(i)
+	return uu
+}
+
+// AddAge adds i to the "age" field.
+func (uu *UserUpdate) AddAge(i int) *UserUpdate {
+	uu.mutation.AddAge(i)
+	return uu
+}
+
 // Mutation returns the UserMutation object of the builder.
 func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
@@ -68,6 +81,12 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if value, ok := uu.mutation.Age(); ok {
+		_spec.SetField(user.FieldAge, field.TypeInt, value)
+	}
+	if value, ok := uu.mutation.AddedAge(); ok {
+		_spec.AddField(user.FieldAge, field.TypeInt, value)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, uu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{user.Label}
@@ -86,6 +105,19 @@ type UserUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *UserMutation
+}
+
+// SetAge sets the "age" field.
+func (uuo *UserUpdateOne) SetAge(i int) *UserUpdateOne {
+	uuo.mutation.ResetAge()
+	uuo.mutation.SetAge(i)
+	return uuo
+}
+
+// AddAge adds i to the "age" field.
+func (uuo *UserUpdateOne) AddAge(i int) *UserUpdateOne {
+	uuo.mutation.AddAge(i)
+	return uuo
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -158,6 +190,12 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := uuo.mutation.Age(); ok {
+		_spec.SetField(user.FieldAge, field.TypeInt, value)
+	}
+	if value, ok := uuo.mutation.AddedAge(); ok {
+		_spec.AddField(user.FieldAge, field.TypeInt, value)
 	}
 	_node = &User{config: uuo.config}
 	_spec.Assign = _node.assignValues
