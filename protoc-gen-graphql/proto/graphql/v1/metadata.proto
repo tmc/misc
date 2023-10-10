@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package graphql.v1;
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.ServiceOptions {
+  // Used to configure service-level GraphQL concerns.
+  optional GraphQLService graphql_service = 1039;
+}
+
+extend google.protobuf.MethodOptions {
+  // Used to configure the method's GraphQL concerns.
+  optional GraphQLMethod graphql_operation = 1039;
+}
+
+extend google.protobuf.MessageOptions {
+  // Used to configure the entity's GraphQL concerns.
+  optional GraphQLField graphql_type = 1039;
+}
+
+extend google.protobuf.FieldOptions {
+  // Used to configure field-level GraphQL concerns.
+  optional GraphQLField graphql = 1039;
+}
+
+// GraphQLService
+message GraphQLService {
+  // If present, exposes this service in the GraphQL graph.
+  optional bool exposed = 1;
+}
+
+// GraphQLField 
+message GraphQLField {
+  // If present, generates a Connection. Should only be used on repeated fields.
+  optional bool connection = 1;
+}
+
+// GraphQLOperation is an extension that encodes GraphQL operation concerns.
+message GraphQLOperation {
+  // If present, exposes this method in the GraphQL graph.
+  optional bool exposed = 1;
+  // If present, explicitly sets the query name to expose this as.
+  optional string query_name = 2;
+  // If present, explicitly sets the mutation name to expose this as.
+  optional string mutation_name = 3;
+}
