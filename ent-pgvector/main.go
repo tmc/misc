@@ -8,6 +8,7 @@ import (
 	"ent-pgvector/ent"
 	"ent-pgvector/ent/hook"
 
+	"entgo.io/ent/dialect/sql"
 	_ "github.com/lib/pq"
 	"github.com/pgvector/pgvector-go"
 	"github.com/tmc/langchaingo/embeddings"
@@ -60,13 +61,38 @@ func main() {
 	u, err := client.User.
 		Create().
 		SetAge(30).
-		SetDescription("I am a user").
+		SetDescription("I am a purple dinosaur").
 		Save(context.Background())
-		//	SetVector([]float32{1.0, 2.0, 3.0}).
 	if err != nil {
 		log.Fatalf("failed creating user: %v", err)
 	}
 	fmt.Println(u)
+
+	var uWDist []struct {
+		*ent.User
+		Distance float64
+	}
+	client = client.Debug()
+	// Find the users with the highest similarity to the query.
+	err = client.User.
+		Query().
+		Limit(4).
+		Select("id", "name", "age", "description", "distance").
+		Modify(func(q *sql.Selector) {
+			q.AppendSelectAs(fmt.Sprintf("embeddings <-> '%s' as distance", u.Embedding), "distance")
+		}).
+		Scan(context.Background(), &uWDist)
+		//All(context.Background()).Scan(&uWDist)
+
+	// Modify(func(q *sql.Selector) {
+	// 	// q.Where(sql.Raw("embeddings <=> ? < 0.5", u.Embedding))
+	// 	q.AppendSelectExpr(sql.Raw(fmt.Sprintf("embeddings <-> '%s' as distance", u.Embedding)))
+	// }).
+
+	fmt.Printf("got %d users\n", len(uWDist))
+	for _, u := range uWDist {
+		fmt.Println(u)
+	}
 }
 
 func embed(description string) ([]float32, error) {

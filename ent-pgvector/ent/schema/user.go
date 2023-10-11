@@ -19,7 +19,7 @@ func (User) Fields() []ent.Field {
 		field.String("description").Optional(),
 		field.Other("embedding", pgvector.Vector{}).SchemaType(map[string]string{
 			dialect.Postgres: "vector(1536)",
-		}).Optional(),
+		}).Optional().Sensitive(), // we mark the field as sensitive, so it won't be fetched by default.
 	}
 }
 

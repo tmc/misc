@@ -22,7 +22,7 @@ type User struct {
 	// Description holds the value of the "description" field.
 	Description string `json:"description,omitempty"`
 	// Embedding holds the value of the "embedding" field.
-	Embedding    pgvector.Vector `json:"embedding,omitempty"`
+	Embedding    pgvector.Vector `json:"-"`
 	selectValues sql.SelectValues
 }
 
@@ -118,8 +118,7 @@ func (u *User) String() string {
 	builder.WriteString("description=")
 	builder.WriteString(u.Description)
 	builder.WriteString(", ")
-	builder.WriteString("embedding=")
-	builder.WriteString(fmt.Sprintf("%v", u.Embedding))
+	builder.WriteString("embedding=<sensitive>")
 	builder.WriteByte(')')
 	return builder.String()
 }
