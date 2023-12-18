@@ -9,8 +9,8 @@ module "cs-vpc-prod-shared" {
   subnets = [
     {
       subnet_name               = "subnet-prod-1"
-      subnet_ip                 = ""
-      subnet_region             = ""
+      subnet_ip                 = "10.0.0.0/13"
+      subnet_region             = "us-central1"
       subnet_private_access     = true
       subnet_flow_logs          = true
       subnet_flow_logs_sampling = "0.5"
@@ -19,8 +19,8 @@ module "cs-vpc-prod-shared" {
     },
     {
       subnet_name               = "subnet-prod-2"
-      subnet_ip                 = ""
-      subnet_region             = ""
+      subnet_ip                 = "10.8.0.0/13"
+      subnet_region             = "us-east4"
       subnet_private_access     = true
       subnet_flow_logs          = true
       subnet_flow_logs_sampling = "0.5"
@@ -95,8 +95,8 @@ module "cs-vpc-nonprod-shared" {
   subnets = [
     {
       subnet_name               = "subnet-non-prod-1"
-      subnet_ip                 = ""
-      subnet_region             = ""
+      subnet_ip                 = "10.0.0.0/13"
+      subnet_region             = "us-central1"
       subnet_private_access     = true
       subnet_flow_logs          = true
       subnet_flow_logs_sampling = "0.5"
@@ -105,8 +105,8 @@ module "cs-vpc-nonprod-shared" {
     },
     {
       subnet_name               = "subnet-non-prod-2"
-      subnet_ip                 = ""
-      subnet_region             = ""
+      subnet_ip                 = "10.8.0.0/13"
+      subnet_region             = "us-east4"
       subnet_private_access     = true
       subnet_flow_logs          = true
       subnet_flow_logs_sampling = "0.5"
