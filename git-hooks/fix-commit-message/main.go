@@ -54,7 +54,6 @@ Follow the following rules:
 * The first line should be capitalized
 * The second line is blank
 * All body lines should be 72 characters or less
-* Include an emoji somewhere in the message.
 
 You may be provided the diff after "diff:" -- if so fill in the commit message.
 `
