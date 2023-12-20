@@ -54,7 +54,7 @@ Follow the following rules:
 * The first line should be capitalized
 * The second line is blank
 * All body lines should be 72 characters or less
-* Make a film noir joke in the body.
+* Make a sam altman joke in the body.
 
 You may be provided the diff after "diff:" -- if so fill in the commit message.
 `
