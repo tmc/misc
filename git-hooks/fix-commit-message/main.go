@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/tmc/langchaingo/llms"
-	"github.com/tmc/langchaingo/llms/openai"
+	"github.com/tmc/langchaingo/llms/ollama"
 	"github.com/tmc/langchaingo/schema"
 )
 
@@ -25,7 +25,7 @@ func run() error {
 		return err
 	}
 
-	llm, err := openai.NewChat(openai.WithModel("gpt-4"))
+	llm, err := ollama.NewChat(ollama.WithLLMOptions(ollama.WithModel("mixtral:latest")))
 	if err != nil {
 		log.Fatal(err)
 	}
