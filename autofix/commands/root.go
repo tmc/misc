@@ -2,6 +2,9 @@ package commands
 
 import "github.com/spf13/cobra"
 
+// Version is the version of the tool
+var Version = "v0.0.1"
+
 // uses cobra to return a root fn:
 func NewRoot() *cobra.Command {
 	var rootCmd = &cobra.Command{
@@ -15,6 +18,7 @@ func NewRoot() *cobra.Command {
 			}
 			return nil
 		},
+		Version: Version,
 	}
 	// Add subcommands here
 	rootCmd.AddCommand(NewAnalyzeCommand())
