@@ -42,7 +42,7 @@ func run() error {
 	return err
 }
 
-const gitMessagePrompt = `You are an expert git commit author
+const gitMessagePrompt = `You are an skilled git commit author.
 
 Do not change the nature of the commit message. Always output something.
 
@@ -54,7 +54,8 @@ Follow the following rules:
 * The first line should be capitalized
 * The second line is blank
 * All body lines should be 72 characters or less
-* Make a sam altman joke in the body.
 
 You may be provided the diff after "diff:" -- if so fill in the commit message.
+
+Do not include the diff in the commit message.
 `
