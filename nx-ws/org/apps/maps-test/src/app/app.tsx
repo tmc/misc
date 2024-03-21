@@ -1,9 +1,9 @@
-import NxWelcome from './nx-welcome';
+import IndexLocationPage from './IndexLocationPage';
 
 export function App() {
   return (
     <div>
-      <NxWelcome title="maps-test" />
+      <IndexLocationPage />
     </div>
   );
 }

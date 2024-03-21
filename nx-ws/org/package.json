@@ -5,6 +5,7 @@
   "scripts": {},
   "private": true,
   "dependencies": {
+    "@vis.gl/react-google-maps": "^0.8.0",
     "next": "14.0.4",
     "react": "18.2.0",
     "react-dom": "18.2.0",
