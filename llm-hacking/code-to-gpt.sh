@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 DIRECTORY="." # Replace with the path to your directory containing the code files
 EXCLUDE_DIRS=() # Array to store directories to exclude
+IGNORED_FILES=("go.sum" "package.json") # Array to store files to exclude
 function read_directory_files {
     # Check if .gitignore file exists
     if [ -f "$1/.gitignore" ]; then
@@ -12,10 +13,9 @@ function read_directory_files {
     fi
     for filename in "$1"/**; do
         # Exclude specific files:
-        case "$(basename "$filename")" in
-            go.sum|package.json)
-                continue
-                ;;
+        case "$(basename "$filename")" in "${IGNORED_FILES[@]}")
+            continue
+            ;;
         esac
         # Exclude binary (non-text) files:
         if [ -f "$filename" ] && file "$filename" | grep -q text; then
