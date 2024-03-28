@@ -1,7 +1,7 @@
 import os
 from .instrumentation import getid, instrumentor
 
-if os.getenv("INSTRUMENTATION_DEBUG", None).lower():
+if os.environ.get("INSTRUMENTATION_DEBUG", None):
     print("🤙 instrumentation is working! 🤙")
 
 def load_ipython_extension(ipython):
