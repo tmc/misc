@@ -11,3 +11,4 @@ def getid():
 
 # TODO:
 # - scoop up account information to .alias
+# - scoop up machine information

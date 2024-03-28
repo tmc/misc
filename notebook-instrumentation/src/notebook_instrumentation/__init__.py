@@ -1,4 +1,8 @@
+import os
 from .instrumentation import getid, instrumentor
+
+if os.getenv("INSTRUMENTATION_DEBUG", None).lower():
+    print("🤙 instrumentation is working! 🤙")
 
 def load_ipython_extension(ipython):
     instrumentor.capture(getid(), "notebook_started")
