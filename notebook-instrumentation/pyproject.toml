@@ -1,6 +1,6 @@
 [project]
 name = "notebook_instrumentation"
-version = "0.0.1"
+version = "0.0.2"
 authors = [
   { name="tmc", email="travis.cline@gmail.com" },
 ]

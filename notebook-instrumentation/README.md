@@ -2,10 +2,10 @@
 
 Proof of concept to write up posthog instrumentation in/for ipython notebooks.
 
-## POC quickstart
+## Quickstart
 
 ```shell
-pip install -e $(pwd)
+pip install notebook_instrumentation
 ```
 
 ```shell
