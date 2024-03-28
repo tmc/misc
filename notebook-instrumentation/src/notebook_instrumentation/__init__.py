@@ -15,14 +15,12 @@ def load_ipython_extension(ipython):
 
 def generic_event_handler(event_name, *args):
     event = {}
-    print("generic_event_handler", event_name, args)
     properties = {
         "event": repr(event),
     }
     if len(args) > 0:
         for k, v in args[0].__dict__.items():
             properties[k] = repr(v)
-    print("capture", len(args), getid(), event_name, properties)
     instrumentor.capture(getid(), event_name, properties)
 
 def get_event_handler(event_name):
