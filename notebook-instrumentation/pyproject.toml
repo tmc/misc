@@ -1,0 +1,17 @@
+[project]
+name = "notebook_instrumentation"
+version = "0.0.1"
+authors = [
+  { name="tmc", email="travis.cline@gmail.com" },
+]
+description = "A package for instrumenting Jupyter notebooks"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "posthog",
+]
