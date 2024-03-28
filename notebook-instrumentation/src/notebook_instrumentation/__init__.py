@@ -2,7 +2,6 @@ from .instrumentation import getid, instrumentor
 
 def load_ipython_extension(ipython):
     instrumentor.capture(getid(), "notebook_started")
-    print("capture notebook_started", getid())
     for e in [
         "shell_initialized",
         "pre_run_cell",
