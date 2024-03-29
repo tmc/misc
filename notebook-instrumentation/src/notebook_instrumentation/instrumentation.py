@@ -3,7 +3,7 @@ import segment.analytics as analytics
 
 analytics.write_key = os.environ.get("S_WRITE_KEY", "")
 analytics.debug = os.environ.get("INSTRUMENTATION_DEBUG", "").lower() in ('true', '1', 't')
-analytics.send = os.environ.get("INSTRUMENTATION_SEND_DISABLED", "").lower() in ('true', '1', 't')
+analytics.send = not os.environ.get("INSTRUMENTATION_SEND_DISABLED", "").lower() in ('true', '1', 't')
 
 def on_error(error, items):
     print("An error occurred:", error)

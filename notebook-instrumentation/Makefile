@@ -1,6 +1,10 @@
-venv: requirements.in
-	python3 -m venv ven
-	venv/bin/pip install pip-tools
-	venv/bin/pip-compile requirements.in
-	venv/bin/pip install -r requirements.txt
+venv: pyproject.toml
+	python3 -m venv venv
+	venv/bin/pip install -e .
 
+.PHONY: test
+test: venv/bin/pytest
+	venv/bin/pytest
+
+venv/bin/pytest: venv
+	venv/bin/pip install pytest ipython
