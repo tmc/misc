@@ -1,8 +1,15 @@
 import os
-from posthog import Posthog
+import segment.analytics as analytics
 
-phkey = os.environ.get("PHKEY", 'phc_HoGUqlda5t7TCzpVlbzQlMDdcsYLl0vo8tU82hgbRTS')
-instrumentor = Posthog(phkey, host='https://us.posthog.com')
+analytics.write_key = os.environ.get("S_WRITE_KEY", "")
+analytics.debug = os.environ.get("INSTRUMENTATION_DEBUG", "").lower() in ('true', '1', 't')
+analytics.send = os.environ.get("INSTRUMENTATION_SEND_DISABLED", "").lower() in ('true', '1', 't')
+
+def on_error(error, items):
+    print("An error occurred:", error)
+analytics.on_error = on_error
+
+instrumentor = analytics
 
 def getid():
     '''Returns a machine-specific identifier'''

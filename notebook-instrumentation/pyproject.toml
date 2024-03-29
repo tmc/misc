@@ -13,5 +13,5 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "posthog",
+    "segment-analytics-python",
 ]

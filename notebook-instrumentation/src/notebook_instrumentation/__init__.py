@@ -5,7 +5,7 @@ if os.environ.get("INSTRUMENTATION_DEBUG", None):
     print("🤙 instrumentation is working! 🤙")
 
 def load_ipython_extension(ipython):
-    instrumentor.capture(getid(), "notebook_started")
+    instrumentor.track(getid(), "notebook_started")
     for e in [
         "shell_initialized",
         "pre_run_cell",
@@ -24,7 +24,7 @@ def generic_event_handler(event_name, *args):
     if len(args) > 0:
         for k, v in args[0].__dict__.items():
             properties[k] = repr(v)
-    instrumentor.capture(getid(), event_name, properties)
+    instrumentor.track(getid(), event_name, properties)
 
 def get_event_handler(event_name):
     def event_handler(*args):
