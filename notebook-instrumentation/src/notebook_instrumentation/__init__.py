@@ -49,7 +49,7 @@ def generic_event_handler(event_name, *args):
     if len(args) > 0:
         for k, v in extract_info_from_event(args[0]).items():
             properties[k] = str(v)
-    instrumentor.track(None, event_name, properties, context=collect_system_context(), anonymous_id=getid())
+    instrumentor.track(os.environ.get('VERB_USER_ID'), event_name, properties, context=collect_system_context(), anonymous_id=getid())
 
 def get_event_handler(event_name):
     def event_handler(*args):

@@ -31,7 +31,6 @@ def get_notebook_path():
         conninfo = json.loads(ipykernel.get_connection_info())
         return conninfo['jupyter_session']
     except Exception as e:
-        print(e)
         return 'unknown'
 
 def get_notebook_name():
@@ -52,7 +51,6 @@ def strip_notebook_outputs(path):
         nb = open(path, "r").read()
         return strip_output(nb)
     except Exception as e:
-        print(e)
         return None
 
 def get_notebook_hash():
