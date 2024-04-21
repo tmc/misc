@@ -1,4 +1,4 @@
-module github.com/tmc/misc/inshella
+module github.com/tmc/misc/ai
 
 go 1.22.2
 
