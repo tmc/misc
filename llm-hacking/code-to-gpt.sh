@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 DIRECTORY="." # Replace with the path to your directory containing the code files
-EXCLUDE_DIRS=() # Array to store directories to exclude
+EXCLUDE_DIRS=("node_modules") # Array to store directories to exclude
 IGNORED_FILES=("go.sum" "package.json") # Array to store files to exclude
 
 function is_excluded_dir {

@@ -11,7 +11,7 @@ extend google.protobuf.ServiceOptions {
 
 extend google.protobuf.MethodOptions {
   // Used to configure the method's GraphQL concerns.
-  optional GraphQLMethod graphql_operation = 1039;
+  optional GraphQLOperation graphql_operation = 1039;
 }
 
 extend google.protobuf.MessageOptions {
