@@ -18,7 +18,8 @@ import (
 
 // Generator holds configuration for an invocation of this tool
 type Generator struct {
-	TemplateDir string
+	TemplateDir   string
+	DefaultExpose bool
 
 	services       map[string]*protogen.Service
 	exposedMethods map[string]*protogen.Method
@@ -28,9 +29,10 @@ type Generator struct {
 }
 
 // newGenerator creates a new generator.
-func newGenerator(templateDir string) *Generator {
+func newGenerator(templateDir string, defaultExpose bool) *Generator {
 	return &Generator{
 		TemplateDir:    templateDir,
+		DefaultExpose:  defaultExpose,
 		services:       make(map[string]*protogen.Service),
 		exposedMethods: make(map[string]*protogen.Method),
 		schemas:        make(map[string]*gqltypes.Schema),
@@ -341,7 +343,7 @@ func printServiceSchema(svc *protogen.Service, opts *Generator, gen *protogen.Pl
 
 func (o *Generator) helperExposed(m *protogen.Method) bool {
 	mops, ok := getMethodGraphQLOpts(m)
-	return ok && mops.GetExposed()
+	return ok && mops.GetExposed() || o.DefaultExpose
 }
 
 func (o *Generator) helperMethodOpts(m *protogen.Method) *metadata.GraphQLOperation {

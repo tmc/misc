@@ -9,9 +9,12 @@ import (
 func main() {
 	var flags flag.FlagSet
 	templateDir := flags.String("templates", "", "path to custom templates")
-	generator := newGenerator(*templateDir)
+	defaultExpose := flags.Bool("default_expose", false, "expose all fields by default")
 	opts := protogen.Options{
 		ParamFunc: flags.Set,
 	}
-	opts.Run(generator.Generate)
+	opts.Run(func(p *protogen.Plugin) error {
+		generator := newGenerator(*templateDir, *defaultExpose)
+		return generator.Generate(p)
+	})
 }
