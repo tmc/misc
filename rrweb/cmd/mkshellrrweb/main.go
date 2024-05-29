@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
-
-	. "github.com/tmc/misc/rrweb"
 )
 
 func main() {
@@ -36,52 +34,51 @@ func main() {
 						ChildNodes: []SerializedNodeWithId{
 							{
 								SerializedNode: SerializedNode{
-									Type:      DocumentType,
-									Name:      "html",
-									PublicId:  "",
-									SystemId:  "",
+									Type:     DocumentType,
+									Name:     "html",
+									PublicId: "",
+									SystemId: "",
 								},
-								ID: 2,
 							},
 							{
 								SerializedNode: SerializedNode{
-									Type:      Element,
-									TagName:   "html",
+									Type:       Element,
+									TagName:    "html",
 									Attributes: map[string]string{"lang": "en"},
 									ChildNodes: []SerializedNodeWithId{
 										{
 											SerializedNode: SerializedNode{
-												Type:      Element,
-												TagName:   "head",
+												Type:    Element,
+												TagName: "head",
 												ChildNodes: []SerializedNodeWithId{
 													{
 														SerializedNode: SerializedNode{
-															Type: Text,
+															Type:        Text,
 															TextContent: "\n    ",
 														},
 														ID: 5,
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Element,
-															TagName: "meta",
+															Type:       Element,
+															TagName:    "meta",
 															Attributes: map[string]string{"charset": "UTF-8"},
 														},
 														ID: 6,
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Text,
+															Type:        Text,
 															TextContent: "\n    ",
 														},
 														ID: 7,
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Element,
+															Type:    Element,
 															TagName: "meta",
 															Attributes: map[string]string{
-																"name": "viewport",
+																"name":    "viewport",
 																"content": "width=device-width, initial-scale=1.0",
 															},
 														},
@@ -89,19 +86,19 @@ func main() {
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Text,
+															Type:        Text,
 															TextContent: "\n    ",
 														},
 														ID: 9,
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Element,
+															Type:    Element,
 															TagName: "title",
 															ChildNodes: []SerializedNodeWithId{
 																{
 																	SerializedNode: SerializedNode{
-																		Type: Text,
+																		Type:        Text,
 																		TextContent: "Simulated Terminal with Automatic Recording",
 																	},
 																	ID: 11,
@@ -112,14 +109,14 @@ func main() {
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Text,
+															Type:        Text,
 															TextContent: "\n    ",
 														},
 														ID: 12,
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Element,
+															Type:    Element,
 															TagName: "script",
 															Attributes: map[string]string{
 																"src": "https://cdn.jsdelivr.net/npm/rrweb@latest/dist/record/rrweb-record.min.js",
@@ -129,19 +126,19 @@ func main() {
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Text,
+															Type:        Text,
 															TextContent: "\n    ",
 														},
 														ID: 14,
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Element,
+															Type:    Element,
 															TagName: "style",
 															ChildNodes: []SerializedNodeWithId{
 																{
 																	SerializedNode: SerializedNode{
-																		Type: Text,
+																		Type:        Text,
 																		TextContent: "body { font-family: \"Courier New\", Courier, monospace; background-color: black; color: green; margin: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; } #terminal-container { width: 80%; height: 60%; background-color: black; border: 1px solid green; padding: 10px; box-sizing: border-box; overflow-y: auto; } #terminal { white-space: pre-wrap; }",
 																	},
 																	ID: 16,
@@ -152,7 +149,7 @@ func main() {
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Text,
+															Type:        Text,
 															TextContent: "\n",
 														},
 														ID: 17,
@@ -163,26 +160,26 @@ func main() {
 										},
 										{
 											SerializedNode: SerializedNode{
-												Type: Text,
+												Type:        Text,
 												TextContent: "\n",
 											},
 											ID: 18,
 										},
 										{
 											SerializedNode: SerializedNode{
-												Type: Element,
+												Type:    Element,
 												TagName: "body",
 												ChildNodes: []SerializedNodeWithId{
 													{
 														SerializedNode: SerializedNode{
-															Type: Text,
+															Type:        Text,
 															TextContent: "\n    ",
 														},
 														ID: 20,
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Element,
+															Type:    Element,
 															TagName: "div",
 															Attributes: map[string]string{
 																"id": "terminal-container",
@@ -190,14 +187,14 @@ func main() {
 															ChildNodes: []SerializedNodeWithId{
 																{
 																	SerializedNode: SerializedNode{
-																		Type: Text,
+																		Type:        Text,
 																		TextContent: "\n        ",
 																	},
 																	ID: 22,
 																},
 																{
 																	SerializedNode: SerializedNode{
-																		Type: Element,
+																		Type:    Element,
 																		TagName: "div",
 																		Attributes: map[string]string{
 																			"id": "terminal",
@@ -207,7 +204,7 @@ func main() {
 																},
 																{
 																	SerializedNode: SerializedNode{
-																		Type: Text,
+																		Type:        Text,
 																		TextContent: "\n    ",
 																	},
 																	ID: 24,
@@ -218,19 +215,19 @@ func main() {
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Text,
+															Type:        Text,
 															TextContent: "\n\n    ",
 														},
 														ID: 25,
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Element,
+															Type:    Element,
 															TagName: "script",
 															ChildNodes: []SerializedNodeWithId{
 																{
 																	SerializedNode: SerializedNode{
-																		Type: Text,
+																		Type:        Text,
 																		TextContent: "SCRIPT_PLACEHOLDER",
 																	},
 																	ID: 27,
@@ -241,7 +238,7 @@ func main() {
 													},
 													{
 														SerializedNode: SerializedNode{
-															Type: Text,
+															Type:        Text,
 															TextContent: "\n\n\n",
 														},
 														ID: 28,
@@ -384,8 +381,8 @@ func main() {
 					Texts: []TextMutationData{
 						{ID: 23, Text: "shell\u003e ls\nfile1.txt\nfile2.txt\nfile3"},
 					},
-					},
 				},
+			},
 			Timestamp: baseTime + 22000,
 		},
 		{
