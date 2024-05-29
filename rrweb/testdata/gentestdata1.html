@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rrweb Recording Example</title>
+    <script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/record/rrweb-record.min.js"></script>
+</head>
+<body>
+    <h1>rrweb Recording Example</h1>
+    <button id="start-recording">Start Recording</button>
+    <button id="stop-recording" disabled>Stop Recording</button>
+
+    <script>
+        let events = [];
+        let stopFn;
+
+        document.getElementById('start-recording').addEventListener('click', () => {
+            events = [];
+            stopFn = rrwebRecord({
+                emit(event) {
+                    events.push(event);
+                }
+            });
+            document.getElementById('start-recording').disabled = true;
+            document.getElementById('stop-recording').disabled = false;
+        });
+
+        document.getElementById('stop-recording').addEventListener('click', () => {
+            if (stopFn) {
+                stopFn();
+            }
+            const blob = new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'recording.json';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            document.getElementById('start-recording').disabled = false;
+            document.getElementById('stop-recording').disabled = true;
+        });
+    </script>
+    <textarea id="events" rows="20" cols="100"></textarea>
+</body>
+</html>

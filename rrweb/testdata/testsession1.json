@@ -1,0 +1,584 @@
+[
+  {
+    "type": 4,
+    "data": {
+      "href": "file:///Users/tmc/go/src/github.com/tmc/misc/rrweb/testdata/gentestdata1.html",
+      "width": 729,
+      "height": 980
+    },
+    "timestamp": 1716956996535
+  },
+  {
+    "type": 2,
+    "data": {
+      "node": {
+        "type": 0,
+        "childNodes": [
+          {
+            "type": 1,
+            "name": "html",
+            "publicId": "",
+            "systemId": "",
+            "id": 2
+          },
+          {
+            "type": 2,
+            "tagName": "html",
+            "attributes": {
+              "lang": "en"
+            },
+            "childNodes": [
+              {
+                "type": 2,
+                "tagName": "head",
+                "attributes": {},
+                "childNodes": [
+                  {
+                    "type": 3,
+                    "textContent": "\n    ",
+                    "id": 5
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "meta",
+                    "attributes": {
+                      "charset": "UTF-8"
+                    },
+                    "childNodes": [],
+                    "id": 6
+                  },
+                  {
+                    "type": 3,
+                    "textContent": "\n    ",
+                    "id": 7
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "meta",
+                    "attributes": {
+                      "name": "viewport",
+                      "content": "width=device-width, initial-scale=1.0"
+                    },
+                    "childNodes": [],
+                    "id": 8
+                  },
+                  {
+                    "type": 3,
+                    "textContent": "\n    ",
+                    "id": 9
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "title",
+                    "attributes": {},
+                    "childNodes": [
+                      {
+                        "type": 3,
+                        "textContent": "rrweb Recording Example",
+                        "id": 11
+                      }
+                    ],
+                    "id": 10
+                  },
+                  {
+                    "type": 3,
+                    "textContent": "\n    ",
+                    "id": 12
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "script",
+                    "attributes": {
+                      "src": "https://cdn.jsdelivr.net/npm/rrweb@latest/dist/record/rrweb-record.min.js"
+                    },
+                    "childNodes": [],
+                    "id": 13
+                  },
+                  {
+                    "type": 3,
+                    "textContent": "\n",
+                    "id": 14
+                  }
+                ],
+                "id": 4
+              },
+              {
+                "type": 3,
+                "textContent": "\n",
+                "id": 15
+              },
+              {
+                "type": 2,
+                "tagName": "body",
+                "attributes": {},
+                "childNodes": [
+                  {
+                    "type": 3,
+                    "textContent": "\n    ",
+                    "id": 17
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "h1",
+                    "attributes": {},
+                    "childNodes": [
+                      {
+                        "type": 3,
+                        "textContent": "rrweb Recording Example",
+                        "id": 19
+                      }
+                    ],
+                    "id": 18
+                  },
+                  {
+                    "type": 3,
+                    "textContent": "\n    ",
+                    "id": 20
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "button",
+                    "attributes": {
+                      "id": "start-recording"
+                    },
+                    "childNodes": [
+                      {
+                        "type": 3,
+                        "textContent": "Start Recording",
+                        "id": 22
+                      }
+                    ],
+                    "id": 21
+                  },
+                  {
+                    "type": 3,
+                    "textContent": "\n    ",
+                    "id": 23
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "button",
+                    "attributes": {
+                      "id": "stop-recording",
+                      "disabled": ""
+                    },
+                    "childNodes": [
+                      {
+                        "type": 3,
+                        "textContent": "Stop Recording",
+                        "id": 25
+                      }
+                    ],
+                    "id": 24
+                  },
+                  {
+                    "type": 3,
+                    "textContent": "\n\n    ",
+                    "id": 26
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "script",
+                    "attributes": {},
+                    "childNodes": [
+                      {
+                        "type": 3,
+                        "textContent": "SCRIPT_PLACEHOLDER",
+                        "id": 28
+                      }
+                    ],
+                    "id": 27
+                  },
+                  {
+                    "type": 3,
+                    "textContent": "\n    ",
+                    "id": 29
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "textarea",
+                    "attributes": {
+                      "id": "events",
+                      "rows": "20",
+                      "cols": "100"
+                    },
+                    "childNodes": [],
+                    "id": 30
+                  },
+                  {
+                    "type": 3,
+                    "textContent": "\n\n\n",
+                    "id": 31
+                  }
+                ],
+                "id": 16
+              }
+            ],
+            "id": 3
+          }
+        ],
+        "id": 1
+      },
+      "initialOffset": {
+        "left": 0,
+        "top": 0
+      }
+    },
+    "timestamp": 1716956996539
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 2,
+      "type": 6,
+      "id": 21
+    },
+    "timestamp": 1716956996541
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 0,
+      "texts": [],
+      "attributes": [
+        {
+          "id": 21,
+          "attributes": {
+            "disabled": ""
+          }
+        },
+        {
+          "id": 24,
+          "attributes": {
+            "disabled": null
+          }
+        }
+      ],
+      "removes": [],
+      "adds": []
+    },
+    "timestamp": 1716956996542
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 1,
+      "positions": [
+        {
+          "x": 65,
+          "y": 89,
+          "id": 21,
+          "timeOffset": 0
+        }
+      ]
+    },
+    "timestamp": 1716956996748
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 2,
+      "type": 1,
+      "id": 30,
+      "x": 64,
+      "y": 140
+    },
+    "timestamp": 1716956996912
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 2,
+      "type": 5,
+      "id": 30
+    },
+    "timestamp": 1716956996913
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 2,
+      "type": 0,
+      "id": 30,
+      "x": 64,
+      "y": 140
+    },
+    "timestamp": 1716956996993
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 2,
+      "type": 2,
+      "id": 30,
+      "x": 64,
+      "y": 140
+    },
+    "timestamp": 1716956996994
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 1,
+      "positions": [
+        {
+          "x": 65,
+          "y": 114,
+          "id": 30,
+          "timeOffset": -451
+        },
+        {
+          "x": 65,
+          "y": 134,
+          "id": 30,
+          "timeOffset": -397
+        }
+      ]
+    },
+    "timestamp": 1716956997250
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "text": "e",
+      "isChecked": false,
+      "id": 30
+    },
+    "timestamp": 1716956998490
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "text": "ec",
+      "isChecked": false,
+      "id": 30
+    },
+    "timestamp": 1716956998663
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "text": "ech",
+      "isChecked": false,
+      "id": 30
+    },
+    "timestamp": 1716956998726
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "text": "echo",
+      "isChecked": false,
+      "id": 30
+    },
+    "timestamp": 1716956998834
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "text": "echo ",
+      "isChecked": false,
+      "id": 30
+    },
+    "timestamp": 1716956998970
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "text": "echo h",
+      "isChecked": false,
+      "id": 30
+    },
+    "timestamp": 1716956999194
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "text": "echo hi",
+      "isChecked": false,
+      "id": 30
+    },
+    "timestamp": 1716956999277
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 1,
+      "positions": [
+        {
+          "x": 64,
+          "y": 139,
+          "id": 30,
+          "timeOffset": 0
+        }
+      ]
+    },
+    "timestamp": 1716957000192
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 1,
+      "positions": [
+        {
+          "x": 64,
+          "y": 110,
+          "id": 30,
+          "timeOffset": -444
+        },
+        {
+          "x": 64,
+          "y": 78,
+          "id": 16,
+          "timeOffset": -394
+        },
+        {
+          "x": 73,
+          "y": 46,
+          "id": 18,
+          "timeOffset": -338
+        },
+        {
+          "x": 77,
+          "y": 29,
+          "id": 18,
+          "timeOffset": -279
+        },
+        {
+          "x": 78,
+          "y": 14,
+          "id": 3,
+          "timeOffset": -227
+        },
+        {
+          "x": 78,
+          "y": 10,
+          "id": 3,
+          "timeOffset": -155
+        },
+        {
+          "x": 88,
+          "y": 10,
+          "id": 3,
+          "timeOffset": -96
+        },
+        {
+          "x": 114,
+          "y": 27,
+          "id": 18,
+          "timeOffset": -44
+        }
+      ]
+    },
+    "timestamp": 1716957000693
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 2,
+      "type": 1,
+      "id": 24,
+      "x": 156,
+      "y": 80
+    },
+    "timestamp": 1716957001122
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 2,
+      "type": 6,
+      "id": 30
+    },
+    "timestamp": 1716957001122
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 2,
+      "type": 5,
+      "id": 24
+    },
+    "timestamp": 1716957001122
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 1,
+      "positions": [
+        {
+          "x": 133,
+          "y": 46,
+          "id": 18,
+          "timeOffset": -494
+        },
+        {
+          "x": 142,
+          "y": 56,
+          "id": 18,
+          "timeOffset": -441
+        },
+        {
+          "x": 143,
+          "y": 59,
+          "id": 16,
+          "timeOffset": -371
+        },
+        {
+          "x": 144,
+          "y": 59,
+          "id": 16,
+          "timeOffset": -311
+        },
+        {
+          "x": 146,
+          "y": 63,
+          "id": 16,
+          "timeOffset": -261
+        },
+        {
+          "x": 152,
+          "y": 71,
+          "id": 16,
+          "timeOffset": -203
+        },
+        {
+          "x": 156,
+          "y": 78,
+          "id": 16,
+          "timeOffset": -147
+        }
+      ]
+    },
+    "timestamp": 1716957001194
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 2,
+      "type": 0,
+      "id": 24,
+      "x": 156,
+      "y": 80
+    },
+    "timestamp": 1716957001247
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 2,
+      "type": 2,
+      "id": 24,
+      "x": 156,
+      "y": 80
+    },
+    "timestamp": 1716957001247
+  }
+]
