@@ -1,0 +1,404 @@
+[
+  {
+    "type": 4,
+    "data": {
+      "href": "file:///Users/tmc/go/src/github.com/tmc/misc/rrweb/testdata/gentestdata1.html",
+      "width": 1424,
+      "height": 1236
+    },
+    "timestamp": 1716961324631
+  },
+  {
+    "type": 2,
+    "data": {
+      "node": {
+        "type": 0,
+        "childNodes": [
+          {
+            "type": 1,
+            "name": "html",
+            "id": 2
+          },
+          {
+            "type": 2,
+            "tagName": "html",
+            "attributes": {
+              "lang": "en"
+            },
+            "childNodes": [
+              {
+                "type": 2,
+                "tagName": "head",
+                "childNodes": [
+                  {
+                    "type": 3,
+                    "id": 5,
+                    "textContent": "\n    "
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "meta",
+                    "attributes": {
+                      "charset": "UTF-8"
+                    },
+                    "id": 6
+                  },
+                  {
+                    "type": 3,
+                    "id": 7,
+                    "textContent": "\n    "
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "meta",
+                    "attributes": {
+                      "content": "width=device-width, initial-scale=1.0",
+                      "name": "viewport"
+                    },
+                    "id": 8
+                  },
+                  {
+                    "type": 3,
+                    "id": 9,
+                    "textContent": "\n    "
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "title",
+                    "childNodes": [
+                      {
+                        "type": 3,
+                        "id": 11,
+                        "textContent": "Simulated Terminal with Automatic Recording"
+                      }
+                    ],
+                    "id": 10
+                  },
+                  {
+                    "type": 3,
+                    "id": 12,
+                    "textContent": "\n    "
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "script",
+                    "attributes": {
+                      "src": "https://cdn.jsdelivr.net/npm/rrweb@latest/dist/record/rrweb-record.min.js"
+                    },
+                    "id": 13
+                  },
+                  {
+                    "type": 3,
+                    "id": 14,
+                    "textContent": "\n    "
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "style",
+                    "childNodes": [
+                      {
+                        "type": 3,
+                        "id": 16,
+                        "textContent": "body { font-family: \"Courier New\", Courier, monospace; background-color: black; color: green; margin: 0px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; } #terminal-container { width: 80%; height: 60%; background-color: black; border: 1px solid green; padding: 10px; box-sizing: border-box; overflow-y: auto; } #terminal { white-space: pre-wrap; }",
+                        "isStyle": true
+                      }
+                    ],
+                    "id": 15
+                  },
+                  {
+                    "type": 3,
+                    "id": 17,
+                    "textContent": "\n"
+                  }
+                ],
+                "id": 4
+              },
+              {
+                "type": 3,
+                "id": 18,
+                "textContent": "\n"
+              },
+              {
+                "type": 2,
+                "tagName": "body",
+                "childNodes": [
+                  {
+                    "type": 3,
+                    "id": 20,
+                    "textContent": "\n    "
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "div",
+                    "attributes": {
+                      "id": "terminal-container"
+                    },
+                    "childNodes": [
+                      {
+                        "type": 3,
+                        "id": 22,
+                        "textContent": "\n        "
+                      },
+                      {
+                        "type": 2,
+                        "tagName": "div",
+                        "attributes": {
+                          "id": "terminal"
+                        },
+                        "id": 23
+                      },
+                      {
+                        "type": 3,
+                        "id": 24,
+                        "textContent": "\n    "
+                      }
+                    ],
+                    "id": 21
+                  },
+                  {
+                    "type": 3,
+                    "id": 25,
+                    "textContent": "\n\n    "
+                  },
+                  {
+                    "type": 2,
+                    "tagName": "script",
+                    "childNodes": [
+                      {
+                        "type": 3,
+                        "id": 27,
+                        "textContent": "SCRIPT_PLACEHOLDER"
+                      }
+                    ],
+                    "id": 26
+                  },
+                  {
+                    "type": 3,
+                    "id": 28,
+                    "textContent": "\n\n\n"
+                  }
+                ],
+                "id": 19
+              }
+            ],
+            "id": 3
+          }
+        ],
+        "id": 1
+      },
+      "initialOffset": {
+        "top": 0,
+        "left": 0
+      }
+    },
+    "timestamp": 1716961326631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e l"
+        }
+      ]
+    },
+    "timestamp": 1716961328631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e s"
+        }
+      ]
+    },
+    "timestamp": 1716961330631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e \n"
+        }
+      ]
+    },
+    "timestamp": 1716961332631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e file1"
+        }
+      ]
+    },
+    "timestamp": 1716961334631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e .txt"
+        }
+      ]
+    },
+    "timestamp": 1716961336631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e \n"
+        }
+      ]
+    },
+    "timestamp": 1716961338631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e file2"
+        }
+      ]
+    },
+    "timestamp": 1716961340631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e .txt"
+        }
+      ]
+    },
+    "timestamp": 1716961342631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e \n"
+        }
+      ]
+    },
+    "timestamp": 1716961344631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e file3"
+        }
+      ]
+    },
+    "timestamp": 1716961346631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e .txt"
+        }
+      ]
+    },
+    "timestamp": 1716961348631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e \n"
+        }
+      ]
+    },
+    "timestamp": 1716961350631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e echo 'Hello World!'"
+        }
+      ]
+    },
+    "timestamp": 1716961352631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e \n"
+        }
+      ]
+    },
+    "timestamp": 1716961354631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e cat file1.txt"
+        }
+      ]
+    },
+    "timestamp": 1716961356631
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "texts": [
+        {
+          "id": 23,
+          "text": "shell\u003e \n"
+        }
+      ]
+    },
+    "timestamp": 1716961358631
+  }
+]

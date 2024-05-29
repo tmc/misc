@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulated Terminal with Automatic Recording</title>
+    <script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/record/rrweb-record.min.js"></script>
+    <style>
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: black;
+            color: green;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #terminal-container {
+            width: 80%;
+            height: 60%;
+            background-color: black;
+            border: 1px solid green;
+            padding: 10px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        #terminal {
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal-container">
+        <div id="terminal"></div>
+    </div>
+
+    <script>
+        let events = [];
+        let stopFn;
+        const terminal = document.getElementById('terminal');
+
+        function startRecording() {
+            events = [];
+            stopFn = rrwebRecord({
+                emit(event) {
+                    events.push(event);
+                }
+            });
+        }
+
+        function stopRecording() {
+            if (stopFn) {
+                stopFn();
+            }
+            const blob = new Blob([JSON.stringify(events, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'recording.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function simulateTerminalOutput(content, delay = 100, callback) {
+            let index = 0;
+
+            function typeCharacter() {
+                if (index < content.length) {
+                    const char = content[index++];
+                    terminal.innerHTML += char === '\n' ? '<br>' : char;
+                    terminal.scrollTop = terminal.scrollHeight; // Auto scroll to bottom
+                    setTimeout(typeCharacter, delay);
+                } else if (callback) {
+                    callback();
+                }
+            }
+
+            typeCharacter();
+        }
+
+        // Simulated terminal content
+        const simulatedContent = `
+        $ echo "Hello, World!"
+        Hello, World!
+        
+        $ ls -l
+        total 4
+        -rw-r--r--  1 user  staff   0 May 28 12:34 file.txt
+        `;
+
+        // Start recording and simulation after a short delay
+        setTimeout(() => {
+            startRecording();
+            simulateTerminalOutput(simulatedContent, 50, stopRecording);
+        }, 500);
+    </script>
+</body>
+</html>

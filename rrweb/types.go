@@ -1,8 +1,5 @@
 package rrweb
 
-// Recording represents a recording.
-type Recording []EventWithTime
-
 // NodeType represents the different types of nodes
 type NodeType int
 
@@ -33,12 +30,15 @@ type EventWithoutTime struct {
 // SerializedNode represents a serialized node
 type SerializedNode struct {
 	Type         NodeType               `json:"type"`
-	TagName      string                 `json:"tagName,omitempty"`
+	Name         string                 `json:"name,omitempty"`
+	PublicID     string                 `json:"publicId,omitempty"`
+	SystemID     string                 `json:"systemId,omitempty"`
 	RootID       *int                   `json:"rootId,omitempty"`
 	IsShadowHost bool                   `json:"isShadowHost,omitempty"`
 	IsShadow     bool                   `json:"isShadow,omitempty"`
 	ChildNodes   []SerializedNodeWithId `json:"childNodes,omitempty"`
 	TextContent  string                 `json:"textContent,omitempty"`
+	TagName      string                 `json:"tagName,omitempty"`
 	Attributes   map[string]string      `json:"attributes,omitempty"`
 }
 

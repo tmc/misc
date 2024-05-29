@@ -1,0 +1,163 @@
+[
+  {
+    "type": 4,
+    "data": {
+      "href": "file:///Users/tmc/go/src/github.com/tmc/misc/rrweb/testdata/gentestdata1.html",
+      "width": 1424,
+      "height": 1236
+    },
+    "timestamp": 1716960124486
+  },
+  {
+    "type": 2,
+    "data": {
+      "node": {
+        "type": 0,
+        "childNodes": [
+          {
+            "type": 1,
+            "name": "html",
+            "id": 2
+          },
+          {
+            "type": 2,
+            "childNodes": [
+              {
+                "type": 2,
+                "childNodes": [
+                  {
+                    "type": 3,
+                    "textContent": "\n    ",
+                    "id": 5
+                  }
+                ],
+                "tagName": "head",
+                "id": 4
+              },
+              {
+                "type": 2,
+                "childNodes": [
+                  {
+                    "type": 2,
+                    "childNodes": [
+                      {
+                        "type": 3,
+                        "textContent": "shell\u003e ",
+                        "id": 3
+                      }
+                    ],
+                    "tagName": "pre",
+                    "id": 16
+                  }
+                ],
+                "tagName": "body",
+                "id": 3
+              }
+            ],
+            "tagName": "html",
+            "attributes": {
+              "lang": "en"
+            },
+            "id": 3
+          }
+        ],
+        "id": 1
+      },
+      "initialOffset": {
+        "top": 0,
+        "left": 0
+      }
+    },
+    "timestamp": 1716960126486
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "id": 3,
+      "text": "shell\u003e l"
+    },
+    "timestamp": 1716960128486
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "id": 3,
+      "text": "shell\u003e ls"
+    },
+    "timestamp": 1716960129486
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "id": 3,
+      "text": "shell\u003e ls\nfile1"
+    },
+    "timestamp": 1716960130486
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "id": 3,
+      "text": "shell\u003e ls\nfile1.txt"
+    },
+    "timestamp": 1716960131486
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "id": 3,
+      "text": "shell\u003e ls\nfile1.txt\nfile2"
+    },
+    "timestamp": 1716960132486
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "id": 3,
+      "text": "shell\u003e ls\nfile1.txt\nfile2.txt"
+    },
+    "timestamp": 1716960133486
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "id": 3,
+      "text": "shell\u003e ls\nfile1.txt\nfile2.txt\nfile3"
+    },
+    "timestamp": 1716960134486
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "id": 3,
+      "text": "shell\u003e ls\nfile1.txt\nfile2.txt\nfile3.txt"
+    },
+    "timestamp": 1716960135486
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "id": 3,
+      "text": "shell\u003e echo 'Hello World!'"
+    },
+    "timestamp": 1716960136486
+  },
+  {
+    "type": 3,
+    "data": {
+      "source": 5,
+      "id": 3,
+      "text": "shell\u003e cat file1.txt"
+    },
+    "timestamp": 1716960137486
+  }
+]
