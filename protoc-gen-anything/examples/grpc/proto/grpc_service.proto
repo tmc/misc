@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package grpc;
+
+option go_package = "github.com/yourusername/yourrepo/examples/grpc/gen/grpc";
+
+message GRPCMessage {
+  string id = 1;
+  string content = 2;
+}
+
+service GRPCService {
+  rpc SendMessage(GRPCMessage) returns (GRPCMessage);
+  rpc StreamMessages(GRPCMessage) returns (stream GRPCMessage);
+}

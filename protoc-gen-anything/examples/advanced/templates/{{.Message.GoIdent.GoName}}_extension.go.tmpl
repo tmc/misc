@@ -1,0 +1,26 @@
+
+package {{.File.GoPackageName}}
+
+// Adds Foobar() method to {{.Message.GoIdent.GoName}}
+func (m *{{.Message.GoIdent.GoName}}) Foobar() {}
+
+// Provides details of {{.Message.GoIdent.GoName}}
+type {{.Message.GoIdent.GoName}}Details struct {
+  ID string
+  Name string
+  Status string
+  Description string
+}
+
+func (m *{{.Message.GoIdent.GoName}}) ToDetails() {{.Message.GoIdent.GoName}}Details {
+  details := {{.Message.GoIdent.GoName}}Details{
+    ID: m.Id,
+    Name: m.Name,
+    Status: m.Status.String(),
+  }
+  if m.Details != nil {
+    details.Description = m.GetDescription()
+  }
+  return details
+}
+

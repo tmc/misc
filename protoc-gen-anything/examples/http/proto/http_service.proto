@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package http;
+
+option go_package = "github.com/yourusername/yourrepo/examples/http/gen/http";
+
+import "google/api/annotations.proto";
+
+message HTTPMessage {
+  string id = 1;
+  string data = 2;
+}
+
+service HTTPService {
+  rpc GetMessage(HTTPMessage) returns (HTTPMessage) {
+    option (google.api.http) = {
+      get: "/v1/messages/{id}"
+    };
+  }
+}

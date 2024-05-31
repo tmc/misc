@@ -1,0 +1,18 @@
+
+package {{.File.GoPackageName}}
+
+import (
+  "context"
+  "log"
+)
+
+// {{.Service.GoName}}Server is the server API for {{.Service.GoName}} service.
+type {{.Service.GoName}}Server struct{}
+
+{{range .Service.Methods}}
+// {{.GoName}} handles the {{.GoName}} RPC.
+func (s *{{$.Service.GoName}}Server) {{.GoName}}(ctx context.Context, req *{{.Input.GoIdent.GoName}}) (*{{.Output.GoIdent.GoName}}, error) {
+  log.Printf("Received message: %s", req.Content)
+  return &{{.Output.GoIdent.GoName}}{Id: req.Id, Content: "Echo: " + req.Content}, nil
+}
+{{end}}

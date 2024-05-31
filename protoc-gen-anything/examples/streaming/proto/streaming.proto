@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package streaming;
+
+option go_package = "github.com/yourusername/yourrepo/examples/streaming/gen/streaming";
+
+message StreamMessage {
+  string id = 1;
+  string payload = 2;
+}
+
+service StreamingService {
+  rpc StreamData(stream StreamMessage) returns (stream StreamMessage);
+}

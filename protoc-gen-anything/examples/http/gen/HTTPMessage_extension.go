@@ -1,0 +1,26 @@
+package proto
+
+import (
+	"net/http"
+	"github.com/gorilla/mux"
+	"encoding/json"
+)
+
+// HTTPServiceHandler handles HTTP requests for the HTTPService.
+type HTTPServiceHandler struct{}
+
+// GetMessage handles GET requests for GetMessage.
+func (h *HTTPServiceHandler) GetMessage(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id := vars["id"]
+	response := proto.HTTPMessage{
+		Id:   id,
+		Data: "Hello, " + id,
+	}
+	json.NewEncoder(w).Encode(response)
+}
+
+// RegisterRoutes registers the HTTP routes for the service.
+func (h *HTTPServiceHandler) RegisterRoutes(r *mux.Router) {
+	r.HandleFunc("/v1/messages/{id}", h.GetMessage).Methods("GET")
+}

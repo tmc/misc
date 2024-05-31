@@ -1,0 +1,19 @@
+
+package {{.File.GoPackageName}}
+
+import (
+  "fmt"
+)
+
+// FileSummary provides a summary of the proto file.
+func FileSummary() string {
+  return fmt.Sprintf("Proto file: %s, Package: %s", "{{.File.Desc.Path}}", "{{.File.GoPackageName}}")
+}
+
+// PrintFileDetails prints the details of the proto file.
+func PrintFileDetails() {
+  fmt.Println("Proto File Details:")
+  fmt.Println("Path:", "{{.File.Desc.Path}}")
+  fmt.Println("Package:", "{{.File.GoPackageName}}")
+}
+
