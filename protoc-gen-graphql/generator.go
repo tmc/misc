@@ -18,8 +18,10 @@ import (
 
 // Generator holds configuration for an invocation of this tool
 type Generator struct {
-	TemplateDir   string
-	DefaultExpose bool
+	TemplateDir string
+
+	DefaultExposeQueries   bool
+	DefaultExposeMutations bool
 
 	services       map[string]*protogen.Service
 	exposedMethods map[string]*protogen.Method
@@ -29,14 +31,15 @@ type Generator struct {
 }
 
 // newGenerator creates a new generator.
-func newGenerator(templateDir string, defaultExpose bool) *Generator {
+func newGenerator(templateDir string, defaultExposeQueries bool, defaultExposeMutations bool) *Generator {
 	return &Generator{
-		TemplateDir:    templateDir,
-		DefaultExpose:  defaultExpose,
-		services:       make(map[string]*protogen.Service),
-		exposedMethods: make(map[string]*protogen.Method),
-		schemas:        make(map[string]*gqltypes.Schema),
-		mutations:      make(map[string]*gqltypes.Mutation),
+		TemplateDir:            templateDir,
+		DefaultExposeQueries:   defaultExposeQueries,
+		DefaultExposeMutations: defaultExposeMutations,
+		services:               make(map[string]*protogen.Service),
+		exposedMethods:         make(map[string]*protogen.Method),
+		schemas:                make(map[string]*gqltypes.Schema),
+		mutations:              make(map[string]*gqltypes.Mutation),
 	}
 }
 
@@ -87,10 +90,6 @@ func (g *Generator) walkSchemas(gen *protogen.Plugin) error {
 }
 
 func (g *Generator) walkMethod(m *protogen.Method) (*gqltypes.Input, bool) {
-	if !methodExposed(m) {
-		return nil, false
-	}
-
 	if _, ok := g.services[string(m.Parent.Desc.FullName())]; !ok {
 		g.services[string(m.Parent.Desc.FullName())] = m.Parent
 		g.schemas[string(m.Parent.Desc.FullName())] = newSchema()
@@ -125,6 +124,13 @@ func (g *Generator) walkMethod(m *protogen.Method) (*gqltypes.Input, bool) {
 	isQuery, err := regexp.MatchString(`(?i)(get|list|search)`, t.Name)
 	if err != nil {
 		panic(err)
+	}
+
+	if isQuery && !g.DefaultExposeQueries && !methodExposed(m) {
+		return nil, false
+	}
+	if !isQuery && !g.DefaultExposeMutations && !methodExposed(m) {
+		return nil, false
 	}
 
 	if isQuery {
@@ -343,7 +349,7 @@ func printServiceSchema(svc *protogen.Service, opts *Generator, gen *protogen.Pl
 
 func (o *Generator) helperExposed(m *protogen.Method) bool {
 	mops, ok := getMethodGraphQLOpts(m)
-	return ok && mops.GetExposed() || o.DefaultExpose
+	return ok && mops.GetExposed()
 }
 
 func (o *Generator) helperMethodOpts(m *protogen.Method) *metadata.GraphQLOperation {

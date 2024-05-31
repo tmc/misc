@@ -4,7 +4,7 @@
 
 DIRECTORY="." # Default directory to process, can be replaced with your specific directory
 EXCLUDE_DIRS=("node_modules") # Array of directories to exclude
-IGNORED_FILES=("go.sum" "package.json") # Array of files to exclude
+IGNORED_FILES=("go.sum" "package-lock.json") # Array of files to ignore
 IGNORE_PATTERNS=() # Array to store combined .gitignore patterns
 
 # Function to check if a directory is in the exclude list
