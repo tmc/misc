@@ -161,37 +161,37 @@ func (g *Generator) generateForService(f *protogen.File, s *protogen.Service, tF
 }
 
 func (g *Generator) generateForMethod(f *protogen.File, s *protogen.Service, m *protogen.Method, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for method:", m.GoName)
+	//g.logVerbose("generating for method:", m.GoName)
 	context := determineContext("method", f, s, m, nil, nil, nil, nil)
 	return g.applyTemplates("method", f, s, m, nil, nil, nil, nil, context, tFS, gen)
 }
 
 func (g *Generator) generateForMessage(f *protogen.File, msg *protogen.Message, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for message:", msg.GoIdent.GoName)
+	//g.logVerbose("generating for message:", msg.GoIdent.GoName)
 	context := determineContext("message", f, nil, nil, msg, nil, nil, nil)
 	return g.applyTemplates("message", f, nil, nil, msg, nil, nil, nil, context, tFS, gen)
 }
 
 func (g *Generator) generateForEnum(f *protogen.File, enum *protogen.Enum, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for enum:", enum.GoIdent.GoName)
+	//g.logVerbose("generating for enum:", enum.GoIdent.GoName)
 	context := determineContext("enum", f, nil, nil, nil, enum, nil, nil)
 	return g.applyTemplates("enum", f, nil, nil, nil, enum, nil, nil, context, tFS, gen)
 }
 
 func (g *Generator) generateForOneof(f *protogen.File, msg *protogen.Message, oneof *protogen.Oneof, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for oneof:", oneof.GoName)
+	//g.logVerbose("generating for oneof:", oneof.GoName)
 	context := determineContext("oneof", f, nil, nil, msg, nil, oneof, nil)
 	return g.applyTemplates("oneof", f, nil, nil, msg, nil, oneof, nil, context, tFS, gen)
 }
 
 func (g *Generator) generateForField(f *protogen.File, msg *protogen.Message, field *protogen.Field, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for field:", field.GoName)
+	//g.logVerbose("generating for field:", field.GoName)
 	context := determineContext("field", f, nil, nil, msg, nil, nil, field)
 	return g.applyTemplates("field", f, nil, nil, msg, nil, nil, field, context, tFS, gen)
 }
 
 func (g *Generator) generateForNestedMessage(f *protogen.File, parentMsg *protogen.Message, nestedMsg *protogen.Message, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for nested message:", nestedMsg.GoIdent.GoName)
+	//g.logVerbose("generating for nested message:", nestedMsg.GoIdent.GoName)
 	context := determineContext("nestedMessage", f, nil, nil, nestedMsg, nil, nil, nil)
 	return g.applyTemplates("nestedMessage", f, nil, nil, nestedMsg, nil, nil, nil, context, tFS, gen)
 }
@@ -425,6 +425,7 @@ func registerAllExtensions(extTypes *protoregistry.Types, descs interface {
 	}
 	xds := descs.Extensions()
 	for i := 0; i < xds.Len(); i++ {
+		fmt.Fprintln(os.Stderr, "Registering extension:", xds.Get(i).FullName())
 		if err := extTypes.RegisterExtension(dynamicpb.NewExtensionType(xds.Get(i))); err != nil {
 			return err
 		}
