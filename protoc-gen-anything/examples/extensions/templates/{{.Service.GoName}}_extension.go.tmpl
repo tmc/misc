@@ -2,7 +2,7 @@ package {{.File.GoPackageName}}
 
 var AllowedUnauthenticatedMethods = map[string]bool{
 {{range .Service.Methods}}
-  {{- $authz := methodOptionsExtension . "extensions.authz" -}}
+  {{- $authz := methodExtension . "extensions.authz" -}}
   {{- $allowUnauthenticated := fieldByName $authz "allow_unauthenticated" -}}
   {{- if $allowUnauthenticated -}}
     "{{.GoName}}": true,

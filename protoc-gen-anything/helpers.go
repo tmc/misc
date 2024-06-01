@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 	"text/template"
@@ -89,33 +90,34 @@ func (g *Generator) funcMap() template.FuncMap {
 		"trimstr": func(cutset, s string) string {
 			return strings.Trim(s, cutset)
 		},
-		"snakeCase":              xstrings.ToSnakeCase,
-		"methodOptionsExtension": g.helperMethodOptionsExtension,
-		"fieldByName":            g.helperFieldByName,
+		"snakeCase":        xstrings.ToSnakeCase,
+		"methodExtension":  g.helperMethodExtension,
+		"messageExtension": g.helperMessageExtension,
+		"fieldByName":      g.helperFieldByName,
 	}
 }
 
-func (g *Generator) helperMethodOptionsExtension(method *protogen.Method, path string) any {
+func (g *Generator) helperMethodExtension(method *protogen.Method, path string) any {
 	options := method.Desc.Options().(*descriptorpb.MethodOptions)
 	if options == nil {
 		return nil
 	}
-	b, err := proto.Marshal(options)
-	if err != nil {
-		log.Fatalf("Error marshalling options: %v", err)
+	if err := g.marshalAndUnmarshalOptions(options); err != nil {
+		log.Fatalf("%v", err)
 	}
-	options.Reset()
-	err = proto.UnmarshalOptions{Resolver: g.types}.Unmarshal(b, options)
-	if err != nil {
-		log.Fatalf("Error unmarshalling options: %v", err)
+	extensions := g.getExtensions(options)
+	return extensions[path]
+}
+
+func (g *Generator) helperMessageExtension(message *protogen.Message, path string) any {
+	options := message.Desc.Options().(*descriptorpb.MessageOptions)
+	if options == nil {
+		return nil
 	}
-	var extensions = make(map[string]any)
-	options.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
-		if fd.IsExtension() {
-			extensions[string(fd.FullName())] = v.Interface()
-		}
-		return true
-	})
+	if err := g.marshalAndUnmarshalOptions(options); err != nil {
+		log.Fatalf("%v", err)
+	}
+	extensions := g.getExtensions(options)
 	return extensions[path]
 }
 
@@ -123,4 +125,27 @@ func (g *Generator) helperMethodOptionsExtension(method *protogen.Method, path s
 func (g *Generator) helperFieldByName(message dynamicpb.Message, name string) any {
 	fd := message.Descriptor().Fields().ByName(protoreflect.Name(name))
 	return message.Get(fd)
+}
+
+func (g *Generator) marshalAndUnmarshalOptions(options proto.Message) error {
+	b, err := proto.Marshal(options)
+	if err != nil {
+		return fmt.Errorf("Error marshalling options: %v", err)
+	}
+	err = proto.UnmarshalOptions{Resolver: g.types}.Unmarshal(b, options)
+	if err != nil {
+		return fmt.Errorf("Error unmarshalling options: %v", err)
+	}
+	return nil
+}
+
+func (g *Generator) getExtensions(options proto.Message) map[string]any {
+	extensions := make(map[string]any)
+	options.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+		if fd.IsExtension() {
+			extensions[string(fd.FullName())] = v.Interface()
+		}
+		return true
+	})
+	return extensions
 }

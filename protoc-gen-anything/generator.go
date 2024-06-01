@@ -219,7 +219,7 @@ func (g *Generator) applyTemplates(entityType string, file *protogen.File, servi
 		if err != nil {
 			return fmt.Errorf("failed to expand path: %w", err)
 		}
-		g.logVerbose("Generating file:", outputFileName)
+		g.logVerbose("generating file:", outputFileName)
 		generatedFile := gen.NewGeneratedFile(outputFileName, "")
 
 		// Parse the template
