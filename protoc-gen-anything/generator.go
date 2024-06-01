@@ -149,49 +149,49 @@ func (g *Generator) generate(gen *protogen.Plugin) error {
 }
 
 func (g *Generator) generateForFile(f *protogen.File, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for file:", f.Desc.Path())
+	//g.logVerbose("generating for file:", f.Desc.Path())
 	context := determineContext("file", f, nil, nil, nil, nil, nil, nil)
 	return g.applyTemplates("file", f, nil, nil, nil, nil, nil, nil, context, tFS, gen)
 }
 
 func (g *Generator) generateForService(f *protogen.File, s *protogen.Service, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for service:", s.GoName)
+	//g.logVerbose("generating for service:", s.GoName)
 	context := determineContext("service", f, s, nil, nil, nil, nil, nil)
 	return g.applyTemplates("service", f, s, nil, nil, nil, nil, nil, context, tFS, gen)
 }
 
 func (g *Generator) generateForMethod(f *protogen.File, s *protogen.Service, m *protogen.Method, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for method:", m.GoName)
+	//g.logVerbose("generating for method:", m.GoName)
 	context := determineContext("method", f, s, m, nil, nil, nil, nil)
 	return g.applyTemplates("method", f, s, m, nil, nil, nil, nil, context, tFS, gen)
 }
 
 func (g *Generator) generateForMessage(f *protogen.File, msg *protogen.Message, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for message:", msg.GoIdent.GoName)
+	//g.logVerbose("generating for message:", msg.GoIdent.GoName)
 	context := determineContext("message", f, nil, nil, msg, nil, nil, nil)
 	return g.applyTemplates("message", f, nil, nil, msg, nil, nil, nil, context, tFS, gen)
 }
 
 func (g *Generator) generateForEnum(f *protogen.File, enum *protogen.Enum, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for enum:", enum.GoIdent.GoName)
+	//g.logVerbose("generating for enum:", enum.GoIdent.GoName)
 	context := determineContext("enum", f, nil, nil, nil, enum, nil, nil)
 	return g.applyTemplates("enum", f, nil, nil, nil, enum, nil, nil, context, tFS, gen)
 }
 
 func (g *Generator) generateForOneof(f *protogen.File, msg *protogen.Message, oneof *protogen.Oneof, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for oneof:", oneof.GoName)
+	//g.logVerbose("generating for oneof:", oneof.GoName)
 	context := determineContext("oneof", f, nil, nil, msg, nil, oneof, nil)
 	return g.applyTemplates("oneof", f, nil, nil, msg, nil, oneof, nil, context, tFS, gen)
 }
 
 func (g *Generator) generateForField(f *protogen.File, msg *protogen.Message, field *protogen.Field, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for field:", field.GoName)
+	//g.logVerbose("generating for field:", field.GoName)
 	context := determineContext("field", f, nil, nil, msg, nil, nil, field)
 	return g.applyTemplates("field", f, nil, nil, msg, nil, nil, field, context, tFS, gen)
 }
 
 func (g *Generator) generateForNestedMessage(f *protogen.File, parentMsg *protogen.Message, nestedMsg *protogen.Message, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for nested message:", nestedMsg.GoIdent.GoName)
+	//g.logVerbose("generating for nested message:", nestedMsg.GoIdent.GoName)
 	context := determineContext("nestedMessage", f, nil, nil, nestedMsg, nil, nil, nil)
 	return g.applyTemplates("nestedMessage", f, nil, nil, nestedMsg, nil, nil, nil, context, tFS, gen)
 }
@@ -220,6 +220,7 @@ func (g *Generator) applyTemplates(entityType string, file *protogen.File, servi
 			return fmt.Errorf("failed to expand path: %w", err)
 		}
 		g.logVerbose("generating file:", outputFileName)
+		g.logVerbose("numext:", g.types.NumExtensions())
 		generatedFile := gen.NewGeneratedFile(outputFileName, "")
 
 		// Parse the template
@@ -232,7 +233,7 @@ func (g *Generator) applyTemplates(entityType string, file *protogen.File, servi
 		}
 
 		// Apply the template with the context
-		g.logVerbose("Applying template:", path, "for", metadata["type"], outputFileName)
+		//g.logVerbose("applying template:", path, "for", metadata["type"], outputFileName)
 		err = tmpl.Execute(generatedFile, context)
 		if err != nil {
 			err = fmt.Errorf("failed to execute template: %w", err)
@@ -340,7 +341,9 @@ func (g *Generator) walkSchemas(gen *protogen.Plugin) error {
 }
 
 func (g *Generator) walkFile(f *protogen.File) {
-	registerAllExtensions(g.types, f.Desc)
+	if err := registerAllExtensions(g.types, f.Desc); err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to register extensions:", err)
+	}
 	for _, s := range f.Services {
 		g.walkService(s)
 	}
@@ -428,6 +431,7 @@ func registerAllExtensions(extTypes *protoregistry.Types, descs interface {
 		if err := extTypes.RegisterExtension(dynamicpb.NewExtensionType(xds.Get(i))); err != nil {
 			return err
 		}
+		// fmt.Fprintln(os.Stderr, "Registered extension:", xds.Get(i).FullName(), "current:", extTypes.NumExtensions())
 	}
 	return nil
 }

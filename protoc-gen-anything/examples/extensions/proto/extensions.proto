@@ -18,17 +18,3 @@ message AuthzPolicy {
   int64 foobar = 2;
 }
 
-message FooRequest {
-  string name = 1;
-}
-
-message FooResponse {
-  string message = 1;
-}
-
-service FooService {
-  rpc Foo(FooRequest) returns (FooResponse) {
-    option (authz).allow_unauthenticated = true;
-    option (authz).foobar = 42;
-  }
-}
