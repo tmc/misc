@@ -149,13 +149,13 @@ func (g *Generator) generate(gen *protogen.Plugin) error {
 }
 
 func (g *Generator) generateForFile(f *protogen.File, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for file:", f.Desc.Path())
+	//g.logVerbose("generating for file:", f.Desc.Path())
 	context := determineContext("file", f, nil, nil, nil, nil, nil, nil)
 	return g.applyTemplates("file", f, nil, nil, nil, nil, nil, nil, context, tFS, gen)
 }
 
 func (g *Generator) generateForService(f *protogen.File, s *protogen.Service, tFS fs.FS, gen *protogen.Plugin) error {
-	g.logVerbose("generating for service:", s.GoName)
+	//g.logVerbose("generating for service:", s.GoName)
 	context := determineContext("service", f, s, nil, nil, nil, nil, nil)
 	return g.applyTemplates("service", f, s, nil, nil, nil, nil, nil, context, tFS, gen)
 }
@@ -220,6 +220,7 @@ func (g *Generator) applyTemplates(entityType string, file *protogen.File, servi
 			return fmt.Errorf("failed to expand path: %w", err)
 		}
 		g.logVerbose("generating file:", outputFileName)
+		g.logVerbose("numext:", g.types.NumExtensions())
 		generatedFile := gen.NewGeneratedFile(outputFileName, "")
 
 		// Parse the template
@@ -232,7 +233,7 @@ func (g *Generator) applyTemplates(entityType string, file *protogen.File, servi
 		}
 
 		// Apply the template with the context
-		g.logVerbose("Applying template:", path, "for", metadata["type"], outputFileName)
+		//g.logVerbose("applying template:", path, "for", metadata["type"], outputFileName)
 		err = tmpl.Execute(generatedFile, context)
 		if err != nil {
 			err = fmt.Errorf("failed to execute template: %w", err)
@@ -340,7 +341,9 @@ func (g *Generator) walkSchemas(gen *protogen.Plugin) error {
 }
 
 func (g *Generator) walkFile(f *protogen.File) {
-	registerAllExtensions(g.types, f.Desc)
+	if err := registerAllExtensions(g.types, f.Desc); err != nil {
+		fmt.Fprintln(os.Stderr, "Failed to register extensions:", err)
+	}
 	for _, s := range f.Services {
 		g.walkService(s)
 	}
@@ -425,10 +428,10 @@ func registerAllExtensions(extTypes *protoregistry.Types, descs interface {
 	}
 	xds := descs.Extensions()
 	for i := 0; i < xds.Len(); i++ {
-		fmt.Fprintln(os.Stderr, "Registering extension:", xds.Get(i).FullName())
 		if err := extTypes.RegisterExtension(dynamicpb.NewExtensionType(xds.Get(i))); err != nil {
 			return err
 		}
+		// fmt.Fprintln(os.Stderr, "Registered extension:", xds.Get(i).FullName(), "current:", extTypes.NumExtensions())
 	}
 	return nil
 }
