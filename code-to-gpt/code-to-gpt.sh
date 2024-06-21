@@ -67,7 +67,8 @@ function read_directory_files {
             # Check if the file matches any .gitignore pattern
             if ! is_ignored_file "$filename"; then
                 echo "== $(basename "$filename") =="
-                cat "$filename"
+                # Escape {{ and }} in the file contents
+                sed 's/{{/\\{\{/g; s/}}/\\}\\}/g' "$filename"
                 echo ""
             fi
         fi
