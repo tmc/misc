@@ -116,19 +116,28 @@ while IFS= read -r file; do
     [ "$skip" = true ] && continue
 
     # Process the file if it's a text file
-    if [ -f "$file" ] && file "$file" | grep -q text; then
-        if [ "$COUNT_TOKENS" = true ]; then
-            token_count=$(count_tokens "$file")
-            echo "$token_count $file"
-        else
-            echo "=== $file ==="
-            cat "$file"
-            echo ""
+    if [ "$VERBOSE" = true ]; then
+        echo "File type for $file: $(file "$file")"
+        echo "MIME type for $file: $(file -i "$file")"
+    fi
+    if [ -f "$file" ]; then
+        file_type=$(file -b --mime-type "$file")
+        if [[ "$file_type" == text/* ]] || [[ "$file_type" == application/x-empty ]] || [[ "$file_type" == inode/x-empty ]]; then
+            if [ "$COUNT_TOKENS" = true ]; then
+                token_count=$(count_tokens "$file")
+                echo "$token_count $file"
+            else
+                echo "=== $file ==="
+                cat "$file"
+                echo ""
+            fi
+        elif [ "$VERBOSE" = true ]; then
+            echo "Skipping non-text file: $file (MIME type: $file_type)"
         fi
-    elif [ "$VERBOSE" = true ]; then
-        echo "Skipping non-text file: $file"
     fi
 done < <(get_files)
+
+[ "$VERBOSE" = true ] && echo "Files found: $(get_files | wc -l)"
 
 if [ "$COUNT_TOKENS" = false ]; then
     echo "=== END OF INPUT ==="
