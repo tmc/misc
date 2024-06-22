@@ -1,116 +1,50 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # code-to-gpt.sh
-# Script to read and print contents of text files in a directory, excluding specified directories and files
+# This script preps content to feed into a large language model.
+# Read and print contents of text files in a directory, excluding specified directories and files
 
-DIRECTORY="." # Default directory to process, can be replaced with your specific directory
-EXCLUDE_DIRS=("node_modules") # Array of directories to exclude
-IGNORED_FILES=("go.sum" "go.work.sum" "yarn.lock" "yarn.error.log" "package-lock.json") # Array of files to ignore
-IGNORE_PATTERNS=() # Array to store combined .gitignore patterns
-COUNT_TOKENS=false # Flag to enable token counting
+set -euo pipefail
 
-# Function to check if a directory is in the exclude list
-function is_excluded_dir {
-    local dir="$1"
-    for excluded_dir in "${EXCLUDE_DIRS[@]}"; do
-        if [[ "$dir" == "$DIRECTORY/$excluded_dir" || "$dir" == "$DIRECTORY/$excluded_dir/"* ]]; then
-            return 0
-        fi
-    done
-    return 1
+# Usage function
+usage() {
+    echo "Usage: $0 [--count-tokens] [--exclude-dir <dir>] [--verbose] [<directory>]"
+    echo "  --count-tokens: Count tokens instead of outputting file contents"
+    echo "  --exclude-dir <dir>: Exclude additional directory"
+    echo "  --verbose: Enable verbose output"
+    echo "  <directory>: Specify the directory to process (default: current directory)"
+    exit 1
 }
 
-# Function to read .gitignore files and add patterns to IGNORE_PATTERNS
-function read_gitignore {
-    local dir="$1"
-    local gitignore_file="$dir/.gitignore"
+DIRECTORY="." # Default directory to process
+EXCLUDE_DIRS=("node_modules" "venv" ".venv") # Array of directories to exclude
+IGNORED_FILES=("go.sum" "go.work.sum" "yarn.lock" "yarn.error.log" "package-lock.json") # Array of files to ignore
+COUNT_TOKENS=false # Flag to enable token counting
+VERBOSE=false # Flag for verbose output
 
-    if [ -f "$gitignore_file" ]; then
-        while IFS= read -r line || [[ -n "$line" ]]; do
-            # Ignore comments and empty lines
-            if [[ ! "$line" =~ ^# && ! "$line" =~ ^$ ]]; then
-                # Add the pattern as-is
-                IGNORE_PATTERNS+=("$line")
-            fi
-        done < "$gitignore_file"
+# Function to ensure tokencount is installed
+ensure_tokencount() {
+    if ! command -v tokencount &> /dev/null; then
+        echo "tokencount not found. Attempting to install..."
+        if ! command -v go &> /dev/null; then
+            echo "Error: Go is not installed. Please install Go to use tokencount."
+            exit 1
+        fi
+        go install github.com/tmc/tokencount@latest
+        if ! command -v tokencount &> /dev/null; then
+            echo "Error: Failed to install tokencount. Please install it manually."
+            exit 1
+        fi
+        echo "tokencount installed successfully."
     fi
 }
 
-# Function to check if a file matches any of the ignore patterns
-function is_ignored_file {
+# Function to count tokens using tokencount
+count_tokens() {
     local file="$1"
-    local rel_file="${file#$DIRECTORY/}"
-    for pattern in "${IGNORE_PATTERNS[@]}"; do
-        if [[ "$rel_file" == $pattern || "$rel_file" == *"/$pattern" ]]; then
-            return 0
-        fi
-    done
-    return 1
-}
-
-function is_ignored_filename {
-    local filename="$1"
-    local basename=$(basename "$filename")
-    for ignored_file in "${IGNORED_FILES[@]}"; do
-        if [[ "$basename" == "$ignored_file" ]]; then
-            return 0
-        fi
-    done
-    return 1
-}
-
-# Function to count tokens in a file
-function count_tokens {
-    local file="$1"
-    # Assuming 'tokencount' is a command that returns the number of tokens
-    # Replace this with the actual command you use for token counting
     tokencount "$file" 2>/dev/null || echo "0"
 }
 
-# Function to read and print files in a directory, recursively processing subdirectories
-function read_directory_files {
-    local dir="$1"
-    local rel_path="${2:-}"
-
-    # Check if the directory is excluded
-    is_excluded_dir "$dir" && return
-
-    # Read .gitignore file patterns if exists
-    read_gitignore "$dir"
-
-    for filename in "$dir"/*; do
-        # Skip specific files
-        if is_ignored_filename "$filename"; then
-            continue
-        fi
-
-        # Process text files
-        if [ -f "$filename" ] && file "$filename" | grep -q text; then
-            # Check if the file matches any .gitignore pattern
-            if ! is_ignored_file "$filename"; then
-                local file_rel_path="${rel_path:+$rel_path/}$(basename "$filename")"
-                if [ "$COUNT_TOKENS" = true ]; then
-                    local token_count=$(count_tokens "$filename")
-                    echo "$token_count $file_rel_path"
-                else
-                    echo "=== $file_rel_path ==="
-                    cat "$filename"
-                    echo ""
-                fi
-            fi
-        fi
-    done
-
-    # Recursively process subdirectories
-    for subdir in "$dir"/*/; do
-        if [ -d "$subdir" ]; then
-            local subdir_name=$(basename "$subdir")
-            local new_rel_path="${rel_path:+$rel_path/}$subdir_name"
-            read_directory_files "$subdir" "$new_rel_path"
-        fi
-    done
-}
-
-# Read command line arguments
+# Process command line arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --exclude-dir)
@@ -121,15 +55,81 @@ while [[ $# -gt 0 ]]; do
             COUNT_TOKENS=true
             shift
             ;;
+        --verbose)
+            VERBOSE=true
+            shift
+            ;;
+        -h|--help)
+            usage
+            ;;
         *)
-            echo "Unknown option: $1"
-            exit 1
+            if [[ -d "$1" ]]; then
+                DIRECTORY="$1"
+                shift
+            else
+                echo "Unknown option or invalid directory: $1"
+                usage
+            fi
             ;;
     esac
 done
 
-# Start reading files from the specified directory
-read_directory_files "$DIRECTORY" ""
+# Ensure tokencount is installed if we're counting tokens
+if [ "$COUNT_TOKENS" = true ]; then
+    ensure_tokencount
+fi
+
+# Function to get files respecting Git ignore rules
+get_files() {
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        # We're in a Git repository, use Git commands
+        git ls-files --cached --others --exclude-standard
+        git ls-files --others --exclude-standard
+    else
+        # We're not in a Git repository, fall back to find
+        find "$DIRECTORY" -type f
+    fi
+}
+
+# Process files
+while IFS= read -r file; do
+    # Check if the file is in an excluded directory
+    skip=false
+    for dir in "${EXCLUDE_DIRS[@]}"; do
+        if [[ "$file" == *"/$dir/"* ]]; then
+            [ "$VERBOSE" = true ] && echo "Skipping excluded directory: $file"
+            skip=true
+            break
+        fi
+    done
+    [ "$skip" = true ] && continue
+
+    # Check if the file is in the ignored files list
+    filename=$(basename "$file")
+    for ignored in "${IGNORED_FILES[@]}"; do
+        if [[ "$filename" == "$ignored" ]]; then
+            [ "$VERBOSE" = true ] && echo "Skipping ignored file: $file"
+            skip=true
+            break
+        fi
+    done
+    [ "$skip" = true ] && continue
+
+    # Process the file if it's a text file
+    if [ -f "$file" ] && file "$file" | grep -q text; then
+        if [ "$COUNT_TOKENS" = true ]; then
+            token_count=$(count_tokens "$file")
+            echo "$token_count $file"
+        else
+            echo "=== $file ==="
+            cat "$file"
+            echo ""
+        fi
+    elif [ "$VERBOSE" = true ]; then
+        echo "Skipping non-text file: $file"
+    fi
+done < <(get_files)
+
 if [ "$COUNT_TOKENS" = false ]; then
     echo "=== END OF INPUT ==="
 fi
