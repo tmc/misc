@@ -90,13 +90,14 @@ func (g *Generator) funcMap() template.FuncMap {
 			return strings.Trim(s, cutset)
 		},
 		"snakeCase":        xstrings.ToSnakeCase,
-		"methodExtension":  g.helperMethodOptionsExtension,
-		"messageExtension": g.helperMessageOptionsExtension,
+		"methodExtension":  g.helperMethodExtension,
+		"messageExtension": g.helperMessageExtension,
+		"fieldExtension":   g.helperFieldExtension,
 		"fieldByName":      g.helperFieldByName,
 	}
 }
 
-func (g *Generator) helperMethodOptionsExtension(method *protogen.Method, path string) any {
+func (g *Generator) helperMethodExtension(method *protogen.Method, path string) any {
 	options := method.Desc.Options().(*descriptorpb.MethodOptions)
 	if options == nil {
 		return nil
@@ -120,7 +121,7 @@ func (g *Generator) helperMethodOptionsExtension(method *protogen.Method, path s
 	return extensions[path]
 }
 
-func (g *Generator) helperMessageOptionsExtension(message *protogen.Message, path string) any {
+func (g *Generator) helperMessageExtension(message *protogen.Message, path string) any {
 	options := message.Desc.Options().(*descriptorpb.MessageOptions)
 	if options == nil {
 		return nil
@@ -130,6 +131,30 @@ func (g *Generator) helperMessageOptionsExtension(message *protogen.Message, pat
 		log.Fatalf("Error marshalling options: %v", err)
 	}
 	// options.Reset()
+	err = proto.UnmarshalOptions{Resolver: g.types}.Unmarshal(b, options)
+	if err != nil {
+		log.Fatalf("Error unmarshalling options: %v", err)
+	}
+	var extensions = make(map[string]any)
+	options.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+		if fd.IsExtension() {
+			extensions[string(fd.FullName())] = v.Interface()
+		}
+		return true
+	})
+	return extensions[path]
+}
+
+func (g *Generator) helperFieldExtension(field *protogen.Field, path string) any {
+	options := field.Desc.Options().(*descriptorpb.FieldOptions)
+	if options == nil {
+		return nil
+	}
+	b, err := proto.Marshal(options)
+	if err != nil {
+		log.Fatalf("Error marshalling options: %v", err)
+	}
+	options.Reset()
 	err = proto.UnmarshalOptions{Resolver: g.types}.Unmarshal(b, options)
 	if err != nil {
 		log.Fatalf("Error unmarshalling options: %v", err)
