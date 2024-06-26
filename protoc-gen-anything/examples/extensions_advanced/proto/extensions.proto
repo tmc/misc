@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package extensions;
+
+option go_package = "github.com/yourusername/yourrepo/examples/extensions/gen/extensions";
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.MethodOptions {
+  AuthzPolicy2 authz2 = 50000;
+}
+
+// AuthzPolicy is a message that can be attached to a method in a proto file.
+message AuthzPolicy2 {
+  // allow_unauthenticated is a boolean that indicates whether the method can be
+  // called without any authentication.
+  bool allow_unauthenticated = 1;
+  int64 foobar = 2;
+}
+

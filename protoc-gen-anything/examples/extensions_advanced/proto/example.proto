@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package extensions;
+
+option go_package = "github.com/yourusername/yourrepo/examples/extensions/gen/extensions";
+
+import "metadata/v1/metadata.proto";
+//import "metadata/v1/extensions.proto";
+import "proto/extensions.proto";
+
+message FooRequest {
+  string name = 1;
+}
+
+message FooResponse {
+  string message = 1;
+}
+
+service FooService {
+  rpc Foo(FooRequest) returns (FooResponse) {
+    option (metadata.v1.authz).allow_unauthenticated = true;
+    option (authz2).allow_unauthenticated = true;
+    option (authz2).foobar = 42;
+  }
+}

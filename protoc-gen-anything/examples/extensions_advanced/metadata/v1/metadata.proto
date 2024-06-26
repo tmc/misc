@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package metadata.v1;
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.MethodOptions {
+  AuthzPolicy authz = 50003;
+}
+
+extend google.protobuf.MessageOptions {
+  EntityMetadata entity = 50004;
+}
+
+// AuthzPolicy is a message that can be attached to a method in a proto file.
+message AuthzPolicy {
+  // allow_unauthenticated is a boolean that indicates whether the method can be
+  // called without any authentication.
+  bool allow_unauthenticated = 1;
+}
+
+// EntityMetadata is a message that can be attached to a message in a proto file.
+message EntityMetadata {
+  // is_entity is a boolean that indicates whether the message is an entity.
+  bool is_entity = 1;
+  // id_field is a string that indicates the field name of the entity id.
+  string id_field = 2;
+}
