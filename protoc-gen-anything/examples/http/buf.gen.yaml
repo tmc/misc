@@ -6,6 +6,7 @@ managed:
       value: github.com/tmc/misc/protoc-gen-anything/examples/basic/gen
 plugins:
   - local: protoc-gen-anything
+    strategy: all # Necessary if you do cross-package extensions.
     out: gen
     opt:
       - paths=source_relative

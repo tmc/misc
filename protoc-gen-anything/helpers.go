@@ -2,9 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
-	"os"
 	"strings"
 	"text/template"
 
@@ -101,67 +99,56 @@ func (g *Generator) funcMap() template.FuncMap {
 func (g *Generator) helperMethodOptionsExtension(method *protogen.Method, path string) any {
 	options := method.Desc.Options().(*descriptorpb.MethodOptions)
 	if options == nil {
-		fmt.Fprintln(os.Stderr, "options is nil")
 		return nil
 	}
-	fmt.Fprintln(os.Stderr, "options is not nil", options)
 	b, err := proto.Marshal(options)
 	if err != nil {
 		log.Fatalf("Error marshalling options: %v", err)
 	}
 	options.Reset()
-	fmt.Fprintln(os.Stderr, "options before unmarshal", options)
-	fmt.Fprintln(os.Stderr, "num messages", g.types.NumMessages())
-	fmt.Fprintln(os.Stderr, "num extensions", g.types.NumExtensions())
 	err = proto.UnmarshalOptions{Resolver: g.types}.Unmarshal(b, options)
-	fmt.Fprintln(os.Stderr, "options after unmarshal", options)
 	if err != nil {
 		log.Fatalf("Error unmarshalling options: %v", err)
 	}
-	fmt.Fprintln(os.Stderr, "options:", options)
 	var extensions = make(map[string]any)
 	options.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
-		fmt.Fprintln(os.Stderr, "fd:", fd, fd.IsExtension())
 		if fd.IsExtension() {
 			extensions[string(fd.FullName())] = v.Interface()
 		}
 		return true
 	})
-	fmt.Fprintln(os.Stderr, "ext:", extensions)
 	return extensions[path]
 }
 
 func (g *Generator) helperMessageOptionsExtension(message *protogen.Message, path string) any {
 	options := message.Desc.Options().(*descriptorpb.MessageOptions)
 	if options == nil {
-		fmt.Fprintln(os.Stderr, "options is nil")
 		return nil
 	}
-	fmt.Fprintln(os.Stderr, "options is not nil", options)
 	b, err := proto.Marshal(options)
 	if err != nil {
 		log.Fatalf("Error marshalling options: %v", err)
 	}
 	// options.Reset()
 	err = proto.UnmarshalOptions{Resolver: g.types}.Unmarshal(b, options)
-	fmt.Fprintln(os.Stderr, "options after unmarshal", options)
 	if err != nil {
 		log.Fatalf("Error unmarshalling options: %v", err)
 	}
 	var extensions = make(map[string]any)
 	options.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
-		fmt.Fprintln(os.Stderr, "fd:", fd, fd.IsExtension())
 		if fd.IsExtension() {
 			extensions[string(fd.FullName())] = v.Interface()
 		}
 		return true
 	})
-	fmt.Fprintln(os.Stderr, "ext:", extensions)
 	return extensions[path]
 }
 
 // gets a value of a field by name
 func (g *Generator) helperFieldByName(message dynamicpb.Message, name string) any {
 	fd := message.Descriptor().Fields().ByName(protoreflect.Name(name))
+	if fd == nil {
+		return nil
+	}
 	return message.Get(fd)
 }
