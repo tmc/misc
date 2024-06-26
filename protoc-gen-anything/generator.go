@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"log"
 	"os"
 	"strings"
 	"text/template"
 
 	"github.com/Masterminds/sprig"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
@@ -21,6 +23,8 @@ type Generator struct {
 	TemplateDir     string
 	Verbose         bool
 	ContinueOnError bool
+
+	Logger *zap.Logger
 
 	types *protoregistry.Types
 
@@ -37,6 +41,7 @@ type Options struct {
 	TemplateDir     string
 	Verbose         bool
 	ContinueOnError bool
+	Logger          *zap.Logger
 }
 
 // NewGenerator creates a new protoc-gen-anything generator.
@@ -45,6 +50,7 @@ func NewGenerator(o Options) *Generator {
 		TemplateDir:     o.TemplateDir,
 		Verbose:         o.Verbose,
 		ContinueOnError: o.ContinueOnError,
+		Logger:          o.Logger,
 
 		types:    new(protoregistry.Types),
 		files:    make(map[string]*protogen.File),
@@ -67,7 +73,15 @@ func (g *Generator) Generate(gen *protogen.Plugin) error {
 
 func (g *Generator) logVerbose(args ...interface{}) {
 	if g.Verbose {
-		fmt.Fprintln(os.Stderr, args...)
+		a := append([]interface{}{"✨protoc-gen-anything✨"}, args...)
+		g.Logger.Sugar().Infoln(a...)
+	}
+}
+
+func (g *Generator) logVerbosef(format string, args ...interface{}) {
+	if g.Verbose {
+		format = "✨protoc-gen-anything✨ " + format
+		g.Logger.Sugar().Infof(format, args...)
 	}
 }
 
@@ -197,62 +211,85 @@ func (g *Generator) generateForNestedMessage(f *protogen.File, parentMsg *protog
 }
 
 func (g *Generator) applyTemplates(entityType string, file *protogen.File, service *protogen.Service, method *protogen.Method, message *protogen.Message, enum *protogen.Enum, oneof *protogen.Oneof, field *protogen.Field, context any, tFS fs.FS, gen *protogen.Plugin) error {
-	var err error
+	g.Logger.Info("Applying templates", zap.String("entityType", entityType))
 
-	// Walk through the template directory for each specific entity type
-	err = fs.WalkDir(tFS, ".", func(path string, d fs.DirEntry, err error) error {
+	err := fs.WalkDir(tFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
+			g.Logger.Error("Failed to walk template dir", zap.Error(err))
 			return fmt.Errorf("failed to walk template dir: %w", err)
 		}
 		if d.IsDir() {
 			return nil
 		}
 
-		// Parse the template path to identify placeholders
+		g.Logger.Debug("Processing potential template", zap.String("path", path))
+
 		metadata := extractMetadataFromPath(path)
 		if metadata["type"] != entityType {
+			g.Logger.Debug("Skipping template, wrong entity type", zap.String("path", path), zap.String("expectedType", entityType), zap.String("actualType", metadata["type"]))
 			return nil
 		}
 
-		// Generate the output file path by replacing placeholders with actual values
 		outputFileName, err := expandPath(path, g.funcMap(), file, service, method, message, enum, oneof, field)
 		if err != nil {
+			g.Logger.Error("Failed to expand path", zap.Error(err), zap.String("path", path))
 			return fmt.Errorf("failed to expand path: %w", err)
 		}
-		g.logVerbose("generating file:", outputFileName)
-		g.logVerbose("numext:", g.types.NumExtensions())
+
+		g.Logger.Info("Generating file", zap.String("outputFileName", outputFileName))
 		generatedFile := gen.NewGeneratedFile(outputFileName, "")
 
-		// Parse the template
+		templateContent, err := fs.ReadFile(tFS, path)
+		if err != nil {
+			g.Logger.Error("Failed to read template file", zap.Error(err), zap.String("path", path))
+			return fmt.Errorf("failed to read template file: %w", err)
+		}
+
+		g.Logger.Debug("Template content", zap.String("path", path), zap.String("content", string(templateContent)))
+
 		tmpl, err := template.New(path).
 			Funcs(sprig.TxtFuncMap()).
 			Funcs(g.funcMap()).
-			ParseFS(tFS, path)
+			Parse(string(templateContent))
 		if err != nil {
+			g.Logger.Error("Failed to parse template", zap.Error(err), zap.String("path", path))
 			return fmt.Errorf("failed to parse template: %w", err)
 		}
 
-		// Apply the template with the context
-		//g.logVerbose("applying template:", path, "for", metadata["type"], outputFileName)
+		g.Logger.Debug("Template parsed successfully",
+			zap.String("path", path),
+			zap.Strings("definedTemplates", strings.Split(tmpl.DefinedTemplates(), "; ")))
+
+		g.Logger.Debug("Executing template",
+			zap.String("path", path),
+			zap.String("entityType", metadata["type"]),
+			zap.String("outputFileName", outputFileName))
+
 		err = tmpl.Execute(generatedFile, context)
 		if err != nil {
-			err = fmt.Errorf("failed to execute template: %w", err)
+			g.Logger.Error("Failed to execute template",
+				zap.Error(err),
+				zap.String("path", path),
+				zap.String("outputFileName", outputFileName),
+				zap.Any("context", context))
 			if g.ContinueOnError {
-				fmt.Fprintln(os.Stderr, err)
 				return nil
 			}
 			return err
 		}
+
+		g.Logger.Info("Successfully generated file", zap.String("outputFileName", outputFileName))
 		return nil
 	})
+
 	if err != nil {
-		err = fmt.Errorf("failed to apply specific templates: %w", err)
+		g.Logger.Error("Failed to apply templates", zap.Error(err), zap.Bool("continueOnError", g.ContinueOnError))
 		if g.ContinueOnError {
-			fmt.Fprintln(os.Stderr, err)
 			return nil
 		}
 		return err
 	}
+
 	return nil
 }
 
@@ -281,6 +318,9 @@ func extractMetadataFromPath(path string) map[string]string {
 	} else if strings.Contains(path, "{{.Field.") {
 		metadata["type"] = "field"
 	}
+
+	// Log the extracted metadata
+	log.Printf("Extracted metadata for path %s: %v", path, metadata)
 
 	return metadata
 }
