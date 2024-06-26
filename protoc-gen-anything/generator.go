@@ -215,7 +215,7 @@ func (g *Generator) applyTemplates(entityType string, file *protogen.File, servi
 		}
 
 		// Generate the output file path by replacing placeholders with actual values
-		outputFileName, err := expandPath(path, file, service, method, message, enum, oneof, field)
+		outputFileName, err := expandPath(path, g.funcMap(), file, service, method, message, enum, oneof, field)
 		if err != nil {
 			return fmt.Errorf("failed to expand path: %w", err)
 		}
@@ -285,8 +285,8 @@ func extractMetadataFromPath(path string) map[string]string {
 	return metadata
 }
 
-func expandPath(pathTemplate string, file *protogen.File, service *protogen.Service, method *protogen.Method, message *protogen.Message, enum *protogen.Enum, oneof *protogen.Oneof, field *protogen.Field) (string, error) {
-	tmpl, err := template.New("path").Parse(pathTemplate)
+func expandPath(pathTemplate string, funcMap template.FuncMap, file *protogen.File, service *protogen.Service, method *protogen.Method, message *protogen.Message, enum *protogen.Enum, oneof *protogen.Oneof, field *protogen.Field) (string, error) {
+	tmpl, err := template.New("path").Funcs(funcMap).Parse(pathTemplate)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
