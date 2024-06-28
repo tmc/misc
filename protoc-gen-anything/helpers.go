@@ -94,6 +94,10 @@ func (g *Generator) funcMap() template.FuncMap {
 		"messageExtension": g.helperMessageExtension,
 		"fieldExtension":   g.helperFieldExtension,
 		"fieldByName":      g.helperFieldByName,
+		"isNotEmpty":       g.helperIsNotEmpty,
+		"isValidGoType":    g.helperIsValidGoType,
+		"hasJSONFields":    g.helperHasJSONFields,
+		"hasField":         g.helperHasField,
 	}
 }
 
@@ -121,7 +125,7 @@ func (g *Generator) helperMethodExtension(method *protogen.Method, path string) 
 	return extensions[path]
 }
 
-func (g *Generator) helperMessageExtension(message *protogen.Message, path string) any {
+func (g *Generator) helperMessageExtension(message protogen.Message, path string) any {
 	options := message.Desc.Options().(*descriptorpb.MessageOptions)
 	if options == nil {
 		return nil
@@ -169,11 +173,77 @@ func (g *Generator) helperFieldExtension(field *protogen.Field, path string) any
 	return extensions[path]
 }
 
-// gets a value of a field by name
-func (g *Generator) helperFieldByName(message dynamicpb.Message, name string) any {
+// gets a value of a field by name, returns nil if the field is not found or empty
+func (g *Generator) helperFieldByName(message dynamicpb.Message, name string) protoreflect.Value {
 	fd := message.Descriptor().Fields().ByName(protoreflect.Name(name))
 	if fd == nil {
-		return nil
+		return protoreflect.Value{}
 	}
-	return message.Get(fd)
+	val := message.Get(fd)
+	if !val.IsValid() {
+		return protoreflect.Value{}
+	}
+	if val.String() == "" {
+		return protoreflect.Value{}
+
+	}
+	return val
+}
+
+func (g *Generator) helperIsNotEmpty(value interface{}) bool {
+	if value == nil {
+		return false
+	}
+	switch v := value.(type) {
+	case string:
+		return v != ""
+	case bool:
+		return v
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+		return v != 0
+	case *dynamicpb.Message:
+		return v != nil && v.ProtoReflect().IsValid()
+	default:
+		return true
+	}
+}
+
+func (g *Generator) helperIsValidGoType(value interface{}) bool {
+	if value == nil {
+		return false
+	}
+	switch v := value.(type) {
+	case string:
+		return v != ""
+	case *dynamicpb.Message:
+		return v != nil && v.ProtoReflect().IsValid()
+	default:
+		return false
+	}
+}
+
+func (g *Generator) helperHasJSONFields(message *protogen.Message) bool {
+	for _, field := range message.Fields {
+		entField := g.helperFieldExtension(field, "metadata.v1.ent_field")
+		if entField != nil {
+			ef, ok := entField.(dynamicpb.Message)
+			if !ok {
+				continue
+			}
+			fieldType := g.helperFieldByName(ef, "type")
+			if fieldType.String() == "JSON" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (g *Generator) helperHasField(message *protogen.Message, fieldName string) bool {
+	for _, field := range message.Fields {
+		if field.GoName == fieldName {
+			return true
+		}
+	}
+	return false
 }
