@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"log"
 	"os"
 	"strings"
 	"text/template"
@@ -18,6 +17,11 @@ import (
 	"google.golang.org/protobuf/types/pluginpb"
 )
 
+type GeneratedFileBuffer struct {
+	Content    bytes.Buffer
+	IsFirstGen bool
+}
+
 // Generator holds configuration for an invocation of this tool
 type Generator struct {
 	TemplateDir     string
@@ -28,13 +32,14 @@ type Generator struct {
 
 	types *protoregistry.Types
 
-	files    map[string]*protogen.File
-	services map[string]*protogen.Service
-	methods  map[string]*protogen.Method
-	messages map[string]*protogen.Message
-	enums    map[string]*protogen.Enum
-	oneofs   map[string]*protogen.Oneof
-	fields   map[string]*protogen.Field
+	files          map[string]*protogen.File
+	services       map[string]*protogen.Service
+	methods        map[string]*protogen.Method
+	messages       map[string]*protogen.Message
+	enums          map[string]*protogen.Enum
+	oneofs         map[string]*protogen.Oneof
+	fields         map[string]*protogen.Field
+	generatedFiles map[string]*GeneratedFileBuffer
 }
 
 type Options struct {
@@ -52,14 +57,15 @@ func NewGenerator(o Options) *Generator {
 		ContinueOnError: o.ContinueOnError,
 		Logger:          o.Logger,
 
-		types:    new(protoregistry.Types),
-		files:    make(map[string]*protogen.File),
-		services: make(map[string]*protogen.Service),
-		methods:  make(map[string]*protogen.Method),
-		messages: make(map[string]*protogen.Message),
-		enums:    make(map[string]*protogen.Enum),
-		oneofs:   make(map[string]*protogen.Oneof),
-		fields:   make(map[string]*protogen.Field),
+		types:          new(protoregistry.Types),
+		files:          make(map[string]*protogen.File),
+		services:       make(map[string]*protogen.Service),
+		methods:        make(map[string]*protogen.Method),
+		messages:       make(map[string]*protogen.Message),
+		enums:          make(map[string]*protogen.Enum),
+		oneofs:         make(map[string]*protogen.Oneof),
+		fields:         make(map[string]*protogen.Field),
+		generatedFiles: make(map[string]*GeneratedFileBuffer),
 	}
 }
 
@@ -68,19 +74,20 @@ func (g *Generator) Generate(gen *protogen.Plugin) error {
 	if err := g.walkSchemas(gen); err != nil {
 		return err
 	}
-	return g.generate(gen)
+	if err := g.generate(gen); err != nil {
+		return err
+	}
+	return g.finalizeGeneration(gen)
 }
 
 func (g *Generator) logVerbose(args ...interface{}) {
 	if g.Verbose {
-		a := append([]interface{}{"✨protoc-gen-anything✨"}, args...)
-		g.Logger.Sugar().Infoln(a...)
+		g.Logger.Sugar().Info(args...)
 	}
 }
 
 func (g *Generator) logVerbosef(format string, args ...interface{}) {
 	if g.Verbose {
-		format = "✨protoc-gen-anything✨ " + format
 		g.Logger.Sugar().Infof(format, args...)
 	}
 }
@@ -97,189 +104,121 @@ func (g *Generator) generate(gen *protogen.Plugin) error {
 		if !f.Generate {
 			continue
 		}
-		// Generate code for file level
-		err = g.generateForFile(f, tFS, gen)
-		if err != nil {
+		if err := g.generateForFile(f, tFS, gen); err != nil {
 			return err
-		}
-		for _, s := range f.Services {
-			// Generate code for service level
-			err = g.generateForService(f, s, tFS, gen)
-			if err != nil {
-				return err
-			}
-			for _, m := range s.Methods {
-				// Generate code for method level
-				err = g.generateForMethod(f, s, m, tFS, gen)
-				if err != nil {
-					return err
-				}
-			}
-		}
-		for _, msg := range f.Messages {
-			// Generate code for message level
-			err = g.generateForMessage(f, msg, tFS, gen)
-			if err != nil {
-				return err
-			}
-			for _, oneof := range msg.Oneofs {
-				// Generate code for oneof level
-				err = g.generateForOneof(f, msg, oneof, tFS, gen)
-				if err != nil {
-					return err
-				}
-			}
-			for _, field := range msg.Fields {
-				// Generate code for field level
-				err = g.generateForField(f, msg, field, tFS, gen)
-				if err != nil {
-					return err
-				}
-			}
-			for _, enum := range msg.Enums {
-				// Generate code for enum level
-				err = g.generateForEnum(f, enum, tFS, gen)
-				if err != nil {
-					return err
-				}
-			}
-			// Generate code for nested message level:
-			for _, nestedMsg := range msg.Messages {
-				err = g.generateForNestedMessage(f, msg, nestedMsg, tFS, gen)
-				if err != nil {
-					return err
-				}
-			}
-		}
-		for _, enum := range f.Enums {
-			// Generate code for enum level
-			err = g.generateForEnum(f, enum, tFS, gen)
-			if err != nil {
-				return err
-			}
 		}
 	}
 	return nil
 }
 
 func (g *Generator) generateForFile(f *protogen.File, tFS fs.FS, gen *protogen.Plugin) error {
-	//g.logVerbose("generating for file:", f.Desc.Path())
-	context := determineContext("file", f, nil, nil, nil, nil, nil, nil)
-	return g.applyTemplates("file", f, nil, nil, nil, nil, nil, nil, context, tFS, gen)
+	if err := g.applyTemplates("file", f, nil, nil, nil, nil, nil, nil, tFS, gen); err != nil {
+		return err
+	}
+
+	for _, s := range f.Services {
+		if err := g.generateForService(f, s, tFS, gen); err != nil {
+			return err
+		}
+	}
+
+	for _, msg := range f.Messages {
+		if err := g.generateForMessage(f, msg, tFS, gen); err != nil {
+			return err
+		}
+	}
+
+	for _, enum := range f.Enums {
+		if err := g.generateForEnum(f, enum, tFS, gen); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (g *Generator) generateForService(f *protogen.File, s *protogen.Service, tFS fs.FS, gen *protogen.Plugin) error {
-	//g.logVerbose("generating for service:", s.GoName)
-	context := determineContext("service", f, s, nil, nil, nil, nil, nil)
-	return g.applyTemplates("service", f, s, nil, nil, nil, nil, nil, context, tFS, gen)
+	if err := g.applyTemplates("service", f, s, nil, nil, nil, nil, nil, tFS, gen); err != nil {
+		return err
+	}
+
+	for _, m := range s.Methods {
+		if err := g.generateForMethod(f, s, m, tFS, gen); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (g *Generator) generateForMethod(f *protogen.File, s *protogen.Service, m *protogen.Method, tFS fs.FS, gen *protogen.Plugin) error {
-	//g.logVerbose("generating for method:", m.GoName)
-	context := determineContext("method", f, s, m, nil, nil, nil, nil)
-	return g.applyTemplates("method", f, s, m, nil, nil, nil, nil, context, tFS, gen)
+	return g.applyTemplates("method", f, s, m, nil, nil, nil, nil, tFS, gen)
 }
 
 func (g *Generator) generateForMessage(f *protogen.File, msg *protogen.Message, tFS fs.FS, gen *protogen.Plugin) error {
-	//g.logVerbose("generating for message:", msg.GoIdent.GoName)
-	context := determineContext("message", f, nil, nil, msg, nil, nil, nil)
-	return g.applyTemplates("message", f, nil, nil, msg, nil, nil, nil, context, tFS, gen)
+	if err := g.applyTemplates("message", f, nil, nil, msg, nil, nil, nil, tFS, gen); err != nil {
+		return err
+	}
+
+	for _, oneof := range msg.Oneofs {
+		if err := g.generateForOneof(f, msg, oneof, tFS, gen); err != nil {
+			return err
+		}
+	}
+
+	for _, field := range msg.Fields {
+		if err := g.generateForField(f, msg, field, tFS, gen); err != nil {
+			return err
+		}
+	}
+
+	for _, enum := range msg.Enums {
+		if err := g.generateForEnum(f, enum, tFS, gen); err != nil {
+			return err
+		}
+	}
+
+	for _, nestedMsg := range msg.Messages {
+		if err := g.generateForNestedMessage(f, msg, nestedMsg, tFS, gen); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (g *Generator) generateForEnum(f *protogen.File, enum *protogen.Enum, tFS fs.FS, gen *protogen.Plugin) error {
-	//g.logVerbose("generating for enum:", enum.GoIdent.GoName)
-	context := determineContext("enum", f, nil, nil, nil, enum, nil, nil)
-	return g.applyTemplates("enum", f, nil, nil, nil, enum, nil, nil, context, tFS, gen)
+	return g.applyTemplates("enum", f, nil, nil, nil, enum, nil, nil, tFS, gen)
 }
 
 func (g *Generator) generateForOneof(f *protogen.File, msg *protogen.Message, oneof *protogen.Oneof, tFS fs.FS, gen *protogen.Plugin) error {
-	//g.logVerbose("generating for oneof:", oneof.GoName)
-	context := determineContext("oneof", f, nil, nil, msg, nil, oneof, nil)
-	return g.applyTemplates("oneof", f, nil, nil, msg, nil, oneof, nil, context, tFS, gen)
+	return g.applyTemplates("oneof", f, nil, nil, msg, nil, oneof, nil, tFS, gen)
 }
 
 func (g *Generator) generateForField(f *protogen.File, msg *protogen.Message, field *protogen.Field, tFS fs.FS, gen *protogen.Plugin) error {
-	//g.logVerbose("generating for field:", field.GoName)
-	context := determineContext("field", f, nil, nil, msg, nil, nil, field)
-	return g.applyTemplates("field", f, nil, nil, msg, nil, nil, field, context, tFS, gen)
+	return g.applyTemplates("field", f, nil, nil, msg, nil, nil, field, tFS, gen)
 }
-
 func (g *Generator) generateForNestedMessage(f *protogen.File, parentMsg *protogen.Message, nestedMsg *protogen.Message, tFS fs.FS, gen *protogen.Plugin) error {
-	//g.logVerbose("generating for nested message:", nestedMsg.GoIdent.GoName)
-	context := determineContext("nestedMessage", f, nil, nil, nestedMsg, nil, nil, nil)
-	return g.applyTemplates("nestedMessage", f, nil, nil, nestedMsg, nil, nil, nil, context, tFS, gen)
+	return g.applyTemplates("nestedMessage", f, nil, nil, nestedMsg, nil, nil, nil, tFS, gen)
 }
 
-func (g *Generator) applyTemplates(entityType string, file *protogen.File, service *protogen.Service, method *protogen.Method, message *protogen.Message, enum *protogen.Enum, oneof *protogen.Oneof, field *protogen.Field, context any, tFS fs.FS, gen *protogen.Plugin) error {
-	g.Logger.Info("Applying templates", zap.String("entityType", entityType))
+func (g *Generator) applyTemplates(entityType string, file *protogen.File, service *protogen.Service, method *protogen.Method, message *protogen.Message, enum *protogen.Enum, oneof *protogen.Oneof, field *protogen.Field, tFS fs.FS, gen *protogen.Plugin) error {
+	// g.Logger.Debug("Applying templates for entity type", zap.String("entityType", entityType))
 
 	err := fs.WalkDir(tFS, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			g.Logger.Error("Failed to walk template dir", zap.Error(err))
 			return fmt.Errorf("failed to walk template dir: %w", err)
 		}
 		if d.IsDir() {
 			return nil
 		}
 
-		g.Logger.Debug("Processing potential template", zap.String("path", path))
-
 		metadata := extractMetadataFromPath(path)
 		if metadata["type"] != entityType {
-			g.Logger.Debug("Skipping template, wrong entity type", zap.String("path", path), zap.String("expectedType", entityType), zap.String("actualType", metadata["type"]))
 			return nil
 		}
 
-		outputFileName, err := expandPath(path, g.funcMap(), file, service, method, message, enum, oneof, field)
-		if err != nil {
-			g.Logger.Error("Failed to expand path", zap.Error(err), zap.String("path", path))
-			return fmt.Errorf("failed to expand path: %w", err)
-		}
-
-		g.Logger.Info("Generating file", zap.String("outputFileName", outputFileName))
-		generatedFile := gen.NewGeneratedFile(outputFileName, "")
-
-		templateContent, err := fs.ReadFile(tFS, path)
-		if err != nil {
-			g.Logger.Error("Failed to read template file", zap.Error(err), zap.String("path", path))
-			return fmt.Errorf("failed to read template file: %w", err)
-		}
-
-		g.Logger.Debug("Template content", zap.String("path", path), zap.String("content", string(templateContent)))
-
-		tmpl, err := template.New(path).
-			Funcs(sprig.TxtFuncMap()).
-			Funcs(g.funcMap()).
-			Parse(string(templateContent))
-		if err != nil {
-			g.Logger.Error("Failed to parse template", zap.Error(err), zap.String("path", path))
-			return fmt.Errorf("failed to parse template: %w", err)
-		}
-
-		g.Logger.Debug("Template parsed successfully",
-			zap.String("path", path),
-			zap.Strings("definedTemplates", strings.Split(tmpl.DefinedTemplates(), "; ")))
-
-		g.Logger.Debug("Executing template",
-			zap.String("path", path),
-			zap.String("entityType", metadata["type"]),
-			zap.String("outputFileName", outputFileName))
-
-		err = tmpl.Execute(generatedFile, context)
-		if err != nil {
-			g.Logger.Error("Failed to execute template",
-				zap.Error(err),
-				zap.String("path", path),
-				zap.String("outputFileName", outputFileName),
-				zap.Any("context", context))
-			if g.ContinueOnError {
-				return nil
-			}
-			return err
-		}
-
-		g.Logger.Info("Successfully generated file", zap.String("outputFileName", outputFileName))
-		return nil
+		return g.processTemplate(path, file, service, method, message, enum, oneof, field, tFS, gen)
 	})
 
 	if err != nil {
@@ -293,81 +232,194 @@ func (g *Generator) applyTemplates(entityType string, file *protogen.File, servi
 	return nil
 }
 
-func extractMetadataFromPath(path string) map[string]string {
-	metadata := map[string]string{
-		"type": "file", // Default to "file" if no metadata is found
+func (g *Generator) processTemplate(path string, file *protogen.File, service *protogen.Service, method *protogen.Method, message *protogen.Message, enum *protogen.Enum, oneof *protogen.Oneof, field *protogen.Field, tFS fs.FS, gen *protogen.Plugin) error {
+	outputFileName, err := g.expandPath(path, file, service, method, message, enum, oneof, field)
+	if err != nil {
+		g.Logger.Error("Failed to expand path", zap.Error(err), zap.String("path", path))
+		return fmt.Errorf("failed to expand path: %w", err)
 	}
 
-	// Dynamically determine the entity type based on the placeholders in the path
-	if strings.Contains(path, "{{.Method.") {
-		metadata["type"] = "method"
-	} else if strings.Contains(path, "{{.Message.") {
-		if strings.Count(path, "{{.Message.") > 1 {
-			metadata["type"] = "nestedMessage"
-		} else {
-			metadata["type"] = "message"
-		}
-	} else if strings.Contains(path, "{{.Oneof.") {
-		metadata["type"] = "oneof"
-	} else if strings.Contains(path, "{{.Enum.") {
-		metadata["type"] = "enum"
-	} else if strings.Contains(path, "{{.Service.") {
-		metadata["type"] = "service"
-	} else if strings.Contains(path, "{{.File.") {
-		metadata["type"] = "file"
-	} else if strings.Contains(path, "{{.Field.") {
-		metadata["type"] = "field"
+	// Skip if the outputFileName is just a directory
+	if outputFileName == "" || outputFileName[len(outputFileName)-1] == '/' {
+		//g.Logger.Debug("Skipping empty or directory-only output", zap.String("outputFileName", outputFileName))
+		return nil
 	}
 
-	// Log the extracted metadata
-	log.Printf("Extracted metadata for path %s: %v", path, metadata)
+	g.Logger.Info("Generating file", zap.String("outputFileName", outputFileName))
 
-	return metadata
+	fileBuffer, exists := g.generatedFiles[outputFileName]
+	if !exists {
+		fileBuffer = &GeneratedFileBuffer{IsFirstGen: true}
+		g.generatedFiles[outputFileName] = fileBuffer
+	}
+
+	context := g.determineContext(file, service, method, message, enum, oneof, field)
+	context.IsFirstGeneration = fileBuffer.IsFirstGen
+	context.OutputFileName = outputFileName
+	context.TemplateFileName = path
+
+	// use protojson:
+	g.Logger.Debug("processTemplate",
+		zap.String("path", path),
+	)
+
+	templateContent, err := g.readTemplateContent(tFS, path)
+	if err != nil {
+		return err
+	}
+
+	tmpl, err := g.parseTemplate(path, templateContent)
+	if err != nil {
+		return err
+	}
+
+	var tempBuffer bytes.Buffer
+	err = tmpl.Execute(&tempBuffer, context)
+	if err != nil {
+		g.Logger.Error("Failed to execute template",
+			zap.Error(err),
+			zap.String("path", path),
+			zap.String("outputFileName", outputFileName))
+		return err
+	}
+
+	behavior := g.detectTemplateBehavior(tempBuffer.String())
+
+	if err := g.applyTemplateBehavior(behavior, fileBuffer, &tempBuffer); err != nil {
+		return err
+	}
+
+	fileBuffer.IsFirstGen = false
+
+	g.Logger.Info("Successfully processed template for file", zap.String("outputFileName", outputFileName))
+
+	return nil
 }
 
-func expandPath(pathTemplate string, funcMap template.FuncMap, file *protogen.File, service *protogen.Service, method *protogen.Method, message *protogen.Message, enum *protogen.Enum, oneof *protogen.Oneof, field *protogen.Field) (string, error) {
-	tmpl, err := template.New("path").Funcs(funcMap).Parse(pathTemplate)
+func (g *Generator) expandPath(pathTemplate string, file *protogen.File, service *protogen.Service, method *protogen.Method, message *protogen.Message, enum *protogen.Enum, oneof *protogen.Oneof, field *protogen.Field) (string, error) {
+	tmpl, err := template.New("path").
+		Funcs(sprig.TxtFuncMap()).
+		Funcs(g.funcMap()).
+		Parse(pathTemplate)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	// Create a context with all possible entities
-	context := map[string]interface{}{
-		"File":    file,
-		"Service": service,
-		"Method":  method,
-		"Message": message,
-		"Enum":    enum,
-		"Oneof":   oneof,
-		"Field":   field,
-	}
+	context := g.determineContext(file, service, method, message, enum, oneof, field)
 
-	// Execute the template with the provided context
 	var buf bytes.Buffer
 	err = tmpl.Execute(&buf, context)
 	if err != nil {
 		return "", fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	return cleanPath(buf.String()), nil
+	return g.cleanPath(buf.String()), nil
 }
 
-// cleanPath removes .tmpl extension and replaces double slashes with single slash
-func cleanPath(path string) string {
+func (g *Generator) cleanPath(path string) string {
 	return strings.TrimSuffix(path, ".tmpl")
 }
 
-func determineContext(entityType string, file *protogen.File, service *protogen.Service, method *protogen.Method, message *protogen.Message, enum *protogen.Enum, oneof *protogen.Oneof, field *protogen.Field) map[string]interface{} {
-	context := map[string]interface{}{
-		"File":    file,
-		"Service": service,
-		"Method":  method,
-		"Message": message,
-		"Enum":    enum,
-		"Oneof":   oneof,
-		"Field":   field,
+type RenderContext struct {
+	TemplateFileName  string // The name of the template file being rendered.
+	OutputFileName    string // The name of the output file being generated.
+	IsFirstGeneration bool   // Whether this is the first generation of the file path.
+
+	File    *protogen.File
+	Service *protogen.Service
+	Method  *protogen.Method
+	Message *protogen.Message
+	Enum    *protogen.Enum
+	Oneof   *protogen.Oneof
+	Field   *protogen.Field
+}
+
+func (g *Generator) determineContext(file *protogen.File, service *protogen.Service, method *protogen.Method, message *protogen.Message, enum *protogen.Enum, oneof *protogen.Oneof, field *protogen.Field) RenderContext {
+	return RenderContext{
+		File:    file,
+		Service: service,
+		Method:  method,
+		Message: message,
+		Enum:    enum,
+		Oneof:   oneof,
+		Field:   field,
 	}
-	return context
+}
+
+// deref returns the underlying type of a pointer type, or false
+func deref[T any](p *T) any {
+	if p == nil {
+		return false
+	}
+	return *p
+}
+
+func (g *Generator) readTemplateContent(tFS fs.FS, path string) (string, error) {
+	templateContent, err := fs.ReadFile(tFS, path)
+	if err != nil {
+		g.Logger.Error("Failed to read template file", zap.Error(err), zap.String("path", path))
+		return "", fmt.Errorf("failed to read template file: %w", err)
+	}
+
+	g.Logger.Debug("Template content", zap.String("path", path), zap.String("content", string(templateContent)))
+	return string(templateContent), nil
+}
+
+func (g *Generator) parseTemplate(path string, templateContent string) (*template.Template, error) {
+	tmpl, err := template.New(path).
+		Funcs(sprig.TxtFuncMap()).
+		Funcs(g.funcMap()).
+		Parse(templateContent)
+	if err != nil {
+		g.Logger.Error("Failed to parse template", zap.Error(err), zap.String("path", path))
+		return nil, fmt.Errorf("failed to parse template: %w", err)
+	}
+
+	g.Logger.Debug("Template parsed successfully",
+		zap.String("path", path),
+		zap.Strings("definedTemplates", strings.Split(tmpl.DefinedTemplates(), "; ")))
+
+	return tmpl, nil
+}
+
+func (g *Generator) detectTemplateBehavior(content string) string {
+	if strings.Contains(content, "// GENERATION_BEHAVIOR: append") {
+		return "append"
+	} else if strings.Contains(content, "// GENERATION_BEHAVIOR: overwrite") {
+		return "overwrite"
+	} else if strings.Contains(content, "// GENERATION_BEHAVIOR: error_on_conflict") {
+		return "error_on_conflict"
+	}
+	return "append" // Default behavior
+}
+func (g *Generator) applyTemplateBehavior(behavior string, fileBuffer *GeneratedFileBuffer, tempBuffer *bytes.Buffer) error {
+	switch behavior {
+	case "append":
+		fileBuffer.Content.Write(tempBuffer.Bytes())
+	case "overwrite":
+		fileBuffer.Content.Reset()
+		fileBuffer.Content.Write(tempBuffer.Bytes())
+	case "error_on_conflict":
+		if !fileBuffer.IsFirstGen {
+			return fmt.Errorf("conflict detected for file")
+		}
+		fileBuffer.Content.Write(tempBuffer.Bytes())
+	default:
+		// Default to append
+		fileBuffer.Content.Write(tempBuffer.Bytes())
+	}
+	return nil
+}
+
+func (g *Generator) finalizeGeneration(gen *protogen.Plugin) error {
+	for outputFileName, buffer := range g.generatedFiles {
+		generatedFile := gen.NewGeneratedFile(outputFileName, "")
+		_, err := generatedFile.Write(buffer.Content.Bytes())
+		if err != nil {
+			return fmt.Errorf("failed to write generated file %s: %w", outputFileName, err)
+		}
+	}
+	return nil
 }
 
 func (g *Generator) walkSchemas(gen *protogen.Plugin) error {
@@ -382,7 +434,7 @@ func (g *Generator) walkSchemas(gen *protogen.Plugin) error {
 
 func (g *Generator) walkFile(f *protogen.File) {
 	if err := registerAllExtensions(g.types, f.Desc); err != nil {
-		fmt.Fprintln(os.Stderr, "Failed to register extensions:", err)
+		g.Logger.Error("Failed to register extensions", zap.Error(err))
 	}
 	for _, s := range f.Services {
 		g.walkService(s)
@@ -434,25 +486,25 @@ func (g *Generator) walkField(f *protogen.Field) {
 	g.fields[f.GoName] = f
 }
 
-func (o *Generator) getTemplateFS() (fs.FS, error) {
+func (g *Generator) getTemplateFS() (fs.FS, error) {
 	tFS := os.DirFS(".")
-	return fs.Sub(tFS, o.TemplateDir)
+	return fs.Sub(tFS, g.TemplateDir)
 }
 
-func (o *Generator) renderTemplate(templateName string, service *protogen.Service, g *protogen.GeneratedFile, funcMap template.FuncMap) error {
-	tFS, err := o.getTemplateFS()
+func (g *Generator) renderTemplate(templateName string, service *protogen.Service, generatedFile *protogen.GeneratedFile, funcMap template.FuncMap) error {
+	tFS, err := g.getTemplateFS()
 	if err != nil {
 		return err
 	}
 	t := template.New(templateName).
 		Funcs(sprig.TxtFuncMap()).
-		Funcs(o.funcMap()).
+		Funcs(g.funcMap()).
 		Funcs(funcMap)
 	t, err = t.ParseFS(tFS, templateName)
 	if err != nil {
 		return err
 	}
-	return t.Execute(g, service)
+	return t.Execute(generatedFile, service)
 }
 
 // registerAllExtensions recursively registers all extensions in the given descriptors.
@@ -471,7 +523,35 @@ func registerAllExtensions(extTypes *protoregistry.Types, descs interface {
 		if err := extTypes.RegisterExtension(dynamicpb.NewExtensionType(xds.Get(i))); err != nil {
 			return err
 		}
-		// fmt.Fprintln(os.Stderr, "Registered extension:", xds.Get(i).FullName(), "current:", extTypes.NumExtensions())
 	}
 	return nil
+}
+
+func extractMetadataFromPath(path string) map[string]string {
+	metadata := map[string]string{
+		"type": "file", // Default to "file" if no metadata is found
+	}
+
+	// Dynamically determine the entity type based on the placeholders in the path
+	if strings.Contains(path, "{{.Method.") {
+		metadata["type"] = "method"
+	} else if strings.Contains(path, "{{.Message.") {
+		if strings.Count(path, "{{.Message.") > 1 {
+			metadata["type"] = "nestedMessage"
+		} else {
+			metadata["type"] = "message"
+		}
+	} else if strings.Contains(path, "{{.Oneof.") {
+		metadata["type"] = "oneof"
+	} else if strings.Contains(path, "{{.Enum.") {
+		metadata["type"] = "enum"
+	} else if strings.Contains(path, "{{.Service.") {
+		metadata["type"] = "service"
+	} else if strings.Contains(path, "{{.File.") {
+		metadata["type"] = "file"
+	} else if strings.Contains(path, "{{.Field.") {
+		metadata["type"] = "field"
+	}
+
+	return metadata
 }

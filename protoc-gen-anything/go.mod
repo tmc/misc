@@ -4,9 +4,10 @@ go 1.22.3
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
-	github.com/google/go-cmp v0.5.5
+	github.com/google/go-cmp v0.6.0
 	github.com/huandu/xstrings v1.4.0
 	go.uber.org/zap v1.27.0
+	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
 	google.golang.org/protobuf v1.34.1
 )
 
