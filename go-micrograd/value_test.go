@@ -6,8 +6,12 @@ func ExampleDrawDot() {
 
 	a := NewValue(2.0, WithLabel("a"))
 	b := NewValue(-3.0, WithLabel("b"))
-	c := a.Add(b, WithLabel("c"))
-	dot := DrawDot(c)
+	c := NewValue(10.0, WithLabel("c"))
+	e := a.Mul(b, WithLabel("e"))
+	d := e.Add(c, WithLabel("d"))
+	f := NewValue(-2.0, WithLabel("f"))
+	L := d.Mul(f, WithLabel("L"))
+	dot := DrawDot(L)
 	fmt.Println(dot)
 	// Output:
 	// digraph {
