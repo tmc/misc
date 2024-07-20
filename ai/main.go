@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/tmc/langchaingo/llms"
-	"github.com/tmc/langchaingo/llms/openai"
+	"github.com/tmc/langchaingo/llms/anthropic"
 )
 
 var (
@@ -23,7 +23,7 @@ Output ONLY the exact command that would be run, not any additional information 
 
 func main() {
 	//llm, err := ollama.New(ollama.WithModel("llama3"))
-	llm, err := openai.New(openai.WithModel("gpt-4-turbo"))
+	llm, err := anthropic.New(anthropic.WithModel("claude-3-5-sonnet-20240620"))
 	if err != nil {
 		log.Fatal(err)
 	}
