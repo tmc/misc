@@ -10,8 +10,18 @@ func ExampleDrawDot() {
 	e := a.Mul(b, WithLabel("e"))
 	d := e.Add(c, WithLabel("d"))
 	f := NewValue(-2.0, WithLabel("f"))
-	L := d.Mul(f, WithLabel("L"))
-	dot := DrawDot(L)
+	L1 := d.Mul(f, WithLabel("L"))
+
+	a = NewValue(2.0, WithLabel("a"))
+	b = NewValue(-3.0, WithLabel("b"))
+	c = NewValue(10.0, WithLabel("c"))
+	e = a.Mul(b, WithLabel("e"))
+	d = e.Add(c, WithLabel("d"))
+	f = NewValue(-2.0, WithLabel("f"))
+	L2 := d.Mul(f, WithLabel("L"))
+
+	dot := DrawDot(L1)
+	dot = DrawDot(L2)
 	fmt.Println(dot)
 	// Output:
 	// digraph {
