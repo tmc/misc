@@ -95,9 +95,8 @@ fi
 # Function to get files respecting Git ignore rules
 get_files() {
     if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        # We're in a Git repository, use Git commands
+        # We're in a Git repository
         git ls-files --cached --others --exclude-standard
-        git ls-files --others --exclude-standard
     else
         # We're not in a Git repository, fall back to find
         find "$DIRECTORY" -type f
