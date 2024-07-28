@@ -109,7 +109,7 @@ while IFS= read -r file; do
     # Check if the file is in an excluded directory
     skip=false
     for dir in "${EXCLUDE_DIRS[@]}"; do
-        if [[ "$file" == *"/$dir/"* ]]; then
+        if [[ "$file" == *"/$dir/"* || "$file" == "$dir/"* ]]; then
             [ "$VERBOSE" = true ] && echo "Skipping excluded directory: $file"
             skip=true
             break
