@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"text/template"
 
 	"github.com/tmc/langchaingo/llms"
@@ -46,7 +47,7 @@ func run() error {
 
 	pluginInfo := PluginInfo{
 		Name:        args[0],
-		Description: args[1],
+		Description: strings.Join(args[1:], " "),
 		Language:    "go",
 		OutputDir:   filepath.Join(".", args[0]),
 		Version:     "0.1.0",
@@ -83,11 +84,9 @@ func run() error {
 
 	fw := &fileWriter{outputDir: pluginInfo.OutputDir}
 
-	prompt := fmt.Sprintf("Generate a ctx plugin with the following details:\nName: %s\nLanguage: %s\nDescription: %s\nCapabilities: %s\nVersion: %s\n\nProvide the content for the main source file, README.md, and LICENSE (MIT). For Go plugins, also include go.mod content. Implement the required flags (--capabilities, --plan-relevance) and include placeholder logic for the main plugin functionality.", pluginInfo.Name, pluginInfo.Language, pluginInfo.Description, pluginInfo.Capabilities, pluginInfo.Version)
-
 	messages := []llms.MessageContent{
 		llms.TextParts(llms.ChatMessageTypeSystem, sysPrompt.String()),
-		llms.TextParts(llms.ChatMessageTypeHuman, prompt),
+		llms.TextParts(llms.ChatMessageTypeHuman, strings.Join(args, " ")),
 	}
 
 	_, err = client.GenerateContent(ctx,
