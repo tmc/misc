@@ -1,4 +1,4 @@
-module github.com/tmc/misc //mkprog-ctx-plugin
+module github.com/tmc/misc/mkprog-ctx-plugin
 
 go 1.22.0
 
