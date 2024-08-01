@@ -12,14 +12,20 @@ IGNORED_FILES=("go.sum" "go.work.sum" "yarn.lock" "yarn.error.log" "package-lock
 COUNT_TOKENS=false
 VERBOSE=false
 USE_XML_TAGS=true
+INCLUDE_SVG=false
+INCLUDE_XML=false
 
 # Function to print usage information
 print_usage() {
-    echo "Usage: $0 [--count-tokens] [--exclude-dir <dir>] [--verbose] [--no-xml-tags] [<directory>]"
+    echo "Usage: $0 [--count-tokens] [--exclude-dir <dir>] [--verbose] [--no-xml-tags] [--exclude-svg] [--exclude-xml] [--include-svg] [--include-xml] [<directory>]"
     echo "  --count-tokens: Count tokens instead of outputting file contents"
     echo "  --exclude-dir <dir>: Add a directory to the list of directories to exclude"
     echo "  --verbose: Enable verbose output"
     echo "  --no-xml-tags: Disable XML tags around content"
+    echo "  --exclude-svg: Exclude SVG files from processing (default behavior)"
+    echo "  --exclude-xml: Exclude XML files from processing (default behavior)"
+    echo "  --include-svg: Explicitly include SVG files"
+    echo "  --include-xml: Explicitly include XML files"
     echo "  <directory>: Specify the directory to process (default: current directory)"
 }
 
@@ -40,6 +46,22 @@ while [[ $# -gt 0 ]]; do
             ;;
         --no-xml-tags)
             USE_XML_TAGS=false
+            shift
+            ;;
+        --exclude-svg)
+            INCLUDE_SVG=false
+            shift
+            ;;
+        --exclude-xml)
+            INCLUDE_XML=false
+            shift
+            ;;
+        --include-svg)
+            INCLUDE_SVG=true
+            shift
+            ;;
+        --include-xml)
+            INCLUDE_XML=true
             shift
             ;;
         -h|--help)
@@ -103,13 +125,40 @@ get_relative_path() {
     fi
 }
 
+# Function to check if a file is a text file and should be included
+is_text_file() {
+    local file="$1"
+    local mime_type=$(file -b --mime-type "$file")
+    local extension="${file##*.}"
+
+    if [[ "$mime_type" == text/* ]]; then
+        return 0
+    elif [[ "$mime_type" == application/x-empty ]] || [[ "$mime_type" == inode/x-empty ]]; then
+        return 0
+    elif [[ "$mime_type" == image/svg+xml ]] && $INCLUDE_SVG; then
+        return 0
+    elif [[ "$mime_type" == application/xml ]] && $INCLUDE_XML; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Function to process a file
 process_file() {
     local file="$1"
     local relative_path=$(get_relative_path "$file")
+    local mime_type=$(file -b --mime-type "$file")
+
+    if ! is_text_file "$file"; then
+        if $VERBOSE; then
+            echo "Skipping non-text file: $relative_path (MIME: $mime_type)" >&2
+        fi
+        return
+    fi
 
     if $VERBOSE; then
-        echo "Processing file: $relative_path" >&2
+        echo "Processing file: $relative_path (MIME: $mime_type)" >&2
     fi
 
     if $USE_XML_TAGS; then
@@ -127,7 +176,6 @@ process_file() {
         echo "</file>"
     fi
 }
-
 
 # Force off the use of XML tags if counting tokens:
 if $COUNT_TOKENS; then
