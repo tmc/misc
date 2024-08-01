@@ -118,7 +118,7 @@ process_file() {
 
     if $COUNT_TOKENS; then
         token_count=$(tokencount "$file")
-        echo "Token count for $relative_path: $token_count"
+        echo "$token_count $relative_path"
     else
         cat "$file"
     fi
@@ -127,6 +127,12 @@ process_file() {
         echo "</file>"
     fi
 }
+
+
+# Force off the use of XML tags if counting tokens:
+if $COUNT_TOKENS; then
+    USE_XML_TAGS=false
+fi
 
 # Main processing logic
 if $USE_XML_TAGS; then
