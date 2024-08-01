@@ -1,0 +1,4 @@
+#!/bin/bash
+p=${1}
+n=${2:-100}
+mkdir ${p}; cd ${p}; curl -s "https://api.github.com/orgs/${p}/repos?per_page=${n}&sort=pushed" | jq -r '.[].clone_url' | xargs -L1 -P10 git clone
