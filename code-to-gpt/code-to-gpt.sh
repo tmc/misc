@@ -14,6 +14,7 @@ VERBOSE=false
 USE_XML_TAGS=true
 INCLUDE_SVG=false
 INCLUDE_XML=false
+WC_LIMIT=10000
 
 # Function to print usage information
 print_usage() {
@@ -149,10 +150,18 @@ process_file() {
     local file="$1"
     local relative_path=$(get_relative_path "$file")
     local mime_type=$(file -b --mime-type "$file")
+    local line_count=$(wc -l < "$file")
 
     if ! is_text_file "$file"; then
         if $VERBOSE; then
             echo "Skipping non-text file: $relative_path (MIME: $mime_type)" >&2
+        fi
+        return
+    fi
+
+    if [ "$line_count" -gt "$WC_LIMIT" ]; then
+        if $VERBOSE; then
+            echo "Skipping large file: $relative_path ($line_count lines)" >&2
         fi
         return
     fi
