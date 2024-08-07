@@ -1,0 +1,107 @@
+#!/bin/bash
+# sandbox-exec -- uses docker to run operations in a sandbox
+# If the --copy flag is passed, the entire workspace is copied to a temporary directory, which is added as a git remote
+
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
+if [ -z "$repo_root" ]; then
+    echo "Error: Not in a git repository" >&2
+    exit 1
+fi
+
+COPY=false
+REMOVE=true
+NAMESPACE="sandbox-exec"
+
+usage() {
+    echo "Usage: $0 [OPTIONS] [COMMAND]"
+    echo "Options:"
+    echo "  --copy              Create a temporary copy of the workspace"
+    echo "  --keep              Don't remove the container after exit"
+    echo "  --namespace NAME    Use a custom namespace for git notes (default: sandbox-exec)"
+    echo "  -h, --help          Show this help message"
+    exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --copy)
+            COPY=true
+            shift
+            ;;
+        --keep)
+            REMOVE=false
+            shift
+            ;;
+        --namespace)
+            NAMESPACE="$2"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+WS_ROOT=${repo_root}
+export DOTFILES_HOME=${DOTFILES_HOME:-$HOME}
+
+# if we're in container already, use /workspace
+if [[ -f /.dockerenv ]]; then
+    WS_ROOT=/workspace
+    DOTFILES_HOME=/root
+fi
+
+current_path=$(pwd)
+relative_path=${current_path#$repo_root/}
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+dockerfile_path="$script_dir/.sandbox-exec.dockerfile"
+dockerfile_context="$script_dir"
+
+if ! docker build -t sandbox-exec -f "$dockerfile_path" "$dockerfile_context"; then
+    echo "Error: Failed to build Docker image" >&2
+    exit 1
+fi
+
+container_name="$NAMESPACE-$(date +%s)"
+
+if [ "$COPY" = true ]; then
+    tmpdir=$(mktemp -d)
+    cp -r "$WS_ROOT"/* "$tmpdir"
+    WS_ROOT=$tmpdir
+    git remote add $container_name "$WS_ROOT"
+fi
+
+git notes --ref="$NAMESPACE" append -m "$container_name"
+
+# Check if the alternative bashrc file exists
+if [ -f "${DOTFILES_HOME}/.bashrc_sandbox-exec" ]; then
+    BASHRC_MOUNT="-v ${DOTFILES_HOME}/.bashrc_sandbox-exec:/root/.bashrc:ro"
+else
+    BASHRC_MOUNT="-v ${DOTFILES_HOME}/.bashrc:/root/.bashrc:ro"
+fi
+
+docker_run_opts=""
+if [ "$REMOVE" = true ]; then
+    docker_run_opts="--rm"
+fi
+
+docker run $docker_run_opts -d -it \
+    --name "$container_name" \
+    -v "$WS_ROOT":/workspace \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "${DOTFILES_HOME}/.gitconfig":/root/.gitconfig:ro \
+    $BASHRC_MOUNT \
+    -e DOTFILES_HOME \
+    --net=host \
+    -w /workspace \
+    sandbox-exec:latest \
+    /bin/bash -c "cd '$relative_path' && exec /bin/bash \"$@\""
+
+echo "Container started as $container_name"
+docker attach "$container_name"

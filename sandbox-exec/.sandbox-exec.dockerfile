@@ -1,0 +1,12 @@
+# syntax=docker/dockerfile:1
+FROM golang:1-bookworm AS build
+
+RUN go install github.com/tmc/mkprog@latest
+RUN go install github.com/tmc/cgpt/cmd/cgpt@latest
+
+FROM golang:1-bookworm AS final
+
+COPY --from=docker /usr/local/bin/docker /usr/local/bin/docker
+COPY --from=docker/buildx-bin /buildx /usr/libexec/docker/cli-plugins/docker-buildx
+COPY --from=build /go/bin/mkprog /usr/local/bin/mkprog
+COPY --from=build /go/bin/cgpt /usr/local/bin/cgpt
