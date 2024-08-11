@@ -1,7 +1,7 @@
 #!/bin/bash
 # code-to-gpt.sh
 # This script preps content to feed into a large language model.
-# Read and print contents of text files in a directory, excluding specified directories and files
+# Read and print contents of text files in a directory, including untracked files by default
 
 set -euo pipefail
 
@@ -15,10 +15,11 @@ USE_XML_TAGS=true
 INCLUDE_SVG=false
 INCLUDE_XML=false
 WC_LIMIT=10000
+TRACKED_ONLY=false
 
 # Function to print usage information
 print_usage() {
-    echo "Usage: $0 [--count-tokens] [--exclude-dir <dir>] [--verbose] [--no-xml-tags] [--exclude-svg] [--exclude-xml] [--include-svg] [--include-xml] [<directory>]"
+    echo "Usage: $0 [--count-tokens] [--exclude-dir <dir>] [--verbose] [--no-xml-tags] [--exclude-svg] [--exclude-xml] [--include-svg] [--include-xml] [--tracked-only] [<directory>]"
     echo "  --count-tokens: Count tokens instead of outputting file contents"
     echo "  --exclude-dir <dir>: Add a directory to the list of directories to exclude"
     echo "  --verbose: Enable verbose output"
@@ -27,6 +28,7 @@ print_usage() {
     echo "  --exclude-xml: Exclude XML files from processing (default behavior)"
     echo "  --include-svg: Explicitly include SVG files"
     echo "  --include-xml: Explicitly include XML files"
+    echo "  --tracked-only: Only include tracked files in Git repositories"
     echo "  <directory>: Specify the directory to process (default: current directory)"
 }
 
@@ -63,6 +65,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --include-xml)
             INCLUDE_XML=true
+            shift
+            ;;
+        --tracked-only)
+            TRACKED_ONLY=true
             shift
             ;;
         -h|--help)
@@ -112,16 +118,22 @@ get_home_relative_path() {
     fi
 }
 
+realpath() {
+    [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+}
+
 # Function to get relative path from git root or specified directory
 get_relative_path() {
     local file="$1"
     if [ -d "$DIRECTORY/.git" ]; then
-        # If it's a git repository, get path relative to git root
-        git -C "$DIRECTORY" ls-files --full-name "$file"
+        # If it's a git repository, try to get path relative to git root
+        local git_root=$(git -C "$DIRECTORY" rev-parse --show-toplevel)
+        local abs_file=$(realpath "$file")
+        echo "${abs_file#$git_root/}"
     else
         # Otherwise, get path relative to specified directory
-        local abs_file=$(cd "$(dirname "$file")" && pwd)/$(basename "$file")
-        local abs_dir=$(cd "$DIRECTORY" && pwd)
+        local abs_file=$(realpath "$file")
+        local abs_dir=$(realpath "$DIRECTORY")
         echo "${abs_file#$abs_dir/}"
     fi
 }
@@ -199,14 +211,28 @@ fi
 
 if [ -d "$DIRECTORY/.git" ]; then
     if $VERBOSE; then
-        echo "Git repository detected. Using git ls-files." >&2
+        echo "Git repository detected. Using git commands." >&2
     fi
     cd "$DIRECTORY" || exit 1
-    git ls-files | while read -r file; do
-        if [ -f "$file" ] && ! is_ignored_file "$file" && ! is_excluded_dir "$(dirname "$file")"; then
-            process_file "$DIRECTORY/$file"
+    if $TRACKED_ONLY; then
+        if $VERBOSE; then
+            echo "Processing only tracked files." >&2
         fi
-    done
+        git ls-files | while read -r file; do
+            if [ -f "$file" ] && ! is_ignored_file "$file" && ! is_excluded_dir "$(dirname "$file")"; then
+                process_file "$DIRECTORY/$file"
+            fi
+        done
+    else
+        if $VERBOSE; then
+            echo "Processing all files, including untracked." >&2
+        fi
+        { git ls-files; git ls-files --others --exclude-standard; } | sort -u | while read -r file; do
+            if [ -f "$file" ] && ! is_ignored_file "$file" && ! is_excluded_dir "$(dirname "$file")"; then
+                process_file "$DIRECTORY/$file"
+            fi
+        done
+    fi
 else
     if $VERBOSE; then
         echo "No Git repository detected. Using find command." >&2
