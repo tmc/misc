@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION="0.2.12"
+VERSION="0.2.13"
 # Load plugins
 declare -A GIT_GOALS_COMMANDS
 

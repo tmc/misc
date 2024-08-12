@@ -162,3 +162,11 @@
 - Plugin command registration and dynamic command listing
 ### Changed
 - Updated main git-goals script to support plugin registration and execution
+
+## [0.2.13] - 2024-08-12
+### Added
+- Updated README.md with information about the plugin system
+- Updated USAGE.md with example of using a plugin
+### Changed
+- Performed code cleanup, replacing tabs with spaces
+- Updated version number to 0.2.13

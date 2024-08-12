@@ -117,3 +117,25 @@ To run the test suite and verify the functionality of git-goals, use the followi
 ```
 
 This will run through a series of tests to ensure all commands are working as expected.
+
+## Plugin System
+
+git-goals now supports a plugin system for extending functionality. To create a plugin:
+
+1. Create a new file in the  directory with a  extension.
+2. Implement your plugin logic.
+3. Use the  function to register new subcommands.
+
+Example plugin (plugins/hello_world.sh):
+
+```bash
+#!/bin/bash
+git_goals_hello_world() {
+    echo "Hello from the git-goals plugin system!"
+}
+
+git_goals_register_command "hello" "git_goals_hello_world" "Print a hello message"
+```
+
+Plugins are automatically loaded and new commands become available in the git-goals CLI.
+

@@ -125,3 +125,13 @@ Current Goals:
 - 20240101000002 (active, Priority: medium): Medium priority goal
 - 20240101000003 (active, Priority: low): Low priority goal
 ```
+
+## Using Plugins
+
+After installing a plugin, you can use its commands like any other git-goals subcommand:
+
+```
+$ git goals hello
+Hello from the git-goals plugin system!
+```
+
