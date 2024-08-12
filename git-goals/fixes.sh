@@ -1,79 +1,57 @@
 #!/usr/bin/bash
 
-# Implement sorting of goals by priority in the list command
-echo "Implementing priority sorting in git-goals-list..."
-cat << 'EOF' > git-goals-list
-#!/usr/bin/env bash
+# Update test suite for priority sorting feature
+echo "Updating test-git-goals.sh to include priority sorting tests..."
+cat << EOT >> test-git-goals.sh
 
-set -euo pipefail
+# Test priority sorting in list command
+echo "Testing priority sorting in list command..."
+high_priority_goal=$(git goals create "High priority goal")
+git goals prioritize \$high_priority_goal high
+medium_priority_goal=$(git goals create "Medium priority goal")
+git goals prioritize \$medium_priority_goal medium
+low_priority_goal=$(git goals create "Low priority goal")
+git goals prioritize \$low_priority_goal low
 
-source "$(dirname "$0")/git-goals-common.sh"
+sorted_list=$(git goals list)
+if [[ "\$sorted_list" == *"High priority goal"*"Medium priority goal"*"Low priority goal"* ]]; then
+    echo "Priority sorting test passed"
+else
+    echo "Priority sorting test failed"
+    exit 1
+fi
 
-load_config
-NOTE_REF_NAME=${NOTE_REF_NAME:-goals}
-DATE_FORMAT=${DATE_FORMAT:-%Y-%m-%d}
-MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}
+# Clean up test goals
+git goals delete \$high_priority_goal
+git goals delete \$medium_priority_goal
+git goals delete \$low_priority_goal
+EOT
 
-set -euo pipefail
-load_config
-check_args "$@"
+# Update README.md to reflect priority sorting feature
+echo "Updating README.md to include information about priority sorting..."
+sed -i '/## Features/a - Priority sorting in list command' README.md
 
-echo -e "\033[1mCurrent Goals:"
+# Update USAGE.md to include example of priority sorting
+echo "Updating USAGE.md to include example of priority sorting..."
+cat << EOT >> USAGE.md
 
-# Function to convert priority to numeric value for sorting
-priority_to_number() {
-    case "$1" in
-        high) echo 3 ;;
-        medium) echo 2 ;;
-        low) echo 1 ;;
-        *) echo 0 ;;
-    esac
-}
+## List goals sorted by priority
+\`\`\`
+$ git goals list
+Current Goals:
+- 20240101000001 (active, Priority: high): High priority goal
+- 20240101000002 (active, Priority: medium): Medium priority goal
+- 20240101000003 (active, Priority: low): Low priority goal
+\`\`\`
+EOT
 
-# Collect and sort goals
-goals=$(git notes --ref=goals list | while read -r note_ref commit_hash; do
-    goal_data=$(git notes --ref=goals show "$commit_hash")
-    id=$(echo -e "$goal_data" | grep "^id:" | cut -d" " -f2-)
-    status=$(echo -e "$goal_data" | grep "^status:" | cut -d" " -f2-)
-    description=$(echo -e "$goal_data" | grep "^description:" | cut -d" " -f2-)
-    priority=$(echo -e "$goal_data" | grep "^priority:" | cut -d" " -f2- || echo "Not set")
-    deadline=$(echo -e "$goal_data" | grep "^deadline:" | cut -d" " -f2- || echo "Not set")
-    priority_num=$(priority_to_number "$priority")
-    echo "$priority_num|$id|$status|$priority|$deadline|$description"
-done | sort -rn | cut -d'|' -f2-)
+# Update CONTRIBUTING.md to mention priority sorting feature
+echo "Updating CONTRIBUTING.md to mention priority sorting feature..."
+sed -i '/## Testing/a\- Ensure that priority sorting in the list command works correctly.' docs/CONTRIBUTING.md
 
-# Display sorted goals
-echo "$goals" | while IFS='|' read -r id status priority deadline description; do
-    echo -e "\033[1m- $id ($status, Priority: $priority, Deadline: $deadline): $description"
-done | head -n ${MAX_GOALS_DISPLAY:-100}
-EOF
+# Run tests to ensure everything is working correctly
+echo "Running tests..."
+./test-git-goals.sh
 
-chmod +x git-goals-list
-
-# Update CHANGELOG.md
-echo "Updating CHANGELOG.md..."
-cat << 'EOF' >> CHANGELOG.md
-
-## [0.2.9] - 2024-08-12
-### Added
-- Implemented sorting of goals by priority in the list command
-### Changed
-- Updated git-goals-list to sort goals by priority (high to low)
-- Minor improvements and code cleanup
-EOF
-
-# Update version number in main git-goals script
-echo "Updating version number in git-goals script..."
-sed -i 's/VERSION="0.2.8"/VERSION="0.2.9"/' git-goals
-
-# Update README.md
-echo "Updating README.md..."
-sed -i 's/git-goals v0.2.0/git-goals v0.2.9/' README.md
-
-# Commit changes
-echo "Committing changes..."
-git add git-goals-list CHANGELOG.md git-goals README.md
-git commit -m "Implement priority sorting in list command and prepare for version 0.2.9 release"
-
-echo "All tasks completed. Sleeping for 10 minutes..."
-sleep 600
+echo "All updates completed. Sleeping for 15 minutes before next iteration..."
+sleep 900
