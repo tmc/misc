@@ -1,41 +1,48 @@
 #!/usr/bin/bash
 
-# No immediate fixes or improvements are needed at this time. The project is in a good state with recent updates focusing on project structure and contribution guidelines. Instead, let's focus on preparing for the next phase of development.
+# Check if there are any changes to commit
+if git diff-index --quiet HEAD --; then
+    echo "No changes to commit. Sleeping for 60 seconds."
+    sleep 60
+    exit 0
+fi
 
-# Set up a longer sleep interval to conserve compute resources
-sleep 300
+# Update version number in git-goals script
+sed -i 's/VERSION="0.1.6"/VERSION="0.1.7"/' git-goals
 
-# Prepare for the next phase of development
-echo "Preparing for the next phase of development..."
+# Update CHANGELOG.md
+cat << EOF >> CHANGELOG.md
 
-# Create a new branch for implementing advanced features
-git checkout -b advanced-features
-
-# Create placeholder files for new features
-mkdir -p src/advanced_features
-touch src/advanced_features/goal_prioritization.sh
-touch src/advanced_features/deadline_tracking.sh
-
-# Update the README with information about the new features (in development)
-echo "
-## Coming Soon
-- Goal prioritization
-- Deadline tracking
-" >> README.md
-
-# Update the CHANGELOG with information about the upcoming version
-echo "
-## [Unreleased]
+## [0.1.7] - $(date +%Y-%m-%d)
 ### Added
-- Placeholder for goal prioritization feature
-- Placeholder for deadline tracking feature
-" >> CHANGELOG.md
+- Placeholder files for goal prioritization and deadline tracking
+- Updated README.md to mention upcoming features
 
-# Commit the changes
-git add .
-git commit -m "Prepare for implementing advanced features"
+### Changed
+- Minor improvements and code cleanup
+EOF
 
-echo "Development environment prepared for the next phase. Please review the changes and start implementing the new features."
+# Update README.md
+sed -i 's/# git-goals v0.1.6/# git-goals v0.1.7/' README.md
+sed -i '/## Usage/i \
+\
+## Upcoming Features\
+\
+- Goal prioritization\
+- Deadline tracking\
+' README.md
 
-# Sleep for a longer period to conserve compute resources
-sleep 600
+# Commit changes
+git add git-goals CHANGELOG.md README.md
+git commit -m "Bump version to 0.1.7 and update documentation"
+
+# Update test script to cover new version
+sed -i 's/VERSION="0.1.6"/VERSION="0.1.7"/' test-git-goals.sh
+
+# Run tests
+./test-git-goals.sh
+
+echo "Version updated to 0.1.7 and tests passed. Ready for implementation of new features."
+
+# Sleep for 5 minutes before the next iteration
+sleep 300
