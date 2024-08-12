@@ -1,1 +1,1 @@
-./make-fix-suggestion.sh "Implement error handling and improve output in git-goals-create script"
+./make-fix-suggestion.sh "Add more verbose logging to git-goals-create and git-goals-list scripts, and update the test script to properly parse their output"
