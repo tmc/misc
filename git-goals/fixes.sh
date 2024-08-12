@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to update all git-notes-* scripts
+# Script to update all git-goals-* scripts
 
 set -euo pipefail
 
@@ -33,8 +33,7 @@ description: $description
 status: active
 created_at: $(date -I)" HEAD
 
-echo "Goal created successfully:"
-echo "ID: $id"
+echo "Created new goal with ID: $id"
 echo "Description: $description"
 '
 
@@ -101,43 +100,6 @@ echo "$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
 echo "Updated goal $goal_id: $new_description"
 '
 
-# Update git-goals-complete
-update_script "git-goals-complete" '#!/bin/bash
-set -euo pipefail
-
-if [ $# -lt 1 ]; then
-    echo "Usage: git goals complete <goal_id> [rationale]"
-    exit 1
-fi
-
-goal_id="$1"
-rationale="${2:-}"
-
-commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
-
-if [ -z "$commit_hash" ]; then
-    echo "Error: Goal with ID $goal_id not found."
-    exit 1
-fi
-
-current_data=$(git notes --ref=goals show "$commit_hash")
-updated_data=$(echo "$current_data" | sed "s/^status:.*$/status: completed/")
-updated_data+="
-completed_at: $(date -I)"
-
-if [ -n "$rationale" ]; then
-    updated_data+="
-rationale: $rationale"
-fi
-
-echo "$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
-
-echo "Goal $goal_id marked as complete"
-if [ -n "$rationale" ]; then
-    echo "Rationale: $rationale"
-fi
-'
-
 # Update git-goals-delete
 update_script "git-goals-delete" '#!/bin/bash
 set -euo pipefail
@@ -159,6 +121,49 @@ fi
 git notes --ref=goals remove "$commit_hash"
 
 echo "Goal $goal_id deleted"
+'
+
+# Update git-goals-complete
+update_script "git-goals-complete" '#!/bin/bash
+set -euo pipefail
+
+if [ $# -lt 1 ]; then
+    echo "Usage: git goals complete <goal_id> [attempt_id] [rationale]"
+    exit 1
+fi
+
+goal_id="$1"
+attempt_id="${2:-}"
+rationale="${3:-}"
+
+commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
+
+if [ -z "$commit_hash" ]; then
+    echo "Error: Goal with ID $goal_id not found."
+    exit 1
+fi
+
+current_data=$(git notes --ref=goals show "$commit_hash")
+updated_data=$(echo "$current_data" | sed "s/^status:.*$/status: completed/")
+updated_data+="
+completed_at: $(date -I)"
+
+if [ -n "$attempt_id" ]; then
+    updated_data+="
+attempt_id: $attempt_id"
+fi
+
+if [ -n "$rationale" ]; then
+    updated_data+="
+rationale: $rationale"
+fi
+
+echo "$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
+
+echo "Goal $goal_id marked as complete"
+if [ -n "$rationale" ]; then
+    echo "Rationale: $rationale"
+fi
 '
 
 # Update git-goals-report
