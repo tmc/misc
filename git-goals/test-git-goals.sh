@@ -9,11 +9,7 @@ run_command() {
     echo
 }
 
-set -x
 export PATH="$(pwd):$PATH"
-pwd
-ls -alh
-set +x
 
 # Set up a temporary test directory
 test_dir=$(mktemp -d)
