@@ -1,4 +1,4 @@
-# git-goals v0.1.8
+# git-goals v0.2.0
 
 # git-goals
 
@@ -20,6 +20,8 @@ To run the test suite, use the following command:
 
 
 ## Upcoming Features
+- Goal prioritization (in progress)
+- Deadline tracking (in progress)
 
 - Goal prioritization
 - Deadline tracking

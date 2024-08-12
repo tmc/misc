@@ -77,3 +77,16 @@ For more detailed information on each command, use the --help option:
 ```
 $ git goals <command> --help
 ```
+
+### Prioritize a goal (coming soon)
+
+```
+git goals prioritize <goal_id> <priority>
+```
+
+### Set a deadline for a goal (coming soon)
+
+```
+git goals deadline <goal_id> <deadline>
+```
+

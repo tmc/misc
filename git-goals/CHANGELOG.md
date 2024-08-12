@@ -57,3 +57,17 @@
 ### Changed
 - Fixed shebang issues for better cross-platform compatibility
 - Minor improvements and bug fixes
+
+## [0.1.9] - 2024-08-12
+### Changed
+- Fixed shebang issues for better cross-platform compatibility
+- Minor improvements and bug fixes
+
+## [0.2.0] - 2024-08-12
+### Added
+- Placeholder for goal prioritization feature
+- Placeholder for deadline tracking feature
+
+### Changed
+- Updated version number to 0.2.0 in preparation for new features
+
