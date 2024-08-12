@@ -1,1 +1,1 @@
-./make-fix-suggestion.sh "Improve error handling and add missing functionality to git-goals scripts"
+./make-fix-suggestion.sh "Update git-goals-create to include error handling and improve output formatting"
