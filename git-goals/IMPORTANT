@@ -1,3 +1,4 @@
+- /usr/bin/bash doesnt exist on macos, and /bin/bash didn't exist in a contaienr.
 - Consider setting up a continuous integration pipeline for automated testing
 - Gather user feedback on the current feature set and user experience
 - Investigate potential integrations with popular Git hosting platforms or project management tools
