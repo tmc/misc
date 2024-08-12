@@ -52,3 +52,8 @@
 
 ### Changed
 - Minor improvements and code cleanup
+
+## [0.1.8] - 2024-08-12
+### Changed
+- Fixed shebang issues for better cross-platform compatibility
+- Minor improvements and bug fixes

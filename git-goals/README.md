@@ -1,4 +1,4 @@
-# git-goals v0.1.7
+# git-goals v0.1.8
 
 # git-goals
 
