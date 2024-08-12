@@ -2,23 +2,6 @@
 # git-goals-list - Lists all goals
 set -euo pipefail
 
-show_details=false
-
-# Parse command line arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        -d|--details)
-            show_details=true
-            shift
-            ;;
-        *)
-            echo "Unknown option: $1"
-            echo "Usage: git goals list [-d|--details]"
-            exit 1
-            ;;
-    esac
-done
-
 echo "Current Goals:"
 
 # Check if there are any notes
@@ -27,26 +10,27 @@ if ! git notes --ref=goals list > /dev/null 2>&1; then
     exit 0
 fi
 
-git notes --ref=goals list | while read -r commit_hash note_ref; do
+git notes --ref=goals list | while read -r note_ref commit_hash; do
     goal_data=$(git notes --ref=goals show "$commit_hash" 2>/dev/null)
 
-    if [ -z "$goal_data" ]; then
-        continue
-    fi
-
-    goal_id=$(echo "$goal_data" | grep "^id:" | cut -d' ' -f2)
-    description=$(echo "$goal_data" | grep "^description:" | cut -d' ' -f2-)
-    status=$(echo "$goal_data" | grep "^status:" | cut -d' ' -f2)
-
-    if $show_details; then
-        echo "Goal ID: $goal_id"
-        echo "Commit: $commit_hash"
-        echo "Status: $status"
-        echo "Description: $description"
-        echo "$goal_data"
-        echo "---"
+    # Check if it's the old format (contains 'tree' and 'parent')
+    if echo "$goal_data" | grep -q "tree"; then
+        description=$(echo "$goal_data" | grep "Goal:" | sed 's/Goal: //')
+        if [ -z "$description" ]; then
+            echo "Warning: No goal description found for commit $commit_hash"
+            continue
+        fi
+        echo "- $commit_hash (old format): $description"
     else
-        short_commit=$(echo $commit_hash | cut -c1-7)
-        echo "- $short_commit $goal_id ($status): $description"
+        goal_id=$(echo "$goal_data" | grep "^id:" | cut -d' ' -f2-)
+        description=$(echo "$goal_data" | grep "^description:" | cut -d' ' -f2-)
+        status=$(echo "$goal_data" | grep "^status:" | cut -d' ' -f2-)
+
+        if [ -z "$goal_id" ] || [ -z "$description" ] || [ -z "$status" ]; then
+            echo "Warning: Incomplete goal data for commit $commit_hash"
+            continue
+        fi
+
+        echo "- $commit_hash $goal_id ($status): $description"
     fi
 done

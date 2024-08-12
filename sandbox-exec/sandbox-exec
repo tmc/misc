@@ -65,8 +65,27 @@ current_path=$(pwd)
 relative_path=${current_path#$repo_root/}
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-dockerfile_path="$script_dir/.sandbox-exec.dockerfile"
-dockerfile_context="$script_dir"
+# Look for .sandbox-exec.dockerfile in the current directory
+dockerfile_path="$(pwd)/.sandbox-exec.dockerfile"
+dockerfile_context="$(pwd)"
+
+# If not found, look in the repo root
+if [ ! -f "$dockerfile_path" ]; then
+    dockerfile_path="$repo_root/.sandbox-exec.dockerfile"
+    dockerfile_context="$repo_root"
+fi
+
+# If still not found, use the one next to the sandbox-exec script
+if [ ! -f "$dockerfile_path" ]; then
+    dockerfile_path="$script_dir/.sandbox-exec.dockerfile"
+    dockerfile_context="$script_dir"
+fi
+
+# Check if the Dockerfile exists
+if [ ! -f "$dockerfile_path" ]; then
+    echo "Error: .sandbox-exec.dockerfile not found in current directory, repo root, or next to the sandbox-exec script" >&2
+    exit 1
+fi
 
 # use last 5 characters of the md5sum of the Dockerfile as the tag:
 docker_tag="sandbox-exec:$(md5sum $dockerfile_path | cut -c-5)"

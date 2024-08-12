@@ -10,16 +10,19 @@ fi
 description="$*"
 goal_id=$(date +%Y%m%d%H%M%S)
 
+# Prepare goal metadata
+goal_metadata="id: $goal_id
+type: goal
+description: $description
+status: active
+created_at: $(date -I)"
+
 # Create a new empty commit
 git commit --allow-empty -m "Goal: $description"
 commit_hash=$(git rev-parse HEAD)
 
 # Add goal metadata as a Git note
-git notes --ref=goals add -m "id: $goal_id
-type: goal
-description: $description
-status: active
-created_at: $(date -I)" $commit_hash
+git notes --ref=goals add -f -m "$goal_metadata" $commit_hash
 
 echo "Created new goal with ID: $goal_id"
 echo "Description: $description"
