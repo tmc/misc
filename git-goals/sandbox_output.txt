@@ -1,0 +1,1 @@
+/Users/tmc/go/src/github.com/tmc/misc/sandbox-exec/sandbox-exec: line 120: SANDBOX_EXTRA_ENV: unbound variable
