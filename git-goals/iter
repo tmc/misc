@@ -12,7 +12,7 @@ sandbox-exec ./mkfix.sh
 git add fixes.sh
 git commit -m "git-notes: Adding fix suggestions to fix the codebase"
 sandbox-exec ./fixes.sh
-git add -u . && git commit -m "git-notes: Fixing the codebase" --allow-emtpy
+git add -u . && git commit -m "git-notes: Fixing the codebase" --allow-empty
 # (ctx-exec git show --notes='*'; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -s $(cat .claude-system-prompt-analyze-attempt) |tee /tmp/claude-analysis; cat /tmp/claude-analysis |git notes --ref attempt-analysis add -F-
 # (ctx-exec git show --notes='*'; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -s $(cat .claude-system-prompt-analyze-attempt) |tee /tmp/claude-analysis; cat /tmp/claude-analysis |git notes --ref attempt-analysis add -F-
 # sh eval-make-safe-progress.sh | tee /tmp/eval-make-safe-progress; cat /tmp/eval-make-safe-progress |git notes --ref eval-safe-progress add -F- ;
