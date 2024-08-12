@@ -1,196 +1,69 @@
 #!/bin/bash
 
-# Update git-goals-list script
-cat > git-goals-list << 'EOF'
-#!/bin/bash
-
-# Function to parse and display goals in both old and new formats
-parse_and_display_goals() {
-    while IFS= read -r line; do
-        if [[ $line == \#* ]]; then
-            # New format: #ID | Status | Description
-            IFS='|' read -r id status description <<< "${line#\#}"
-            printf "%-5s %-10s %s\n" "${id## }" "${status## }" "${description## }"
-        else
-            # Old format: just print the line as-is
-            echo "$line"
-        fi
-    done < "$1"
+# Function to run a command and print its output
+run_command() {
+    echo "$ $*"
+    output=$("$@")
+    echo "$output"
+    echo
 }
 
-# Check if .git-goals file exists
-if [ ! -f .git-goals ]; then
-    echo "No goals found. Use 'git goals create' to add a new goal."
-    exit 0
-fi
+export PATH="/workspace/git-goals:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# Display header
-echo "ID    Status      Description"
-echo "---   ------      -----------"
+# Set up a temporary test directory
+test_dir=$(mktemp -d)
+cd "$test_dir"
 
-# Parse and display goals
-parse_and_display_goals .git-goals
-EOF
+echo "Setting up test repository..."
+git init
+git config user.email "test@example.com"
+git config user.name "Test User"
+git commit --allow-empty -m "Initial commit"
 
-chmod +x git-goals-list
+echo "Testing git-goals..."
 
-# Update git-goals-create script
-cat > git-goals-create << 'EOF'
-#!/bin/bash
+# Test goal creation
+run_command git goals create "Implement new feature"
 
-# Check if a description is provided
-if [ $# -eq 0 ]; then
-    echo "Error: Please provide a description for the goal."
-    echo "Usage: git goals create <description>"
+# Test goal listing
+run_command git goals list
+
+# Get the goal ID from the list output
+goal_id=$(git goals list | grep "Implement new feature" | awk '{print $1}')
+
+if [ -z "$goal_id" ]; then
+    echo "Error: Failed to extract goal ID for 'Implement new feature'"
     exit 1
 fi
 
-# Combine all arguments into a single description
-description="$*"
+# Test goal show
+run_command git goals show "$goal_id"
 
-# Generate a unique ID (timestamp-based)
-id=$(date +%s)
+# Test goal update
+run_command git goals update "$goal_id" "Implement new feature with improved performance"
 
-# Add the new goal to the .git-goals file
-echo "#$id | TODO | $description" >> .git-goals
+# Test goal show after update
+run_command git goals show "$goal_id"
 
-echo "Goal created successfully:"
-echo "ID: $id"
-echo "Status: TODO"
-echo "Description: $description"
-EOF
+# Test goal completion
+run_command git goals complete "$goal_id" "" "Feature implemented and tested"
 
-chmod +x git-goals-create
+# Test goal report
+run_command git goals report
 
-# Update git-goals-show script
-cat > git-goals-show << 'EOF'
-#!/bin/bash
+# Test goal deletion
+run_command git goals delete "$goal_id"
 
-# Check if an ID is provided
-if [ $# -eq 0 ]; then
-    echo "Error: Please provide a goal ID."
-    echo "Usage: git goals show <id>"
+# Verify goal is deleted
+if git goals list | grep -q "$goal_id"; then
+    echo "Error: Goal $goal_id still exists after deletion"
     exit 1
-fi
-
-id="$1"
-
-# Check if .git-goals file exists
-if [ ! -f .git-goals ]; then
-    echo "Error: No goals found. Use 'git goals create' to add a new goal."
-    exit 1
-fi
-
-# Search for the goal with the given ID
-goal=$(grep "^#$id |" .git-goals)
-
-if [ -z "$goal" ]; then
-    echo "Error: Goal with ID $id not found."
-    exit 1
-fi
-
-# Parse and display the goal details
-IFS='|' read -r _ status description <<< "$goal"
-echo "ID: $id"
-echo "Status: ${status## }"
-echo "Description: ${description## }"
-EOF
-
-chmod +x git-goals-show
-
-# Update git-goals-update script
-cat > git-goals-update << 'EOF'
-#!/bin/bash
-
-# Check if ID and new status are provided
-if [ $# -lt 2 ]; then
-    echo "Error: Please provide a goal ID and the new status."
-    echo "Usage: git goals update <id> <new_status>"
-    exit 1
-fi
-
-id="$1"
-new_status="$2"
-
-# Check if .git-goals file exists
-if [ ! -f .git-goals ]; then
-    echo "Error: No goals found. Use 'git goals create' to add a new goal."
-    exit 1
-fi
-
-# Update the goal status
-sed -i "s/^#$id |[^|]*|/#$id | $new_status |/" .git-goals
-
-# Check if the update was successful
-if grep -q "^#$id | $new_status |" .git-goals; then
-    echo "Goal $id updated successfully. New status: $new_status"
 else
-    echo "Error: Failed to update goal $id. Make sure the ID exists."
-    exit 1
-fi
-EOF
-
-chmod +x git-goals-update
-
-# Update git-goals-delete script
-cat > git-goals-delete << 'EOF'
-#!/bin/bash
-
-# Check if an ID is provided
-if [ $# -eq 0 ]; then
-    echo "Error: Please provide a goal ID to delete."
-    echo "Usage: git goals delete <id>"
-    exit 1
+    echo "Goal $goal_id successfully deleted"
 fi
 
-id="$1"
+echo "All tests completed successfully!"
 
-# Check if .git-goals file exists
-if [ ! -f .git-goals ]; then
-    echo "Error: No goals found. Use 'git goals create' to add a new goal."
-    exit 1
-fi
-
-# Delete the goal with the given ID
-sed -i "/^#$id |/d" .git-goals
-
-# Check if the deletion was successful
-if ! grep -q "^#$id |" .git-goals; then
-    echo "Goal $id deleted successfully."
-else
-    echo "Error: Failed to delete goal $id. Make sure the ID exists."
-    exit 1
-fi
-EOF
-
-chmod +x git-goals-delete
-
-# Update git-goals script (main entry point)
-cat > git-goals << 'EOF'
-#!/bin/bash
-
-# Check if a subcommand is provided
-if [ $# -eq 0 ]; then
-    echo "Usage: git goals <subcommand> [<args>]"
-    echo "Available subcommands: list, create, show, update, delete"
-    exit 1
-fi
-
-subcommand="$1"
-shift
-
-case "$subcommand" in
-    list|create|show|update|delete)
-        "git-goals-$subcommand" "$@"
-        ;;
-    *)
-        echo "Error: Unknown subcommand '$subcommand'"
-        echo "Available subcommands: list, create, show, update, delete"
-        exit 1
-        ;;
-esac
-EOF
-
-chmod +x git-goals
-
-echo "Git goals scripts have been updated and fixed."
+# Clean up
+cd ..
+rm -rf "$test_dir"
