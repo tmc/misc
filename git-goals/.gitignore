@@ -2,3 +2,4 @@
 *.log
 *.swp
 .DS_Store
+git-goals-common.sh

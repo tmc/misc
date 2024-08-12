@@ -17,3 +17,11 @@
 - Improved error handling for configuration file loading
 - Enhanced help messages in main git-goals script
 - Added --help option to all subcommands
+
+## [0.1.3] - 2024-08-12
+### Changed
+- Updated shebang in all scripts to use /usr/bin/bash
+- Improved error handling and input validation across all scripts
+- Enhanced configuration file loading with proper error messages
+- Added help messages to all subcommands
+- Optimized git-goals-list script for large repositories

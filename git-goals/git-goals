@@ -1,7 +1,7 @@
 #!/usr/bin/bash
 set -euo pipefail
 
-VERSION="0.1.2"
+VERSION="0.1.3"
 
 if [ "$1" = "--version" ]; then
     echo "git-goals version $VERSION"
@@ -18,6 +18,11 @@ fi
 subcommand="$1"
 shift
 
+if [ ! -f "git-goals-$subcommand" ]; then
+    echo "Error: Unknown subcommand '$subcommand'" >&2
+    echo "Available subcommands: create, list, show, update, delete, complete, report, recover" >&2
+    exit 1
+fi
 case "$subcommand" in
     create|list|show|update|delete|complete|report|recover)
         "git-goals-$subcommand" "$@"
