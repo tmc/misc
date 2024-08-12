@@ -83,3 +83,9 @@
 - Deadline tracking feature
 - Updated list and report commands to show deadline information
 - Updated documentation and test suite for deadline feature
+
+## [0.2.3] - 2024-08-12
+### Changed
+- Updated test suite to cover new prioritization and deadline features
+- Enhanced README.md with more detailed feature information
+- Minor improvements and code cleanup

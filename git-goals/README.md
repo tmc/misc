@@ -19,12 +19,13 @@ To run the test suite, use the following command:
 ```
 
 
-## Upcoming Features
-- Goal prioritization (in progress)
-- Deadline tracking (in progress)
+## Features
 
+- Goal creation and management
 - Goal prioritization
 - Deadline tracking
+- Goal completion tracking
+- Reporting and analytics
 
 ## Usage
 
