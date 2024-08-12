@@ -1,45 +1,79 @@
 #!/usr/bin/bash
 
-# Minor improvements and preparations for version 0.2.8
+# Implement sorting of goals by priority in the list command
+echo "Implementing priority sorting in git-goals-list..."
+cat << 'EOF' > git-goals-list
+#!/usr/bin/env bash
 
-# Update version number
-sed -i 's/VERSION="0.2.7"/VERSION="0.2.8"/' git-goals
+set -euo pipefail
 
-# Update CHANGELOG.md
-cat << EOF >> CHANGELOG.md
+source "$(dirname "$0")/git-goals-common.sh"
 
-## [0.2.8] - $(date +%Y-%m-%d)
-### Changed
-- Minor improvements and code cleanup
-- Enhanced error handling in various scripts
-- Updated documentation
+load_config
+NOTE_REF_NAME=${NOTE_REF_NAME:-goals}
+DATE_FORMAT=${DATE_FORMAT:-%Y-%m-%d}
+MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}
+
+set -euo pipefail
+load_config
+check_args "$@"
+
+echo -e "\033[1mCurrent Goals:"
+
+# Function to convert priority to numeric value for sorting
+priority_to_number() {
+    case "$1" in
+        high) echo 3 ;;
+        medium) echo 2 ;;
+        low) echo 1 ;;
+        *) echo 0 ;;
+    esac
+}
+
+# Collect and sort goals
+goals=$(git notes --ref=goals list | while read -r note_ref commit_hash; do
+    goal_data=$(git notes --ref=goals show "$commit_hash")
+    id=$(echo -e "$goal_data" | grep "^id:" | cut -d" " -f2-)
+    status=$(echo -e "$goal_data" | grep "^status:" | cut -d" " -f2-)
+    description=$(echo -e "$goal_data" | grep "^description:" | cut -d" " -f2-)
+    priority=$(echo -e "$goal_data" | grep "^priority:" | cut -d" " -f2- || echo "Not set")
+    deadline=$(echo -e "$goal_data" | grep "^deadline:" | cut -d" " -f2- || echo "Not set")
+    priority_num=$(priority_to_number "$priority")
+    echo "$priority_num|$id|$status|$priority|$deadline|$description"
+done | sort -rn | cut -d'|' -f2-)
+
+# Display sorted goals
+echo "$goals" | while IFS='|' read -r id status priority deadline description; do
+    echo -e "\033[1m- $id ($status, Priority: $priority, Deadline: $deadline): $description"
+done | head -n ${MAX_GOALS_DISPLAY:-100}
 EOF
 
-# Update README.md with more detailed information about the notification system
-sed -i '/## Features/a - Configurable notification system for approaching and overdue goals' README.md
+chmod +x git-goals-list
 
-# Improve error handling in git-goals-notify
-sed -i '/echo -e "\\033\[1mChecking for approaching deadlines..."/a\
-if [ -z "$(git notes --ref=goals list)" ]; then\
-    echo -e "\\033[1mNo goals found. Nothing to notify."\
-    exit 0\
-fi' git-goals-notify
+# Update CHANGELOG.md
+echo "Updating CHANGELOG.md..."
+cat << 'EOF' >> CHANGELOG.md
 
-# Add a TODO comment for future enhancement in git-goals-prioritize
-sed -i '/echo -e "\\033\[1mGoal $goal_id priority set to $priority"/a\
-# TODO: Consider implementing a way to sort goals by priority in the list command' git-goals-prioritize
+## [0.2.9] - 2024-08-12
+### Added
+- Implemented sorting of goals by priority in the list command
+### Changed
+- Updated git-goals-list to sort goals by priority (high to low)
+- Minor improvements and code cleanup
+EOF
 
-# Update IMPORTANT file
-sed -i '/- Consider implementing a web interface for easier goal management/d' IMPORTANT
-echo "- Implement sorting of goals by priority in the list command" >> IMPORTANT
+# Update version number in main git-goals script
+echo "Updating version number in git-goals script..."
+sed -i 's/VERSION="0.2.8"/VERSION="0.2.9"/' git-goals
+
+# Update README.md
+echo "Updating README.md..."
+sed -i 's/git-goals v0.2.0/git-goals v0.2.9/' README.md
 
 # Commit changes
-git add git-goals CHANGELOG.md README.md git-goals-notify git-goals-prioritize IMPORTANT
-git commit -m "Prepare for version 0.2.8 release"
+echo "Committing changes..."
+git add git-goals-list CHANGELOG.md git-goals README.md
+git commit -m "Implement priority sorting in list command and prepare for version 0.2.9 release"
 
-# Run tests
-./test-git-goals.sh
-
-echo "Minor improvements and preparations for version 0.2.8 complete. Please review changes and run manual tests if needed."
-echo "Development slowing down. Sleeping for 5 minutes..."
-sleep 300
+echo "All tasks completed. Sleeping for 10 minutes..."
+sleep 600
