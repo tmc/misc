@@ -1,26 +1,20 @@
 #!/bin/bash
-# git-goals-report - Generates a report of all goals
 set -euo pipefail
+
+# Check if .git-goals file exists
+if [ ! -f .git-goals ]; then
+    echo "No goals found. Use 'git goals create' to add a new goal."
+    exit 0
+fi
 
 echo "Goal Report"
 echo "==========="
 
-git notes --ref=goals list | while read -r note_ref commit_hash; do
-    goal_data=$(git notes --ref=goals show "$commit_hash")
-
-    goal_id=$(echo "$goal_data" | grep "^id:" | cut -d" " -f2-)
-    description=$(echo "$goal_data" | grep "^description:" | cut -d" " -f2-)
-    status=$(echo "$goal_data" | grep "^status:" | cut -d" " -f2-)
-    created_at=$(echo "$goal_data" | grep "^created_at:" | cut -d" " -f2-)
-    completed_at=$(echo "$goal_data" | grep "^completed_at:" | cut -d" " -f2-)
-
-    echo "Goal ID: $goal_id"
-    echo "Description: $description"
-    echo "Status: $status"
-    echo "Created: $created_at"
-    if [ "$status" = "completed" ]; then
-        echo "Completed: $completed_at"
-    fi
+while IFS='|' read -r id status description; do
+    id=${id#\#}
+    echo "Goal ID: ${id## }"
+    echo "Status: ${status## }"
+    echo "Description: ${description## }"
     echo "---"
-done
+done < .git-goals
 

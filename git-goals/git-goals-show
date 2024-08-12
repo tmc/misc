@@ -1,13 +1,12 @@
 #!/bin/bash
+set -euo pipefail
 
-# Check if an ID is provided
 if [ $# -eq 0 ]; then
-    echo "Error: Please provide a goal ID."
-    echo "Usage: git goals show <id>"
+    echo "Usage: git goals show <goal_id>"
     exit 1
 fi
 
-id="$1"
+goal_id="$1"
 
 # Check if .git-goals file exists
 if [ ! -f .git-goals ]; then
@@ -16,15 +15,16 @@ if [ ! -f .git-goals ]; then
 fi
 
 # Search for the goal with the given ID
-goal=$(grep "^#$id |" .git-goals)
+goal=$(grep "^#$goal_id |" .git-goals)
 
 if [ -z "$goal" ]; then
-    echo "Error: Goal with ID $id not found."
+    echo "Error: Goal with ID $goal_id not found."
     exit 1
 fi
 
 # Parse and display the goal details
 IFS='|' read -r _ status description <<< "$goal"
-echo "ID: $id"
+echo "ID: $goal_id"
 echo "Status: ${status## }"
 echo "Description: ${description## }"
+

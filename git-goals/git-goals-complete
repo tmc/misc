@@ -1,47 +1,32 @@
 #!/bin/bash
-# git-goals-complete - Marks a goal as complete
 set -euo pipefail
 
 if [ $# -lt 1 ]; then
-    echo "Usage: git goals complete <goal_id> [attempt_id] [rationale]"
+    echo "Usage: git goals complete <goal_id> [rationale]"
     exit 1
 fi
 
-goal_id="$1"
-attempt_id="${2:-}"
-rationale="${3:-}"
+id="$1"
+rationale="${2:-}"
 
-# Find the commit hash for the given goal ID
-commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
-
-if [ -z "$commit_hash" ]; then
-    echo "Error: Goal with ID $goal_id not found."
+# Check if .git-goals file exists
+if [ ! -f .git-goals ]; then
+    echo "Error: No goals found. Use 'git goals create' to add a new goal."
     exit 1
 fi
 
-# Get the current goal data
-current_data=$(git notes --ref=goals show "$commit_hash")
+# Update the goal status to completed
+sed -i "s/^#$id |[^|]*|/#$id | COMPLETED |/" .git-goals
 
-# Update the status and add completion details
-updated_data=$(echo "$current_data" | sed "s/^status:.*$/status: completed/")
-updated_data+="
-completed_at: $(date -I)"
-
-if [ -n "$attempt_id" ]; then
-    updated_data+="
-attempt_id: $attempt_id"
-fi
-
-if [ -n "$rationale" ]; then
-    updated_data+="
-rationale: $rationale"
-fi
-
-# Update the git note
-echo "$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
-
-echo "Goal $goal_id marked as complete"
-if [ -n "$rationale" ]; then
-    echo "Rationale: $rationale"
+# Check if the update was successful
+if grep -q "^#$id | COMPLETED |" .git-goals; then
+    echo "Goal $id marked as complete"
+    if [ -n "$rationale" ]; then
+        echo "Rationale: $rationale"
+        # TODO: Add rationale to the goal entry
+    fi
+else
+    echo "Error: Failed to complete goal $id. Make sure the ID exists."
+    exit 1
 fi
 

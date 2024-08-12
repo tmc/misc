@@ -1,6 +1,6 @@
 #!/bin/bash
+set -euo pipefail
 
-# Check if ID and new status are provided
 if [ $# -lt 2 ]; then
     echo "Error: Please provide a goal ID and the new status."
     echo "Usage: git goals update <id> <new_status>"
@@ -26,3 +26,4 @@ else
     echo "Error: Failed to update goal $id. Make sure the ID exists."
     exit 1
 fi
+

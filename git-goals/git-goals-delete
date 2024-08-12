@@ -1,6 +1,6 @@
 #!/bin/bash
+set -euo pipefail
 
-# Check if an ID is provided
 if [ $# -eq 0 ]; then
     echo "Error: Please provide a goal ID to delete."
     echo "Usage: git goals delete <id>"
@@ -25,3 +25,4 @@ else
     echo "Error: Failed to delete goal $id. Make sure the ID exists."
     exit 1
 fi
+
