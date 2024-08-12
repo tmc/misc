@@ -2,8 +2,18 @@
 
 set -euo pipefail
 
-VERSION="0.2.11"
+VERSION="0.2.12"
 # Load plugins
+declare -A GIT_GOALS_COMMANDS
+
+git_goals_register_command() {
+    local command_name="$1"
+    local function_name="$2"
+    local description="$3"
+    GIT_GOALS_COMMANDS["$command_name"]="$function_name"
+    GIT_GOALS_COMMANDS["${command_name}_description"]="$description"
+}
+
 for plugin in plugins/*.sh; do
     if [ -f "$plugin" ] && [ -x "$plugin" ]; then
         source "$plugin"
@@ -12,7 +22,13 @@ done
 
 print_usage() {
     echo "Usage: git goals <subcommand> [<args>]"
-    echo "Available subcommands: create, list, show, update, delete, complete, report, recover"
+    echo "Available subcommands:"
+    echo "  create, list, show, update, delete, complete, report, recover, notify, prioritize, deadline"
+    for cmd in "${!GIT_GOALS_COMMANDS[@]}"; do
+        if [[ ! $cmd =~ _description$ ]]; then
+            echo "  $cmd: ${GIT_GOALS_COMMANDS[${cmd}_description]}"
+        fi
+    done
     echo "Use --version to display version information"
     echo "Use <subcommand> --help for more information about a specific subcommand"
 }
@@ -23,27 +39,25 @@ if [ $# -eq 0 ]; then
 fi
 
 case "$1" in
-    notify)
+    notify|prioritize|deadline)
         shift
-        "git-goals-notify" "$@"
+        "git-goals-$1" "$@"
+        ;;
+    create|list|show|update|delete|complete|report|recover)
+        shift
+        "git-goals-$1" "$@"
         ;;
     --version)
         echo "git-goals version $VERSION"
         exit 0
         ;;
-    prioritize|deadline)
-        subcommand="$1"
-        shift
-        "git-goals-$subcommand" "$@"
-        ;;
-    create|list|show|update|delete|complete|report|recover)
-        subcommand="$1"
-        shift
-        "git-goals-$subcommand" "$@"
-        ;;
     *)
-        echo "Error: Unknown subcommand '$1'" >&2
-        print_usage
-        exit 1
+        if [[ -n "${GIT_GOALS_COMMANDS[$1]}" ]]; then
+            ${GIT_GOALS_COMMANDS[$1]} "$@"
+        else
+            echo "Error: Unknown subcommand '$1'" >&2
+            print_usage
+            exit 1
+        fi
         ;;
 esac

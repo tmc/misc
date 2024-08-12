@@ -155,3 +155,10 @@
 
 ### Changed
 - Updated documentation to reflect new features and ongoing work
+
+## [0.2.12] - 2024-08-12
+### Added
+- Enhanced plugin system with example "hello world" plugin
+- Plugin command registration and dynamic command listing
+### Changed
+- Updated main git-goals script to support plugin registration and execution

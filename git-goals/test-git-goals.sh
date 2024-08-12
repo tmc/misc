@@ -112,3 +112,14 @@ fi
 git goals delete $high_priority_goal
 git goals delete $medium_priority_goal
 git goals delete $low_priority_goal
+
+# Test plugin system
+echo "Testing plugin system..."
+source plugins/examples/hello_world.sh
+output=$(git_goals_hello_world)
+if [[ "$output" == "Hello from the git-goals plugin system!" ]]; then
+    echo "Plugin test passed"
+else
+    echo "Plugin test failed"
+    exit 1
+fi
