@@ -170,3 +170,10 @@
 ### Changed
 - Performed code cleanup, replacing tabs with spaces
 - Updated version number to 0.2.13
+
+## [0.2.14] - 2024-08-12
+### Changed
+- Entered sleep period for user testing and feedback collection
+- Minor improvements and code cleanup
+- Updated documentation for clarity
+- Prepared for next phase of development focusing on performance optimization and collaborative features

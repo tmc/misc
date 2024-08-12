@@ -20,6 +20,8 @@ To run the test suite, use the following command:
 
 
 ## Features
+- Performance optimizations (coming soon)
+- Enhanced collaborative features (coming soon)
 - Priority sorting in list command
 - Configurable notification system for approaching and overdue goals
 - Configurable notification system for approaching and overdue goals
