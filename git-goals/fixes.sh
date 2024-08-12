@@ -1,89 +1,60 @@
 #!/usr/bin/bash
 
-# Sleep for a longer period as we seem to be getting close to completion
-sleep 30
+# Since we've just implemented the notification system, let's focus on testing and refining it.
 
-# Update the IMPORTANT file to remove the completed tasks
-sed -i '/Update test suite to cover new features/d' IMPORTANT
-sed -i '/Enhance documentation for new features/d' IMPORTANT
+# 1. Update the test suite to include tests for the new notification feature
+echo "Updating test suite..."
+cat << EOF >> test-git-goals.sh
 
-# Implement a basic notification system for approaching deadlines
-cat << EOF > git-goals-notify
-#!/usr/bin/env bash
+# Test notification system
+echo "Testing notification system..."
+test_goal_id=\$(git goals create "Test goal with deadline")
+git goals deadline \$test_goal_id "2023-12-31"
+notification_output=\$(git goals notify)
+if [[ \$notification_output == *"WARNING: Goal \$test_goal_id is due"* ]]; then
+    echo "Notification test passed"
+else
+    echo "Notification test failed"
+    exit 1
+fi
 
-set -euo pipefail
-
-source "\$(dirname "\$0")/git-goals-common.sh"
-
-load_config
-NOTE_REF_NAME=\${NOTE_REF_NAME:-goals}
-DATE_FORMAT=\${DATE_FORMAT:-%Y-%m-%d}
-MAX_GOALS_DISPLAY=\${MAX_GOALS_DISPLAY:-0}
-
-set -euo pipefail
-load_config
-check_args "\$@"
-
-echo -e "\033[1mChecking for approaching deadlines..."
-
-current_date=\$(date +%Y-%m-%d)
-warning_days=7
-
-git notes --ref=goals list | while read -r commit_hash note_ref; do
-    goal_data=\$(git notes --ref=goals show "\$commit_hash")
-    goal_id=\$(echo -e "\033[1m\$goal_data" | grep "^id:" | cut -d" " -f2-)
-    deadline=\$(echo -e "\033[1m\$goal_data" | grep "^deadline:" | cut -d" " -f2-)
-    status=\$(echo -e "\033[1m\$goal_data" | grep "^status:" | cut -d" " -f2-)
-    
-    if [ -n "\$deadline" ] && [ "\$status" != "completed" ]; then
-        days_until_deadline=\$(( (\$(date -d "\$deadline" +%s) - \$(date -d "\$current_date" +%s) ) / 86400 ))
-        if [ \$days_until_deadline -le \$warning_days ] && [ \$days_until_deadline -ge 0 ]; then
-            echo -e "\033[1mWARNING: Goal \$goal_id is due in \$days_until_deadline days!"
-        elif [ \$days_until_deadline -lt 0 ]; then
-            echo -e "\033[1mALERT: Goal \$goal_id is overdue by \$(( -days_until_deadline )) days!"
-        fi
-    fi
-done
+# Clean up test goal
+git goals delete \$test_goal_id
 EOF
 
-chmod +x git-goals-notify
+# 2. Add more detailed documentation for the notification feature
+echo "Updating README.md with notification feature details..."
+sed -i '/## Features/a - Deadline notification system for approaching and overdue goals' README.md
 
-# Update the main git-goals script to include the new notify subcommand
-sed -i '/^case "$1" in/a\    notify)\n        shift\n        "git-goals-notify" "$@"\n        ;;' git-goals
+# 3. Refine the notification system
+echo "Refining the notification system..."
+sed -i 's/warning_days=7/warning_days=${WARNING_DAYS:-7}/' git-goals-notify
+sed -i '1a\WARNING_DAYS=${WARNING_DAYS:-7}' git-goals-notify
 
-# Update README.md to include information about the new notification feature
-sed -i '/## Features/a\- Deadline notification system' README.md
-
-# Update USAGE.md to include an example of the new notify command
-cat << EOF >> USAGE.md
-
-## Check for approaching deadlines
-\`\`\`
-$ git goals notify
-Checking for approaching deadlines...
-WARNING: Goal 20240101000000 is due in 5 days!
-ALERT: Goal 20240101000001 is overdue by 2 days!
-\`\`\`
-EOF
-
-# Update CHANGELOG.md
+# 4. Update CHANGELOG.md
+echo "Updating CHANGELOG.md..."
 cat << EOF >> CHANGELOG.md
 
-## [0.2.4] - $(date +%Y-%m-%d)
+## [0.2.5] - $(date +%Y-%m-%d)
 ### Added
-- Implemented a basic notification system for approaching deadlines
-- Added 'notify' subcommand to check for goals with upcoming or passed deadlines
-
+- Enhanced notification system with configurable warning period
+- Updated test suite to include notification system tests
 ### Changed
-- Updated documentation to reflect new notification feature
-- Minor improvements and code cleanup
+- Improved documentation for the notification feature
 EOF
 
-# Update version number
-sed -i 's/VERSION="0.2.3"/VERSION="0.2.4"/' git-goals
+# 5. Update version number
+sed -i 's/VERSION="0.2.4"/VERSION="0.2.5"/' git-goals
 
-# Commit changes
-git add IMPORTANT README.md USAGE.md CHANGELOG.md git-goals git-goals-notify
-git commit -m "Implement basic notification system for approaching deadlines"
+# 6. Run tests
+echo "Running tests..."
+./test-git-goals.sh
 
-echo "Basic notification system implemented. Consider testing and refining the feature."
+# 7. Commit changes
+git add test-git-goals.sh README.md git-goals-notify CHANGELOG.md git-goals
+git commit -m "Refine notification system and update documentation"
+
+echo "Improvements completed. Please review the changes and run manual tests if needed."
+
+# Sleep for a short period to avoid unnecessary compute
+sleep 5
