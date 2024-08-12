@@ -71,3 +71,15 @@
 ### Changed
 - Updated version number to 0.2.0 in preparation for new features
 
+
+## [0.2.1] - 2024-08-12
+### Added
+- Goal prioritization feature
+- Updated list and report commands to show priority information
+- Updated documentation and test suite for prioritization feature
+
+## [0.2.2] - 2024-08-12
+### Added
+- Deadline tracking feature
+- Updated list and report commands to show deadline information
+- Updated documentation and test suite for deadline feature

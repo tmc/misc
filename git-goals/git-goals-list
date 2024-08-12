@@ -21,5 +21,7 @@ git notes --ref=goals list | head -n ${MAX_GOALS_DISPLAY:-100} | while read -r n
     id=$(echo -e "\033[1m$goal_data" | grep "^id:" | cut -d" " -f2-)
     status=$(echo -e "\033[1m$goal_data" | grep "^status:" | cut -d" " -f2-)
     description=$(echo -e "\033[1m$goal_data" | grep "^description:" | cut -d" " -f2-)
-    echo -e "\033[1m- $id ($status): $description"
+    priority=$(echo -e "\033[1m$goal_data" | grep "^priority:" | cut -d" " -f2- || echo "Not set")
+    deadline=$(echo -e "\033[1m$goal_data" | grep "^deadline:" | cut -d" " -f2- || echo "Not set")
+    echo -e "\033[1m- $id ($status, Priority: $priority, Deadline: $deadline): $description"
 done

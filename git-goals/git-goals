@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION="0.2.0"
+VERSION="0.2.2"
 
 print_usage() {
     echo "Usage: git goals <subcommand> [<args>]"
@@ -22,6 +22,10 @@ case "$1" in
         exit 0
         ;;
     prioritize|deadline)
+        subcommand="$1"
+        shift
+        "git-goals-$subcommand" "$@"
+        ;;
     create|list|show|update|delete|complete|report|recover)
         subcommand="$1"
         shift

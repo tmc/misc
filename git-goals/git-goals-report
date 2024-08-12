@@ -26,10 +26,14 @@ git notes --ref=goals list | while read -r note_ref commit_hash; do
     status=$(echo -e "\033[1m$goal_data" | grep "^status:" | cut -d" " -f2-)
     created_at=$(echo -e "\033[1m$goal_data" | grep "^created_at:" | cut -d" " -f2-)
     completed_at=$(echo -e "\033[1m$goal_data" | grep "^completed_at:" | cut -d" " -f2-)
+    priority=$(echo -e "\033[1m$goal_data" | grep "^priority:" | cut -d" " -f2- || echo "Not set")
+    deadline=$(echo -e "\033[1m$goal_data" | grep "^deadline:" | cut -d" " -f2- || echo "Not set")
 
     echo -e "\033[1mGoal ID: $id"
     echo -e "\033[1mDescription: $description"
     echo -e "\033[1mStatus: $status"
+    echo -e "\033[1mPriority: $priority"
+    echo -e "\033[1mDeadline: $deadline"
     echo -e "\033[1mCreated: $created_at"
     if [ "$status" = "completed" ]; then
         echo -e "\033[1mCompleted: $completed_at"

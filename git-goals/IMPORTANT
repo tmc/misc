@@ -1,5 +1,3 @@
-- Implement goal prioritization feature
-- Implement deadline tracking feature
 - Update test suite to cover new features
 - Enhance documentation for new features
 - Consider implementing a plugin system for extensibility

@@ -54,6 +54,18 @@ Completed: 2024-01-01
 ---
 ```
 
+## Prioritize a goal
+## Set a deadline for a goal
+```
+$ git goals deadline 20240101000000 2024-12-31
+Goal 20240101000000 deadline set to 2024-12-31
+```
+
+```
+$ git goals prioritize 20240101000000 high
+Goal 20240101000000 priority set to high
+```
+
 ## Delete a goal
 ```
 $ git goals delete 20240101000000
@@ -79,6 +91,12 @@ $ git goals <command> --help
 ```
 
 ### Prioritize a goal (coming soon)
+## Set a deadline for a goal
+```
+$ git goals deadline 20240101000000 2024-12-31
+Goal 20240101000000 deadline set to 2024-12-31
+```
+
 
 ```
 git goals prioritize <goal_id> <priority>

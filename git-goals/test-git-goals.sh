@@ -46,6 +46,18 @@ run_command git goals update "$goal_id" "Implement new feature with improved per
 # Test goal show after update
 run_command git goals show "$goal_id"
 
+# Test goal prioritization
+# Test setting goal deadline
+run_command git goals deadline "$goal_id" "2024-12-31"
+
+# Test goal show after setting deadline
+run_command git goals show "$goal_id"
+
+run_command git goals prioritize "$goal_id" "high"
+
+# Test goal show after prioritization
+run_command git goals show "$goal_id"
+
 # Test goal completion
 run_command git goals complete "$goal_id" "" "Feature implemented and tested"
 

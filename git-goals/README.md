@@ -52,6 +52,18 @@ git goals list
 git goals show <goal_id>
 ```
 
+### Prioritize a goal
+### Set a deadline for a goal
+
+```
+git goals deadline <goal_id> <deadline>
+```
+
+
+```
+git goals prioritize <goal_id> <priority>
+```
+
 ### Complete a goal
 
 ```
