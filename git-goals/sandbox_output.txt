@@ -1,7 +1,65 @@
-Usage: sandbox-exec [options] command [args]
-Options:
-  -f profile-file     Read profile from file.
-  -n profile-name     Use pre-defined profile.
-  -p profile-string   Specify profile on the command line.
-  -D key=value        Define a profile parameter.
-Exactly one of -f, -n, -p must be specified.
++ set -euo pipefail
+++ pwd
++ export PATH=/workspace/git-goals:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ PATH=/workspace/git-goals:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+++ mktemp -d
++ test_dir=/tmp/tmp.23NYOtsbMe
++ cd /tmp/tmp.23NYOtsbMe
++ echo 'Setting up test repository...'
+Setting up test repository...
++ git init
+[33mhint: Using 'master' as the name for the initial branch. This default branch name[m
+[33mhint: is subject to change. To configure the initial branch name to use in all[m
+[33mhint: of your new repositories, which will suppress this warning, call:[m
+[33mhint: [m
+[33mhint: 	git config --global init.defaultBranch <name>[m
+[33mhint: [m
+[33mhint: Names commonly chosen instead of 'master' are 'main', 'trunk' and[m
+[33mhint: 'development'. The just-created branch can be renamed via this command:[m
+[33mhint: [m
+[33mhint: 	git branch -m <name>[m
+Initialized empty Git repository in /tmp/tmp.23NYOtsbMe/.git/
++ git config user.email test@example.com
++ git config user.name 'Test User'
++ git commit --allow-empty -m 'Initial commit'
+[master (root-commit) 62bd851] Initial commit
++ echo 'Testing git-goals...'
+Testing git-goals...
++ run_command git goals create 'Implement new feature'
++ echo '$ git' goals create 'Implement new feature'
+$ git goals create Implement new feature
+++ git goals create 'Implement new feature'
++ output='[master 82c40b7] Goal: Implement new feature
+Created new goal with ID: 20240812080940
+Description: Implement new feature'
++ echo '[master 82c40b7] Goal: Implement new feature
+Created new goal with ID: 20240812080940
+Description: Implement new feature'
+[master 82c40b7] Goal: Implement new feature
+Created new goal with ID: 20240812080940
+Description: Implement new feature
++ echo
+
++ run_command git goals list
++ echo '$ git' goals list
+$ git goals list
+++ git goals list
++ output='Current Goals:
+- 82c40b7ceb87419916abbb567fbbca0a2f278bc1 20240812080940 (active): Implement new feature'
++ echo 'Current Goals:
+- 82c40b7ceb87419916abbb567fbbca0a2f278bc1 20240812080940 (active): Implement new feature'
+Current Goals:
+- 82c40b7ceb87419916abbb567fbbca0a2f278bc1 20240812080940 (active): Implement new feature
++ echo
+
+++ git goals list
+++ grep 'Implement new feature'
+++ sed -E 's/- ([^ ]+) .*/\1/'
++ goal_id=82c40b7ceb87419916abbb567fbbca0a2f278bc1
++ '[' -z 82c40b7ceb87419916abbb567fbbca0a2f278bc1 ']'
++ run_command git goals show 82c40b7ceb87419916abbb567fbbca0a2f278bc1
++ echo '$ git' goals show 82c40b7ceb87419916abbb567fbbca0a2f278bc1
+$ git goals show 82c40b7ceb87419916abbb567fbbca0a2f278bc1
+++ git goals show 82c40b7ceb87419916abbb567fbbca0a2f278bc1
+error: no note found for object 1785eed7a5744084684365bc6fc993c7713ead03.
++ output=
