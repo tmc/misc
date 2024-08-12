@@ -10,6 +10,7 @@ create_commit() {
 # Function to run command in sandbox and capture output
 run_sandbox() {
     local command="$1"
+    which sandbox-exec
     sandbox-exec "$command" > sandbox_output.txt 2>&1
 }
 
