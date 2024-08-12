@@ -1,33 +1,23 @@
 Observations: 
 
-The codebase is focused on implementing a "git-goals" system for managing and tracking goals within Git repositories. Recent changes include:
+- The test script is failing when trying to create and list goals. It's unable to extract the goal ID after creation.
 
-1. Adding test scripts and improving error handling in existing scripts.
+- The git-goals-create script seems to be working correctly, but the output may not be in the expected format for parsing in the test script.
 
-2. Implementing a "make-safe-progress.sh" script that runs tests in a sandbox environment and analyzes the execution context.
+- The git-goals-list script exists but may not be outputting goals in a format that can be easily parsed to extract IDs.
 
-3. Creating an "iter" script to automate the improvement process using a plan-do-study-act cycle.
+- Error handling and output formatting in the scripts could be improved to make debugging easier.
 
-4. Using git notes to store metadata and execution context for each iteration.
+- The test script could use more robust error handling and logging to help identify where exactly it's failing.
 
-5. Improving the system prompt for the AI assistant to better guide the development process.
+- We may need to update the test script to properly parse the output from git-goals-create and git-goals-list.
 
-Key areas for improvement:
+- Adding more verbose logging throughout the scripts would help with debugging.
 
-1. Enhance error handling and output in git-goals-create and other scripts.
-
-2. Implement missing functionality like git-goals-update and git-goals-delete.
-
-3. Improve test coverage and add more comprehensive test cases.
-
-4. Refine the automated improvement process in the "iter" script.
-
-5. Enhance documentation, including updating USAGE.md with new features.
+- We should focus on getting the basic create and list functionality working before moving on to other commands.
 
 Next steps:
-
-1. Implement error handling and improve output in git-goals-create script.
-2. Create git-goals-update and git-goals-delete scripts.
-3. Expand test cases in test-git-goals.sh.
-4. Refine the "iter" script to better analyze and apply improvements.
-5. Update USAGE.md with new features and improved examples.
+1. Add more verbose logging to git-goals-create and git-goals-list
+2. Update the test script to properly parse output from these commands
+3. Improve error handling in all scripts
+4. Re-run tests and iterate on fixes until create and list are working
