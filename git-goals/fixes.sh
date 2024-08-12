@@ -193,29 +193,4 @@ git notes --ref=goals list | while read -r note_ref commit_hash; do
 done
 '
 
-# Update git-goals (main script)
-update_script "git-goals" '#!/bin/bash
-set -euo pipefail
-
-if [ $# -eq 0 ]; then
-    echo "Usage: git goals <subcommand> [<args>]"
-    echo "Available subcommands: create, list, show, update, delete, complete, report"
-    exit 1
-fi
-
-subcommand="$1"
-shift
-
-case "$subcommand" in
-    create|list|show|update|delete|complete|report)
-        "git-goals-$subcommand" "$@"
-        ;;
-    *)
-        echo "Error: Unknown subcommand '\''$subcommand'\''"
-        echo "Available subcommands: create, list, show, update, delete, complete, report"
-        exit 1
-        ;;
-esac
-'
-
 echo "All git-goals-* scripts have been updated."
