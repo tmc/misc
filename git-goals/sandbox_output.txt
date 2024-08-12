@@ -1,8 +1,9 @@
 + set -euo pipefail
 + export PATH=/workspace/git-goals:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 + PATH=/workspace/git-goals:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-+ test_dir=/tmp/tmp.Nlv7IUMxOa
-+ cd ''
+++ mktemp -d
++ test_dir=/tmp/tmp.ZOr4vtLJE4
++ cd /tmp/tmp.ZOr4vtLJE4
 + echo 'Setting up test repository...'
 Setting up test repository...
 + git init
@@ -16,11 +17,11 @@ Setting up test repository...
 [33mhint: 'development'. The just-created branch can be renamed via this command:[m
 [33mhint: [m
 [33mhint: 	git branch -m <name>[m
-Initialized empty Git repository in /workspace/git-goals/.git/
+Initialized empty Git repository in /tmp/tmp.ZOr4vtLJE4/.git/
 + git config user.email test@example.com
 + git config user.name 'Test User'
 + git commit --allow-empty -m 'Initial commit'
-[master (root-commit) 3ae0b69] Initial commit
+[master (root-commit) 253a288] Initial commit
 + echo 'Testing git-goals...'
 Testing git-goals...
 + run_command git goals create 'Implement new feature'
