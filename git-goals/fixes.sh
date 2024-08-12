@@ -1,38 +1,26 @@
 #!/usr/bin/bash
 
-# This script will make final improvements to the git-goals project
+# This script will make minor improvements to the git-goals codebase
 
-# Update shebang in all scripts
-find . -name 'git-goals*' -type f -exec sed -i '1s|^#!.*|#!/usr/bin/bash|' {} +
-
-# Update version number in git-goals main script
-sed -i 's/VERSION="0.1.2"/VERSION="0.1.3"/' git-goals
+# Update version number in git-goals and README.md
+sed -i 's/VERSION="0.1.3"/VERSION="0.1.4"/' git-goals
+sed -i 's/# git-goals v0.1.3/# git-goals v0.1.4/' README.md
 
 # Update CHANGELOG.md
 cat << EOF >> CHANGELOG.md
 
-## [0.1.3] - $(date +%Y-%m-%d)
+## [0.1.4] - $(date +%Y-%m-%d)
 ### Changed
-- Updated shebang in all scripts to use /usr/bin/bash
-- Improved error handling and input validation across all scripts
-- Enhanced configuration file loading with proper error messages
-- Added help messages to all subcommands
-- Optimized git-goals-list script for large repositories
+- Minor improvements and code cleanup
+- Updated error handling in git-goals-common.sh
+- Improved consistency in script headers
 EOF
 
-# Update README.md with new version number
-sed -i 's/# git-goals v0.1.2/# git-goals v0.1.3/' README.md
-
-# Remove unnecessary duplicate code in scripts
-for file in git-goals-*; do
-    sed -i '/if \[ -f ".git-goals-config" \]; then/,/fi/d' "$file"
-    sed -i '/if \[ "\$1" = "--help" \]; then/,/fi/d' "$file"
-    sed -i '/if \[ \$# -eq 0 \]; then/,/fi/d' "$file"
-done
-
-# Add common functions to a separate file
+# Update git-goals-common.sh with better error handling
 cat << EOF > git-goals-common.sh
 #!/usr/bin/bash
+
+set -euo pipefail
 
 load_config() {
     if [ -f ".git-goals-config" ]; then
@@ -54,34 +42,62 @@ print_help() {
 
 check_args() {
     if [ \$# -eq 0 ]; then
-        echo -e "\033[1mUsage: git goals \$1 <args>" >&2
+        echo "Error: No arguments provided" >&2
+        print_help "\$1"
         exit 1
     fi
 }
 EOF
 
-# Update all scripts to use common functions
-for file in git-goals-*; do
-    sed -i '1a source "$(dirname "$0")/git-goals-common.sh"' "$file"
-    sed -i '/^set -euo pipefail/a\nload_config\ncheck_args "$@"\n' "$file"
+# Update headers of all git-goals-* scripts
+for script in git-goals-*; do
+    sed -i '1,/^$/c\#!/usr/bin/bash\n\nset -euo pipefail\n\nsource "$(dirname "$0")/git-goals-common.sh"\n\nload_config' "$script"
 done
 
-# Add error handling to git-goals main script
-sed -i '/case "$subcommand" in/i\
-if [ ! -f "git-goals-$subcommand" ]; then\
-    echo "Error: Unknown subcommand '\''$subcommand'\''" >&2\
-    echo "Available subcommands: create, list, show, update, delete, complete, report, recover" >&2\
-    exit 1\
-fi' git-goals
+# Remove unnecessary comments from git-goals-* scripts
+sed -i '/^# Input validation and error handling/d' git-goals-*
+sed -i '/^# Load configuration/d' git-goals-*
 
-# Update .gitignore
-echo "git-goals-common.sh" >> .gitignore
+# Update git-goals script with better subcommand handling
+cat << EOF > git-goals
+#!/usr/bin/bash
 
-# Remove IMPORTANT file as its contents have been addressed
-rm -f IMPORTANT
+set -euo pipefail
+
+VERSION="0.1.4"
+
+print_usage() {
+    echo "Usage: git goals <subcommand> [<args>]"
+    echo "Available subcommands: create, list, show, update, delete, complete, report, recover"
+    echo "Use --version to display version information"
+    echo "Use <subcommand> --help for more information about a specific subcommand"
+}
+
+if [ \$# -eq 0 ]; then
+    print_usage
+    exit 1
+fi
+
+case "\$1" in
+    --version)
+        echo "git-goals version \$VERSION"
+        exit 0
+        ;;
+    create|list|show|update|delete|complete|report|recover)
+        subcommand="\$1"
+        shift
+        "git-goals-\$subcommand" "\$@"
+        ;;
+    *)
+        echo "Error: Unknown subcommand '\$1'" >&2
+        print_usage
+        exit 1
+        ;;
+esac
+EOF
 
 # Commit changes
 git add .
-git commit -m "Final improvements and version bump to 0.1.3"
+git commit -m "Improve codebase consistency and error handling"
 
-echo "Final improvements completed. Project is now at version 0.1.3."
+echo "Codebase improvements complete. Version updated to 0.1.4."
