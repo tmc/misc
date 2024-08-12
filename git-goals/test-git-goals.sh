@@ -12,7 +12,7 @@ run_command() {
 export PATH="/workspace/git-goals:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # Set up a temporary test directory
-test_dir=/tmp/tmp.ZaLQnxzJog
+test_dir=/tmp/tmp.Nlv7IUMxOa
 cd ""
 
 echo "Setting up test repository..."
