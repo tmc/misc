@@ -1,7 +1,12 @@
-#!/bin/bash
+#!/usr/bin/bash
 # Input validation and error handling
 # Load configuration
 if [ -f ".git-goals-config" ]; then
+if [ -f ".git-goals-config" ]; then
+    source ".git-goals-config"
+else
+    echo "Warning: .git-goals-config not found. Using default settings."
+fi
     source ".git-goals-config"
 fi
 
@@ -9,6 +14,12 @@ NOTE_REF_NAME=${NOTE_REF_NAME:-goals}
 DATE_FORMAT=${DATE_FORMAT:-%Y-%m-%d}
 MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}
 
+if [ "$1" = "--help" ]; then
+    echo "Usage: git goals update [options]"
+    echo "Options:"
+    echo "  --help    Show this help message"
+    exit 0
+fi
 if [ $# -eq 0 ]; then
     echo -e "\033[1mUsage: $0 <args>"
     exit 1

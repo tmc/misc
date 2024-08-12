@@ -7,7 +7,7 @@ attach-sandbox-content
 docker logs $(get-latest-sandbox)
 cp OBSERVATIONS OBSERVATIONS.previous
 (echo "we will fix what went wrong, if nothing went wrong, add observations about how we may be done"; ctx-exec docker logs $(get-latest-sandbox) ; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -s "we are fixing issues in this codebase. consider the contents in OBSERVATIONS, keep it to short lines, and consider updating it. output new contents of OBSERVATIONS to guide our next steps" -p 'Observations:' | tee OBSERVATIONS || git co OBSERVATIONS
-(echo "we will fix what went wrong"; ctx-exec docker logs $(get-latest-sandbox) ; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -s "we are fxing issues in this codebase. consider the contents in OBSERVATIONS, and consider updating it. output a bash script to carry out fixes/improvements; if it appears we are getting close to being done, dont waste compute and begin sleeping for longer periods of time" -p '#!/usr/bin/bash' | tee fixes.sh
+(echo "we will fix what went wrong"; ctx-exec docker logs $(get-latest-sandbox) ; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -s "we are fxing issues in this codebase. consider the contents in OBSERVATIONS and IMPORTANT, and consider updating it. If a task in eitehr is done, remove the line. output a bash script to carry out fixes/improvements; if it appears we are getting close to being done, dont waste compute and begin sleeping for longer periods of time" -p '#!/usr/bin/bash' | tee fixes.sh
 git add fixes.sh
 git commit -m "git-notes: Adding fix suggestions to fix the codebase"
 sandbox-exec ./fixes.sh
