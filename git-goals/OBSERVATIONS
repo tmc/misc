@@ -1,21 +1,25 @@
 Observations: 
 
-- The test script is failing when trying to create and list goals. It's unable to extract the goal ID after creation.
+- The test script is failing because it's unable to extract the goal ID after creating a new goal. This suggests the output format of git-goals-create needs to be adjusted.
 
-- The git-goals-create script seems to be working as it's creating a git note, but the output may not be in the expected format for the test script to parse.
+- The git-goals-create script has been updated to output the goal ID on a separate line, which should make it easier to parse in the test script.
 
-- We need to modify the git-goals-create script to output the goal ID in a consistent, easily parsable format.
+- The test script (test-git-goals.sh) needs to be updated to properly extract the goal ID from the new output format of git-goals-create.
 
-- The git-goals-list script may also need adjustment to ensure it outputs goals in a format the test script can parse.
+- Other git-goals scripts (show, update, delete, complete, list, report) have been implemented but haven't been tested yet due to the initial failure.
 
-- Error handling in the test script could be improved to provide more informative messages.
-
-- We should focus on fixing the goal creation and listing functionality before moving on to other commands.
+- The project structure is becoming clearer, with individual scripts for each git-goals subcommand and a main git-goals script to dispatch to the appropriate subcommand.
 
 Next steps:
 
-1. Modify git-goals-create to output the goal ID on a separate line
-2. Update git-goals-list to ensure consistent output format
-3. Adjust the test script to properly parse the output from these commands
-4. Add more robust error handling and logging in the test script
-5. Re-run the test script and address any remaining issues
+1. Update test-git-goals.sh to correctly parse the goal ID from the new git-goals-create output format.
+
+2. Run the test script again to verify that goal creation and ID extraction are working correctly.
+
+3. If successful, proceed to test the other git-goals subcommands (show, update, delete, complete, list, report) in the test script.
+
+4. Address any issues found during testing and refine the scripts as needed.
+
+5. Consider adding error handling and input validation to improve robustness.
+
+6. Update documentation (README.md, USAGE.md) to reflect any changes in usage or new features.
