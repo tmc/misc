@@ -1,1 +1,0 @@
-/usr/bin/sandbox-exec: /usr/bin/sandbox-exec: cannot execute binary file
