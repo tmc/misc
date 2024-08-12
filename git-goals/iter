@@ -1,4 +1,5 @@
 #!/bin/bash
+export PATH=$(pwd):.tools:$PATH
 
 # plan
 ./make-safe-progress.sh
