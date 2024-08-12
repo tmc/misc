@@ -8,9 +8,9 @@ Observations:
 
 4. The test script now successfully extracts the goal ID after creation.
 
-5. The git-goals-show script has been fixed to correctly retrieve and display goal details.
+5. The git-goals-show script is failing to retrieve and display goal details.
 
-6. The remaining commands (update, complete, report, delete) are now being tested.
+6. The remaining commands (update, complete, report, delete) are not being tested yet.
 
 7. Error handling and input validation have been added to all scripts to make them more robust.
 
@@ -18,16 +18,16 @@ Observations:
 
 9. We should consider adding debug output options to help with troubleshooting.
 
-10. The next steps should focus on thorough testing and potential improvements to the user experience.
+10. The next steps should focus on fixing the git-goals-show script and implementing the remaining commands.
 
 Next steps:
-1. Implement comprehensive error handling in all scripts.
-2. Add debug mode to all scripts for easier troubleshooting.
-3. Create more extensive test cases to cover edge cases and potential errors.
-4. Improve documentation, including updating the README.md and USAGE.md files.
-5. Consider adding features like goal prioritization or tagging.
-6. Implement data validation to ensure goal data integrity.
-7. Optimize performance for repositories with a large number of goals.
-8. Add unit tests for individual functions within the scripts.
-9. Consider creating a man page for the git-goals command.
-10. Explore integration with other Git workflows or tools.
+1. Debug and fix the git-goals-show script to correctly retrieve and display goal details.
+2. Implement the update, complete, report, and delete functions.
+3. Update the test script to include tests for all implemented functions.
+4. Add more comprehensive error handling and input validation to all scripts.
+5. Consider adding a debug mode to all scripts for easier troubleshooting.
+6. Update the README.md and USAGE.md files to reflect the current state of the project.
+7. Implement data validation to ensure goal data integrity.
+8. Consider adding features like goal prioritization or tagging.
+9. Explore integration with other Git workflows or tools.
+10. Begin planning for more advanced features like goal dependencies or recurring goals.
