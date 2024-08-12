@@ -1,0 +1,19 @@
+Observations: 
+
+- The test script is failing to extract the goal ID after creating a new goal. This is likely due to an issue with the output format or parsing in the git-goals-create script.
+
+- The git-goals-list script may not be outputting goals in the expected format for the test script to parse.
+
+- We need to update the git-goals-create script to output the goal ID in a consistent, easily parseable format.
+
+- The git-goals-list script should be updated to output goals in a format that matches what the test script expects.
+
+- We should add error handling and input validation to the scripts to make them more robust.
+
+- The test script could be improved to provide more detailed error messages to help with debugging.
+
+- We may want to consider adding a --json flag to the scripts to output machine-readable data for easier parsing and testing.
+
+- The overall structure and flow of the scripts looks good, but they need some refinement to work together properly.
+
+Next steps should focus on fixing the output formats, improving error handling, and getting the basic create/list functionality working before moving on to other commands.
