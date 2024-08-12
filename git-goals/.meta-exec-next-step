@@ -1,0 +1,1 @@
+(echo "help suggest the next step"; ctx-exec history 10; ctx-exec ctx-last-sandbox-exec; ~/code-to-gpt.sh) |cgpt -s "$(cat .claude-system-prompt); Current goals: $(cat .goals)" -p="$(cat .claude-prefill)"
