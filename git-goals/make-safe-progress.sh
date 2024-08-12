@@ -4,7 +4,7 @@ set -euo pipefail
 # Function to create a new git commit
 create_commit() {
     git add .
-    git commit -m "Progress iteration: $(date +%Y%m%d%H%M%S)"
+    git commit -m "Progress iteration: $(date +%Y%m%d%H%M%S)" --allow-empty
 }
 
 # Function to run command in sandbox and capture output
