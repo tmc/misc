@@ -1,35 +1,34 @@
 #!/usr/bin/bash
+
 set -euo pipefail
 
-VERSION="0.1.3"
+VERSION="0.1.4"
 
-if [ "$1" = "--version" ]; then
-    echo "git-goals version $VERSION"
-    exit 0
-fi
-
-if [ $# -eq 0 ]; then
+print_usage() {
     echo "Usage: git goals <subcommand> [<args>]"
     echo "Available subcommands: create, list, show, update, delete, complete, report, recover"
     echo "Use --version to display version information"
+    echo "Use <subcommand> --help for more information about a specific subcommand"
+}
+
+if [ $# -eq 0 ]; then
+    print_usage
     exit 1
 fi
 
-subcommand="$1"
-shift
-
-if [ ! -f "git-goals-$subcommand" ]; then
-    echo "Error: Unknown subcommand '$subcommand'" >&2
-    echo "Available subcommands: create, list, show, update, delete, complete, report, recover" >&2
-    exit 1
-fi
-case "$subcommand" in
+case "$1" in
+    --version)
+        echo "git-goals version $VERSION"
+        exit 0
+        ;;
     create|list|show|update|delete|complete|report|recover)
+        subcommand="$1"
+        shift
         "git-goals-$subcommand" "$@"
         ;;
     *)
-        echo "Error: Unknown subcommand '$subcommand'"
-        echo "Available subcommands: create, list, show, update, delete, complete, report, recover"
+        echo "Error: Unknown subcommand '$1'" >&2
+        print_usage
         exit 1
         ;;
 esac

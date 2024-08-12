@@ -1,14 +1,10 @@
 #!/usr/bin/bash
-source "$(dirname "$0")/git-goals-common.sh"
-# Input validation and error handling
-# Load configuration
-    source ".git-goals-config"
-else
-    echo "Warning: .git-goals-config not found. Using default settings."
-fi
-    source ".git-goals-config"
-fi
 
+set -euo pipefail
+
+source "$(dirname "$0")/git-goals-common.sh"
+
+load_config
 NOTE_REF_NAME=${NOTE_REF_NAME:-goals}
 DATE_FORMAT=${DATE_FORMAT:-%Y-%m-%d}
 MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}

@@ -25,3 +25,9 @@
 - Enhanced configuration file loading with proper error messages
 - Added help messages to all subcommands
 - Optimized git-goals-list script for large repositories
+
+## [0.1.4] - 2024-08-12
+### Changed
+- Minor improvements and code cleanup
+- Updated error handling in git-goals-common.sh
+- Improved consistency in script headers
