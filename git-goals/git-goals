@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION="0.2.3"
+VERSION="0.2.4"
 
 print_usage() {
     echo "Usage: git goals <subcommand> [<args>]"
@@ -17,6 +17,10 @@ if [ $# -eq 0 ]; then
 fi
 
 case "$1" in
+    notify)
+        shift
+        "git-goals-notify" "$@"
+        ;;
     --version)
         echo "git-goals version $VERSION"
         exit 0

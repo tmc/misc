@@ -89,3 +89,12 @@
 - Updated test suite to cover new prioritization and deadline features
 - Enhanced README.md with more detailed feature information
 - Minor improvements and code cleanup
+
+## [0.2.4] - 2024-08-12
+### Added
+- Implemented a basic notification system for approaching deadlines
+- Added 'notify' subcommand to check for goals with upcoming or passed deadlines
+
+### Changed
+- Updated documentation to reflect new notification feature
+- Minor improvements and code cleanup

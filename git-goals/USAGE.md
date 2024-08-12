@@ -108,3 +108,11 @@ git goals prioritize <goal_id> <priority>
 git goals deadline <goal_id> <deadline>
 ```
 
+
+## Check for approaching deadlines
+```
+$ git goals notify
+Checking for approaching deadlines...
+WARNING: Goal 20240101000000 is due in 5 days!
+ALERT: Goal 20240101000001 is overdue by 2 days!
+```

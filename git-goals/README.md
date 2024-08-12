@@ -20,6 +20,7 @@ To run the test suite, use the following command:
 
 
 ## Features
+- Deadline notification system
 
 - Goal creation and management
 - Goal prioritization
