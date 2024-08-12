@@ -1,2 +1,0 @@
-/bin/bash: line 1: exec: -f: invalid option
-exec: usage: exec [-cl] [-a name] [command [argument ...]] [redirection ...]
