@@ -191,3 +191,8 @@
 - Minor improvements and code cleanup
 - Updated documentation for clarity
 - Prepared for next phase of development focusing on performance optimization and collaborative features
+## [0.2.17] - 2024-08-12
+### Added
+- Ran performance tests for large repositories
+### Changed
+- Updated documentation based on performance test results
