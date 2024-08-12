@@ -3,3 +3,4 @@
 - Investigate potential integrations with popular Git hosting platforms or project management tools
 - Consider implementing more advanced features like goal prioritization or deadline tracking
 - Prepare documentation for contributors, including coding standards and contribution guidelines
+- Set up and configure the GitHub Actions CI pipeline

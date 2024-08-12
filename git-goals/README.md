@@ -73,6 +73,7 @@ git goals recover
 git-goals uses Git notes to store goal metadata. Each goal is associated with a specific commit, and the goal information is stored as a note on that commit. The tools provided allow you to manage these notes and the associated goal branches easily.
 
 ## Contributing
+Please see the [Contributing Guide](docs/CONTRIBUTING.md) for details on how to contribute to this project.
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
