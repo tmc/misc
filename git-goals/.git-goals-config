@@ -1,0 +1,10 @@
+# Git Goals Configuration
+
+# Custom note reference name (default: goals)
+NOTE_REF_NAME=goals
+
+# Date format for goal creation and completion (default: %Y-%m-%d)
+DATE_FORMAT=%Y-%m-%d
+
+# Maximum number of goals to display in list view (0 for unlimited)
+MAX_GOALS_DISPLAY=0
