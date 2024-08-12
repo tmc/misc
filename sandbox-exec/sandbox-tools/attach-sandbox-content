@@ -18,7 +18,7 @@ usage() {
     exit 1
 }
 
-while getopts ":n:h-:" opt; do
+while getopts ":n:hc:r-:" opt; do
     case $opt in
         n)
             NAMESPACE="$OPTARG"
@@ -55,7 +55,7 @@ done
 
 # Get the latest sandbox container
 # get path relative to this script:
-dir=$(dirname -- "$( readlink -f -- "$0"; )";
+dir=$(dirname -- "$( readlink -f -- "$0"; )")
 latest_sandbox=$(${dir}/get-latest-sandbox -n "$NAMESPACE") || { echo "Error: Failed to get latest sandbox" >&2; exit 1; }
 
 if [ -z "$latest_sandbox" ]; then
