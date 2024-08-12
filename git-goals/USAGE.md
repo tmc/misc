@@ -1,63 +1,51 @@
-# git-goals Usage Guide
+## Example Usage
 
-## Installation
+Here's an example of how to use git-goals:
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/git-goals.git
-   ```
-2. Add the git-goals directory to your PATH:
-   ```
-   export PATH=$PATH:/path/to/git-goals
-   ```
-3. Ensure all scripts are executable:
-   ```
-   chmod +x /path/to/git-goals/git-goals*
-   ```
+```bash
+# Create a new goal
+$ git goals create "Implement new feature"
+Created new goal with ID: 20230811123456
+Description: Implement new feature
 
-## Basic Usage
+# List all goals
+$ git goals list
+Current Goals:
+- 20230811123456 (active): Implement new feature
 
-### Create a new goal
-```
-git goals create "Implement new feature"
-```
+# Show goal details
+$ git goals show 20230811123456
+{
+  "id": "20230811123456",
+  "type": "goal",
+  "description": "Implement new feature",
+  "status": "active",
+  "created_at": "2023-08-11"
+}
 
-### List all goals
-```
-git goals list
-```
+# Update a goal
+$ git goals update 20230811123456 "Implement new feature with improved performance"
+Updated goal 20230811123456: Implement new feature with improved performance
 
-### Show goal details
-```
-git goals show <goal_id>
-```
+# Complete a goal
+$ git goals complete 20230811123456 "" "Feature implemented and tested"
+Goal 20230811123456 marked as complete
+Rationale: Feature implemented and tested
 
-### Update a goal
-```
-git goals update <goal_id> "Updated goal description"
-```
+# Generate a report
+$ git goals report
+Goal Report
+===========
+Goal ID: 20230811123456
+Description: Implement new feature with improved performance
+Status: completed
+Created: 2023-08-11
+Completed: 2023-08-11
+---
 
-### Complete a goal
-```
-git goals complete <goal_id> [attempt_id] [rationale]
-```
-
-### Delete a goal
-```
-git goals delete <goal_id>
-```
-
-### Generate a report
-```
-git goals report
+# Delete a goal
+$ git goals delete 20230811123456
+Goal 20230811123456 deleted
 ```
 
-### Recover goals
-```
-git goals recover
-```
-
-For more detailed information on each command, use the --help option:
-```
-git goals <command> --help
-```
+This example demonstrates the basic workflow of creating, updating, completing, and deleting a goal using git-goals.

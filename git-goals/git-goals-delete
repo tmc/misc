@@ -11,7 +11,7 @@ MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}
 
 
 set -euo pipefail
-load_config
+nload_config
 check_args "$@"
 
 
