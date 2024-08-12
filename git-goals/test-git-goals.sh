@@ -9,6 +9,12 @@ run_command() {
     echo
 }
 
+set -x
+export PATH="$(pwd):$PATH"
+pwd
+ls -alh
+set +x
+
 # Set up a temporary test directory
 test_dir=$(mktemp -d)
 cd "$test_dir"
@@ -19,11 +25,6 @@ git config user.email "test@example.com"
 git config user.name "Test User"
 git commit --allow-empty -m "Initial commit"
 
-set -x
-export PATH="$(pwd):$PATH"
-pwd
-ls -alh
-set +x
 
 echo "Testing git-goals..."
 
