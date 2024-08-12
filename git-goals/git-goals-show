@@ -3,16 +3,11 @@
 set -euo pipefail
 
 if [ $# -eq 0 ]; then
-    # No argument provided, show the latest goal
-    latest_goal=$(git notes --ref=goals list | tail -n 1 | cut -d" " -f2 | sed 's/goals\///')
-    if [ -z "$latest_goal" ]; then
-        echo "No goals found" >&2
-        exit 1
-    fi
-    goal_id="$latest_goal"
-else
-    goal_id="$1"
+    echo "Usage: git goals show <goal_id>"
+    exit 1
 fi
+
+goal_id="$1"
 
 commit_hash=$(git notes --ref=goals list | grep "goals/$goal_id$" | cut -d" " -f1)
 
