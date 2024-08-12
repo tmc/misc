@@ -1,1 +1,1 @@
-./make-fix-suggestion.sh "Improve the git-goals-create script to output the goal ID on a separate line for easier parsing in the test script"
+#!/bin/bash"
