@@ -1,0 +1,1 @@
+Linux docker-desktop 6.6.32-linuxkit #1 SMP Thu Jun 13 14:13:01 UTC 2024 aarch64 GNU/Linux
