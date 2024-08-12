@@ -2,11 +2,16 @@
 # git-goals-show - Displays details of a specific goal
 set -euo pipefail
 
-goal_id="$1"
-
-if [ -z "$goal_id" ]; then
-    echo "Usage: git goals show <goal_id>" >&2
-    exit 1
+if [ $# -eq 0 ]; then
+    # No argument provided, show the latest goal
+    latest_goal=$(git notes --ref=goals list | tail -n 1 | cut -d" " -f2 | sed 's/goals\///')
+    if [ -z "$latest_goal" ]; then
+        echo "No goals found" >&2
+        exit 1
+    fi
+    goal_id="$latest_goal"
+else
+    goal_id="$1"
 fi
 
 commit_hash=$(git notes --ref=goals list | grep "goals/$goal_id$" | cut -d" " -f1)

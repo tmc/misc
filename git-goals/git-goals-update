@@ -1,23 +1,26 @@
 #!/bin/bash
-# git-goals-update - Updates the current goal or creates a new one if it doesn't exist
-
+# git-goals-update - Updates an existing goal or creates a new one
 set -euo pipefail
 
-if [ $# -eq 0 ]; then
-    echo "Usage: git goals update <new_goal_description>"
+if [ $# -lt 2 ]; then
+    echo "Usage: git goals update <goal_id> <new_goal_description>"
     exit 1
 fi
 
+goal_id="$1"
+shift
 new_goal_description="$*"
 
-current_branch=$(git rev-parse --abbrev-ref HEAD)
+# Find the commit hash for the goal
+commit_hash=$(git notes --ref=goals list | grep "goals/$goal_id$" | cut -d" " -f1)
 
-if [[ $current_branch == goal/* ]]; then
-    # We're on a goal branch, so update the existing goal
-    git notes add -f -m "description: $new_goal_description"
-    echo "Updated goal: $new_goal_description"
-else
-    # We're not on a goal branch, so create a new goal
+if [ -z "$commit_hash" ]; then
+    echo "Goal $goal_id not found. Creating a new goal."
     git goals create "$new_goal_description"
-    echo "Created new goal: $new_goal_description"
+else
+    # Update the existing goal
+    current_note=$(git notes --ref=goals show $commit_hash)
+    updated_note=$(echo "$current_note" | sed "s/\"description\": \".*\"/\"description\": \"$new_goal_description\"/")
+    git notes --ref=goals add -f -m "$updated_note" $commit_hash
+    echo "Updated goal $goal_id: $new_goal_description"
 fi

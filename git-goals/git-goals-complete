@@ -15,7 +15,14 @@ fi
 # Function to find the note for a specific goal
 find_goal_note() {
     local goal_id="$1"
-    git notes --ref=goals list | grep -E "^[a-f0-9]+ goals/$goal_id$" | cut -d " " -f 1
+    git notes --ref=goals list | while read -r commit_hash note_ref; do
+        note_content=$(git notes --ref=goals show $commit_hash)
+        if echo "$note_content" | grep -q "\"id\": \"$goal_id\""; then
+            echo $commit_hash
+            return 0
+        fi
+    done
+    return 1
 }
 
 # Find the note for the specified goal
