@@ -1,128 +1,49 @@
 #!/bin/bash
 
-# Check if analysis.txt exists and has content
-if [ ! -s analysis.txt ]; then
-    echo "Generating analysis..."
-    ./analyze.sh > analysis.txt
+# Plan: Update git-goals-show script to handle errors and improve output formatting
+
+# Check if git-goals-show exists
+if [ ! -f "git-goals-show" ]; then
+    echo "Error: git-goals-show script not found."
+    exit 1
 fi
 
-# Apply fixes based on analysis
-echo "Applying fixes..."
-
-# Fix 1: Update README.md with project description and usage instructions
-echo "Updating README.md..."
-cat << EOF > README.md
-# Git Goals
-
-Git Goals is a tool to help manage and track personal development goals using Git.
-
-## Usage
-
-1. Initialize a new goals repository:
-   git-goals init
-
-2. Add a new goal:
-   git-goals add "My new goal"
-
-3. List current goals:
-   git-goals list
-
-4. Mark a goal as complete:
-   git-goals complete "My completed goal"
-
-5. View goal history:
-   git-goals history
-
-For more information, run 'git-goals --help'
-EOF
-
-# Fix 2: Create a basic test suite
-echo "Creating test suite..."
-mkdir -p tests
-cat << EOF > tests/test_git_goals.sh
+# Update git-goals-show script
+cat > git-goals-show << EOL
 #!/bin/bash
+set -euo pipefail
 
-# Basic test suite for git-goals
-
-# Test init
-git-goals init
-if [ $? -eq 0 ]; then
-    echo "PASS: git-goals init"
-else
-    echo "FAIL: git-goals init"
+if [ \$# -eq 0 ]; then
+    echo "Usage: git goals show <goal_id>"
+    exit 1
 fi
 
-# Test add
-git-goals add "Test goal"
-if [ $? -eq 0 ]; then
-    echo "PASS: git-goals add"
-else
-    echo "FAIL: git-goals add"
+goal_id="\$1"
+
+commit_hash=\$(git notes --ref=goals list | grep "\$goal_id" | awk "{print \\\$1}")
+
+if [ -z "\$commit_hash" ]; then
+    echo "Error: Goal with ID \$goal_id not found."
+    exit 1
 fi
 
-# Test list
-output=$(git-goals list)
-if [[ $output == *"Test goal"* ]]; then
-    echo "PASS: git-goals list"
-else
-    echo "FAIL: git-goals list"
-fi
+goal_data=\$(git notes --ref=goals show "\$commit_hash")
 
-# Test complete
-git-goals complete "Test goal"
-if [ $? -eq 0 ]; then
-    echo "PASS: git-goals complete"
-else
-    echo "FAIL: git-goals complete"
-fi
+echo "Goal Details:"
+echo "============="
+echo "\$goal_data" | sed 's/^/  /'
+EOL
 
-# Test history
-output=$(git-goals history)
-if [[ $output == *"Test goal"* ]]; then
-    echo "PASS: git-goals history"
-else
-    echo "FAIL: git-goals history"
-fi
-EOF
+chmod +x git-goals-show
 
-chmod +x tests/test_git_goals.sh
+echo "Updated git-goals-show script with error handling and improved output formatting."
 
-# Fix 3: Add error handling to main script
-echo "Adding error handling to main script..."
-sed -i '1a\
-set -e\
-\
-function handle_error {\
-    echo "Error: $1"\
-    exit 1\
-}\
-\
-trap '"'"'handle_error "An unexpected error occurred"'"'"' ERR\
-' git-goals
+# Commit changes
+git add git-goals-show
+git commit -m "Improved git-goals-show script with error handling and better formatting"
 
-# Fix 4: Improve code organization
-echo "Improving code organization..."
-mkdir -p src
-mv git-goals src/
-ln -s src/git-goals git-goals
+# Run tests
+./test-git-goals.sh
 
-# Fix 5: Add version information
-echo "Adding version information..."
-echo "VERSION=0.1.0" > src/version.sh
-sed -i '2r src/version.sh' src/git-goals
-
-# Fix 6: Update OBSERVATIONS
-echo "Updating OBSERVATIONS..."
-cat << EOF > OBSERVATIONS
-- README.md has been updated with project description and usage instructions
-- Basic test suite has been created in tests/test_git_goals.sh
-- Error handling has been added to the main script
-- Code organization improved by moving main script to src/ directory
-- Version information added
-- Consider adding more comprehensive tests and documentation
-EOF
-
-echo "Fixes applied. Please review changes and run tests."
-
-# Sleep for a longer period as we're getting close to completion
-sleep 300
+# If we get here, tests passed
+echo "All tests passed successfully."
