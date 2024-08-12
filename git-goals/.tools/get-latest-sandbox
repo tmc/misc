@@ -1,2 +1,0 @@
-#!/bin/bash
-git log --first-parent --pretty=format:"%H" | while read commit; do if git notes --ref=sandbox-exec list | grep -q $commit; then git notes --ref=sandbox-exec show $commit; break; fi; done |tail -n1

@@ -12,7 +12,7 @@ MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}
 
 # recover-goals.sh
 set -euo pipefail
-nload_config
+load_config
 check_args "$@"
 
 
