@@ -1,21 +1,24 @@
 #!/bin/bash
-# git-goals-delete - Deletes a goal by its ID
+# git-goals-delete - Deletes a goal
 set -euo pipefail
+
+if [ $# -eq 0 ]; then
+    echo "Usage: git goals delete <goal_id>"
+    exit 1
+fi
 
 goal_id="$1"
 
-if [ -z "$goal_id" ]; then
-    echo "Usage: git goals delete <goal_id>" >&2
-    exit 1
-fi
-
-commit_hash=$(git notes --ref=goals list | grep "goals/$goal_id$" | cut -d" " -f1)
+# Find the commit hash for the given goal ID
+commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
 
 if [ -z "$commit_hash" ]; then
-    echo "Goal $goal_id not found" >&2
+    echo "Error: Goal with ID $goal_id not found."
     exit 1
 fi
 
+# Remove the git note for the goal
 git notes --ref=goals remove "$commit_hash"
 
 echo "Goal $goal_id deleted"
+

@@ -1,4 +1,5 @@
-# git-goals-show - Displays details of a specific goal
+#!/bin/bash
+# git-goals-show - Shows details of a specific goal
 set -euo pipefail
 
 if [ $# -eq 0 ]; then
@@ -8,11 +9,14 @@ fi
 
 goal_id="$1"
 
-commit_hash=$(git notes --ref=goals list | grep "goals/$goal_id$" | cut -d" " -f1)
+# Find the commit hash for the given goal ID
+commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
 
 if [ -z "$commit_hash" ]; then
-    echo "Goal $goal_id not found" >&2
+    echo "Error: Goal with ID $goal_id not found."
     exit 1
 fi
 
+# Display the goal details
 git notes --ref=goals show "$commit_hash"
+
