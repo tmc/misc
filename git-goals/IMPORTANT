@@ -4,6 +4,8 @@
 - Enhance notification system integration with priority sorting
 - Explore integrations with popular project management tools
 - Implement advanced reporting features leveraging priority and deadline information
-- Implement performance optimizations based on user feedback
 - Enhance collaborative features for team-based usage
 - Analyze and incorporate user feedback into future development plans
+- Run and analyze performance tests using performance_tests/large_repo_simulation.sh
+- Implement performance optimizations based on test results and user feedback
+- Regularly review and analyze feedback in USER_FEEDBACK.md

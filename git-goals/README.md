@@ -1,4 +1,4 @@
-# git-goals v0.2.10
+# git-goals v0.2.15
 
 # git-goals
 
@@ -20,14 +20,17 @@ To run the test suite, use the following command:
 
 
 ## Features
-- Performance optimizations (coming soon)
-- Enhanced collaborative features (coming soon)
-- Priority sorting in list command
-- Configurable notification system for approaching and overdue goals
-- Configurable notification system for approaching and overdue goals
-- Configurable notification system for approaching and overdue goals
-- Deadline notification system for approaching and overdue goals
-- Deadline notification system
+**Note:** We are currently in a user testing phase. Your feedback is valuable for our next major update!
+- Goal creation and management
+- Goal prioritization
+- Deadline tracking
+- Goal completion tracking
+- Reporting and analytics
+- Performance optimizations (in progress)
+- Enhanced collaborative features (in progress)
+- Notification system for approaching and overdue goals
+- Plugin system for extensibility
+
 
 - Goal creation and management
 - Goal prioritization
