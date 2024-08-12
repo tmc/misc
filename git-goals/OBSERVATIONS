@@ -1,1 +1,21 @@
-Observations:
+Observations: 
+
+- The test script is failing when trying to create and list goals. It's unable to extract the goal ID after creation.
+
+- The git-goals-create script seems to be working as it's creating a git note, but the output may not be in the expected format for the test script to parse.
+
+- We need to modify the git-goals-create script to output the goal ID in a consistent, easily parsable format.
+
+- The git-goals-list script may also need adjustment to ensure it outputs goals in a format the test script can parse.
+
+- Error handling in the test script could be improved to provide more informative messages.
+
+- We should focus on fixing the goal creation and listing functionality before moving on to other commands.
+
+Next steps:
+
+1. Modify git-goals-create to output the goal ID on a separate line
+2. Update git-goals-list to ensure consistent output format
+3. Adjust the test script to properly parse the output from these commands
+4. Add more robust error handling and logging in the test script
+5. Re-run the test script and address any remaining issues
