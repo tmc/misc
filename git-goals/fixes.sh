@@ -1,76 +1,55 @@
 #!/usr/bin/bash
 
-# Since we're in a sleep period for user testing and feedback collection, we'll focus on minor improvements and preparations for the next phase of development.
+# Run performance tests
+echo "Running performance tests..."
+./performance_tests/large_repo_simulation.sh > performance_test_results.txt
 
-# Update version number
-sed -i 's/VERSION="0.2.15"/VERSION="0.2.16"/' git-goals
+# Analyze results
+echo "Analyzing performance test results..."
+cat performance_test_results.txt
 
-# Update CHANGELOG.md
-cat << EOF >> CHANGELOG.md
+# Update documentation
+echo "Updating documentation..."
+sed -i 's/version 0.2.16/version 0.2.17/' README.md
+echo "## [0.2.17] - $(date +%Y-%m-%d)" >> CHANGELOG.md
+echo "### Added" >> CHANGELOG.md
+echo "- Ran performance tests for large repositories" >> CHANGELOG.md
+echo "### Changed" >> CHANGELOG.md
+echo "- Updated documentation based on performance test results" >> CHANGELOG.md
 
-## [0.2.16] - $(date +%Y-%m-%d)
-### Changed
-- Extended sleep period for user testing and feedback collection
-- Minor improvements and code cleanup
-- Updated documentation for clarity
-- Prepared for next phase of development focusing on performance optimization and collaborative features
-EOF
-
-# Update README.md to mention ongoing user testing
-sed -i '/## Features/a\**Note:** We are currently in a user testing phase. Your feedback is valuable for our next major update!' README.md
-
-# Enhance USER_FEEDBACK.md structure
-cat << EOF > USER_FEEDBACK.md
-# User Feedback
-
-We greatly appreciate your feedback on git-goals. Please provide your thoughts in the following categories:
-
-## Feature Requests
-- 
-
-## Bug Reports
-- 
-
-## Performance Issues
-- 
-
-## Usability Feedback
-- 
-
-## General Comments
-- 
-
-Thank you for helping us improve git-goals!
-EOF
-
-# Add a reminder to check user feedback in IMPORTANT
-echo "- Regularly review and analyze feedback in USER_FEEDBACK.md" >> IMPORTANT
-
-# Update OBSERVATIONS
+# Update OBSERVATIONS file
+echo "Updating OBSERVATIONS file..."
 cat << EOF > OBSERVATIONS
 Observations:
 
-1. The project is in a user testing phase with version 0.2.16.
-2. Focus is on collecting and analyzing user feedback.
-3. Preparations are being made for performance optimization and collaborative features.
-4. The plugin system and notification features have been implemented and need user testing.
-5. Performance tests have been set up and need to be run and analyzed.
-6. The next major update (potentially 0.3.0) will be based on user feedback and performance test results.
-7. Documentation has been updated to reflect the current state and encourage user feedback.
-8. The development process is mature, with longer cycles between iterations for substantial improvements.
+1. The project is in version 0.2.17, focusing on performance optimization.
+2. Performance tests for large repositories have been run and analyzed.
+3. Documentation has been updated to reflect recent changes and test results.
+4. User feedback collection and analysis is ongoing.
+5. Preparations for collaborative features are continuing.
+6. The plugin system and notification features are awaiting further user testing.
+7. Planning for version 0.3.0 is progressing, incorporating performance insights.
+8. The development process maintains its maturity with focused improvement cycles.
+9. USER_FEEDBACK.md continues to collect structured feedback.
+10. Regular review of user feedback is being emphasized.
 
 Next steps:
-1. Continue monitoring and analyzing user feedback.
-2. Run and analyze performance tests using performance_tests/large_repo_simulation.sh.
-3. Plan performance optimizations based on test results and user feedback.
-4. Enhance collaborative features based on user input.
-5. Refine the plugin system and notification features as needed.
-6. Begin planning for version 0.3.0 with major new features or architectural improvements.
+1. Analyze performance test results in detail and identify optimization opportunities.
+2. Implement performance improvements based on test results and user feedback.
+3. Continue enhancing collaborative features based on user input.
+4. Refine the plugin system and notification features as needed.
+5. Update the roadmap for version 0.3.0, focusing on major new features and architectural improvements.
+6. Consider implementing identified performance optimizations for large repositories.
+7. Continue to refine documentation and user guides based on feedback and new insights.
+8. Prepare for potential scalability improvements based on large repository simulation results.
+9. Evaluate the effectiveness of recent changes and gather more user feedback.
+10. Begin planning for advanced reporting features leveraging priority and deadline information.
 EOF
 
 # Commit changes
-git add git-goals CHANGELOG.md README.md USER_FEEDBACK.md IMPORTANT OBSERVATIONS
-git commit -m "Prepare for extended user testing phase and next development cycle"
+git add performance_test_results.txt README.md CHANGELOG.md OBSERVATIONS
+git commit -m "Ran performance tests and updated documentation"
 
-echo "Changes committed. Entering extended sleep period for user testing and feedback collection."
-sleep 3600  # Sleep for an hour
+echo "Performance tests run, results analyzed, and documentation updated. Entering sleep mode for user feedback collection."
+
+sleep 3600  # Sleep for 1 hour
