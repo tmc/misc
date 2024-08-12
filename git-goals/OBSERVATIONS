@@ -1,27 +1,19 @@
 Observations: 
 
-1. The test script is failing to extract the goal ID after creating a new goal. This is likely due to an issue with the output format or parsing in the git-goals-list command.
+- The test script is failing to extract the goal ID after creating a new goal. This is likely due to an issue with the output format or parsing in the git-goals-create script.
 
-2. The git-goals-create command seems to be working as it's creating a new goal, but the list command is not properly displaying or formatting the output.
+- The git-goals-list script may not be outputting goals in the expected format for the test script to parse.
 
-3. The sandbox environment is set up correctly, and the test repository is being initialized properly.
+- We need to update the git-goals-create script to output the goal ID in a consistent, easily parseable format.
 
-4. The PATH is set correctly to include the git-goals scripts.
+- The git-goals-list script should be updated to output goals in a format that matches what the test script expects.
 
-5. The error occurs when trying to extract the goal ID from the list output, suggesting that the list command's output format may need adjustment.
+- We should add error handling and input validation to the scripts to make them more robust.
 
-6. The test script is well-structured but needs to be updated to handle the current output format of the git-goals-list command.
+- The test script could be improved to provide more detailed error messages to help with debugging.
 
-7. We should focus on fixing the git-goals-list command to ensure it outputs the goal ID in a consistent and easily parseable format.
+- We may want to consider adding a --json flag to the scripts to output machine-readable data for easier parsing and testing.
 
-8. After fixing the list command, we should update the test script to correctly extract the goal ID from the new output format.
+- The overall structure and flow of the scripts looks good, but they need some refinement to work together properly.
 
-9. Once the list command is fixed, we can proceed with testing the other git-goals commands (show, update, complete, etc.).
-
-10. We should consider adding more error handling and input validation to the git-goals commands to improve robustness.
-
-Next steps:
-1. Review and fix the git-goals-list command to ensure it outputs goal IDs in a consistent format.
-2. Update the test script to correctly parse the new output format of git-goals-list.
-3. Run the test script again to verify that goal creation and listing work correctly.
-4. Continue implementing and testing the remaining git-goals commands (show, update, complete, delete, report).
+Next steps should focus on fixing the output formats, improving error handling, and getting the basic create/list functionality working before moving on to other commands.
