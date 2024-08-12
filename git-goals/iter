@@ -1,2 +1,4 @@
 ./make-safe-progress.sh
+attach-sandbox-content
+(ctx-exec git show --notes='*'; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -s $(cat .claude-system-prompt-analyze-attempt) |tee /tmp/claude-analysis; cat /tmp/claude-analysis |git notes --ref attempt-analysis add -F-
 sh eval-make-safe-progress.sh | tee /tmp/eval-make-safe-progress; cat /tmp/eval-make-safe-progress |git notes --ref eval-safe-progress add -F- ;
