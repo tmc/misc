@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-VERSION="0.2.9"
+VERSION="0.2.10"
 
 print_usage() {
     echo "Usage: git goals <subcommand> [<args>]"

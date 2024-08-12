@@ -19,6 +19,7 @@ Thank you for your interest in contributing to git-goals! We welcome contributio
 - Write clear and concise commit messages.
 
 ## Testing
+- Ensure that priority sorting in the list command works correctly.
 
 - Add appropriate unit tests for new features or bug fixes.
 - Ensure all existing tests pass before submitting a pull request.
@@ -38,3 +39,14 @@ Thank you for your interest in contributing to git-goals! We welcome contributio
 4. Be prepared to address any feedback or questions during the review process.
 
 Thank you for contributing to git-goals!
+
+## Roadmap
+
+We're currently focusing on the following areas for improvement:
+
+- Implementing a plugin system for extensibility
+- Enhancing collaborative goal management features
+- Optimizing performance for large repositories
+- Improving integration between the notification system and priority sorting
+
+If you're interested in contributing to any of these areas, please check the IMPORTANT file for more details and open an issue to discuss your ideas before submitting a pull request.

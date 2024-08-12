@@ -38,4 +38,5 @@ git notes --ref=goals list | while read -r commit_hash note_ref; do
         fi
     fi
 done
+# TODO: Enhance notification system to integrate with priority sorting feature
 # TODO: Consider implementing more advanced notification features, such as email or desktop notifications

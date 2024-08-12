@@ -1,4 +1,4 @@
-# git-goals v0.2.9
+# git-goals v0.2.10
 
 # git-goals
 
@@ -20,6 +20,7 @@ To run the test suite, use the following command:
 
 
 ## Features
+- Priority sorting in list command
 - Configurable notification system for approaching and overdue goals
 - Configurable notification system for approaching and overdue goals
 - Configurable notification system for approaching and overdue goals
