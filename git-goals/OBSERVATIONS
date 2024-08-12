@@ -1,25 +1,26 @@
 Observations: 
 
-- The test script is failing because it's unable to extract the goal ID after creating a new goal. This suggests the output format of git-goals-create needs to be adjusted.
+1. The test script is failing to extract the goal ID after creating a new goal. This indicates an issue with either the goal creation or listing functionality.
 
-- The git-goals-create script has been updated to output the goal ID on a separate line, which should make it easier to parse in the test script.
+2. The git-goals-create script seems to be working as it's creating a new goal, but the output may not be in the expected format for parsing.
 
-- The test script (test-git-goals.sh) needs to be updated to properly extract the goal ID from the new output format of git-goals-create.
+3. The git-goals-list script might not be outputting the goal information in a way that can be easily parsed by the test script.
 
-- Other git-goals scripts (show, update, delete, complete, list, report) have been implemented but haven't been tested yet due to the initial failure.
+4. There may be an issue with how git notes are being used or read in the git-goals-list script.
 
-- The project structure is becoming clearer, with individual scripts for each git-goals subcommand and a main git-goals script to dispatch to the appropriate subcommand.
+5. The test script's error handling and output parsing need improvement to provide more informative error messages.
+
+6. We should focus on fixing the goal creation and listing functionality before moving on to testing other features.
+
+7. It might be helpful to add more verbose output in the git-goals-create and git-goals-list scripts for debugging purposes.
+
+8. We should consider adding error checking in the git-goals-create script to ensure the goal is actually created before returning success.
+
+9. The test script could benefit from better separation of concerns, possibly breaking out the test cases into separate functions.
+
+10. We may need to review and possibly update the USAGE.md file to ensure it accurately reflects the current implementation and expected output format.
 
 Next steps:
-
-1. Update test-git-goals.sh to correctly parse the goal ID from the new git-goals-create output format.
-
-2. Run the test script again to verify that goal creation and ID extraction are working correctly.
-
-3. If successful, proceed to test the other git-goals subcommands (show, update, delete, complete, list, report) in the test script.
-
-4. Address any issues found during testing and refine the scripts as needed.
-
-5. Consider adding error handling and input validation to improve robustness.
-
-6. Update documentation (README.md, USAGE.md) to reflect any changes in usage or new features.
+1. Debug and fix the git-goals-create and git-goals-list scripts to ensure they work correctly and output information in a consistent, parseable format.
+2. Update the test script to better handle and report errors, possibly adding more verbose output for debugging.
+3. Once the basic create and list functionality is working, continue implementing and testing the other git-goals commands.
