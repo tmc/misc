@@ -98,32 +98,6 @@ EOL
 
 chmod +x git-goals-update
 
-# Update git-goals-delete script
-cat > git-goals-delete << EOL
-#!/bin/bash
-set -euo pipefail
-
-if [ \$# -eq 0 ]; then
-    echo "Usage: git goals delete <goal_id>"
-    exit 1
-fi
-
-goal_id="\$1"
-
-commit_hash=\$(git notes --ref=goals list | grep "\$goal_id" | awk "{print \\\$1}")
-
-if [ -z "\$commit_hash" ]; then
-    echo "Error: Goal with ID \$goal_id not found."
-    exit 1
-fi
-
-git notes --ref=goals remove "\$commit_hash"
-
-echo "Goal \$goal_id deleted"
-EOL
-
-chmod +x git-goals-delete
-
 # Update git-goals-complete script
 cat > git-goals-complete << EOL
 #!/bin/bash
@@ -169,6 +143,32 @@ fi
 EOL
 
 chmod +x git-goals-complete
+
+# Update git-goals-delete script
+cat > git-goals-delete << EOL
+#!/bin/bash
+set -euo pipefail
+
+if [ \$# -eq 0 ]; then
+    echo "Usage: git goals delete <goal_id>"
+    exit 1
+fi
+
+goal_id="\$1"
+
+commit_hash=\$(git notes --ref=goals list | grep "\$goal_id" | awk "{print \\\$1}")
+
+if [ -z "\$commit_hash" ]; then
+    echo "Error: Goal with ID \$goal_id not found."
+    exit 1
+fi
+
+git notes --ref=goals remove "\$commit_hash"
+
+echo "Goal \$goal_id deleted"
+EOL
+
+chmod +x git-goals-delete
 
 # Update git-goals-report script
 cat > git-goals-report << EOL
