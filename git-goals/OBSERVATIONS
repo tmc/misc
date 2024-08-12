@@ -1,30 +1,24 @@
 Observations: 
 
-1. The test script is failing due to issues with extracting the goal ID after creation. This needs to be fixed.
+- The test script is failing when trying to create and list goals. It's unable to extract the goal ID after creation.
 
-2. The git-goals-create script is working, but the output is not being captured properly in the test script.
+- The git-goals-create script seems to be working correctly to create a goal, but the output may not be in the expected format for the test script to parse.
 
-3. We need to implement the remaining git-goals commands: list, show, update, delete, complete, and report.
+- The git-goals-list script exists but may not be outputting goals in the format expected by the test script.
 
-4. The USAGE.md file has been added, which is good for documentation.
+- There are several other git-goals-* scripts implemented (show, update, delete, complete, report) but they are not being tested yet.
 
-5. The project structure is improving, but we need to ensure all scripts are executable and properly linked.
+- The main git-goals script exists to route subcommands to the appropriate scripts.
 
-6. Error handling and input validation should be improved across all scripts.
+- There is a USAGE.md file with example usage, but the actual implementation may not match it exactly yet.
 
-7. We should consider adding more comprehensive tests for each command.
+- The test script is running in a temporary directory, which is good for isolation.
 
-8. The sandbox execution environment seems to be working, but we need to ensure it's properly set up for all tests.
-
-9. We should focus on implementing one command at a time, testing it thoroughly before moving to the next.
-
-10. Once all basic commands are implemented and tested, we can look into more advanced features or optimizations.
+- The project structure and basic scripts are in place, but there are still issues to resolve with the core create/list functionality.
 
 Next steps:
-1. Fix the goal ID extraction in the test script.
-2. Implement and test the git-goals-list command.
-3. Implement and test the git-goals-show command.
-4. Continue with the remaining commands in a similar fashion.
-5. Improve error handling and input validation across all scripts.
-6. Update USAGE.md as new commands are implemented.
-7. Consider adding a main git-goals script that routes to the appropriate subcommand.
+1. Debug the git-goals-create and git-goals-list scripts to ensure they output data in a consistent, parseable format.
+2. Update the test script to properly parse the output from create and list.
+3. Expand the test script to cover the other implemented commands (show, update, delete, complete, report).
+4. Ensure all scripts are using consistent data formats and error handling.
+5. Update USAGE.md if the actual implementation differs from the examples.
