@@ -1,26 +1,29 @@
 Observations: 
 
-1. The test script is failing to extract the goal ID after creating a new goal. This indicates an issue with either the goal creation or listing functionality.
+1. The test script is failing to extract the goal ID after creating a new goal. This suggests there may be an issue with the output format of the git-goals-create command or how it's being parsed.
 
-2. The git-goals-create script seems to be working as it's creating a new goal, but the output may not be in the expected format for parsing.
+2. The git-goals-list command doesn't seem to be producing any output, which could be why the goal ID extraction is failing.
 
-3. The git-goals-list script might not be outputting the goal information in a way that can be easily parsed by the test script.
+3. The sandbox environment appears to be set up correctly, but the git-goals commands are not functioning as expected.
 
-4. There may be an issue with how git notes are being used or read in the git-goals-list script.
+4. The test script is using a run_command function, but its implementation is empty. This could be causing issues with command execution and output capture.
 
-5. The test script's error handling and output parsing need improvement to provide more informative error messages.
+5. The error message suggests that the goal creation was attempted, but the subsequent list operation failed to retrieve the created goal.
 
-6. We should focus on fixing the goal creation and listing functionality before moving on to testing other features.
+6. The test script exits after the first failure, preventing further tests from running.
 
-7. It might be helpful to add more verbose output in the git-goals-create and git-goals-list scripts for debugging purposes.
+To guide our next steps:
 
-8. We should consider adding error checking in the git-goals-create script to ensure the goal is actually created before returning success.
+1. Review and fix the git-goals-create command to ensure it's outputting the goal ID in a consistent, parseable format.
 
-9. The test script could benefit from better separation of concerns, possibly breaking out the test cases into separate functions.
+2. Debug the git-goals-list command to understand why it's not producing any output.
 
-10. We may need to review and possibly update the USAGE.md file to ensure it accurately reflects the current implementation and expected output format.
+3. Implement proper error handling in the git-goals commands to provide more informative error messages.
 
-Next steps:
-1. Debug and fix the git-goals-create and git-goals-list scripts to ensure they work correctly and output information in a consistent, parseable format.
-2. Update the test script to better handle and report errors, possibly adding more verbose output for debugging.
-3. Once the basic create and list functionality is working, continue implementing and testing the other git-goals commands.
+4. Revise the run_command function in the test script to properly execute commands and capture their output.
+
+5. Consider adding more verbose logging to the test script to help diagnose issues.
+
+6. Once the basic create and list functionality is working, continue implementing and testing the other git-goals commands (show, update, complete, delete).
+
+7. After fixing immediate issues, focus on improving the overall robustness and user experience of the git-goals tool.
