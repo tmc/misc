@@ -1,18 +1,5 @@
 bin/bash
 
-# <antthinking>
-# 1. We need to improve error handling and input validation in the git-goals scripts.
-# 2. This will enhance the robustness and reliability of the tools.
-# 3. We should focus on the core scripts: create, update, list, show, complete, and delete.
-# 4. Adding more detailed error messages will help users understand and resolve issues.
-# 5. Input validation will prevent unexpected behavior due to incorrect user input.
-# 6. We should also consider adding some basic logging for debugging purposes.
-# 7. Consistency in error handling across all scripts will improve maintainability.
-# 8. We can use functions to centralize common operations and reduce code duplication.
-# 9. Adding usage information to each script will improve user experience.
-# 10. We should ensure that the scripts handle special characters in goal descriptions properly.
-# </antthinking>
-
 # Function to create a fix suggestion
 create_fix_suggestion() {
     local script_name="$1"
