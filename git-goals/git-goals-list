@@ -1,14 +1,26 @@
 #!/bin/bash
-# git-goals-list - Lists all goals
+# git-goals-list - Lists all goals in the current branch
 set -euo pipefail
 
 echo "Current Goals:"
-if ! git notes --ref=goals list 2>/dev/null | while read -r commit_hash note_ref; do
-    goal_data=$(git notes --ref=goals show "$commit_hash")
-    id=$(echo "$goal_data" | grep -o '"id": "[^"]*' | cut -d'"' -f4)
-    description=$(echo "$goal_data" | grep -o '"description": "[^"]*' | cut -d'"' -f4)
-    status=$(echo "$goal_data" | grep -o '"status": "[^"]*' | cut -d'"' -f4)
-    echo "- $id ($status): $description"
-done; then
-    echo "No goals found."
+goals_found=false
+
+# Get the current branch name
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+# Use git log to get commits with notes from the current branch
+git log --notes=goals --pretty=format:"%H" $current_branch | while read -r commit_hash; do
+    goal_data=$(git notes --ref=goals show "$commit_hash" 2>/dev/null)
+    if echo "$goal_data" | grep -q '"type": "goal"'; then
+        id=$(echo "$goal_data" | grep -o '"id": "[^"]*' | cut -d'"' -f4)
+        description=$(echo "$goal_data" | grep -o '"description":
+ "[^"]*' | cut -d'"' -f4)
+        status=$(echo "$goal_data" | grep -o '"status": "[^"]*' | cut -d'"' -f4 || echo "active")
+        echo "- $id ($status): $description"
+        goals_found=true
+    fi
+done
+
+if [ "$goals_found" = false ]; then
+    echo "No goals found in the current branch ($current_branch)."
 fi

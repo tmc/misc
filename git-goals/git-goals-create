@@ -1,50 +1,20 @@
 #!/bin/bash
-# git-goals-create - Creates a new goal or subgoal
+# git-goals-create - Creates a new goal
 set -euo pipefail
 
-# Enable debug logging
-DEBUG=${DEBUG:-false}
-debug() {
-    if [ "$DEBUG" = true ]; then
-        echo "DEBUG: $*" >&2
-    fi
-}
-
-debug "Starting git-goals-create"
-
-if [ "$#" -lt 1 ]; then
-    echo "Usage: git goals create <goal_description>" >&2
+if [ $# -eq 0 ]; then
+    echo "Usage: git goals create <goal_description>"
     exit 1
 fi
 
 description="$*"
-
-debug "Creating goal with description: $description"
-
-# Check if we're in a git repository
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    echo "Error: Not inside a Git repository" >&2
-    exit 1
-fi
-
-# Ensure there's at least one commit
-if ! git rev-parse HEAD >/dev/null 2>&1; then
-    debug "Creating initial commit"
-    git commit --allow-empty -m "Initial commit"
-fi
-
-# Generate a unique goal ID
 goal_id=$(date +%Y%m%d%H%M%S)
-debug "Generated goal ID: $goal_id"
 
-# Create a new empty commit to mark the goal creation
-debug "Creating new commit for goal"
+# Create a new empty commit
 git commit --allow-empty -m "Goal: $description"
 commit_hash=$(git rev-parse HEAD)
-debug "New commit hash: $commit_hash"
 
 # Add goal metadata as a Git note
-debug "Adding note to commit $commit_hash"
 git notes --ref=goals add -m "{
   \"id\": \"$goal_id\",
   \"type\": \"goal\",
@@ -55,5 +25,3 @@ git notes --ref=goals add -m "{
 
 echo "Created new goal with ID: $goal_id"
 echo "Description: $description"
-
-debug "git-goals-create completed successfully"
