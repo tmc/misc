@@ -74,3 +74,18 @@ echo "All tests completed successfully!"
 # Clean up
 cd ..
 rm -rf "$test_dir"
+
+# Test notification system
+echo "Testing notification system..."
+test_goal_id=$(git goals create "Test goal with deadline")
+git goals deadline $test_goal_id "2023-12-31"
+notification_output=$(git goals notify)
+if [[ $notification_output == *"WARNING: Goal $test_goal_id is due"* ]]; then
+    echo "Notification test passed"
+else
+    echo "Notification test failed"
+    exit 1
+fi
+
+# Clean up test goal
+git goals delete $test_goal_id

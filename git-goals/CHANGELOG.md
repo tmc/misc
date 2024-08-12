@@ -98,3 +98,10 @@
 ### Changed
 - Updated documentation to reflect new notification feature
 - Minor improvements and code cleanup
+
+## [0.2.5] - 2024-08-12
+### Added
+- Enhanced notification system with configurable warning period
+- Updated test suite to include notification system tests
+### Changed
+- Improved documentation for the notification feature

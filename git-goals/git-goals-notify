@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+WARNING_DAYS=${WARNING_DAYS:-7}
 
 set -euo pipefail
 
@@ -16,7 +17,7 @@ check_args "$@"
 echo -e "\033[1mChecking for approaching deadlines..."
 
 current_date=$(date +%Y-%m-%d)
-warning_days=7
+warning_days=${WARNING_DAYS:-7}
 
 git notes --ref=goals list | while read -r commit_hash note_ref; do
     goal_data=$(git notes --ref=goals show "$commit_hash")
