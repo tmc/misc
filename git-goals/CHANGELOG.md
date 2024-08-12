@@ -31,3 +31,10 @@
 - Minor improvements and code cleanup
 - Updated error handling in git-goals-common.sh
 - Improved consistency in script headers
+
+## [0.1.5] - 2024-08-12
+### Changed
+- Updated version number to 0.1.5
+- Improved consistency across all scripts
+- Enhanced error handling and input validation
+- Updated README.md with information about running tests

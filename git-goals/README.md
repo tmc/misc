@@ -1,4 +1,4 @@
-# git-goals v0.1.4
+# git-goals v0.1.5
 
 # git-goals
 
@@ -9,6 +9,14 @@ git-goals is a set of command-line tools to manage and track goals within a Git 
 1. Clone this repository or download the scripts.
 2. Add the directory containing these scripts to your PATH.
 3. Ensure the scripts are executable (`chmod +x git-goals*`).
+
+## Testing
+
+To run the test suite, use the following command:
+
+```bash
+./test-git-goals.sh
+```
 
 ## Usage
 
