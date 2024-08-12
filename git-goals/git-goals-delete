@@ -1,24 +1,27 @@
 #!/bin/bash
-# git-goals-delete - Deletes a goal
-set -euo pipefail
 
+# Check if an ID is provided
 if [ $# -eq 0 ]; then
-    echo "Usage: git goals delete <goal_id>"
+    echo "Error: Please provide a goal ID to delete."
+    echo "Usage: git goals delete <id>"
     exit 1
 fi
 
-goal_id="$1"
+id="$1"
 
-# Find the commit hash for the given goal ID
-commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
-
-if [ -z "$commit_hash" ]; then
-    echo "Error: Goal with ID $goal_id not found."
+# Check if .git-goals file exists
+if [ ! -f .git-goals ]; then
+    echo "Error: No goals found. Use 'git goals create' to add a new goal."
     exit 1
 fi
 
-# Remove the git note for the goal
-git notes --ref=goals remove "$commit_hash"
+# Delete the goal with the given ID
+sed -i "/^#$id |/d" .git-goals
 
-echo "Goal $goal_id deleted"
-
+# Check if the deletion was successful
+if ! grep -q "^#$id |" .git-goals; then
+    echo "Goal $id deleted successfully."
+else
+    echo "Error: Failed to delete goal $id. Make sure the ID exists."
+    exit 1
+fi

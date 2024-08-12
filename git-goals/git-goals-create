@@ -1,28 +1,22 @@
 #!/bin/bash
-# git-goals-create - Creates a new goal
-set -euo pipefail
 
+# Check if a description is provided
 if [ $# -eq 0 ]; then
-    echo "Usage: git goals create <goal_description>"
+    echo "Error: Please provide a description for the goal."
+    echo "Usage: git goals create <description>"
     exit 1
 fi
 
+# Combine all arguments into a single description
 description="$*"
-goal_id=$(date +%Y%m%d%H%M%S)
 
-# Prepare goal metadata
-goal_metadata="id: $goal_id
-type: goal
-description: $description
-status: active
-created_at: $(date -I)"
+# Generate a unique ID (timestamp-based)
+id=$(date +%s)
 
-# Create a new empty commit
-git commit --allow-empty -m "Goal: $description"
-commit_hash=$(git rev-parse HEAD)
+# Add the new goal to the .git-goals file
+echo "#$id | TODO | $description" >> .git-goals
 
-# Add goal metadata as a Git note
-git notes --ref=goals add -f -m "$goal_metadata" $commit_hash
-
-echo "Created new goal with ID: $goal_id"
+echo "Goal created successfully:"
+echo "ID: $id"
+echo "Status: TODO"
 echo "Description: $description"

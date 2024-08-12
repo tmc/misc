@@ -1,22 +1,30 @@
 #!/bin/bash
-# git-goals-show - Shows details of a specific goal
-set -euo pipefail
 
+# Check if an ID is provided
 if [ $# -eq 0 ]; then
-    echo "Usage: git goals show <goal_id>"
+    echo "Error: Please provide a goal ID."
+    echo "Usage: git goals show <id>"
     exit 1
 fi
 
-goal_id="$1"
+id="$1"
 
-# Find the commit hash for the given goal ID
-commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
-
-if [ -z "$commit_hash" ]; then
-    echo "Error: Goal with ID $goal_id not found."
+# Check if .git-goals file exists
+if [ ! -f .git-goals ]; then
+    echo "Error: No goals found. Use 'git goals create' to add a new goal."
     exit 1
 fi
 
-# Display the goal details
-git notes --ref=goals show "$commit_hash"
+# Search for the goal with the given ID
+goal=$(grep "^#$id |" .git-goals)
 
+if [ -z "$goal" ]; then
+    echo "Error: Goal with ID $id not found."
+    exit 1
+fi
+
+# Parse and display the goal details
+IFS='|' read -r _ status description <<< "$goal"
+echo "ID: $id"
+echo "Status: ${status## }"
+echo "Description: ${description## }"
