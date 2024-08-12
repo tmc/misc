@@ -1,110 +1,46 @@
 #!/usr/bin/bash
 
-# This script will perform the following tasks:
-# 1. Clean up the codebase by removing unnecessary files
-# 2. Update the README.md and USAGE.md files
-# 3. Remove typos and improve consistency across scripts
-# 4. Update the CHANGELOG.md file
-# 5. Remove the "meta-improvement" tools
+# Since the codebase appears to be in a stable and well-organized state, 
+# we'll focus on testing and minor improvements.
 
-# 1. Clean up the codebase
-echo "Cleaning up the codebase..."
-rm -f make-fix-suggestion.sh
-rm -f THOUGHTS
-rm -f eval-make-safe-progress.sh
-rm -f make-safe-progress.sh
-rm -rf .tools
+# Run the test script to ensure all functionality is working as expected
+echo "Running test script..."
+./test-git-goals.sh
 
-# 2. Update README.md and USAGE.md
-echo "Updating README.md and USAGE.md..."
-sed -i 's/v0.1.4/v0.1.5/' README.md
-cat << EOF > USAGE.md
-# git-goals Usage Guide
+# Update version number in README.md to match the current version
+echo "Updating version number in README.md..."
+sed -i 's/# git-goals v[0-9]\.[0-9]\.[0-9]/# git-goals v0.1.5/' README.md
 
-## Installation
+# Ensure all scripts have the correct shebang
+echo "Checking and updating shebangs..."
+for file in git-goals*; do
+    if [[ -f "$file" && "$file" != "git-goals-common.sh" ]]; then
+        sed -i '1s|^#!.*|#!/usr/bin/bash|' "$file"
+    fi
+done
 
-1. Clone the repository:
-   \`\`\`
-   git clone https://github.com/yourusername/git-goals.git
-   \`\`\`
-2. Add the git-goals directory to your PATH:
-   \`\`\`
-   export PATH=\$PATH:/path/to/git-goals
-   \`\`\`
-3. Ensure all scripts are executable:
-   \`\`\`
-   chmod +x /path/to/git-goals/git-goals*
-   \`\`\`
+# Add a note about running tests in the README
+echo "Adding test information to README.md..."
+if ! grep -q "## Testing" README.md; then
+    echo -e "\n## Testing\n\nTo run the test suite, execute:\n\n\`\`\`\n./test-git-goals.sh\n\`\`\`" >> README.md
+fi
 
-## Basic Usage
+# Ensure .gitignore includes common files to ignore
+echo "Updating .gitignore..."
+cat << EOF >> .gitignore
 
-### Create a new goal
-\`\`\`
-git goals create "Implement new feature"
-\`\`\`
+# Ignore backup files
+*~
 
-### List all goals
-\`\`\`
-git goals list
-\`\`\`
+# Ignore Visual Studio Code settings
+.vscode/
 
-### Show goal details
-\`\`\`
-git goals show <goal_id>
-\`\`\`
-
-### Update a goal
-\`\`\`
-git goals update <goal_id> "Updated goal description"
-\`\`\`
-
-### Complete a goal
-\`\`\`
-git goals complete <goal_id> [attempt_id] [rationale]
-\`\`\`
-
-### Delete a goal
-\`\`\`
-git goals delete <goal_id>
-\`\`\`
-
-### Generate a report
-\`\`\`
-git goals report
-\`\`\`
-
-### Recover goals
-\`\`\`
-git goals recover
-\`\`\`
-
-For more detailed information on each command, use the --help option:
-\`\`\`
-git goals <command> --help
-\`\`\`
+# Ignore any local test files
+test_*.sh
 EOF
 
-# 3. Remove typos and improve consistency
-echo "Removing typos and improving consistency..."
-sed -i 's/nload_config/load_config/' git-goals-*
-sed -i 's/fxing/fixing/' .claude-system-prompt
+# Sleep for a while as we're getting close to being done
+echo "Sleeping for 60 seconds..."
+sleep 60
 
-# 4. Update CHANGELOG.md
-echo "Updating CHANGELOG.md..."
-cat << EOF >> CHANGELOG.md
-
-## [0.1.5] - $(date +%Y-%m-%d)
-### Changed
-- Removed unnecessary "meta-improvement" tools
-- Updated README.md and USAGE.md for clarity and completeness
-- Improved consistency across all scripts
-- Cleaned up codebase by removing unused files
-EOF
-
-# 5. Update version number in git-goals script
-sed -i 's/VERSION="0.1.4"/VERSION="0.1.5"/' git-goals
-
-# 6. Remove IMPORTANT file as its tasks have been completed
-rm -f IMPORTANT
-
-echo "Cleanup and updates completed. Please review the changes and commit them if satisfactory."
+echo "Script completed. Please review changes and commit if satisfactory."
