@@ -1,165 +1,225 @@
 #!/bin/bash
 
-# This script will carry out fixes and improvements for the git-goals project
-
+# Update git-goals-show script
+cat > git-goals-show << EOL
+#!/bin/bash
 set -euo pipefail
 
-# Function to create or update a script
-update_script() {
-  local script_name=$1
-  local content=$2
-
-  echo "Updating $script_name..."
-  echo "$content" > "$script_name"
-  chmod +x "$script_name"
-}
-
-# Update git-goals-list
-update_script "git-goals-list" '#!/bin/bash
-set -euo pipefail
-
-echo "Current Goals:"
-git notes --ref=goals list | while read -r note_ref commit_hash; do
-    goal_data=$(git notes --ref=goals show "$commit_hash")
-    id=$(echo "$goal_data" | grep "^id:" | cut -d" " -f2-)
-    status=$(echo "$goal_data" | grep "^status:" | cut -d" " -f2-)
-    description=$(echo "$goal_data" | grep "^description:" | cut -d" " -f2-)
-    echo "- $id ($status): $description"
-done
-'
-
-# Update git-goals-show
-update_script "git-goals-show" '#!/bin/bash
-set -euo pipefail
-
-if [ $# -eq 0 ]; then
+if [ \$# -eq 0 ]; then
     echo "Usage: git goals show <goal_id>"
     exit 1
 fi
 
-goal_id="$1"
+goal_id="\$1"
 
-commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
+commit_hash=\$(git notes --ref=goals list | grep "\$goal_id" | awk "{print \\\$1}")
 
-if [ -z "$commit_hash" ]; then
-    echo "Error: Goal with ID $goal_id not found."
+if [ -z "\$commit_hash" ]; then
+    echo "Error: Goal with ID \$goal_id not found."
     exit 1
 fi
 
-git notes --ref=goals show "$commit_hash"
-'
+git notes --ref=goals show "\$commit_hash"
 
-# Update test-git-goals.sh
-update_script "test-git-goals.sh" '#!/bin/bash
+EOL
+chmod +x git-goals-show
+
+# Update git-goals-delete script
+cat > git-goals-delete << EOL
+#!/bin/bash
 set -euo pipefail
 
-# Function to run a command and print its output
-run_command() {
-    echo "$ $*"
-    output=$("$@")
-    echo "$output"
-    echo
-}
-
-export PATH="/workspace/git-goals:$PATH"
-
-# Set up a temporary test directory
-test_dir=$(mktemp -d)
-cd "$test_dir"
-
-echo "Setting up test repository..."
-git init
-git config user.email "test@example.com"
-git config user.name "Test User"
-git commit --allow-empty -m "Initial commit"
-
-echo "Testing git-goals..."
-
-# Test goal creation
-run_command git goals create "Implement new feature"
-
-# Test goal listing
-run_command git goals list
-
-# Get the goal ID from the list output
-goal_id=$(git goals list | grep "Implement new feature" | cut -d" " -f2 | tr -d "()")
-
-if [ -z "$goal_id" ]; then
-    echo "Error: Failed to extract goal ID for '\''Implement new feature'\''"
+if [ \$# -eq 0 ]; then
+    echo "Usage: git goals delete <goal_id>"
     exit 1
 fi
 
-# Test goal show
-run_command git goals show "$goal_id"
+goal_id="\$1"
 
-# Test goal update
-run_command git goals update "$goal_id" "Implement new feature with improved performance"
+commit_hash=\$(git notes --ref=goals list | grep "\$goal_id" | awk "{print \\\$1}")
 
-# Test goal show after update
-run_command git goals show "$goal_id"
-
-# Test goal completion
-run_command git goals complete "$goal_id" "" "Feature implemented and tested"
-
-# Test goal report
-run_command git goals report
-
-# Test goal deletion
-run_command git goals delete "$goal_id"
-
-# Verify goal is deleted
-if git goals list | grep -q "$goal_id"; then
-    echo "Error: Goal $goal_id still exists after deletion"
+if [ -z "\$commit_hash" ]; then
+    echo "Error: Goal with ID \$goal_id not found."
     exit 1
-else
-    echo "Goal $goal_id successfully deleted"
 fi
 
-echo "All tests completed successfully!"
+git notes --ref=goals remove "\$commit_hash"
 
-# Clean up
-cd ..
-rm -rf "$test_dir"
-'
+echo "Goal \$goal_id deleted"
+EOL
+chmod +x git-goals-delete
 
-# Update OBSERVATIONS
-cat << EOF > OBSERVATIONS
-Observations: 
+# Update git-goals-update script
+cat > git-goals-update << EOL
+#!/bin/bash
+set -euo pipefail
 
-1. The test script is now executing successfully, but there are still some issues to address:
+if [ \$# -lt 2 ]; then
+    echo "Usage: git goals update <goal_id> <new_description>"
+    exit 1
+fi
 
-2. The git-goals-create script is working correctly, creating a new goal with an ID and description.
+goal_id="\$1"
+shift
+new_description="\$*"
 
-3. The git-goals-list script has been updated to properly retrieve and display stored goals.
+commit_hash=\$(git notes --ref=goals list | grep "\$goal_id" | awk "{print \\\$1}")
 
-4. The test script now successfully extracts the goal ID after creation.
+if [ -z "\$commit_hash" ]; then
+    echo "Error: Goal with ID \$goal_id not found."
+    exit 1
+fi
 
-5. The git-goals-show script has been fixed to correctly retrieve and display goal details.
+current_data=\$(git notes --ref=goals show "\$commit_hash")
+updated_data=\$(echo "\$current_data" | sed "s/^description:.*\$/description: \$new_description/")
 
-6. The remaining commands (update, complete, report, delete) are now being tested.
+echo "\$updated_data" | git notes --ref=goals add -f -F - "\$commit_hash"
 
-7. Error handling and input validation have been added to all scripts to make them more robust.
+echo "Updated goal \$goal_id: \$new_description"
+EOL
+chmod +x git-goals-update
 
-8. The test script has been updated to handle potential failures more gracefully and provide more detailed error messages.
+# Update git-goals-report script
+cat > git-goals-report << EOL
+#!/bin/bash
+set -euo pipefail
 
-9. We should consider adding debug output options to help with troubleshooting.
+echo "Goal Report"
+echo "==========="
 
-10. The next steps should focus on thorough testing and potential improvements to the user experience.
+git notes --ref=goals list | while read -r note_ref commit_hash; do
+    goal_data=\$(git notes --ref=goals show "\$commit_hash")
 
-Next steps:
-1. Implement comprehensive error handling in all scripts.
-2. Add debug mode to all scripts for easier troubleshooting.
-3. Create more extensive test cases to cover edge cases and potential errors.
-4. Improve documentation, including updating the README.md and USAGE.md files.
-5. Consider adding features like goal prioritization or tagging.
-6. Implement data validation to ensure goal data integrity.
-7. Optimize performance for repositories with a large number of goals.
-8. Add unit tests for individual functions within the scripts.
-9. Consider creating a man page for the git-goals command.
-10. Explore integration with other Git workflows or tools.
-EOF
+    id=\$(echo "\$goal_data" | grep "^id:" | cut -d" " -f2-)
+    description=\$(echo "\$goal_data" | grep "^description:" | cut -d" " -f2-)
+    status=\$(echo "\$goal_data" | grep "^status:" | cut -d" " -f2-)
+    created_at=\$(echo "\$goal_data" | grep "^created_at:" | cut -d" " -f2-)
+    completed_at=\$(echo "\$goal_data" | grep "^completed_at:" | cut -d" " -f2-)
 
-echo "Fixes and improvements have been applied. Please review the changes and run the test script."
+    echo "Goal ID: \$id"
+    echo "Description: \$description"
+    echo "Status: \$status"
+    echo "Created: \$created_at"
+    if [ "\$status" = "completed" ]; then
+        echo "Completed: \$completed_at"
+    fi
+    echo "---"
+done
+EOL
+chmod +x git-goals-report
 
-# Sleep for a longer period as we're getting close to being done
-sleep 60
+# Update git-goals-list script
+cat > git-goals-list << EOL
+#!/bin/bash
+set -euo pipefail
+
+echo "Current Goals:"
+git notes --ref=goals list | while read -r note_ref commit_hash; do
+    goal_data=\$(git notes --ref=goals show "\$commit_hash")
+    id=\$(echo "\$goal_data" | grep "^id:" | cut -d" " -f2-)
+    status=\$(echo "\$goal_data" | grep "^status:" | cut -d" " -f2-)
+    description=\$(echo "\$goal_data" | grep "^description:" | cut -d" " -f2-)
+    echo "- \$id (\$status): \$description"
+done
+
+EOL
+chmod +x git-goals-list
+
+# Update git-goals-create script
+cat > git-goals-create << EOL
+#!/bin/bash
+set -euo pipefail
+
+if [ \$# -eq 0 ]; then
+    echo "Error: Please provide a description for the goal."
+    echo "Usage: git goals create <description>"
+    exit 1
+fi
+
+description="\$*"
+id=\$(date +%Y%m%d%H%M%S)
+
+git notes --ref=goals add -m "id: \$id
+type: goal
+description: \$description
+status: active
+created_at: \$(date -I)" HEAD
+
+echo "Created new goal with ID: \$id"
+echo "Description: \$description"
+EOL
+chmod +x git-goals-create
+
+# Update git-goals-complete script
+cat > git-goals-complete << EOL
+#!/bin/bash
+set -euo pipefail
+
+if [ \$# -lt 1 ]; then
+    echo "Usage: git goals complete <goal_id> [attempt_id] [rationale]"
+    exit 1
+fi
+
+goal_id="\$1"
+attempt_id="\${2:-}"
+rationale="\${3:-}"
+
+commit_hash=\$(git notes --ref=goals list | grep "\$goal_id" | awk "{print \\\$1}")
+
+if [ -z "\$commit_hash" ]; then
+    echo "Error: Goal with ID \$goal_id not found."
+    exit 1
+fi
+
+current_data=\$(git notes --ref=goals show "\$commit_hash")
+updated_data=\$(echo "\$current_data" | sed "s/^status:.*\$/status: completed/")
+updated_data+="
+completed_at: \$(date -I)"
+
+if [ -n "\$attempt_id" ]; then
+    updated_data+="
+attempt_id: \$attempt_id"
+fi
+
+if [ -n "\$rationale" ]; then
+    updated_data+="
+rationale: \$rationale"
+fi
+
+echo "\$updated_data" | git notes --ref=goals add -f -F - "\$commit_hash"
+
+echo "Goal \$goal_id marked as complete"
+if [ -n "\$rationale" ]; then
+    echo "Rationale: \$rationale"
+fi
+EOL
+chmod +x git-goals-complete
+
+# Update main git-goals script
+cat > git-goals << EOL
+#!/bin/bash
+set -euo pipefail
+
+if [ \$# -eq 0 ]; then
+    echo "Usage: git goals <subcommand> [<args>]"
+    echo "Available subcommands: create, list, show, update, delete, complete, report"
+    exit 1
+fi
+
+subcommand="\$1"
+shift
+
+case "\$subcommand" in
+    create|list|show|update|delete|complete|report)
+        "git-goals-\$subcommand" "\$@"
+        ;;
+    *)
+        echo "Error: Unknown subcommand '\$subcommand'"
+        echo "Available subcommands: create, list, show, update, delete, complete, report"
+        exit 1
+        ;;
+esac
+EOL
+chmod +x git-goals
+
+echo "All git-goals scripts have been updated."
