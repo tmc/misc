@@ -1,59 +1,3 @@
-+ set -euo pipefail
-++ git rev-parse --show-toplevel
-+ repo_root=/Users/tmc/go/src/github.com/tmc/misc
-+ '[' -z /Users/tmc/go/src/github.com/tmc/misc ']'
-+ COPY=false
-+ REMOVE_CONTAINER=false
-+ NAMESPACE=sandbox-exec
-+ SANDBOX_DEPTH=0
-+ SANDBOX_DEPTH=1
-+ SANDBOX_EXTRA_ENV=ANTHROPIC_API_KEY
-+ [[ 1 -gt 0 ]]
-+ case "$1" in
-+ break
-+ WS_ROOT=/Users/tmc/go/src/github.com/tmc/misc
-+ export DOTFILES_HOME=/Users/tmc
-+ DOTFILES_HOME=/Users/tmc
-+ export BASHRC_PATH=/Users/tmc/.bashrc
-+ BASHRC_PATH=/Users/tmc/.bashrc
-++ pwd
-+ current_path=/Users/tmc/go/src/github.com/tmc/misc/git-goals
-+ relative_path=git-goals
-+++ dirname /Users/tmc/go/src/github.com/tmc/misc/sandbox-exec/sandbox-exec
-++ cd /Users/tmc/go/src/github.com/tmc/misc/sandbox-exec
-++ pwd
-+ script_dir=/Users/tmc/go/src/github.com/tmc/misc/sandbox-exec
-++ pwd
-+ dockerfile_path=/Users/tmc/go/src/github.com/tmc/misc/git-goals/.sandbox-exec.dockerfile
-++ pwd
-+ dockerfile_context=/Users/tmc/go/src/github.com/tmc/misc/git-goals
-+ '[' '!' -f /Users/tmc/go/src/github.com/tmc/misc/git-goals/.sandbox-exec.dockerfile ']'
-+ dockerfile_path=/Users/tmc/go/src/github.com/tmc/misc/.sandbox-exec.dockerfile
-+ dockerfile_context=/Users/tmc/go/src/github.com/tmc/misc
-+ '[' '!' -f /Users/tmc/go/src/github.com/tmc/misc/.sandbox-exec.dockerfile ']'
-+ dockerfile_path=/Users/tmc/go/src/github.com/tmc/misc/sandbox-exec/.sandbox-exec.dockerfile
-+ dockerfile_context=/Users/tmc/go/src/github.com/tmc/misc/sandbox-exec
-+ '[' '!' -f /Users/tmc/go/src/github.com/tmc/misc/sandbox-exec/.sandbox-exec.dockerfile ']'
-++ md5sum /Users/tmc/go/src/github.com/tmc/misc/sandbox-exec/.sandbox-exec.dockerfile
-++ cut -c-5
-+ docker_tag=sandbox-exec:cc9ef
-++ docker images -q sandbox-exec:cc9ef
-+ '[' '!' 1b0a8218fe70 ']'
-+ '[' '!' -z '' ']'
-++ date +%s
-+ container_name=sandbox-exec-d1-1723447303-8643
-+ '[' false = true ']'
-+ git notes --ref=sandbox-exec append -m sandbox-exec-d1-1723447303-8643
-+ '[' -f /Users/tmc/.bashrc_sandbox-exec ']'
-+ BASHRC_PATH=/Users/tmc/.bashrc_sandbox-exec
-+ BASHRC_MOUNT='-v /Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro'
-+ docker_run_opts=
-+ '[' false = true ']'
-+ start_container ./test-git-goals.sh
-+ common_opts=('-it' '--name' 'sandbox-exec-d1-1723447303-8643' '-v' '/Users/tmc/go/src/github.com/tmc/misc:/workspace' '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' '/Users/tmc/.gitconfig:/root/.gitconfig:ro' '-v' '/Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro' '-e' 'DOTFILES_HOME' '-e' 'BASHRC_PATH' '-e' 'ANTHROPIC_API_KEY' '-e' 'SANDBOX_DEPTH=1' '-e' 'WS_ROOT=/Users/tmc/go/src/github.com/tmc/misc' '--net=host' '-w' '/workspace' 'sandbox-exec:cc9ef')
-+ local common_opts
-+ '[' 1 -eq 0 ']'
-+ docker run -it --name sandbox-exec-d1-1723447303-8643 -v /Users/tmc/go/src/github.com/tmc/misc:/workspace -v /var/run/docker.sock:/var/run/docker.sock -v /Users/tmc/.gitconfig:/root/.gitconfig:ro -v /Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro -e DOTFILES_HOME -e BASHRC_PATH -e ANTHROPIC_API_KEY -e SANDBOX_DEPTH=1 -e WS_ROOT=/Users/tmc/go/src/github.com/tmc/misc --net=host -w /workspace sandbox-exec:cc9ef /bin/bash -c 'cd '\''git-goals'\'' && exec ./test-git-goals.sh'
 Setting up test repository...
 [33mhint: Using 'master' as the name for the initial branch. This default branch name[m
 [33mhint: is subject to change. To configure the initial branch name to use in all[m
@@ -65,13 +9,13 @@ Setting up test repository...
 [33mhint: 'development'. The just-created branch can be renamed via this command:[m
 [33mhint: [m
 [33mhint: 	git branch -m <name>[m
-Initialized empty Git repository in /tmp/tmp.I5JVRF2iR4/.git/
-[master (root-commit) 69fa2c6] Initial commit
+Initialized empty Git repository in /tmp/tmp.eVgC2EWlr5/.git/
+[master (root-commit) cdc287c] Initial commit
 Testing git-goals...
 $ git goals create Implement new feature
-[master 3897a07] Goal: Implement new feature
-Created new goal with ID: 20240812072143
+[master 66b0c14] Goal: Implement new feature
+Created new goal with ID: 20240812072251
 Description: Implement new feature
 
 $ git goals list
-/workspace/git-goals/git-goals: line 33: /workspace/git-goals/git-goals-list: Success
+error: no note found for object a073626d14feb767918190aadae4726c3fbc882d.

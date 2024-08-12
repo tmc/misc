@@ -43,7 +43,7 @@ while true; do
     create_commit
 
     echo "Running next step in sandbox..."
-    run_sandbox "./test-git-goals.sh"
+    run_sandbox "bash -x ./test-git-goals.sh"
 
     analyze_sandbox
 
