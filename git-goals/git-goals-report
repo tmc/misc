@@ -1,0 +1,22 @@
+#!/bin/bash
+# git-goals-report - Generates a report of all goals
+set -euo pipefail
+
+echo "Goal Report"
+echo "==========="
+
+git notes --ref=goals list | while read -r commit_hash note_ref; do
+    goal_id=${note_ref#goals/}
+    goal_data=$(git notes --ref=goals show $commit_hash)
+    status=$(echo "$goal_data" | grep "\"status\":" | cut -d"\"" -f4)
+    description=$(echo "$goal_data" | grep "\"description\":" | cut -d"\"" -f4)
+    created_at=$(echo "$goal_data" | grep "\"created_at\":" | cut -d"\"" -f4)
+    completed_at=$(echo "$goal_data" | grep "\"completed_at\":" | cut -d"\"" -f4 || echo "N/A")
+
+    echo "Goal ID: $goal_id"
+    echo "Description: $description"
+    echo "Status: $status"
+    echo "Created: $created_at"
+    echo "Completed: $completed_at"
+    echo "---"
+done

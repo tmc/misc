@@ -1,0 +1,47 @@
+#!/bin/bash
+# git-goals-create - Creates a new goal or subgoal
+# Usage: git goals create <goal_description>
+# Creates a new goal branch with the given description.
+# If the current branch is a goal branch, creates a subgoal.
+# The goal description is used to generate a slug for the goal path.
+# The goal path is used as the branch name.
+# The goal description is stored as a Git note on the commit.
+set -euo pipefail
+
+if [ "$#" -lt 1 ]; then
+    echo "Usage: git goals create <goal_description>" >&2
+    exit 1
+fi
+
+description="$*"
+
+# Generate a slug from the description
+# TODO: this could get long, find way to keep short
+slug=$(echo "$description" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//;s/-$//')
+
+# Determine the new goal path
+# If we're in a goal branch, create a subgoal
+# Otherwise, create a new top-level goal
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+if [[ $current_branch == goal/* ]]; then
+    parent_goal_path=$current_branch
+    goal_path="$parent_goal_path/$slug"
+else
+    goal_path="goal/${slug}"
+fi
+
+git checkout -b "$goal_path"
+
+# Create a new empty commit to mark the goal creation, with the description as the commit message
+# if there are staged changes, stash, then unstash after commit:
+if [[ $(git diff --quiet --exit-code --cached) -ne 0 ]]; then
+    git stash
+    git commit --allow-empty -m "goal: $description"
+    git stash pop
+else
+    git commit --allow-empty -m "$description"
+fi
+
+# Add goal metadata as a Git note
+git notes add -m "type: goal
+description: $description"

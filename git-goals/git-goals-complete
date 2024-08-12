@@ -1,0 +1,72 @@
+#!/bin/bash
+# git-goals-complete - Marks a goal as complete, optionally with attempt selection and rationale
+set -euo pipefail
+
+goal_id="${1:-}"
+attempt_id="${2:-}"
+rationale="${3:-}"
+
+if [ -z "$goal_id" ]; then
+    echo "Error: Goal ID must be provided" >&2
+    echo "Usage: git goals complete <goal_id> [attempt_id] [rationale]" >&2
+    exit 1
+fi
+
+# Function to find the note for a specific goal
+find_goal_note() {
+    local goal_id="$1"
+    git notes --ref=goals list | grep -E "^[a-f0-9]+ goals/$goal_id$" | cut -d " " -f 1
+}
+
+# Find the note for the specified goal
+goal_note_commit=$(find_goal_note "$goal_id")
+
+# Retrieve current goal metadata
+if [ -n "$goal_note_commit" ]; then
+    goal_metadata=$(git notes --ref=goals show "$goal_note_commit")
+else
+    echo "Error: Goal $goal_id not found" >&2
+    exit 1
+fi
+
+# Function to update metadata without jq
+update_metadata() {
+    local key="$1"
+    local value="$2"
+    if grep -q "\"$key\":" <<< "$goal_metadata"; then
+        goal_metadata=$(sed "s/\"$key\":.*$/\"$key\": \"$value\",/" <<< "$goal_metadata")
+    else
+        goal_metadata=$(sed "s/}$/,\"$key\": \"$value\"}/" <<< "$goal_metadata")
+    fi
+}
+
+# Update common metadata
+update_metadata "status" "completed"
+update_metadata "completed_at" "$(date -I)"
+
+if [ -n "$attempt_id" ]; then
+    # Retrieve attempt details
+    attempt_details=$(git show -s --format=%B "$attempt_id")
+
+    # Update goal metadata with selected attempt and rationale
+    update_metadata "selected_attempt" "$attempt_id"
+    update_metadata "completion_rationale" "$rationale"
+    update_metadata "attempt_details" "${attempt_details//$'\n'/\\n}"
+elif [ -n "$rationale" ]; then
+    # Update goal metadata for human completion with rationale
+    update_metadata "completion_rationale" "$rationale"
+else
+    # Update goal metadata for human completion without specific rationale
+    update_metadata "completion_rationale" "Completed by human intervention without specific rationale."
+fi
+
+# Update goal metadata
+git notes --ref=goals add -f -m "$goal_metadata" "$goal_note_commit"
+
+echo "Goal $goal_id marked as complete"
+if [ -n "$attempt_id" ]; then
+    echo "Selected attempt: $attempt_id"
+fi
+if [ -n "$rationale" ]; then
+    echo "Rationale: $rationale"
+fi

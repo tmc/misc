@@ -1,0 +1,12 @@
+#!/bin/bash
+# git-goals-list - Lists all goals
+set -euo pipefail
+
+echo "Current Goals:"
+git notes --ref=goals list | while read -r commit_hash note_ref; do
+    goal_id=${note_ref#goals/}
+    goal_data=$(git notes --ref=goals show $commit_hash)
+    status=$(echo "$goal_data" | grep "\"status\":" | cut -d"\"" -f4)
+    description=$(echo "$goal_data" | grep "\"description\":" | cut -d"\"" -f4)
+    echo "- $goal_id ($status): $description"
+done

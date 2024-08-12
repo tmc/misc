@@ -1,0 +1,23 @@
+#!/bin/bash
+# git-goals-update - Updates the current goal or creates a new one if it doesn't exist
+
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+    echo "Usage: git goals update <new_goal_description>"
+    exit 1
+fi
+
+new_goal_description="$*"
+
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+if [[ $current_branch == goal/* ]]; then
+    # We're on a goal branch, so update the existing goal
+    git notes add -f -m "description: $new_goal_description"
+    echo "Updated goal: $new_goal_description"
+else
+    # We're not on a goal branch, so create a new goal
+    git goals create "$new_goal_description"
+    echo "Created new goal: $new_goal_description"
+fi
