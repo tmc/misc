@@ -122,3 +122,10 @@
 - Minor improvements and code cleanup
 - Enhanced error handling in various scripts
 - Updated documentation
+
+## [0.2.9] - 2024-08-12
+### Added
+- Implemented sorting of goals by priority in the list command
+### Changed
+- Updated git-goals-list to sort goals by priority (high to low)
+- Minor improvements and code cleanup
