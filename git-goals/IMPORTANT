@@ -1,4 +1,5 @@
 - /usr/bin/bash doesnt exist on macos, and /bin/bash didn't exist in a contaienr.
+ - this manifested as: /workspace/git-goals/fixes.sh: ./test-git-goals.sh: /bin/bash: bad interpreter: Permission denied
 - Consider setting up a continuous integration pipeline for automated testing
 - Gather user feedback on the current feature set and user experience
 - Investigate potential integrations with popular Git hosting platforms or project management tools
