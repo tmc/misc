@@ -3,3 +3,4 @@
 - Optimize code performance for large repositories
 - Ensure thorough cross-platform testing
 - Consider implementing a notification system for approaching deadlines
+- Implement sorting of goals by priority in the list command

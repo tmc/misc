@@ -24,6 +24,7 @@ priority="$2"
 
 if [[ ! "$priority" =~ ^(high|medium|low)$ ]]; then
     echo -e "\033[1mError: Invalid priority. Use 'high', 'medium', or 'low'."
+    echo -e "\033[1mPlease provide a valid priority and try again."
     exit 1
 fi
 
@@ -41,3 +42,4 @@ updated_data+="\npriority: $priority"
 echo -e "\033[1m$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
 
 echo -e "\033[1mGoal $goal_id priority set to $priority"
+# TODO: Consider implementing a way to sort goals by priority in the list command

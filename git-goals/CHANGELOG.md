@@ -110,3 +110,15 @@
 ### Changed
 - Minor improvements and code cleanup
 - Updated documentation
+
+## [0.2.7] - 2024-08-12
+### Changed
+- Improved error handling and messages in various scripts
+- Updated documentation to reflect recent changes
+- Minor code improvements and cleanup
+
+## [0.2.8] - 2024-08-12
+### Changed
+- Minor improvements and code cleanup
+- Enhanced error handling in various scripts
+- Updated documentation

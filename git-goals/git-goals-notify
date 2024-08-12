@@ -15,6 +15,10 @@ load_config
 check_args "$@"
 
 echo -e "\033[1mChecking for approaching deadlines..."
+if [ -z "$(git notes --ref=goals list)" ]; then
+    echo -e "\033[1mNo goals found. Nothing to notify."
+    exit 0
+fi
 
 current_date=$(date +%Y-%m-%d)
 warning_days=${WARNING_DAYS:-7}
@@ -28,7 +32,7 @@ git notes --ref=goals list | while read -r commit_hash note_ref; do
     if [ -n "$deadline" ] && [ "$status" != "completed" ]; then
         days_until_deadline=$(( ($(date -d "$deadline" +%s) - $(date -d "$current_date" +%s) ) / 86400 ))
         if [ $days_until_deadline -le $warning_days ] && [ $days_until_deadline -ge 0 ]; then
-            echo -e "\033[1mWARNING: Goal $goal_id is due in $days_until_deadline days!"
+            echo -e "\033[1mWARNING: Goal $goal_id ($description) is due in $days_until_deadline days!"
         elif [ $days_until_deadline -lt 0 ]; then
             echo -e "\033[1mALERT: Goal $goal_id is overdue by $(( -days_until_deadline )) days!"
         fi
