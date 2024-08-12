@@ -11,7 +11,8 @@ create_commit() {
 run_sandbox() {
     local command="$1"
     which sandbox-exec
-    sandbox-exec "$command" > sandbox_output.txt 2>&1
+    bash -x `which sandbox-exec` "$command" > sandbox_output.txt 2>&1
+    #sandbox-exec "$command" > sandbox_output.txt 2>&1
 }
 
 # Function to analyze sandbox output and context
