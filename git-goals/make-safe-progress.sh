@@ -2,16 +2,14 @@
 set -euo pipefail
 
 # Function to create a new git commit
-create_commit() {
-    git add .
+create_commit() { git add .
     git commit -m "Progress iteration: $(date +%Y%m%d%H%M%S)" --allow-empty
 }
 
 # Function to run command in sandbox and capture output
 run_sandbox() {
     local command="$1"
-    which sandbox-exec
-    sandbox-exec "$command" > sandbox_output.txt 2>&1
+    sandbox-exec "$command"
 }
 
 # Function to analyze sandbox output and context
@@ -22,7 +20,7 @@ analyze_sandbox() {
     uname -a > system_info.txt
 
     # Analyze sandbox output
-    cat sandbox_output.txt | cgpt -s "Analyze this sandbox output and suggest improvements or next steps:" > analysis.txt
+    docker logs $(get-latest-sandbox) |cgpt -s "Analyze this sandbox output and suggest improvements or next steps:" > analysis.txt
 
     # Analyze execution context
     ps aux | grep sandbox-exec > execution_context.txt
@@ -41,16 +39,8 @@ update_project() {
 # Main execution loop
 while true; do
     create_commit
-
     echo "Running next step in sandbox..."
     run_sandbox "bash -x ./test-git-goals.sh"
-
-    analyze_sandbox
-
-    update_project
-
-    create_commit
-
     echo "Iteration complete. Press Enter to continue or Ctrl+C to exit."
     read
 done
