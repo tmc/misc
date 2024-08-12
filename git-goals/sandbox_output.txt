@@ -7,6 +7,7 @@
 + NAMESPACE=sandbox-exec
 + SANDBOX_DEPTH=0
 + SANDBOX_DEPTH=1
++ SANDBOX_EXTRA_ENV=SANDBOX_EXTRA_ENV
 + [[ 1 -gt 0 ]]
 + case "$1" in
 + break
@@ -31,13 +32,32 @@
 + '[' '!' d53cb8fad5dc ']'
 + '[' '!' -z '' ']'
 ++ date +%s
-+ container_name=sandbox-exec-d1-1723444355-30801
++ container_name=sandbox-exec-d1-1723444499-32171
 + '[' false = true ']'
-+ git notes --ref=sandbox-exec append -m sandbox-exec-d1-1723444355-30801
++ git notes --ref=sandbox-exec append -m sandbox-exec-d1-1723444499-32171
 + '[' -f /Users/tmc/.bashrc_sandbox-exec ']'
 + BASHRC_PATH=/Users/tmc/.bashrc_sandbox-exec
 + BASHRC_MOUNT='-v /Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro'
 + docker_run_opts=
 + '[' false = true ']'
 + start_container ./test-git-goals.sh
-/Users/tmc/go/src/github.com/tmc/misc/sandbox-exec/sandbox-exec: line 120: SANDBOX_EXTRA_ENV: unbound variable
++ common_opts=('-it' '--name' 'sandbox-exec-d1-1723444499-32171' '-v' '/Users/tmc/go/src/github.com/tmc/misc:/workspace' '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' '/Users/tmc/.gitconfig:/root/.gitconfig:ro' '-v' '/Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro' '-e' 'DOTFILES_HOME' '-e' 'BASHRC_PATH' '-e' 'SANDBOX_EXTRA_ENV' '-e' 'SANDBOX_DEPTH=1' '-e' 'WS_ROOT=/Users/tmc/go/src/github.com/tmc/misc' '--net=host' '-w' '/workspace' 'sandbox-exec:00596')
++ local common_opts
++ '[' 1 -eq 0 ']'
++ docker run -it --name sandbox-exec-d1-1723444499-32171 -v /Users/tmc/go/src/github.com/tmc/misc:/workspace -v /var/run/docker.sock:/var/run/docker.sock -v /Users/tmc/.gitconfig:/root/.gitconfig:ro -v /Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro -e DOTFILES_HOME -e BASHRC_PATH -e SANDBOX_EXTRA_ENV -e SANDBOX_DEPTH=1 -e WS_ROOT=/Users/tmc/go/src/github.com/tmc/misc --net=host -w /workspace sandbox-exec:00596 /bin/bash -c 'cd '\''git-goals'\'' && exec ./test-git-goals.sh'
+Setting up test repository...
+[33mhint: Using 'master' as the name for the initial branch. This default branch name[m
+[33mhint: is subject to change. To configure the initial branch name to use in all[m
+[33mhint: of your new repositories, which will suppress this warning, call:[m
+[33mhint: [m
+[33mhint: 	git config --global init.defaultBranch <name>[m
+[33mhint: [m
+[33mhint: Names commonly chosen instead of 'master' are 'main', 'trunk' and[m
+[33mhint: 'development'. The just-created branch can be renamed via this command:[m
+[33mhint: [m
+[33mhint: 	git branch -m <name>[m
+Initialized empty Git repository in /tmp/tmp.2aX50p9gxx/.git/
+[master (root-commit) 606c5db] Initial commit
+Testing git-goals...
+$ git goals create Implement new feature
+git: 'goals' is not a git command. See 'git --help'.

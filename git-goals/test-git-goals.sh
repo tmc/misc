@@ -19,6 +19,8 @@ git config user.email "test@example.com"
 git config user.name "Test User"
 git commit --allow-empty -m "Initial commit"
 
+export PATH="$(pwd):$PATH"
+
 echo "Testing git-goals..."
 
 # Test goal creation
