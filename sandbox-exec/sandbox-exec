@@ -111,6 +111,7 @@ function start_container() {
         $BASHRC_MOUNT
         -e DOTFILES_HOME
         -e BASHRC_PATH
+        -e ${SANDBOX_EXTRA_ENV}
         -e SANDBOX_DEPTH=$SANDBOX_DEPTH
         -e WS_ROOT=$WS_ROOT
         --net=host
