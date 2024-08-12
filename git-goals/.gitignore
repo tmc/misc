@@ -3,3 +3,6 @@
 *.swp
 .DS_Store
 git-goals-common.sh
+make-fix-suggestion.sh
+make-safe-progress.sh
+eval-make-safe-progress.sh

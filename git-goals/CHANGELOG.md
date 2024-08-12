@@ -38,3 +38,9 @@
 - Improved consistency across all scripts
 - Enhanced error handling and input validation
 - Updated README.md with information about running tests
+
+## [0.1.6] - 2024-08-12
+### Changed
+- Minor improvements and code cleanup
+- Updated error handling in git-goals-common.sh
+- Improved consistency across all scripts

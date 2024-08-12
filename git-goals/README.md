@@ -1,4 +1,4 @@
-# git-goals v0.1.5
+# git-goals v0.1.6
 
 # git-goals
 
@@ -79,3 +79,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 MIT
+
+## Running Tests
+
+To run the test suite and verify the functionality of git-goals, use the following command:
+
+```bash
+./test-git-goals.sh
+```
+
+This will run through a series of tests to ensure all commands are working as expected.
