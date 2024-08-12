@@ -21,8 +21,19 @@ done
 
 echo "Current Goals:"
 
+# Check if there are any notes
+if ! git notes --ref=goals list > /dev/null 2>&1; then
+    echo "No goals found."
+    exit 0
+fi
+
 git notes --ref=goals list | while read -r commit_hash note_ref; do
-    goal_data=$(git notes --ref=goals show $commit_hash)
+    goal_data=$(git notes --ref=goals show "$commit_hash" 2>/dev/null)
+
+    if [ -z "$goal_data" ]; then
+        continue
+    fi
+
     goal_id=$(echo "$goal_data" | grep "^id:" | cut -d' ' -f2)
     description=$(echo "$goal_data" | grep "^description:" | cut -d' ' -f2-)
     status=$(echo "$goal_data" | grep "^status:" | cut -d' ' -f2)
