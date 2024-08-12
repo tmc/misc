@@ -3,10 +3,37 @@
 set -euo pipefail
 
 echo "Current Goals:"
-git notes --ref=goals list | while read -r commit_hash note_ref; do
+if ! git notes --ref=goals list | while read -r commit_hash note_ref; do
     goal_data=$(git notes --ref=goals show $commit_hash)
     goal_id=$(echo "$goal_data" | grep "\"id\":" | cut -d"\"" -f4)
     status=$(echo "$goal_data" | grep "\"status\":" | cut -d"\"" -f4)
     description=$(echo "$goal_data" | grep "\"description\":" | cut -d"\"" -f4)
     echo "- $goal_id ($status): $description"
-done
+done; then
+    echo "No goals found."
+fi
+```
+
+2. Implement `git-goals-show`:
+   Create a new script called `git-goals-show` to display details of a specific goal:
+
+```bash
+#!/bin/bash
+# git-goals-show - Displays details of a specific goal
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+    echo "Usage: git goals show <goal_id>"
+    exit 1
+fi
+
+goal_id="$1"
+
+commit_hash=$(git notes --ref=goals list | grep "goals/$goal_id$" | cut -d" " -f1)
+
+if [ -z "$commit_hash" ]; then
+    echo "Goal $goal_id not found" >&2
+    exit 1
+fi
+
+git notes --ref=goals show "$commit_hash"

@@ -41,19 +41,19 @@
 + '[' '!' 1b0a8218fe70 ']'
 + '[' '!' -z '' ']'
 ++ date +%s
-+ container_name=sandbox-exec-d1-1723447022-29269
++ container_name=sandbox-exec-d1-1723447029-15349
 + '[' false = true ']'
-+ git notes --ref=sandbox-exec append -m sandbox-exec-d1-1723447022-29269
++ git notes --ref=sandbox-exec append -m sandbox-exec-d1-1723447029-15349
 + '[' -f /Users/tmc/.bashrc_sandbox-exec ']'
 + BASHRC_PATH=/Users/tmc/.bashrc_sandbox-exec
 + BASHRC_MOUNT='-v /Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro'
 + docker_run_opts=
 + '[' false = true ']'
 + start_container ./test-git-goals.sh
-+ common_opts=('-it' '--name' 'sandbox-exec-d1-1723447022-29269' '-v' '/Users/tmc/go/src/github.com/tmc/misc:/workspace' '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' '/Users/tmc/.gitconfig:/root/.gitconfig:ro' '-v' '/Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro' '-e' 'DOTFILES_HOME' '-e' 'BASHRC_PATH' '-e' 'ANTHROPIC_API_KEY' '-e' 'SANDBOX_DEPTH=1' '-e' 'WS_ROOT=/Users/tmc/go/src/github.com/tmc/misc' '--net=host' '-w' '/workspace' 'sandbox-exec:cc9ef')
++ common_opts=('-it' '--name' 'sandbox-exec-d1-1723447029-15349' '-v' '/Users/tmc/go/src/github.com/tmc/misc:/workspace' '-v' '/var/run/docker.sock:/var/run/docker.sock' '-v' '/Users/tmc/.gitconfig:/root/.gitconfig:ro' '-v' '/Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro' '-e' 'DOTFILES_HOME' '-e' 'BASHRC_PATH' '-e' 'ANTHROPIC_API_KEY' '-e' 'SANDBOX_DEPTH=1' '-e' 'WS_ROOT=/Users/tmc/go/src/github.com/tmc/misc' '--net=host' '-w' '/workspace' 'sandbox-exec:cc9ef')
 + local common_opts
 + '[' 1 -eq 0 ']'
-+ docker run -it --name sandbox-exec-d1-1723447022-29269 -v /Users/tmc/go/src/github.com/tmc/misc:/workspace -v /var/run/docker.sock:/var/run/docker.sock -v /Users/tmc/.gitconfig:/root/.gitconfig:ro -v /Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro -e DOTFILES_HOME -e BASHRC_PATH -e ANTHROPIC_API_KEY -e SANDBOX_DEPTH=1 -e WS_ROOT=/Users/tmc/go/src/github.com/tmc/misc --net=host -w /workspace sandbox-exec:cc9ef /bin/bash -c 'cd '\''git-goals'\'' && exec ./test-git-goals.sh'
++ docker run -it --name sandbox-exec-d1-1723447029-15349 -v /Users/tmc/go/src/github.com/tmc/misc:/workspace -v /var/run/docker.sock:/var/run/docker.sock -v /Users/tmc/.gitconfig:/root/.gitconfig:ro -v /Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro -e DOTFILES_HOME -e BASHRC_PATH -e ANTHROPIC_API_KEY -e SANDBOX_DEPTH=1 -e WS_ROOT=/Users/tmc/go/src/github.com/tmc/misc --net=host -w /workspace sandbox-exec:cc9ef /bin/bash -c 'cd '\''git-goals'\'' && exec ./test-git-goals.sh'
 Setting up test repository...
 [33mhint: Using 'master' as the name for the initial branch. This default branch name[m
 [33mhint: is subject to change. To configure the initial branch name to use in all[m
@@ -65,13 +65,13 @@ Setting up test repository...
 [33mhint: 'development'. The just-created branch can be renamed via this command:[m
 [33mhint: [m
 [33mhint: 	git branch -m <name>[m
-Initialized empty Git repository in /tmp/tmp.qrP0WBZXtX/.git/
-[master (root-commit) 5a1dc2b] Initial commit
+Initialized empty Git repository in /tmp/tmp.9fSrUX4czg/.git/
+[master (root-commit) 8af9478] Initial commit
 Testing git-goals...
 $ git goals create Implement new feature
-[master ed4b048] Goal: Implement new feature
-Created new goal with ID: 20240812071703
+[master 09352e7] Goal: Implement new feature
+Created new goal with ID: 20240812071709
 Description: Implement new feature
 
 $ git goals list
-error: no note found for object e515a7216b420b5f298056654ccbf9b85241881d.
+error: no note found for object 7bfd7095a4657af147b9ca9ee05669cfc3370cda.
