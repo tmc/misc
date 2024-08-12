@@ -6,7 +6,7 @@ export PATH=$(pwd):.tools:$PATH
 attach-sandbox-content
 docker logs $(get-latest-sandbox)
 
-(ctx-exec git show --notes='sandbox-exec'; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -s $(cat .claude-system-prompt) |tee /tmp/claude-analysis; cat /tmp/claude-analysis |git notes --ref attempt-analysis add -f -F-
+(ctx-exec git show --notes='sandbox-exec'; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -O ~/.hist-git-tools -s $(cat .claude-system-prompt) |tee /tmp/claude-analysis; cat /tmp/claude-analysis |git notes --ref attempt-analysis add -f -F-
 # (ctx-exec git show --notes='*'; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -s $(cat .claude-system-prompt-analyze-attempt) |tee /tmp/claude-analysis; cat /tmp/claude-analysis |git notes --ref attempt-analysis add -F-
 # (ctx-exec git show --notes='*'; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -s $(cat .claude-system-prompt-analyze-attempt) |tee /tmp/claude-analysis; cat /tmp/claude-analysis |git notes --ref attempt-analysis add -F-
 # sh eval-make-safe-progress.sh | tee /tmp/eval-make-safe-progress; cat /tmp/eval-make-safe-progress |git notes --ref eval-safe-progress add -F- ;

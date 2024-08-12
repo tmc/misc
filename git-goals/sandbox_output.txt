@@ -1,4 +1,13 @@
++ set -euo pipefail
+++ pwd
++ export PATH=/workspace/git-goals:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ PATH=/workspace/git-goals:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+++ mktemp -d
++ test_dir=/tmp/tmp.hhTAYtY74Q
++ cd /tmp/tmp.hhTAYtY74Q
++ echo 'Setting up test repository...'
 Setting up test repository...
++ git init
 [33mhint: Using 'master' as the name for the initial branch. This default branch name[m
 [33mhint: is subject to change. To configure the initial branch name to use in all[m
 [33mhint: of your new repositories, which will suppress this warning, call:[m
@@ -9,13 +18,46 @@ Setting up test repository...
 [33mhint: 'development'. The just-created branch can be renamed via this command:[m
 [33mhint: [m
 [33mhint: 	git branch -m <name>[m
-Initialized empty Git repository in /tmp/tmp.eVgC2EWlr5/.git/
-[master (root-commit) cdc287c] Initial commit
+Initialized empty Git repository in /tmp/tmp.hhTAYtY74Q/.git/
++ git config user.email test@example.com
++ git config user.name 'Test User'
++ git commit --allow-empty -m 'Initial commit'
+[master (root-commit) 1dc882f] Initial commit
++ echo 'Testing git-goals...'
 Testing git-goals...
++ run_command git goals create 'Implement new feature'
++ echo '$ git' goals create 'Implement new feature'
 $ git goals create Implement new feature
-[master 66b0c14] Goal: Implement new feature
-Created new goal with ID: 20240812072251
+++ git goals create 'Implement new feature'
++ output='[master 3283567] Goal: Implement new feature
+Created new goal with ID: 20240812072347
+Description: Implement new feature'
++ echo '[master 3283567] Goal: Implement new feature
+Created new goal with ID: 20240812072347
+Description: Implement new feature'
+[master 3283567] Goal: Implement new feature
+Created new goal with ID: 20240812072347
 Description: Implement new feature
++ echo
 
++ run_command git goals list
++ echo '$ git' goals list
 $ git goals list
-error: no note found for object a073626d14feb767918190aadae4726c3fbc882d.
+++ git goals list
+error: no note found for object ec38f02375d02b2a3441517a90efac3ec1987c16.
++ output='Current Goals:
+-  (): '
++ echo 'Current Goals:
+-  (): '
+Current Goals:
+-  (): 
++ echo
+
+++ git goals list
+++ grep 'Implement new feature'
+++ cut '-d(' -f1
+++ tr -d '- '
+tr: invalid option -- ' '
+Try 'tr --help' for more information.
+error: no note found for object ec38f02375d02b2a3441517a90efac3ec1987c16.
++ goal_id=
