@@ -22,4 +22,3 @@ git notes --ref=goals list | while read -r note_ref commit_hash; do
     fi
     echo "---"
 done
-

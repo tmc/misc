@@ -18,4 +18,3 @@ fi
 git notes --ref=goals remove "$commit_hash"
 
 echo "Goal $goal_id deleted"
-

@@ -38,4 +38,3 @@ echo "Goal $goal_id marked as complete"
 if [ -n "$rationale" ]; then
     echo "Rationale: $rationale"
 fi
-

@@ -23,4 +23,3 @@ updated_data=$(echo "$current_data" | sed "s/^description:.*$/description: $new_
 echo "$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
 
 echo "Updated goal $goal_id: $new_description"
-

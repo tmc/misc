@@ -16,4 +16,3 @@ if [ -z "$commit_hash" ]; then
 fi
 
 git notes --ref=goals show "$commit_hash"
-

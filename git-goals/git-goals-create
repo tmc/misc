@@ -18,4 +18,3 @@ created_at: $(date -I)" HEAD
 
 echo "Goal ID: $id"
 echo "Description: $description"
-
