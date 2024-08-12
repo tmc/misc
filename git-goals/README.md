@@ -1,4 +1,4 @@
-# git-goals v0.1.6
+# git-goals v0.1.7
 
 # git-goals
 
@@ -17,6 +17,12 @@ To run the test suite, use the following command:
 ```bash
 ./test-git-goals.sh
 ```
+
+
+## Upcoming Features
+
+- Goal prioritization
+- Deadline tracking
 
 ## Usage
 

@@ -44,3 +44,11 @@
 - Minor improvements and code cleanup
 - Updated error handling in git-goals-common.sh
 - Improved consistency across all scripts
+
+## [0.1.7] - 2024-08-12
+### Added
+- Placeholder files for goal prioritization and deadline tracking
+- Updated README.md to mention upcoming features
+
+### Changed
+- Minor improvements and code cleanup
