@@ -3,8 +3,8 @@
 + export PATH=/workspace/git-goals:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 + PATH=/workspace/git-goals:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ++ mktemp -d
-+ test_dir=/tmp/tmp.GfNzoVUydL
-+ cd /tmp/tmp.GfNzoVUydL
++ test_dir=/tmp/tmp.Uruzq5Vp8T
++ cd /tmp/tmp.Uruzq5Vp8T
 + echo 'Setting up test repository...'
 Setting up test repository...
 + git init
@@ -18,25 +18,25 @@ Setting up test repository...
 [33mhint: 'development'. The just-created branch can be renamed via this command:[m
 [33mhint: [m
 [33mhint: 	git branch -m <name>[m
-Initialized empty Git repository in /tmp/tmp.GfNzoVUydL/.git/
+Initialized empty Git repository in /tmp/tmp.Uruzq5Vp8T/.git/
 + git config user.email test@example.com
 + git config user.name 'Test User'
 + git commit --allow-empty -m 'Initial commit'
-[master (root-commit) 787e577] Initial commit
+[master (root-commit) 8c219c9] Initial commit
 + echo 'Testing git-goals...'
 Testing git-goals...
 + run_command git goals create 'Implement new feature'
 + echo '$ git' goals create 'Implement new feature'
 $ git goals create Implement new feature
 ++ git goals create 'Implement new feature'
-+ output='[master ee361c7] Goal: Implement new feature
-Created new goal with ID: 20240812073046
++ output='[master 968d88a] Goal: Implement new feature
+Created new goal with ID: 20240812073117
 Description: Implement new feature'
-+ echo '[master ee361c7] Goal: Implement new feature
-Created new goal with ID: 20240812073046
++ echo '[master 968d88a] Goal: Implement new feature
+Created new goal with ID: 20240812073117
 Description: Implement new feature'
-[master ee361c7] Goal: Implement new feature
-Created new goal with ID: 20240812073046
+[master 968d88a] Goal: Implement new feature
+Created new goal with ID: 20240812073117
 Description: Implement new feature
 + echo
 
@@ -44,5 +44,17 @@ Description: Implement new feature
 + echo '$ git' goals list
 $ git goals list
 ++ git goals list
-error: no note found for object 416a73a60bba4887b08d307e835db648938f5eb8.
-+ output='Current Goals:'
+error: no note found for object 97aba3a0c9e86269f8086356d66bc09877cee495.
++ output='Current Goals:
+-  (): '
++ echo 'Current Goals:
+-  (): '
+Current Goals:
+-  (): 
++ echo
+
+++ git goals list
+++ grep 'Implement new feature'
+++ sed -E 's/- ([^ ]+) .*/\1/'
+error: no note found for object 97aba3a0c9e86269f8086356d66bc09877cee495.
++ goal_id=
