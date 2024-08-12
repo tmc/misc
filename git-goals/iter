@@ -5,7 +5,7 @@ export PATH=$(pwd):.tools:$PATH
 # ./make-safe-progress.sh
 # attach-sandbox-content
 docker logs $(get-latest-sandbox)
-(echo "we will fix what went wrong"; ctx-exec docker logs $(get-latest-sandbox) ; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -s "we are fixing issues in this codebase. consider the contents in OBSERVATIONS, and consider updating it. output an invocation of ./make-fix-suggestion.sh; at the top of teh bash script, output comments explaining <antthinking thoughts" -p './make-fix-suggestion.sh "' | tee mkfix.sh
+(echo "we will fix what went wrong"; ctx-exec docker logs $(get-latest-sandbox) ; ctx-exec git st .; ~/code-to-gpt.sh) | cgpt -s "we are fixing issues in this codebase. consider the contents in OBSERVATIONS, and consider updating it. output an invocation of ./make-fix-suggestion.sh which takes a high level prompt and produces a fix script; after the script, output comments explaining <antthinking thoughts" -p './make-fix-suggestion.sh "' | tee mkfix.sh
 git add mkfix.sh
 git commit -m "git-notes: Adding mkfix suggestions to fix the codebase"
 sandbox-exec ./mkfix.sh
