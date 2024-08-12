@@ -1,1 +1,43 @@
++ set -euo pipefail
+++ git rev-parse --show-toplevel
++ repo_root=/Users/tmc/go/src/github.com/tmc/misc
++ '[' -z /Users/tmc/go/src/github.com/tmc/misc ']'
++ COPY=false
++ REMOVE_CONTAINER=false
++ NAMESPACE=sandbox-exec
++ SANDBOX_DEPTH=0
++ SANDBOX_DEPTH=1
++ [[ 1 -gt 0 ]]
++ case "$1" in
++ break
++ WS_ROOT=/Users/tmc/go/src/github.com/tmc/misc
++ export DOTFILES_HOME=/Users/tmc
++ DOTFILES_HOME=/Users/tmc
++ export BASHRC_PATH=/Users/tmc/.bashrc
++ BASHRC_PATH=/Users/tmc/.bashrc
+++ pwd
++ current_path=/Users/tmc/go/src/github.com/tmc/misc/git-goals
++ relative_path=git-goals
++++ dirname /Users/tmc/go/src/github.com/tmc/misc/sandbox-exec/sandbox-exec
+++ cd /Users/tmc/go/src/github.com/tmc/misc/sandbox-exec
+++ pwd
++ script_dir=/Users/tmc/go/src/github.com/tmc/misc/sandbox-exec
++ dockerfile_path=/Users/tmc/go/src/github.com/tmc/misc/sandbox-exec/.sandbox-exec.dockerfile
++ dockerfile_context=/Users/tmc/go/src/github.com/tmc/misc/sandbox-exec
+++ md5sum /Users/tmc/go/src/github.com/tmc/misc/sandbox-exec/.sandbox-exec.dockerfile
+++ cut -c-5
++ docker_tag=sandbox-exec:00596
+++ docker images -q sandbox-exec:00596
++ '[' '!' d53cb8fad5dc ']'
++ '[' '!' -z '' ']'
+++ date +%s
++ container_name=sandbox-exec-d1-1723444355-30801
++ '[' false = true ']'
++ git notes --ref=sandbox-exec append -m sandbox-exec-d1-1723444355-30801
++ '[' -f /Users/tmc/.bashrc_sandbox-exec ']'
++ BASHRC_PATH=/Users/tmc/.bashrc_sandbox-exec
++ BASHRC_MOUNT='-v /Users/tmc/.bashrc_sandbox-exec:/root/.bashrc:ro'
++ docker_run_opts=
++ '[' false = true ']'
++ start_container ./test-git-goals.sh
 /Users/tmc/go/src/github.com/tmc/misc/sandbox-exec/sandbox-exec: line 120: SANDBOX_EXTRA_ENV: unbound variable
