@@ -1,5 +1,7 @@
 Observations: 
 
+URGENT: make sure that git pagers dont make the test script get stuck
+
 1. The test script is now executing successfully, but there are still some issues to address:
 
 2. The git-goals-create script is working correctly, creating a new goal with an ID and description.
