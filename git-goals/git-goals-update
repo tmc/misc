@@ -2,28 +2,25 @@
 set -euo pipefail
 
 if [ $# -lt 2 ]; then
-    echo "Error: Please provide a goal ID and the new status."
-    echo "Usage: git goals update <id> <new_status>"
+    echo "Usage: git goals update <goal_id> <new_description>"
     exit 1
 fi
 
-id="$1"
-new_status="$2"
+goal_id="$1"
+shift
+new_description="$*"
 
-# Check if .git-goals file exists
-if [ ! -f .git-goals ]; then
-    echo "Error: No goals found. Use 'git goals create' to add a new goal."
+commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
+
+if [ -z "$commit_hash" ]; then
+    echo "Error: Goal with ID $goal_id not found."
     exit 1
 fi
 
-# Update the goal status
-sed -i "s/^#$id |[^|]*|/#$id | $new_status |/" .git-goals
+current_data=$(git notes --ref=goals show "$commit_hash")
+updated_data=$(echo "$current_data" | sed "s/^description:.*$/description: $new_description/")
 
-# Check if the update was successful
-if grep -q "^#$id | $new_status |" .git-goals; then
-    echo "Goal $id updated successfully. New status: $new_status"
-else
-    echo "Error: Failed to update goal $id. Make sure the ID exists."
-    exit 1
-fi
+echo "$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
+
+echo "Updated goal $goal_id: $new_description"
 

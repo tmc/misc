@@ -1,28 +1,12 @@
 #!/bin/bash
+set -euo pipefail
 
-# Function to parse and display goals in both old and new formats
-parse_and_display_goals() {
-    while IFS= read -r line; do
-        if [[ $line == \#* ]]; then
-            # New format: #ID | Status | Description
-            IFS='|' read -r id status description <<< "${line#\#}"
-            printf "%-5s %-10s %s\n" "${id## }" "${status## }" "${description## }"
-        else
-            # Old format: just print the line as-is
-            echo "$line"
-        fi
-    done < "$1"
-}
+echo "Current Goals:"
+git notes --ref=goals list | while read -r note_ref commit_hash; do
+    goal_data=$(git notes --ref=goals show "$commit_hash")
+    id=$(echo "$goal_data" | grep "^id:" | cut -d" " -f2-)
+    status=$(echo "$goal_data" | grep "^status:" | cut -d" " -f2-)
+    description=$(echo "$goal_data" | grep "^description:" | cut -d" " -f2-)
+    echo "- $id ($status): $description"
+done
 
-# Check if .git-goals file exists
-if [ ! -f .git-goals ]; then
-    echo "No goals found. Use 'git goals create' to add a new goal."
-    exit 0
-fi
-
-# Display header
-echo "ID    Status      Description"
-echo "---   ------      -----------"
-
-# Parse and display goals
-parse_and_display_goals .git-goals

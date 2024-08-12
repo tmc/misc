@@ -6,27 +6,30 @@ if [ $# -lt 1 ]; then
     exit 1
 fi
 
-id="$1"
+goal_id="$1"
 rationale="${2:-}"
 
-# Check if .git-goals file exists
-if [ ! -f .git-goals ]; then
-    echo "Error: No goals found. Use 'git goals create' to add a new goal."
+commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
+
+if [ -z "$commit_hash" ]; then
+    echo "Error: Goal with ID $goal_id not found."
     exit 1
 fi
 
-# Update the goal status to completed
-sed -i "s/^#$id |[^|]*|/#$id | COMPLETED |/" .git-goals
+current_data=$(git notes --ref=goals show "$commit_hash")
+updated_data=$(echo "$current_data" | sed "s/^status:.*$/status: completed/")
+updated_data+="
+completed_at: $(date -I)"
 
-# Check if the update was successful
-if grep -q "^#$id | COMPLETED |" .git-goals; then
-    echo "Goal $id marked as complete"
-    if [ -n "$rationale" ]; then
-        echo "Rationale: $rationale"
-        # TODO: Add rationale to the goal entry
-    fi
-else
-    echo "Error: Failed to complete goal $id. Make sure the ID exists."
-    exit 1
+if [ -n "$rationale" ]; then
+    updated_data+="
+rationale: $rationale"
+fi
+
+echo "$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
+
+echo "Goal $goal_id marked as complete"
+if [ -n "$rationale" ]; then
+    echo "Rationale: $rationale"
 fi
 

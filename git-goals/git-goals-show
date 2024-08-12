@@ -8,23 +8,12 @@ fi
 
 goal_id="$1"
 
-# Check if .git-goals file exists
-if [ ! -f .git-goals ]; then
-    echo "Error: No goals found. Use 'git goals create' to add a new goal."
-    exit 1
-fi
+commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
 
-# Search for the goal with the given ID
-goal=$(grep "^#$goal_id |" .git-goals)
-
-if [ -z "$goal" ]; then
+if [ -z "$commit_hash" ]; then
     echo "Error: Goal with ID $goal_id not found."
     exit 1
 fi
 
-# Parse and display the goal details
-IFS='|' read -r _ status description <<< "$goal"
-echo "ID: $goal_id"
-echo "Status: ${status## }"
-echo "Description: ${description## }"
+git notes --ref=goals show "$commit_hash"
 

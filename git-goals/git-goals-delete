@@ -2,27 +2,20 @@
 set -euo pipefail
 
 if [ $# -eq 0 ]; then
-    echo "Error: Please provide a goal ID to delete."
-    echo "Usage: git goals delete <id>"
+    echo "Usage: git goals delete <goal_id>"
     exit 1
 fi
 
-id="$1"
+goal_id="$1"
 
-# Check if .git-goals file exists
-if [ ! -f .git-goals ]; then
-    echo "Error: No goals found. Use 'git goals create' to add a new goal."
+commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
+
+if [ -z "$commit_hash" ]; then
+    echo "Error: Goal with ID $goal_id not found."
     exit 1
 fi
 
-# Delete the goal with the given ID
-sed -i "/^#$id |/d" .git-goals
+git notes --ref=goals remove "$commit_hash"
 
-# Check if the deletion was successful
-if ! grep -q "^#$id |" .git-goals; then
-    echo "Goal $id deleted successfully."
-else
-    echo "Error: Failed to delete goal $id. Make sure the ID exists."
-    exit 1
-fi
+echo "Goal $goal_id deleted"
 
