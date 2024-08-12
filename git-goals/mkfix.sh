@@ -1,82 +1,111 @@
-./make-fix-suggestion.sh
+./make-fix-suggestion.sh "Improve git-goals-complete script"
 
-# <antthinking thoughts>
-# 1. We need to focus on improving the core functionality of git-goals scripts.
-# 2. The current implementation lacks proper error handling and input validation.
-# 3. We should enhance the user experience by providing more informative output.
-# 4. There's an opportunity to improve code organization and reduce duplication.
-# 5. We can add new features to make the tool more powerful and flexible.
-# 6. It's important to ensure consistency across all git-goals commands.
-# 7. We should consider adding more robust testing for each command.
-# 8. Documentation improvements would help users understand the tool better.
-# 9. We can optimize performance, especially for larger repositories.
-# 10. Adding support for configuration options could make the tool more versatile.
-# </antthinking thoughts>
+# Improving git-goals-complete script
+<antthinking>
+1. The current script lacks input validation for the goal_id format
+2. There's no confirmation prompt before marking a goal as complete
+3. The script doesn't handle cases where the goal is already completed
+4. Error messages could be more informative
+5. The script could benefit from better formatting of the updated goal data
+</antthinking>
 
 #!/bin/bash
 
-# Function to create a fix suggestion
-create_fix_suggestion() {
-    local script_name="$1"
-    local suggestion="$2"
-    
-    echo "Fixing $script_name:"
-    echo "$suggestion"
-    echo
+cat << 'EOF' > fixes.sh
+#!/bin/bash
+
+# Function to improve git-goals-complete script
+improve_git_goals_complete() {
+    cat << 'EOT' > git-goals-complete
+#!/bin/bash
+# git-goals-complete - Marks a goal as complete
+set -euo pipefail
+
+usage() {
+    echo "Usage: git goals complete <goal_id> [attempt_id] [rationale]"
+    echo "  <goal_id>    : ID of the goal to mark as complete"
+    echo "  [attempt_id] : Optional ID of the attempt"
+    echo "  [rationale]  : Optional rationale for completion"
+    exit 1
 }
 
-# git-goals-create improvements
-create_fix_suggestion "git-goals-create" "
-1. Add input validation for the goal description.
-2. Handle special characters in the goal description.
-3. Add error handling for git operations.
-4. Improve the output format for better readability.
-5. Add a --help option for usage information.
-"
+if [ $# -lt 1 ]; then
+    usage
+fi
 
-# git-goals-update improvements
-create_fix_suggestion "git-goals-update" "
-1. Validate the goal ID format.
-2. Add error handling for non-existent goals.
-3. Improve handling of special characters in the new description.
-4. Add a confirmation prompt before updating.
-5. Include a --force option to skip the confirmation prompt.
-"
+goal_id="$1"
+attempt_id="${2:-}"
+rationale="${3:-}"
 
-# git-goals-list improvements
-create_fix_suggestion "git-goals-list" "
-1. Add sorting options (by date, status, etc.).
-2. Implement filtering options (by status, date range, etc.).
-3. Improve the output format for better readability.
-4. Add a --verbose option for more detailed information.
-5. Handle cases where there are no goals to display.
-"
+# Validate goal_id format (assuming it's a timestamp format YYYYMMDDHHMMSS)
+if ! [[ $goal_id =~ ^[0-9]{14}$ ]]; then
+    echo "Error: Invalid goal ID format. Expected YYYYMMDDHHMMSS." >&2
+    exit 1
+fi
 
-# git-goals-show improvements
-create_fix_suggestion "git-goals-show" "
-1. Validate the goal ID format.
-2. Improve error handling for non-existent goals.
-3. Enhance the output format for better readability.
-4. Add an option to show the goal's history (if applicable).
-5. Include related information like linked commits or subtasks.
-"
+# Find the commit hash for the given goal ID
+commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
 
-# git-goals-complete improvements
-create_fix_suggestion "git-goals-complete" "
-1. Validate the goal ID and optional parameters.
-2. Add error handling for already completed goals.
-3. Implement a confirmation prompt before marking as complete.
-4. Allow adding completion notes or final status updates.
-5. Trigger any necessary follow-up actions or notifications.
-"
+if [ -z "$commit_hash" ]; then
+    echo "Error: Goal with ID $goal_id not found." >&2
+    exit 1
+fi
 
-# git-goals-delete improvements
-create_fix_suggestion "git-goals-delete" "
-1. Validate the goal ID format.
-2. Add a confirmation prompt before deletion.
-3. Implement a --force option to skip the confirmation.
-4. Improve error handling for non-existent goals.
-5. Consider adding a 'soft delete' option that archives instead of permanently deleting.
-"
+# Get the current goal data
+current_data=$(git notes --ref=goals show "$commit_hash")
 
-echo "To implement these improvements, create a new script for each git-goals command and gradually refactor the existing code to incorporate these suggestions."
+# Check if the goal is already completed
+if echo "$current_data" | grep -q "^status: completed"; then
+    echo "Error: Goal $goal_id is already marked as complete." >&2
+    exit 1
+fi
+
+# Prompt for confirmation
+read -p "Are you sure you want to mark goal $goal_id as complete? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Operation cancelled."
+    exit 0
+fi
+
+# Update the status and add completion details
+updated_data=$(echo "$current_data" | sed "s/^status:.*$/status: completed/")
+updated_data+="
+completed_at: $(date -I)"
+
+if [ -n "$attempt_id" ]; then
+    updated_data+="
+attempt_id: $attempt_id"
+fi
+
+if [ -n "$rationale" ]; then
+    updated_data+="
+rationale: $rationale"
+fi
+
+# Update the git note
+echo "$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
+
+echo "Goal $goal_id marked as complete"
+if [ -n "$rationale" ]; then
+    echo "Rationale: $rationale"
+fi
+
+# Display updated goal information
+echo -e "\nUpdated goal information:"
+git notes --ref=goals show "$commit_hash"
+EOT
+
+    chmod +x git-goals-complete
+    echo "git-goals-complete script has been improved and updated."
+}
+
+# Run the improvement function
+improve_git_goals_complete
+
+echo "Fixes have been applied. Please review the changes in git-goals-complete."
+EOF
+
+chmod +x fixes.sh
+
+echo "Fix suggestion script has been created. Run ./fixes.sh to apply the improvements to git-goals-complete."
