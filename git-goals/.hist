@@ -877,4 +877,283 @@ messages:
     ```
 
     This script should correctly create a new goal and store it as a Git note. After implementing this change, run the test-git-goals.sh script again to see if it resolves the issues with goal creation and listing.
+- role: human
+  text: |+
+    lets not do json
+
+- role: ai
+  text: |-
+    Understood. We'll modify the approach to use plain text or YAML instead of JSON for storing goal metadata. This will simplify the scripts and make them easier to read and maintain. Let's update the git-goals-create script to use a simple key-value format:
+
+    ```bash
+    #!/bin/bash
+    # git-goals-create - Creates a new goal
+    set -euo pipefail
+
+    if [ $# -eq 0 ]; then
+        echo "Usage: git goals create <goal_description>"
+        exit 1
+    fi
+
+    description="$*"
+    goal_id=$(date +%Y%m%d%H%M%S)
+
+    # Create a new empty commit
+    git commit --allow-empty -m "Goal: $description"
+    commit_hash=$(git rev-parse HEAD)
+
+    # Add goal metadata as a Git note
+    git notes --ref=goals add -m "id: $goal_id
+    type: goal
+    description: $description
+    status: active
+    created_at: $(date -I)" $commit_hash
+
+    echo "Created new goal with ID: $goal_id"
+    echo "Description: $description"
+    ```
+
+    Now, let's update the git-goals-list script to work with this new format:
+
+    ```bash
+    #!/bin/bash
+    # git-goals-list - Lists all goals
+    set -euo pipefail
+
+    echo "Current Goals:"
+
+    git notes --ref=goals list | while read -r commit_hash note_ref; do
+        goal_data=$(git notes --ref=goals show $commit_hash)
+        goal_id=$(echo "$goal_data" | grep "^id:" | cut -d' ' -f2)
+        description=$(echo "$goal_data" | grep "^description:" | cut -d' ' -f2-)
+        status=$(echo "$goal_data" | grep "^status:" | cut -d' ' -f2)
+        echo "- $goal_id ($status): $description"
+    done
+    ```
+
+    These changes should resolve the issues with goal creation and listing. Let's update the other scripts (git-goals-show, git-goals-update, git-goals-delete, and git-goals-complete) to work with this new format as well:
+
+    git-goals-show:
+
+    ```bash
+    #!/bin/bash
+    # git-goals-show - Displays details of a specific goal
+    set -euo pipefail
+
+    if [ $# -eq 0 ]; then
+        echo "Usage: git goals show <goal_id>"
+        exit 1
+    fi
+
+    goal_id="$1"
+
+    commit_hash=$(git notes --ref=goals list | grep "goals/$goal_id$" | cut -d" " -f1)
+
+    if [ -z "$commit_hash" ]; then
+        echo "Goal $goal_id not found" >&2
+        exit 1
+    fi
+
+    git notes --ref=goals show "$commit_hash"
+    ```
+
+    git-goals-update:
+
+    ```bash
+    #!/bin/bash
+    # git-goals-update - Updates an existing goal
+    set -euo pipefail
+
+    if [ $# -lt 2 ]; then
+        echo "Usage: git goals update <goal_id> <new_goal_description>"
+        exit 1
+    fi
+
+    goal_id="$1"
+    shift
+    new_goal_description="$*"
+
+    commit_hash=$(git notes --ref=goals list | grep "goals/$goal_id$" | cut -d" " -f1)
+
+    if [ -z "$commit_hash" ]; then
+        echo "Goal $goal_id not found" >&2
+        exit 1
+    fi
+
+    current_note=$(git notes --ref=goals show $commit_hash)
+    updated_note=$(echo "$current_note" | sed "s/^description:.*$/description: $new_goal_description/")
+
+    git notes --ref=goals add -f -m "$updated_note" $commit_hash
+
+    echo "Updated goal $goal_id: $new_goal_description"
+    ```
+
+    git-goals-delete:
+
+    ```bash
+    #!/bin/bash
+    # git-goals-delete - Deletes a goal by its ID
+    set -euo pipefail
+
+    if [ $# -eq 0 ]; then
+        echo "Usage: git goals delete <goal_id>"
+        exit 1
+    fi
+
+    goal_id="$1"
+
+    commit_hash=$(git notes --ref=goals list | grep "goals/$goal_id$" | cut -d" " -f1)
+
+    if [ -z "$commit_hash" ]; then
+        echo "Goal $goal_id not found" >&2
+        exit 1
+    fi
+
+    git notes --ref=goals remove "$commit_hash"
+
+    echo "Goal $goal_id deleted"
+    ```
+
+    git-goals-complete:
+
+    ```bash
+    #!/bin/bash
+    # git-goals-complete - Marks a goal as complete
+    set -euo pipefail
+
+    if [ $# -lt 1 ]; then
+        echo "Usage: git goals complete <goal_id> [rationale]"
+        exit 1
+    fi
+
+    goal_id="$1"
+    rationale="${2:-Completed without specific rationale}"
+
+    commit_hash=$(git notes --ref=goals list | grep "goals/$goal_id$" | cut -d" " -f1)
+
+    if [ -z "$commit_hash" ]; then
+        echo "Goal $goal_id not found" >&2
+        exit 1
+    fi
+
+    current_note=$(git notes --ref=goals show $commit_hash)
+    updated_note=$(echo "$current_note" | sed "s/^status:.*$/status: completed/")
+    updated_note+="
+    completed_at: $(date -I)
+    completion_rationale: $rationale"
+
+    git notes --ref=goals add -f -m "$updated_note" $commit_hash
+
+    echo "Goal $goal_id marked as complete"
+    echo "Rationale: $rationale"
+    ```
+
+    Now, update the test-git-goals.sh script to test all these functionalities:
+
+    ```bash
+    #!/bin/bash
+    set -euo pipefail
+
+    # Function to run a command and print its output
+    run_command() {
+        echo "$ $@"
+        output=$("$@")
+        echo "$output"
+        echo
+    }
+
+    # Set up a temporary test directory
+    test_dir=$(mktemp -d)
+    cd "$test_dir"
+
+    echo "Setting up test repository..."
+    git init
+    git config user.email "test@example.com"
+    git config user.name "Test User"
+    git commit --allow-empty -m "Initial commit"
+
+    echo "Testing git-goals..."
+
+    # Test goal creation
+    run_command git goals create "Implement new feature"
+
+    # Test goal listing
+    run_command git goals list
+
+    # Get the goal ID from the list output
+    goal_id=$(git goals list | grep "Implement new feature" | sed -E 's/- ([^ ]+) .*/\1/')
+
+    # Test goal show
+    run_command git goals show "$goal_id"
+
+    # Test goal update
+    run_command git goals update "$goal_id" "Implement new feature with improved performance"
+
+    # Test goal show after update
+    run_command git goals show "$goal_id"
+
+    # Test goal completion
+    run_command git goals complete "$goal_id" "Feature implemented and tested"
+
+    # Test goal report
+    run_command git goals list
+
+    # Test goal deletion
+    run_command git goals delete "$goal_id"
+
+    # Verify goal is deleted
+    if git goals list | grep -q "$goal_id"; then
+        echo "Error: Goal $goal_id still exists after deletion"
+        exit 1
+    else
+        echo "Goal $goal_id successfully deleted"
+    fi
+
+    echo "All tests completed successfully!"
+
+    # Clean up
+    cd ..
+    rm -rf "$test_dir"
+    ```
+
+    These changes should resolve the issues with the git-goals scripts and make them work correctly with the new plain text format for storing goal metadata. Run the test-git-goals.sh script to verify that all functionalities are working as expected.
+- role: human
+  text: |+
+    g
+    can you make git goals list have a flag where it shows the details but normally it shows short sha for commit and gooal ref?
+
+- role: ai
+  text: "Certainly! Let's modify the `git-goals-list` script to include a flag for
+    showing detailed information, while keeping the default output concise. We'll
+    add a `-d` or `--details` flag for this purpose.\n\nHere's the updated `git-goals-list`
+    script:\n\n```bash\n#!/bin/bash\n# git-goals-list - Lists all goals\nset -euo
+    pipefail\n\nshow_details=false\n\n# Parse command line arguments\nwhile [[ $#
+    -gt 0 ]]; do\n    case $1 in\n        -d|--details)\n            show_details=true\n
+    \           shift\n            ;;\n        *)\n            echo \"Unknown option:
+    $1\"\n            echo \"Usage: git goals list [-d|--details]\"\n            exit
+    1\n            ;;\n    esac\ndone\n\necho \"Current Goals:\"\n\ngit notes --ref=goals
+    list | while read -r commit_hash note_ref; do\n    goal_data=$(git notes --ref=goals
+    show $commit_hash)\n    goal_id=$(echo \"$goal_data\" | grep \"^id:\" | cut -d'
+    ' -f2)\n    description=$(echo \"$goal_data\" | grep \"^description:\" | cut -d'
+    ' -f2-)\n    status=$(echo \"$goal_data\" | grep \"^status:\" | cut -d' ' -f2)\n
+    \   \n    if $show_details; then\n        echo \"Goal ID: $goal_id\"\n        echo
+    \"Commit: $commit_hash\"\n        echo \"Status: $status\"\n        echo \"Description:
+    $description\"\n        echo \"$goal_data\"\n        echo \"---\"\n    else\n
+    \       short_commit=$(echo $commit_hash | cut -c1-7)\n        echo \"- $short_commit
+    $goal_id ($status): $description\"\n    fi\ndone\n```\n\nThis updated script does
+    the following:\n\n1. It introduces a `show_details` flag that is set to `false`
+    by default.\n2. It parses command-line arguments to check for the `-d` or `--details`
+    flag.\n3. In the default mode (without the flag), it shows a concise output with
+    the short commit hash, goal ID, status, and description.\n4. When the `-d` or
+    `--details` flag is used, it shows all the details of each goal, including the
+    full commit hash and all the metadata.\n\nNow, you can use the script in two ways:\n\n1.
+    For a concise list:\n   ```\n   git goals list\n   ```\n\n2. For a detailed list:\n
+    \  ```\n   git goals list -d\n   ```\n   or\n   ```\n   git goals list --details\n
+    \  ```\n\nThis change provides flexibility in how the goals are displayed, allowing
+    for both a quick overview and a detailed examination when needed.\n\nTo test this
+    new functionality, you can update the `test-git-goals.sh` script to include both
+    types of listing:\n\n```bash\n# In test-git-goals.sh\n\n# Test concise goal listing\nrun_command
+    git goals list\n\n# Test detailed goal listing\nrun_command git goals list --details\n```\n\nThis
+    modification to the `git-goals-list` script provides the requested functionality
+    while maintaining backwards compatibility with the existing usage."
 model: claude-3-5-sonnet-20240620

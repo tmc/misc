@@ -15,13 +15,11 @@ git commit --allow-empty -m "Goal: $description"
 commit_hash=$(git rev-parse HEAD)
 
 # Add goal metadata as a Git note
-git notes --ref=goals add -m "{
-  \"id\": \"$goal_id\",
-  \"type\": \"goal\",
-  \"description\": \"$description\",
-  \"status\": \"active\",
-  \"created_at\": \"$(date -I)\"
-}" $commit_hash
+git notes --ref=goals add -m "id: $goal_id
+type: goal
+description: $description
+status: active
+created_at: $(date -I)" $commit_hash
 
 echo "Created new goal with ID: $goal_id"
 echo "Description: $description"

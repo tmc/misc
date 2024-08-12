@@ -1,26 +1,41 @@
 #!/bin/bash
-# git-goals-list - Lists all goals in the current branch
+# git-goals-list - Lists all goals
 set -euo pipefail
 
-echo "Current Goals:"
-goals_found=false
+show_details=false
 
-# Get the current branch name
-current_branch=$(git rev-parse --abbrev-ref HEAD)
-
-# Use git log to get commits with notes from the current branch
-git log --notes=goals --pretty=format:"%H" $current_branch | while read -r commit_hash; do
-    goal_data=$(git notes --ref=goals show "$commit_hash" 2>/dev/null)
-    if echo "$goal_data" | grep -q '"type": "goal"'; then
-        id=$(echo "$goal_data" | grep -o '"id": "[^"]*' | cut -d'"' -f4)
-        description=$(echo "$goal_data" | grep -o '"description":
- "[^"]*' | cut -d'"' -f4)
-        status=$(echo "$goal_data" | grep -o '"status": "[^"]*' | cut -d'"' -f4 || echo "active")
-        echo "- $id ($status): $description"
-        goals_found=true
-    fi
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -d|--details)
+            show_details=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: git goals list [-d|--details]"
+            exit 1
+            ;;
+    esac
 done
 
-if [ "$goals_found" = false ]; then
-    echo "No goals found in the current branch ($current_branch)."
-fi
+echo "Current Goals:"
+
+git notes --ref=goals list | while read -r commit_hash note_ref; do
+    goal_data=$(git notes --ref=goals show $commit_hash)
+    goal_id=$(echo "$goal_data" | grep "^id:" | cut -d' ' -f2)
+    description=$(echo "$goal_data" | grep "^description:" | cut -d' ' -f2-)
+    status=$(echo "$goal_data" | grep "^status:" | cut -d' ' -f2)
+
+    if $show_details; then
+        echo "Goal ID: $goal_id"
+        echo "Commit: $commit_hash"
+        echo "Status: $status"
+        echo "Description: $description"
+        echo "$goal_data"
+        echo "---"
+    else
+        short_commit=$(echo $commit_hash | cut -c1-7)
+        echo "- $short_commit $goal_id ($status): $description"
+    fi
+done
