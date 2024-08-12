@@ -16,7 +16,6 @@ description: $description
 status: active
 created_at: $(date -I)" HEAD
 
-echo "Goal created successfully:"
-echo "ID: $id"
+echo "Created new goal with ID: $id"
 echo "Description: $description"
 

@@ -2,12 +2,13 @@
 set -euo pipefail
 
 if [ $# -lt 1 ]; then
-    echo "Usage: git goals complete <goal_id> [rationale]"
+    echo "Usage: git goals complete <goal_id> [attempt_id] [rationale]"
     exit 1
 fi
 
 goal_id="$1"
-rationale="${2:-}"
+attempt_id="${2:-}"
+rationale="${3:-}"
 
 commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
 
@@ -20,6 +21,11 @@ current_data=$(git notes --ref=goals show "$commit_hash")
 updated_data=$(echo "$current_data" | sed "s/^status:.*$/status: completed/")
 updated_data+="
 completed_at: $(date -I)"
+
+if [ -n "$attempt_id" ]; then
+    updated_data+="
+attempt_id: $attempt_id"
+fi
 
 if [ -n "$rationale" ]; then
     updated_data+="
