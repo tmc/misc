@@ -1,58 +1,13 @@
 #!/bin/bash
 
-# Update git-goals-list script
-cat << 'EOF' > git-goals-list
-#!/bin/bash
-set -euo pipefail
-
-echo "Current Goals:"
-git notes --ref=goals list | while read -r note_ref commit_hash; do
-    goal_data=$(git notes --ref=goals show "$commit_hash")
-    id=$(echo "$goal_data" | grep "^id:" | cut -d" " -f2-)
-    status=$(echo "$goal_data" | grep "^status:" | cut -d" " -f2-)
-    description=$(echo "$goal_data" | grep "^description:" | cut -d" " -f2-)
-    echo "- $id ($status): $description"
-done
-EOF
-chmod +x git-goals-list
-
-# Update git-goals-report script
-cat << 'EOF' > git-goals-report
-#!/bin/bash
-set -euo pipefail
-
-echo "Goal Report"
-echo "==========="
-
-git notes --ref=goals list | while read -r note_ref commit_hash; do
-    goal_data=$(git notes --ref=goals show "$commit_hash")
-
-    id=$(echo "$goal_data" | grep "^id:" | cut -d" " -f2-)
-    description=$(echo "$goal_data" | grep "^description:" | cut -d" " -f2-)
-    status=$(echo "$goal_data" | grep "^status:" | cut -d" " -f2-)
-    created_at=$(echo "$goal_data" | grep "^created_at:" | cut -d" " -f2-)
-    completed_at=$(echo "$goal_data" | grep "^completed_at:" | cut -d" " -f2-)
-
-    echo "Goal ID: $id"
-    echo "Description: $description"
-    echo "Status: $status"
-    echo "Created: $created_at"
-    if [ "$status" = "completed" ]; then
-        echo "Completed: $completed_at"
-    fi
-    echo "---"
-done
-EOF
-chmod +x git-goals-report
-
-# Create git-goals main script
+# Implement a main git-goals script to dispatch to subcommands
 cat << 'EOF' > git-goals
 #!/bin/bash
 set -euo pipefail
 
 if [ $# -eq 0 ]; then
     echo "Usage: git goals <subcommand> [<args>]"
-    echo "Available subcommands: create, list, show, update, delete, complete, report"
+    echo "Available subcommands: create, list, show, update, delete, complete, report, recover"
     exit 1
 fi
 
@@ -60,91 +15,147 @@ subcommand="$1"
 shift
 
 case "$subcommand" in
-    create|list|show|update|delete|complete|report)
+    create|list|show|update|delete|complete|report|recover)
         "git-goals-$subcommand" "$@"
         ;;
     *)
         echo "Error: Unknown subcommand '$subcommand'"
-        echo "Available subcommands: create, list, show, update, delete, complete, report"
+        echo "Available subcommands: create, list, show, update, delete, complete, report, recover"
         exit 1
         ;;
 esac
 EOF
+
 chmod +x git-goals
 
-# Update test-git-goals.sh script
-cat << 'EOF' > test-git-goals.sh
-#!/bin/bash
-set -euo pipefail
+# Add error handling and input validation to existing scripts
+for script in git-goals-*; do
+    sed -i '2i\
+# Input validation and error handling\
+if [ $# -eq 0 ]; then\
+    echo "Usage: $0 <args>"\
+    exit 1\
+fi\
+' "$script"
+done
 
-# Function to run a command and print its output
-run_command() {
-    echo "$ $*"
-    output=$("$@")
-    echo "$output"
-    echo
-}
+# Improve output formatting for better readability
+for script in git-goals-*; do
+    sed -i 's/echo "/echo -e "\\033[1m/' "$script"
+    sed -i 's/echo "/echo -e "\\033[0m/' "$script"
+done
 
-export PATH="/workspace/git-goals:$PATH"
+# Add version information and --version flag
+echo '
+VERSION="0.1.0"
 
-# Set up a temporary test directory
-test_dir=$(mktemp -d)
-cd "$test_dir"
-
-echo "Setting up test repository..."
-git init
-git config user.email "test@example.com"
-git config user.name "Test User"
-git commit --allow-empty -m "Initial commit"
-
-echo "Testing git-goals..."
-
-# Test goal creation
-run_command git goals create "Implement new feature"
-
-# Test goal listing
-run_command git goals list
-
-# Get the goal ID from the list output
-goal_id=$(git goals list | grep "Implement new feature" | cut -d" " -f2 | tr -d "()")
-
-if [ -z "$goal_id" ]; then
-    echo "Error: Failed to extract goal ID for 'Implement new feature'"
-    exit 1
+if [ "$1" = "--version" ]; then
+    echo "git-goals version $VERSION"
+    exit 0
 fi
+' >> git-goals
 
-# Test goal show
-run_command git goals show "$goal_id"
+# Update README.md with new information
+cat << 'EOF' > README.md
+# git-goals
 
-# Test goal update
-run_command git goals update "$goal_id" "Implement new feature with improved performance"
+git-goals is a set of command-line tools to manage and track goals within a Git repository. It allows you to create, update, list, and complete goals, as well as generate reports on your progress.
 
-# Test goal show after update
-run_command git goals show "$goal_id"
+## Installation
 
-# Test goal completion
-run_command git goals complete "$goal_id" "" "Feature implemented and tested"
+1. Clone this repository or download the scripts.
+2. Add the directory containing these scripts to your PATH.
+3. Ensure the scripts are executable (`chmod +x git-goals*`).
 
-# Test goal report
-run_command git goals report
+## Usage
 
-# Test goal deletion
-run_command git goals delete "$goal_id"
+### Create a new goal
 
-# Verify goal is deleted
-if git goals list | grep -q "$goal_id"; then
-    echo "Error: Goal $goal_id still exists after deletion"
-    exit 1
-else
-    echo "Goal $goal_id successfully deleted"
-fi
+```
+git goals create <goal_description>
+```
 
-echo "All tests completed successfully!"
+### Update a goal
 
-# Clean up
-cd ..
-rm -rf "$test_dir"
+```
+git goals update <goal_id> <new_goal_description>
+```
+
+### List goals
+
+```
+git goals list
+```
+
+### Show goal details
+
+```
+git goals show <goal_id>
+```
+
+### Complete a goal
+
+```
+git goals complete <goal_id> [attempt_id] [rationale]
+```
+
+### Delete a goal
+
+```
+git goals delete <goal_id>
+```
+
+### Generate a report
+
+```
+git goals report
+```
+
+### Recover goals
+
+```
+git goals recover
+```
+
+## How it works
+
+git-goals uses Git notes to store goal metadata. Each goal is associated with a specific commit, and the goal information is stored as a note on that commit. The tools provided allow you to manage these notes and the associated goal branches easily.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+MIT
 EOF
-chmod +x test-git-goals.sh
 
-echo "All git-goals scripts have been updated and the main git-goals script has been created."
+# Create a simple configuration file
+cat << 'EOF' > .git-goals-config
+# Git Goals Configuration
+
+# Custom note reference name (default: goals)
+NOTE_REF_NAME=goals
+
+# Date format for goal creation and completion (default: %Y-%m-%d)
+DATE_FORMAT=%Y-%m-%d
+
+# Maximum number of goals to display in list view (0 for unlimited)
+MAX_GOALS_DISPLAY=0
+EOF
+
+# Update scripts to use configuration file
+for script in git-goals-*; do
+    sed -i '3i\
+# Load configuration\
+if [ -f ".git-goals-config" ]; then\
+    source ".git-goals-config"\
+fi\
+\
+NOTE_REF_NAME=${NOTE_REF_NAME:-goals}\
+DATE_FORMAT=${DATE_FORMAT:-%Y-%m-%d}\
+MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}\
+' "$script"
+done
+
+echo "Updates and improvements have been applied to the git-goals scripts."
