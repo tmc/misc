@@ -1,0 +1,1 @@
+/workspace/git-goals/fixes.sh: line 12: sandbox-exec: command not found
