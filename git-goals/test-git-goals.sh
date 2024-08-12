@@ -30,7 +30,7 @@ run_command git goals create "Implement new feature"
 run_command git goals list
 
 # Get the goal ID from the list output
-goal_id=$(git goals list | grep "Implement new feature" | cut -d' ' -f2 | tr -d '()')
+goal_id=$(git goals list | grep "Implement new feature" | cut -d" " -f2 | tr -d "()")
 
 if [ -z "$goal_id" ]; then
     echo "Error: Failed to extract goal ID for 'Implement new feature'"
@@ -68,3 +68,4 @@ echo "All tests completed successfully!"
 # Clean up
 cd ..
 rm -rf "$test_dir"
+
