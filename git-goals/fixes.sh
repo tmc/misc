@@ -1,69 +1,48 @@
 #!/bin/bash
 
-# Function to run a command and print its output
-run_command() {
-    echo "$ $*"
-    output=$("$@")
-    echo "$output"
-    echo
+# Function to create a new git commit
+create_commit() {
+  git add .
+  git commit -m "Progress iteration: $(date +%Y%m%d%H%M%S)" --allow-empty
 }
 
-export PATH="/workspace/git-goals:/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# Function to run command in sandbox and capture output
+run_sandbox() {
+  local command="$1"
+  sandbox-exec "$command"
+}
 
-# Set up a temporary test directory
-test_dir=$(mktemp -d)
-cd "$test_dir"
+# Function to analyze sandbox output and context
+analyze_sandbox() {
+  echo "Analyzing sandbox execution..."
+  
+  # Capture system information
+  uname -a > system_info.txt
+  
+  # Analyze sandbox output
+  docker logs $(get-latest-sandbox) | cgpt -s "Analyze this sandbox output and suggest improvements or next steps:" > analysis.txt
+  
+  # Analyze execution context
+  ps aux | grep sandbox-exec > execution_context.txt
+  cat execution_context.txt | cgpt -s "Analyze this execution context and provide insights:" >> analysis.txt
+}
 
-echo "Setting up test repository..."
-git init
-git config user.email "test@example.com"
-git config user.name "Test User"
-git commit --allow-empty -m "Initial commit"
+# Function to update project based on analysis
+update_project() {
+  echo "Updating project based on analysis..."
+  cat analysis.txt | cgpt -s "Based on this analysis, suggest concrete changes to the project:" > suggested_changes.txt
+  
+  # Apply suggested changes (this is a placeholder - you may want to review changes manually)
+  # bash suggested_changes.txt
+}
 
-echo "Testing git-goals..."
-
-# Test goal creation
-run_command git goals create "Implement new feature"
-
-# Test goal listing
-run_command git goals list
-
-# Get the goal ID from the list output
-goal_id=$(git goals list | grep "Implement new feature" | awk '{print $1}')
-
-if [ -z "$goal_id" ]; then
-    echo "Error: Failed to extract goal ID for 'Implement new feature'"
-    exit 1
-fi
-
-# Test goal show
-run_command git goals show "$goal_id"
-
-# Test goal update
-run_command git goals update "$goal_id" "Implement new feature with improved performance"
-
-# Test goal show after update
-run_command git goals show "$goal_id"
-
-# Test goal completion
-run_command git goals complete "$goal_id" "" "Feature implemented and tested"
-
-# Test goal report
-run_command git goals report
-
-# Test goal deletion
-run_command git goals delete "$goal_id"
-
-# Verify goal is deleted
-if git goals list | grep -q "$goal_id"; then
-    echo "Error: Goal $goal_id still exists after deletion"
-    exit 1
-else
-    echo "Goal $goal_id successfully deleted"
-fi
-
-echo "All tests completed successfully!"
-
-# Clean up
-cd ..
-rm -rf "$test_dir"
+# Main execution loop
+while true; do
+  create_commit
+  echo "Running next step in sandbox..."
+  run_sandbox "bash -x ./test-git-goals.sh"
+  analyze_sandbox
+  update_project
+  echo "Iteration complete. Press Enter to continue or Ctrl+C to exit."
+  read
+done
