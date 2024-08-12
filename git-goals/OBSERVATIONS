@@ -1,24 +1,22 @@
 Observations: 
 
-- The test script is failing when trying to create and list goals. It's unable to extract the goal ID after creation.
+1. The test script is failing to extract the goal ID after creating a new goal. This suggests there may be an issue with the output format or parsing in the git-goals-create or git-goals-list scripts.
 
-- The git-goals-create script seems to be working as it's creating a git note, but the output may not be in the expected format for the test script to parse.
+2. The error occurs in the test-git-goals.sh script, specifically in the line:
+   goal_id=
 
-- We need to improve error handling and output formatting in the git-goals-create script.
+3. The git-goals-create script seems to be working as it outputs the created goal ID and description, but the test script is not capturing this output correctly.
 
-- The test script should be updated to properly handle the output from git-goals-create.
+4. We need to modify the test-git-goals.sh script to properly capture and parse the output from git-goals-create.
 
-- We should implement the remaining git-goals commands (show, update, complete, report) to fully test the functionality.
+5. After fixing the goal ID extraction, we should continue implementing and testing the remaining git-goals commands (show, update, complete, delete, report).
 
-- Consider adding more robust error checking and user-friendly messages throughout all scripts.
+6. The overall structure of the test script looks good, but we need to ensure each command is properly tested and error cases are handled.
 
-- The USAGE.md file should be updated to reflect the current state of the project and provide accurate usage examples.
+7. Consider adding more robust error handling and input validation to all git-goals scripts.
 
-- We may want to add a main git-goals script that acts as an entry point for all subcommands.
+8. Once the basic functionality is working, we can focus on improving the user experience and adding any additional features.
 
-Next steps:
-1. Fix the output format of git-goals-create to make it easier to parse
-2. Update the test script to properly handle the new output format
-3. Implement the remaining git-goals commands
-4. Update USAGE.md with accurate information
-5. Create a main git-goals script to handle subcommands
+9. Regular testing and iterative improvements will be key to developing a robust git-goals tool.
+
+10. Consider adding more detailed logging or debug output options to help troubleshoot issues during development.
