@@ -1,24 +1,39 @@
 #!/bin/bash
+# Input validation and error handling
+# Load configuration
+if [ -f ".git-goals-config" ]; then
+    source ".git-goals-config"
+fi
+
+NOTE_REF_NAME=${NOTE_REF_NAME:-goals}
+DATE_FORMAT=${DATE_FORMAT:-%Y-%m-%d}
+MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}
+
+if [ $# -eq 0 ]; then
+    echo -e "\033[1mUsage: $0 <args>"
+    exit 1
+fi
+
 set -euo pipefail
 
-echo "Goal Report"
-echo "==========="
+echo -e "\033[1mGoal Report"
+echo -e "\033[1m==========="
 
 git notes --ref=goals list | while read -r note_ref commit_hash; do
     goal_data=$(git notes --ref=goals show "$commit_hash")
 
-    id=$(echo "$goal_data" | grep "^id:" | cut -d" " -f2-)
-    description=$(echo "$goal_data" | grep "^description:" | cut -d" " -f2-)
-    status=$(echo "$goal_data" | grep "^status:" | cut -d" " -f2-)
-    created_at=$(echo "$goal_data" | grep "^created_at:" | cut -d" " -f2-)
-    completed_at=$(echo "$goal_data" | grep "^completed_at:" | cut -d" " -f2-)
+    id=$(echo -e "\033[1m$goal_data" | grep "^id:" | cut -d" " -f2-)
+    description=$(echo -e "\033[1m$goal_data" | grep "^description:" | cut -d" " -f2-)
+    status=$(echo -e "\033[1m$goal_data" | grep "^status:" | cut -d" " -f2-)
+    created_at=$(echo -e "\033[1m$goal_data" | grep "^created_at:" | cut -d" " -f2-)
+    completed_at=$(echo -e "\033[1m$goal_data" | grep "^completed_at:" | cut -d" " -f2-)
 
-    echo "Goal ID: $id"
-    echo "Description: $description"
-    echo "Status: $status"
-    echo "Created: $created_at"
+    echo -e "\033[1mGoal ID: $id"
+    echo -e "\033[1mDescription: $description"
+    echo -e "\033[1mStatus: $status"
+    echo -e "\033[1mCreated: $created_at"
     if [ "$status" = "completed" ]; then
-        echo "Completed: $completed_at"
+        echo -e "\033[1mCompleted: $completed_at"
     fi
-    echo "---"
+    echo -e "\033[1m---"
 done

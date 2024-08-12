@@ -6,7 +6,7 @@ git-goals is a set of command-line tools to manage and track goals within a Git 
 
 1. Clone this repository or download the scripts.
 2. Add the directory containing these scripts to your PATH.
-3. Ensure the scripts are executable (`chmod +x git-goals-*`).
+3. Ensure the scripts are executable (`chmod +x git-goals*`).
 
 ## Usage
 
@@ -16,15 +16,11 @@ git-goals is a set of command-line tools to manage and track goals within a Git 
 git goals create <goal_description>
 ```
 
-This creates a new goal branch with the given description. If you're already on a goal branch, it creates a subgoal.
-
 ### Update a goal
 
 ```
-git goals update <new_goal_description>
+git goals update <goal_id> <new_goal_description>
 ```
-
-Updates the current goal or creates a new one if it doesn't exist.
 
 ### List goals
 
@@ -32,15 +28,11 @@ Updates the current goal or creates a new one if it doesn't exist.
 git goals list
 ```
 
-Displays a list of all current goals with their IDs, statuses, and descriptions.
-
 ### Show goal details
 
 ```
 git goals show <goal_id>
 ```
-
-Displays detailed information about a specific goal.
 
 ### Complete a goal
 
@@ -48,15 +40,11 @@ Displays detailed information about a specific goal.
 git goals complete <goal_id> [attempt_id] [rationale]
 ```
 
-Marks a goal as complete, optionally with an attempt selection and rationale.
-
 ### Delete a goal
 
 ```
 git goals delete <goal_id>
 ```
-
-Deletes a goal by its ID.
 
 ### Generate a report
 
@@ -64,7 +52,11 @@ Deletes a goal by its ID.
 git goals report
 ```
 
-Generates a comprehensive report of all goals, including their statuses, descriptions, creation dates, and completion dates.
+### Recover goals
+
+```
+git goals recover
+```
 
 ## How it works
 

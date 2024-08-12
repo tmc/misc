@@ -1,9 +1,24 @@
 #!/bin/bash
+# Input validation and error handling
+# Load configuration
+if [ -f ".git-goals-config" ]; then
+    source ".git-goals-config"
+fi
+
+NOTE_REF_NAME=${NOTE_REF_NAME:-goals}
+DATE_FORMAT=${DATE_FORMAT:-%Y-%m-%d}
+MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}
+
+if [ $# -eq 0 ]; then
+    echo -e "\033[1mUsage: $0 <args>"
+    exit 1
+fi
+
 set -euo pipefail
 
 if [ $# -eq 0 ]; then
-    echo "Error: Please provide a description for the goal."
-    echo "Usage: git goals create <description>"
+    echo -e "\033[1mError: Please provide a description for the goal."
+    echo -e "\033[1mUsage: git goals create <description>"
     exit 1
 fi
 
@@ -16,5 +31,5 @@ description: $description
 status: active
 created_at: $(date -I)" HEAD
 
-echo "Created new goal with ID: $id"
-echo "Description: $description"
+echo -e "\033[1mCreated new goal with ID: $id"
+echo -e "\033[1mDescription: $description"

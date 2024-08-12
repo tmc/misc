@@ -1,11 +1,26 @@
 #!/bin/bash
+# Input validation and error handling
+# Load configuration
+if [ -f ".git-goals-config" ]; then
+    source ".git-goals-config"
+fi
+
+NOTE_REF_NAME=${NOTE_REF_NAME:-goals}
+DATE_FORMAT=${DATE_FORMAT:-%Y-%m-%d}
+MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}
+
+if [ $# -eq 0 ]; then
+    echo -e "\033[1mUsage: $0 <args>"
+    exit 1
+fi
+
 set -euo pipefail
 
-echo "Current Goals:"
+echo -e "\033[1mCurrent Goals:"
 git notes --ref=goals list | while read -r note_ref commit_hash; do
     goal_data=$(git notes --ref=goals show "$commit_hash")
-    id=$(echo "$goal_data" | grep "^id:" | cut -d" " -f2-)
-    status=$(echo "$goal_data" | grep "^status:" | cut -d" " -f2-)
-    description=$(echo "$goal_data" | grep "^description:" | cut -d" " -f2-)
-    echo "- $id ($status): $description"
+    id=$(echo -e "\033[1m$goal_data" | grep "^id:" | cut -d" " -f2-)
+    status=$(echo -e "\033[1m$goal_data" | grep "^status:" | cut -d" " -f2-)
+    description=$(echo -e "\033[1m$goal_data" | grep "^description:" | cut -d" " -f2-)
+    echo -e "\033[1m- $id ($status): $description"
 done

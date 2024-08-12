@@ -1,8 +1,23 @@
 #!/bin/bash
+# Input validation and error handling
+# Load configuration
+if [ -f ".git-goals-config" ]; then
+    source ".git-goals-config"
+fi
+
+NOTE_REF_NAME=${NOTE_REF_NAME:-goals}
+DATE_FORMAT=${DATE_FORMAT:-%Y-%m-%d}
+MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}
+
+if [ $# -eq 0 ]; then
+    echo -e "\033[1mUsage: $0 <args>"
+    exit 1
+fi
+
 set -euo pipefail
 
 if [ $# -lt 2 ]; then
-    echo "Usage: git goals update <goal_id> <new_description>"
+    echo -e "\033[1mUsage: git goals update <goal_id> <new_description>"
     exit 1
 fi
 
@@ -13,13 +28,13 @@ new_description="$*"
 commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
 
 if [ -z "$commit_hash" ]; then
-    echo "Error: Goal with ID $goal_id not found."
+    echo -e "\033[1mError: Goal with ID $goal_id not found."
     exit 1
 fi
 
 current_data=$(git notes --ref=goals show "$commit_hash")
-updated_data=$(echo "$current_data" | sed "s/^description:.*$/description: $new_description/")
+updated_data=$(echo -e "\033[1m$current_data" | sed "s/^description:.*$/description: $new_description/")
 
-echo "$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
+echo -e "\033[1m$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
 
-echo "Updated goal $goal_id: $new_description"
+echo -e "\033[1mUpdated goal $goal_id: $new_description"

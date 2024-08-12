@@ -1,16 +1,31 @@
 #!/bin/bash
+# Input validation and error handling
+# Load configuration
+if [ -f ".git-goals-config" ]; then
+    source ".git-goals-config"
+fi
+
+NOTE_REF_NAME=${NOTE_REF_NAME:-goals}
+DATE_FORMAT=${DATE_FORMAT:-%Y-%m-%d}
+MAX_GOALS_DISPLAY=${MAX_GOALS_DISPLAY:-0}
+
+if [ $# -eq 0 ]; then
+    echo -e "\033[1mUsage: $0 <args>"
+    exit 1
+fi
+
 # recover-goals.sh
 set -euo pipefail
 
 git notes --ref=goals list | while read -r commit_hash note_ref; do
-    echo "Processing note for commit $commit_hash"
+    echo -e "\033[1mProcessing note for commit $commit_hash"
     note_content=$(git cat-file -p "$note_ref" 2>/dev/null)
 
     # Extract goal description from commit message
-    description=$(echo "$note_content" | grep "Goal:" | sed 's/Goal: //')
+    description=$(echo -e "\033[1m$note_content" | grep "Goal:" | sed 's/Goal: //')
 
     if [ -z "$description" ]; then
-        echo "No goal found for commit $commit_hash. Skipping."
+        echo -e "\033[1mNo goal found for commit $commit_hash. Skipping."
         continue
     fi
 
@@ -27,7 +42,7 @@ created_at: $(date -I)"
     # Update the note with the new metadata
     git notes --ref=goals add -f -m "$new_goal_metadata" $commit_hash
 
-    echo "Recovered goal:"
-    echo "$new_goal_metadata"
-    echo "---"
+    echo -e "\033[1mRecovered goal:"
+    echo -e "\033[1m$new_goal_metadata"
+    echo -e "\033[1m---"
 done
