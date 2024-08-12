@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script to update all git-goals-* scripts
+# This script will update all git-notes-* scripts to reflect recent fixes and improvements
 
 set -euo pipefail
 
@@ -13,43 +13,6 @@ update_script() {
   echo "$content" > "$script_name"
   chmod +x "$script_name"
 }
-
-# Update git-goals-create
-update_script "git-goals-create" '#!/bin/bash
-set -euo pipefail
-
-if [ $# -eq 0 ]; then
-    echo "Error: Please provide a description for the goal."
-    echo "Usage: git goals create <description>"
-    exit 1
-fi
-
-description="$*"
-id=$(date +%Y%m%d%H%M%S)
-
-git notes --ref=goals add -m "id: $id
-type: goal
-description: $description
-status: active
-created_at: $(date -I)" HEAD
-
-echo "Created new goal with ID: $id"
-echo "Description: $description"
-'
-
-# Update git-goals-list
-update_script "git-goals-list" '#!/bin/bash
-set -euo pipefail
-
-echo "Current Goals:"
-git notes --ref=goals list | while read -r note_ref commit_hash; do
-    goal_data=$(git notes --ref=goals show "$commit_hash")
-    id=$(echo "$goal_data" | grep "^id:" | cut -d" " -f2-)
-    status=$(echo "$goal_data" | grep "^status:" | cut -d" " -f2-)
-    description=$(echo "$goal_data" | grep "^description:" | cut -d" " -f2-)
-    echo "- $id ($status): $description"
-done
-'
 
 # Update git-goals-show
 update_script "git-goals-show" '#!/bin/bash
@@ -70,6 +33,29 @@ if [ -z "$commit_hash" ]; then
 fi
 
 git notes --ref=goals show "$commit_hash"
+'
+
+# Update git-goals-delete
+update_script "git-goals-delete" '#!/bin/bash
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+    echo "Usage: git goals delete <goal_id>"
+    exit 1
+fi
+
+goal_id="$1"
+
+commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
+
+if [ -z "$commit_hash" ]; then
+    echo "Error: Goal with ID $goal_id not found."
+    exit 1
+fi
+
+git notes --ref=goals remove "$commit_hash"
+
+echo "Goal $goal_id deleted"
 '
 
 # Update git-goals-update
@@ -100,27 +86,31 @@ echo "$updated_data" | git notes --ref=goals add -f -F - "$commit_hash"
 echo "Updated goal $goal_id: $new_description"
 '
 
-# Update git-goals-delete
-update_script "git-goals-delete" '#!/bin/bash
+# Update git-goals-report
+update_script "git-goals-report" '#!/bin/bash
 set -euo pipefail
 
-if [ $# -eq 0 ]; then
-    echo "Usage: git goals delete <goal_id>"
-    exit 1
-fi
+echo "Goal Report"
+echo "==========="
 
-goal_id="$1"
+git notes --ref=goals list | while read -r note_ref commit_hash; do
+    goal_data=$(git notes --ref=goals show "$commit_hash")
 
-commit_hash=$(git notes --ref=goals list | grep "$goal_id" | awk "{print \$1}")
+    id=$(echo "$goal_data" | grep "^id:" | cut -d" " -f2-)
+    description=$(echo "$goal_data" | grep "^description:" | cut -d" " -f2-)
+    status=$(echo "$goal_data" | grep "^status:" | cut -d" " -f2-)
+    created_at=$(echo "$goal_data" | grep "^created_at:" | cut -d" " -f2-)
+    completed_at=$(echo "$goal_data" | grep "^completed_at:" | cut -d" " -f2-)
 
-if [ -z "$commit_hash" ]; then
-    echo "Error: Goal with ID $goal_id not found."
-    exit 1
-fi
-
-git notes --ref=goals remove "$commit_hash"
-
-echo "Goal $goal_id deleted"
+    echo "Goal ID: $id"
+    echo "Description: $description"
+    echo "Status: $status"
+    echo "Created: $created_at"
+    if [ "$status" = "completed" ]; then
+        echo "Completed: $completed_at"
+    fi
+    echo "---"
+done
 '
 
 # Update git-goals-complete
@@ -166,30 +156,40 @@ if [ -n "$rationale" ]; then
 fi
 '
 
-# Update git-goals-report
-update_script "git-goals-report" '#!/bin/bash
+# Update git-goals-create
+update_script "git-goals-create" '#!/bin/bash
 set -euo pipefail
 
-echo "Goal Report"
-echo "==========="
+if [ $# -eq 0 ]; then
+    echo "Error: Please provide a description for the goal."
+    echo "Usage: git goals create <description>"
+    exit 1
+fi
 
+description="$*"
+id=$(date +%Y%m%d%H%M%S)
+
+git notes --ref=goals add -m "id: $id
+type: goal
+description: $description
+status: active
+created_at: $(date -I)" HEAD
+
+echo "Created new goal with ID: $id"
+echo "Description: $description"
+'
+
+# Update git-goals-list
+update_script "git-goals-list" '#!/bin/bash
+set -euo pipefail
+
+echo "Current Goals:"
 git notes --ref=goals list | while read -r note_ref commit_hash; do
     goal_data=$(git notes --ref=goals show "$commit_hash")
-
     id=$(echo "$goal_data" | grep "^id:" | cut -d" " -f2-)
-    description=$(echo "$goal_data" | grep "^description:" | cut -d" " -f2-)
     status=$(echo "$goal_data" | grep "^status:" | cut -d" " -f2-)
-    created_at=$(echo "$goal_data" | grep "^created_at:" | cut -d" " -f2-)
-    completed_at=$(echo "$goal_data" | grep "^completed_at:" | cut -d" " -f2-)
-
-    echo "Goal ID: $id"
-    echo "Description: $description"
-    echo "Status: $status"
-    echo "Created: $created_at"
-    if [ "$status" = "completed" ]; then
-        echo "Completed: $completed_at"
-    fi
-    echo "---"
+    description=$(echo "$goal_data" | grep "^description:" | cut -d" " -f2-)
+    echo "- $id ($status): $description"
 done
 '
 
