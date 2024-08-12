@@ -6,18 +6,19 @@ Observations:
 
 - The git-goals-list script may not be outputting the goal information in a format that can be easily parsed to extract the goal ID.
 
-- Error handling in the test script could be improved to provide more informative messages about what exactly went wrong.
+- We need to focus on fixing the goal creation and listing functionality to ensure they work together properly.
 
-- The test script is not continuing past the goal creation and listing steps due to the error, so we're not testing the other git-goals commands.
+- Once those core functions are working, we can move on to implementing and testing the other git-goals commands.
+
+- Consider adding more robust error handling and output formatting to make debugging easier.
+
+- We may need to standardize the output format across all git-goals commands to ensure consistency and ease of parsing.
 
 To guide our next steps:
 
-1. Review and potentially modify the output format of git-goals-create and git-goals-list to ensure consistency and ease of parsing.
-
-2. Improve error handling and debugging output in the test script to get more information about why the goal ID extraction is failing.
-
-3. Once the goal creation and listing are working correctly, continue implementing and testing the other git-goals commands (show, update, complete, delete, report).
-
-4. Consider adding more robust input validation and error handling to all git-goals scripts.
-
-5. After fixing the immediate issues, focus on improving the overall user experience and adding any missing features to the git-goals toolset.
+1. Debug and fix the git-goals-create script to ensure it outputs the goal ID in a consistent, parseable format.
+2. Update the git-goals-list script to output goals in a format that's easy to parse and extract goal IDs from.
+3. Modify the test script to properly parse the output from git-goals-list and extract the goal ID.
+4. Add more detailed error messages and logging to help identify issues.
+5. Once create and list are working, implement and test the remaining git-goals commands (show, update, complete, delete).
+6. Consider adding a verbose mode to all commands for additional debugging information.
