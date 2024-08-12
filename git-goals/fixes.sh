@@ -1,43 +1,45 @@
 #!/usr/bin/bash
 
-# This script will implement minor improvements and prepare for the next development phase.
+# Minor improvements and preparations for version 0.2.8
 
-# 1. Update shebang in test-git-goals.sh
-sed -i '1s|^#!/usr/bin/env bash|#!/usr/bin/env -S bash -euo pipefail|' test-git-goals.sh
+# Update version number
+sed -i 's/VERSION="0.2.7"/VERSION="0.2.8"/' git-goals
 
-# 2. Add error handling to test-git-goals.sh
-sed -i '2i\set -euo pipefail' test-git-goals.sh
-
-# 3. Update documentation in README.md
-sed -i '/## Features/a\- Configurable notification system for approaching and overdue goals' README.md
-
-# 4. Add more detailed error messages in git-goals-notify
-sed -i '/echo -e "\\033\[1mError: Goal with ID $goal_id not found."/a\    echo -e "\\033[1mPlease check if the goal ID is correct and try again."' git-goals-notify
-
-# 5. Improve error handling in git-goals-prioritize
-sed -i '/echo -e "\\033\[1mError: Invalid priority. Use '"'"'high'"'"', '"'"'medium'"'"', or '"'"'low'"'"'."/a\    echo -e "\\033[1mPlease provide a valid priority and try again."' git-goals-prioritize
-
-# 6. Update CHANGELOG.md for version 0.2.7
+# Update CHANGELOG.md
 cat << EOF >> CHANGELOG.md
 
-## [0.2.7] - $(date +%Y-%m-%d)
+## [0.2.8] - $(date +%Y-%m-%d)
 ### Changed
-- Improved error handling and messages in various scripts
-- Updated documentation to reflect recent changes
-- Minor code improvements and cleanup
+- Minor improvements and code cleanup
+- Enhanced error handling in various scripts
+- Updated documentation
 EOF
 
-# 7. Update version number in main git-goals script
-sed -i 's/VERSION="0.2.6"/VERSION="0.2.7"/' git-goals
+# Update README.md with more detailed information about the notification system
+sed -i '/## Features/a - Configurable notification system for approaching and overdue goals' README.md
 
-# 8. Add a TODO for future development in IMPORTANT file
-echo "- Consider implementing a web interface for easier goal management" >> IMPORTANT
+# Improve error handling in git-goals-notify
+sed -i '/echo -e "\\033\[1mChecking for approaching deadlines..."/a\
+if [ -z "$(git notes --ref=goals list)" ]; then\
+    echo -e "\\033[1mNo goals found. Nothing to notify."\
+    exit 0\
+fi' git-goals-notify
 
-# 9. Improve notification message in git-goals-notify
-sed -i 's/echo -e "\\033\[1mWARNING: Goal $goal_id is due in $days_until_deadline days!"/echo -e "\\033[1mWARNING: Goal $goal_id ($description) is due in $days_until_deadline days!"/' git-goals-notify
+# Add a TODO comment for future enhancement in git-goals-prioritize
+sed -i '/echo -e "\\033\[1mGoal $goal_id priority set to $priority"/a\
+# TODO: Consider implementing a way to sort goals by priority in the list command' git-goals-prioritize
 
-# 10. Add a sleep command to slow down development pace
-echo "echo 'Development slowing down. Sleeping for 5 minutes...'" >> fixes.sh
-echo "sleep 300" >> fixes.sh
+# Update IMPORTANT file
+sed -i '/- Consider implementing a web interface for easier goal management/d' IMPORTANT
+echo "- Implement sorting of goals by priority in the list command" >> IMPORTANT
 
-echo "Minor improvements and preparations for version 0.2.7 complete. Please review changes and run manual tests if needed."
+# Commit changes
+git add git-goals CHANGELOG.md README.md git-goals-notify git-goals-prioritize IMPORTANT
+git commit -m "Prepare for version 0.2.8 release"
+
+# Run tests
+./test-git-goals.sh
+
+echo "Minor improvements and preparations for version 0.2.8 complete. Please review changes and run manual tests if needed."
+echo "Development slowing down. Sleeping for 5 minutes..."
+sleep 300
