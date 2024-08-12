@@ -105,3 +105,8 @@
 - Updated test suite to include notification system tests
 ### Changed
 - Improved documentation for the notification feature
+
+## [0.2.6] - 2024-08-12
+### Changed
+- Minor improvements and code cleanup
+- Updated documentation

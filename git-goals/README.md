@@ -20,6 +20,7 @@ To run the test suite, use the following command:
 
 
 ## Features
+- Configurable notification system for approaching and overdue goals
 - Deadline notification system for approaching and overdue goals
 - Deadline notification system
 
