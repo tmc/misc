@@ -1,3 +1,5 @@
+# git-goals v0.1.1
+
 # git-goals
 
 git-goals is a set of command-line tools to manage and track goals within a Git repository. It allows you to create, update, list, and complete goals, as well as generate reports on your progress.
