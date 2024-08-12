@@ -1,0 +1,2 @@
+sh eval-make-safe-progress.sh | tee /tmp/eval-make-safe-progress; cat /tmp/eval-make-safe-progress |git notes --ref eval-safe-progress add -F- ;
+./make-safe-progress.sh
