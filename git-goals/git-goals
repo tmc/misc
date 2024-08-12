@@ -1,9 +1,9 @@
 #!/bin/bash
+set -euo pipefail
 
-# Check if a subcommand is provided
 if [ $# -eq 0 ]; then
     echo "Usage: git goals <subcommand> [<args>]"
-    echo "Available subcommands: list, create, show, update, delete"
+    echo "Available subcommands: create, list, show, update, delete, complete, report"
     exit 1
 fi
 
@@ -11,12 +11,13 @@ subcommand="$1"
 shift
 
 case "$subcommand" in
-    list|create|show|update|delete)
+    create|list|show|update|delete|complete|report)
         "git-goals-$subcommand" "$@"
         ;;
     *)
         echo "Error: Unknown subcommand '$subcommand'"
-        echo "Available subcommands: list, create, show, update, delete"
+        echo "Available subcommands: create, list, show, update, delete, complete, report"
         exit 1
         ;;
 esac
+
