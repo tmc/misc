@@ -2,7 +2,13 @@
 
 set -euo pipefail
 
-VERSION="0.2.10"
+VERSION="0.2.11"
+# Load plugins
+for plugin in plugins/*.sh; do
+    if [ -f "$plugin" ] && [ -x "$plugin" ]; then
+        source "$plugin"
+    fi
+done
 
 print_usage() {
     echo "Usage: git goals <subcommand> [<args>]"

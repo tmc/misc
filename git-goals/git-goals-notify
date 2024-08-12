@@ -39,4 +39,22 @@ git notes --ref=goals list | while read -r commit_hash note_ref; do
     fi
 done
 # TODO: Enhance notification system to integrate with priority sorting feature
+# Get goals sorted by priority
+sorted_goals=$(git goals list | sort -k5,5 -r)
+
+# Display notifications for high priority goals first
+echo "$sorted_goals" | while read -r goal; do
+    goal_id=$(echo "$goal" | awk "{print $2}")
+    priority=$(echo "$goal" | awk "{print $5}")
+    deadline=$(git goals show "$goal_id" | grep "^deadline:" | cut -d" " -f2-)
+    
+    if [ -n "$deadline" ]; then
+        days_until_deadline=$(( ($(date -d "$deadline" +%s) - $(date -d "$current_date" +%s) ) / 86400 ))
+        if [ $days_until_deadline -le $warning_days ] && [ $days_until_deadline -ge 0 ]; then
+            echo -e "033[1mWARNING: High priority goal $goal_id is due in $days_until_deadline days!"
+        elif [ $days_until_deadline -lt 0 ]; then
+            echo -e "033[1mALERT: High priority goal $goal_id is overdue by $(( -days_until_deadline )) days!"
+        fi
+    fi
+done
 # TODO: Consider implementing more advanced notification features, such as email or desktop notifications

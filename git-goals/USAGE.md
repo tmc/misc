@@ -116,3 +116,12 @@ Checking for approaching deadlines...
 WARNING: Goal 20240101000000 is due in 5 days!
 ALERT: Goal 20240101000001 is overdue by 2 days!
 ```
+
+## List goals sorted by priority
+```
+$ git goals list
+Current Goals:
+- 20240101000001 (active, Priority: high): High priority goal
+- 20240101000002 (active, Priority: medium): Medium priority goal
+- 20240101000003 (active, Priority: low): Low priority goal
+```

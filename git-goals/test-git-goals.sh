@@ -1,4 +1,5 @@
-#!/usr/bin/env bash
+#!/usr/bin/env -S bash -euo pipefail
+set -euo pipefail
 set -euo pipefail
 
 # Function to run a command and print its output
@@ -89,3 +90,25 @@ fi
 
 # Clean up test goal
 git goals delete $test_goal_id
+
+# Test priority sorting in list command
+echo "Testing priority sorting in list command..."
+high_priority_goal=
+git goals prioritize $high_priority_goal high
+medium_priority_goal=
+git goals prioritize $medium_priority_goal medium
+low_priority_goal=
+git goals prioritize $low_priority_goal low
+
+sorted_list=
+if [[ "$sorted_list" == *"High priority goal"*"Medium priority goal"*"Low priority goal"* ]]; then
+    echo "Priority sorting test passed"
+else
+    echo "Priority sorting test failed"
+    exit 1
+fi
+
+# Clean up test goals
+git goals delete $high_priority_goal
+git goals delete $medium_priority_goal
+git goals delete $low_priority_goal
