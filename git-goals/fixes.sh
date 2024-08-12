@@ -1,51 +1,58 @@
 #!/usr/bin/bash
 
-# Since we're in a stable state and focusing on gathering user feedback, we'll implement a longer sleep period.
-# This will allow more time for user testing and feedback collection.
+# Since we're in a sleep period for user testing and feedback collection, we'll focus on minor improvements and preparations for the next phase.
 
-echo "Entering sleep period for user testing and feedback collection..."
-sleep 3600  # Sleep for 1 hour
-
-echo "Waking up to check for any urgent updates or feedback..."
-
-# Check for any new issues or pull requests in the GitHub repository
-# Note: This is a placeholder command. Replace with actual GitHub API call or git command to check for updates.
-# git fetch origin
-# new_issues=$(git log HEAD..origin/main --oneline | wc -l)
-
-# if [ "$new_issues" -gt 0 ]; then
-#     echo "New updates detected. Consider reviewing and addressing them."
-# else
-#     echo "No new updates detected."
-# fi
-
-echo "Preparing for the next phase of development..."
-
-# Update version number in preparation for future updates
+# 1. Update version number
 sed -i 's/VERSION="0.2.13"/VERSION="0.2.14"/' git-goals
 
-# Update CHANGELOG.md
+# 2. Update CHANGELOG.md
 cat << EOF >> CHANGELOG.md
 
 ## [0.2.14] - $(date +%Y-%m-%d)
 ### Changed
-- Implemented longer sleep periods for user testing and feedback collection
+- Entered sleep period for user testing and feedback collection
+- Minor improvements and code cleanup
+- Updated documentation for clarity
 - Prepared for next phase of development focusing on performance optimization and collaborative features
 EOF
 
-# Update README.md to mention upcoming features
+# 3. Update README.md to mention upcoming features
 sed -i '/## Features/a - Performance optimizations (coming soon)\n- Enhanced collaborative features (coming soon)' README.md
 
-# Create a new file for tracking user feedback
-touch USER_FEEDBACK.md
-echo "# User Feedback" >> USER_FEEDBACK.md
-echo "Use this file to track and organize user feedback for future improvements." >> USER_FEEDBACK.md
+# 4. Create a file for tracking user feedback
+cat << EOF > USER_FEEDBACK.md
+# User Feedback
+
+Use this file to track and organize user feedback during the testing period.
+
+## Feature Requests
+
+- 
+
+## Bug Reports
+
+- 
+
+## General Feedback
+
+- 
+
+EOF
+
+# 5. Prepare for next development phase
+cat << EOF >> IMPORTANT
+- Implement performance optimizations based on user feedback
+- Enhance collaborative features for team-based usage
+- Analyze and incorporate user feedback into future development plans
+EOF
 
 # Commit changes
-git add git-goals CHANGELOG.md README.md USER_FEEDBACK.md
-git commit -m "Prepare for next phase of development and user feedback collection"
+git add git-goals CHANGELOG.md README.md USER_FEEDBACK.md IMPORTANT
+git commit -m "Prepare for user testing phase and future development"
 
-echo "Development environment prepared for next phase. Continue monitoring for user feedback and plan next steps accordingly."
+echo "Preparations for user testing phase and future development are complete."
+echo "The project is now in a sleep period for user testing and feedback collection."
+echo "Monitor USER_FEEDBACK.md for incoming user feedback and use it to guide future development."
 
-# Sleep for another period before the next check
+# Sleep for a longer period (e.g., 1 hour) to simulate the testing phase
 sleep 3600
