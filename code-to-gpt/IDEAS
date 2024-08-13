@@ -1,14 +1,22 @@
 IDEAS to implement
 
-- add option to only use tracked git files
+Token Efficiency:
+- add option to detect identicial files at different locations
+- support some sort of summary/compression mechanism (e.g. local model to reduce larger token files that may be relevant but would be large with full contents -- note: could cache this / consider git notes)
+- support a specified token limit and do something more dynamic to fit in it? (probably too sophisticated)
+
+File Selection and Control:
 - add depth control
 - consider multi-dir specification
 - accept file/path list on stdin? globbing?
 - add additional include/exclude rules (on top of existing policy)
 - support some sort of rc/dotfile/ignore file?
-  - add mode/option to be able to generate ignore rules for files over some token threshold? (may be better as a separate program)
-- clean up the xml/svg rules?
-- support some sort of summary/compression mechanism (e.g. local model to reduce larger token files that may be relevant but would be large with full contents -- note: could cache this / consider git notes)
-- support a specified token limit and do something more dynamic to fit in it? (probably too sophisticated)
+- add mode/option to be able to generate ignore rules for files over some token threshold? (may be better as a separate program)
+
+Git Integration:
 - support some sort of git operations to identify relevant content (recently modified? unstaged?)
 - support some sort of diffing mechanism (perhaps git-backed)
+
+Content Processing:
+- clean up the xml/svg rules?
+
