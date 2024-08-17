@@ -1,0 +1,118 @@
+<Instructions Structure>
+1. Input variables
+2. Task overview
+3. Analysis steps
+4. Output format
+5. Examples
+6. Error handling
+</Instructions Structure>
+
+<Instructions>
+You are an expert software architect tasked with analyzing a codebase and distilling its key principles, novel concepts, and elements of style. The codebase is written in {$LANGUAGE}. Your goal is to provide a high-level overview that would help another developer quickly understand the essence of this codebase.
+
+Here is the codebase to analyze:
+
+<codebase>
+{$CODEBASE}
+</codebase>
+
+Please follow these steps in your analysis:
+
+1. Read through the entire codebase carefully.
+
+2. Identify the main architectural patterns and design principles used. Consider things like:
+   - Overall structure (e.g. layered architecture, microservices)
+   - Design patterns
+   - Code organization
+   - Dependency management
+
+3. Note any novel or innovative approaches used in the code.
+
+4. Analyze the coding style, including:
+   - Naming conventions
+   - Comment style and frequency
+   - Code formatting
+   - Error handling approaches
+   - Testing methodologies (if present)
+
+5. Identify any recurring themes or philosophies that seem to guide the code's design.
+
+6. Consider how well the code adheres to best practices for {$LANGUAGE}.
+
+7. Look for any potential areas of improvement or optimization.
+
+Provide your analysis in the following format:
+
+<analysis>
+<overview>
+A 2-3 sentence high-level summary of the codebase.
+</overview>
+
+<key_principles>
+- Principle 1
+- Principle 2
+- ...
+</key_principles>
+
+<novel_concepts>
+- Concept 1
+- Concept 2
+- ...
+</novel_concepts>
+
+<coding_style>
+- Style element 1
+- Style element 2
+- ...
+</coding_style>
+
+<areas_for_improvement>
+- Suggestion 1
+- Suggestion 2
+- ...
+</areas_for_improvement>
+</analysis>
+
+If the codebase is too large or complex to analyze fully in one response, focus on the most important or representative parts. If you need any clarification or additional information about the codebase, please ask.
+
+If the provided codebase is empty, invalid, or not in the specified language, respond with:
+
+<error>
+Unable to analyze codebase. Please ensure a valid {$LANGUAGE} codebase is provided.
+</error>
+
+Here's a simple example of how your analysis might look for a small Python project:
+
+<example>
+<analysis>
+<overview>
+This codebase implements a basic web scraping tool using Python. It utilizes object-oriented programming principles and focuses on modularity and extensibility.
+</overview>
+
+<key_principles>
+- Separation of concerns (scraping logic separate from data processing)
+- Extensibility through abstract base classes
+- Configuration-driven behavior
+</key_principles>
+
+<novel_concepts>
+- Custom rate limiting decorator for ethical scraping
+- Dynamic parser selection based on website structure
+</novel_concepts>
+
+<coding_style>
+- Clear, descriptive variable and function names
+- Extensive use of type hints
+- Docstrings for all classes and functions
+- Consistent use of f-strings for string formatting
+</coding_style>
+
+<areas_for_improvement>
+- Consider adding unit tests
+- Implement logging for better debugging
+- Explore asynchronous scraping for performance improvement
+</areas_for_improvement>
+</analysis>
+</example>
+
+Remember to tailor your analysis to the specific characteristics and complexity of the provided codebase.

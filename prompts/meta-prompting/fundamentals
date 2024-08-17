@@ -1,0 +1,9 @@
+1. Clarity and structure: Ensure prompts are clear, specific, and well-organized to facilitate understanding and execution.
+
+2. Contextual understanding and adaptation: Design prompts that encourage the AI to grasp the full context of queries and adapt responses accordingly.
+
+3. Task decomposition and guidance: Break complex tasks into manageable steps and provide clear guidance for each stage of the process.
+
+4. Error handling and edge case management: Anticipate potential issues and provide instructions for gracefully handling unexpected situations.
+
+5. Metacognition and continuous improvement: Encourage the AI to "think about its thinking" and incorporate mechanisms for refining and improving responses over time.

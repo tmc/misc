@@ -1,0 +1,39 @@
+1. Clarity and specificity: Instructions should be clear, specific, and leave no room for ambiguity. Provide detailed guidance on how the AI should approach the task.
+
+2. Structure and organization: Use a consistent structure for prompts, including sections like <Inputs>, <Instructions>, and sometimes <Instructions Structure> to organize information logically.
+
+3. Variable handling: Clearly define input variables using placeholders (e.g. {$VARIABLE_NAME}) and explain how they should be used within the instructions.
+
+4. Task decomposition: For complex tasks, break them down into smaller steps or components to make them more manageable for the AI.
+
+5. Examples and context: Provide relevant examples to illustrate desired behavior and outputs. This helps the AI understand the expected format and style of responses.
+
+6. Error handling and edge cases: Anticipate potential issues or unexpected inputs, and provide instructions on how to handle them gracefully.
+
+7. Consistency in responses: Give clear guidelines on maintaining a consistent tone, style, and format in responses across different scenarios.
+
+8. Ethical considerations: Include instructions to ensure the AI behaves ethically and avoids harmful or inappropriate content.
+
+9. Metacognition: Encourage the AI to "think aloud" using techniques like inner monologues or scratchpads for complex problem-solving tasks.
+
+10. Iterative improvement: Design prompts that allow for refinement and improvement based on user feedback or additional requirements.
+
+11. Role-playing: When appropriate, frame the task as a specific role (e.g., customer service agent, tutor) to help the AI adopt the right perspective and behavior.
+
+12. Output formatting: Specify how the AI should format its responses, including the use of XML tags or other structural elements.
+
+13. Scope limitation: Clearly define the boundaries of what the AI should and should not do within the context of the task.
+
+14. Adaptability: Design prompts that can handle a range of related queries or tasks within the same general framework.
+
+15. User interaction: Include instructions on how the AI should interact with users, ask for clarification, and handle follow-up questions.
+
+16. Knowledge boundaries: Be clear about the AI's limitations and how it should handle requests outside its capabilities or knowledge base.
+
+17. Task-specific techniques: Incorporate specialized techniques relevant to particular types of tasks (e.g., Socratic method for tutoring, step-by-step problem-solving for math).
+
+18. Modularity: Design prompts in a way that allows for easy modification or extension to related tasks or variations.
+
+19. Conciseness vs. thoroughness balance: Provide guidance on when to give concise responses and when to elaborate, based on the complexity of the query.
+
+20. Continuous context awareness: Encourage the AI to maintain awareness of the ongoing conversation and refer back to previous interactions when relevant.
