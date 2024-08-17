@@ -10,6 +10,18 @@ import (
 	"github.com/rivo/tview"
 )
 
+func NewInstanceCreator(app *tview.Application) *InstanceCreator {
+	ic := &InstanceCreator{
+		app:   app,
+		pages: tview.NewPages(),
+		gpuOptions: []string{
+			"H100", "A100", "L40S", "A10", "A10G", "L4", "T4",
+		},
+	}
+	ic.gpuSelect = NewGPUSelector(app, ic.gpuOptions)
+	return ic
+}
+
 type InstanceCreator struct {
 	app             *tview.Application
 	pages           *tview.Pages
@@ -20,17 +32,6 @@ type InstanceCreator struct {
 	selectedGPU     string
 }
 
-type GPUSelector struct {
-	*tview.Box
-	app          *tview.Application
-	gpus         []string
-	selected     int
-	animation    int
-	animationPos float64
-	lastUpdate   time.Time
-	selectedFunc func(string)
-}
-
 func NewGPUSelector(app *tview.Application, gpus []string) *GPUSelector {
 	return &GPUSelector{
 		Box:        tview.NewBox(),
@@ -38,6 +39,17 @@ func NewGPUSelector(app *tview.Application, gpus []string) *GPUSelector {
 		gpus:       gpus,
 		lastUpdate: time.Now(),
 	}
+}
+
+type GPUSelector struct {
+	*tview.Box
+	app            *tview.Application
+	gpus           []string
+	selected       int
+	selectedFunc   func(string)
+	animationPos   float64
+	lastUpdate     time.Time
+	pulseAnimation float64
 }
 
 func (g *GPUSelector) Draw(screen tcell.Screen) {
@@ -56,21 +68,77 @@ func (g *GPUSelector) Draw(screen tcell.Screen) {
 
 		if i == g.selected {
 			borderColor = tcell.ColorGreen
-			drawAnimatedSquare(screen, sqX, y, squareSize, gpu, borderColor, g.animationPos)
+			drawAnimatedSquare(screen, sqX, y, squareSize, gpu, borderColor, g.animationPos, g.pulseAnimation)
 		} else {
 			drawSquare(screen, sqX, y, squareSize, gpu, borderColor)
 		}
 	}
 
-	// Update animation position
-	g.animationPos += 0.05
-	if g.animationPos >= 1 {
-		g.animationPos = 0
-	}
-
-	// Request a redraw
-	// g.app.QueueUpdateDraw(func() {})
+	// Update animation position using a smoother easing function
+	g.animationPos = easeInOutQuad(g.animationPos)
+	// g.pulseAnimation = math.Sin(g.animationPos * math.Pi * 2)
 }
+
+func easeInOutQuad(t float64) float64 {
+	if t < 0.5 {
+		return 2 * t * t
+	}
+	return -1 + (4-2*t)*t
+}
+
+func drawAnimatedSquare(screen tcell.Screen, x, y, size int, label string, color tcell.Color, progress, pulse float64) {
+	drawSquare(screen, x, y, size, label, color)
+
+	animationLength := size*4 - 4
+	pos := int(progress * float64(animationLength))
+
+	glowColor := tcell.NewRGBColor(255, 255, 0) // Yellow glow
+
+	for i := 0; i < animationLength; i++ {
+		intensity := 1.0 - math.Abs(float64(i-pos)/float64(animationLength))
+		intensity = math.Max(intensity, 0)
+		intensity *= 0.5 + 0.5*pulse // Add pulsing effect
+
+		r, g, b := glowColor.RGB()
+		currentColor := tcell.NewRGBColor(
+			int32(float64(r)*intensity),
+			int32(float64(g)*intensity),
+			int32(float64(b)*intensity),
+		)
+
+		if i < size-1 {
+			screen.SetContent(x+i, y, tview.BoxDrawingsLightHorizontal, nil, tcell.StyleDefault.Foreground(currentColor))
+		} else if i < size*2-2 {
+			screen.SetContent(x+size-1, y+i-(size-1), tview.BoxDrawingsLightVertical, nil, tcell.StyleDefault.Foreground(currentColor))
+		} else if i < size*3-3 {
+			screen.SetContent(x+size-1-(i-(size*2-2)), y+size-1, tview.BoxDrawingsLightHorizontal, nil, tcell.StyleDefault.Foreground(currentColor))
+		} else {
+			screen.SetContent(x, y+size-1-(i-(size*3-3)), tview.BoxDrawingsLightVertical, nil, tcell.StyleDefault.Foreground(currentColor))
+		}
+	}
+}
+
+func (g *GPUSelector) SetSelectedFunc(f func(string)) {
+	g.selectedFunc = f
+}
+
+func (g *GPUSelector) StartAnimation() {
+	go func() {
+		ticker := time.NewTicker(50 * time.Millisecond)
+		for {
+			select {
+			case <-ticker.C:
+				g.app.QueueUpdateDraw(func() {
+					g.animationPos += 0.02
+					if g.animationPos >= 1 {
+						g.animationPos = 0
+					}
+				})
+			}
+		}
+	}()
+}
+
 func drawSquare(screen tcell.Screen, x, y, size int, label string, color tcell.Color) {
 	for i := 0; i < size; i++ {
 		screen.SetContent(x+i, y, tview.BoxDrawingsLightHorizontal, nil, tcell.StyleDefault.Foreground(color))
@@ -88,85 +156,6 @@ func drawSquare(screen tcell.Screen, x, y, size int, label string, color tcell.C
 	tview.Print(screen, label, labelX, labelY, len(label), tview.AlignCenter, color)
 }
 
-func drawAnimatedSquare(screen tcell.Screen, x, y, size int, label string, color tcell.Color, progress float64) {
-	drawSquare(screen, x, y, size, label, color)
-
-	animationLength := size - 1
-	pos := int(progress * float64(animationLength*4))
-
-	glowColor := tcell.NewRGBColor(255, 255, 0) // Yellow glow
-
-	for i := 0; i < animationLength; i++ {
-		intensity := 1.0 - math.Abs(float64(i-pos%animationLength)/float64(animationLength))
-		if intensity < 0 {
-			intensity = 0
-		}
-		r, g, b := glowColor.RGB()
-		currentColor := tcell.NewRGBColor(
-			int32(float64(r)*intensity),
-			int32(float64(g)*intensity),
-			int32(float64(b)*intensity),
-		)
-
-		if pos < animationLength {
-			screen.SetContent(x+i, y, tview.BoxDrawingsLightHorizontal, nil, tcell.StyleDefault.Foreground(currentColor))
-		} else if pos < animationLength*2 {
-			screen.SetContent(x+animationLength, y+i, tview.BoxDrawingsLightVertical, nil, tcell.StyleDefault.Foreground(currentColor))
-		} else if pos < animationLength*3 {
-			screen.SetContent(x+animationLength-i, y+animationLength, tview.BoxDrawingsLightHorizontal, nil, tcell.StyleDefault.Foreground(currentColor))
-		} else {
-			screen.SetContent(x, y+animationLength-i, tview.BoxDrawingsLightVertical, nil, tcell.StyleDefault.Foreground(currentColor))
-		}
-	}
-}
-
-func (g *GPUSelector) InputHandler() func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
-	return g.WrapInputHandler(func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
-		switch event.Key() {
-		case tcell.KeyLeft:
-			g.selected = (g.selected - 1 + len(g.gpus)) % len(g.gpus)
-		case tcell.KeyRight:
-			g.selected = (g.selected + 1) % len(g.gpus)
-		case tcell.KeyEnter:
-			if g.selected >= 0 && g.selected < len(g.gpus) && g.selectedFunc != nil {
-				g.selectedFunc(g.gpus[g.selected])
-			}
-		}
-	})
-}
-func (g *GPUSelector) StartAnimation() {
-	go func() {
-		ticker := time.NewTicker(1150 * time.Millisecond)
-		for {
-			select {
-			case <-ticker.C:
-				g.app.QueueUpdateDraw(func() {
-					g.animationPos += 0.05
-					if g.animationPos >= 1 {
-						g.animationPos = 0
-					}
-				})
-			}
-		}
-	}()
-}
-
-func (g *GPUSelector) SetSelectedFunc(f func(string)) {
-	g.selectedFunc = f
-}
-
-func NewInstanceCreator(app *tview.Application) *InstanceCreator {
-	ic := &InstanceCreator{
-		app:   app,
-		pages: tview.NewPages(),
-		gpuOptions: []string{
-			"H100", "A100", "L40S", "A10", "A10G", "L4", "T4",
-		},
-	}
-	ic.gpuSelect = NewGPUSelector(app, ic.gpuOptions)
-	return ic
-}
-
 func (ic *InstanceCreator) Run() error {
 	ic.setupContainerSelect()
 	ic.setupGPUSelect()
@@ -175,6 +164,15 @@ func (ic *InstanceCreator) Run() error {
 	ic.pages.AddPage("container", ic.containerSelect, true, true)
 	ic.pages.AddPage("gpu", ic.gpuSelect, true, false)
 	ic.pages.AddPage("config", ic.instanceConfig, true, false)
+
+	ic.pages.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if ic.pages.HasPage("gpu") {
+			ic.gpuSelect.InputHandler()(event, func(p tview.Primitive) {
+				ic.app.SetFocus(p)
+			})
+		}
+		return event
+	})
 
 	ic.app.SetRoot(ic.pages, true).EnableMouse(true)
 	return ic.app.Run()
