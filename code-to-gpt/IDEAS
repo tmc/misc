@@ -12,6 +12,7 @@ File Selection and Control:
 - add additional include/exclude rules (on top of existing policy)
 - support some sort of rc/dotfile/ignore file?
 - add mode/option to be able to generate ignore rules for files over some token threshold? (may be better as a separate program)
+- allow hooking in line with output path to help prevent accidental disclosures.
 
 Git Integration:
 - support some sort of git operations to identify relevant content (recently modified? unstaged?)

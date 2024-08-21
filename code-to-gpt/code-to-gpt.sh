@@ -15,7 +15,7 @@ USE_XML_TAGS=true
 INCLUDE_SVG=false
 INCLUDE_XML=false
 WC_LIMIT=10000
-TRACKED_ONLY=false
+TRACKED_ONLY="${TRACKED_ONLY:-}"
 
 root_path=""
 
