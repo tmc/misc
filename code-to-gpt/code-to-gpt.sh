@@ -141,12 +141,8 @@ get_relative_path() {
     local file="$1"
     local root_path="$2"
 
-    if [ -z "$root_path" ]; then
-        root_path=$(git rev-parse --show-toplevel 2>/dev/null)
-        if [ -z "$root_path" ]; then
-            root_path=$(pwd)
-        fi
-    fi
+    # Expand the tilde in root_path if present
+    root_path="${root_path/#\~/$HOME}"
 
     local abs_file=$(realpath "$file")
     local rel_path="${abs_file#$root_path/}"
@@ -180,7 +176,8 @@ is_text_file() {
 # Function to process a file
 process_file() {
     local file="$1"
-    local relative_path=$(get_relative_path "$file" "$root_path")
+    local expanded_root_path="${root_path/#\~/$HOME}"
+    local relative_path=$(get_relative_path "$file" "$expanded_root_path")
     local mime_type=$(file -b --mime-type "$file")
     local line_count=$(wc -l < "$file")
 
