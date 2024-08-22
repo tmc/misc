@@ -17,6 +17,8 @@ INCLUDE_XML=false
 WC_LIMIT=10000
 TRACKED_ONLY=false
 
+root_path=""
+
 # Function to print usage information
 print_usage() {
     echo "Usage: $0 [--count-tokens] [--exclude-dir <dir>] [--verbose] [--no-xml-tags] [--exclude-svg] [--exclude-xml] [--include-svg] [--include-xml] [--tracked-only] [<directory>]"
@@ -104,10 +106,23 @@ is_ignored_file() {
     return 1
 }
 
-# Function to get relative path from home directory with tilde
-get_home_relative_path() {
+# Function to get relative path to a directory from home directory with tilde
+get_home_relative_dirpath() {
     local dir="$1"
     local abs_path=$(cd "$dir" && pwd)
+    local home_path=$HOME
+    if [[ "$abs_path" == "$home_path" ]]; then
+        echo "~"
+    elif [[ "$abs_path" == "$home_path"/* ]]; then
+        echo "~/${abs_path#$home_path/}"
+    else
+        echo "$abs_path"
+    fi
+}
+
+get_home_relative_filepath() {
+    local file="$1"
+    local abs_path=$(realpath "$file")
     local home_path=$HOME
     if [[ "$abs_path" == "$home_path" ]]; then
         echo "~"
@@ -122,19 +137,24 @@ realpath() {
     [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
 }
 
-# Function to get relative path from git root or specified directory
 get_relative_path() {
     local file="$1"
-    if [ -d "$DIRECTORY/.git" ]; then
-        # If it's a git repository, try to get path relative to git root
-        local git_root=$(git -C "$DIRECTORY" rev-parse --show-toplevel)
-        local abs_file=$(realpath "$file")
-        echo "${abs_file#$git_root/}"
+    local root_path="$2"
+
+    if [ -z "$root_path" ]; then
+        root_path=$(git rev-parse --show-toplevel 2>/dev/null)
+        if [ -z "$root_path" ]; then
+            root_path=$(pwd)
+        fi
+    fi
+
+    local abs_file=$(realpath "$file")
+    local rel_path="${abs_file#$root_path/}"
+
+    if [ "$rel_path" = "$abs_file" ]; then
+        echo "$abs_file"
     else
-        # Otherwise, get path relative to specified directory
-        local abs_file=$(realpath "$file")
-        local abs_dir=$(realpath "$DIRECTORY")
-        echo "${abs_file#$abs_dir/}"
+        echo "./$rel_path"
     fi
 }
 
@@ -160,7 +180,7 @@ is_text_file() {
 # Function to process a file
 process_file() {
     local file="$1"
-    local relative_path=$(get_relative_path "$file")
+    local relative_path=$(get_relative_path "$file" "$root_path")
     local mime_type=$(file -b --mime-type "$file")
     local line_count=$(wc -l < "$file")
 
@@ -205,7 +225,7 @@ fi
 
 # Main processing logic
 if $USE_XML_TAGS; then
-    root_path=$(get_home_relative_path "$DIRECTORY")
+    root_path=$(get_home_relative_dirpath "$DIRECTORY")
     echo "<root path=\"$root_path\">"
 fi
 
