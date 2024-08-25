@@ -207,7 +207,7 @@ process_file() {
         token_count=$(tokencount "$file")
         echo "$token_count $relative_path"
     else
-        cat "$file"
+        cat "$file" |sed -e 's/^/  /'
     fi
 
     if $USE_XML_TAGS; then

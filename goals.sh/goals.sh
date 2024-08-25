@@ -1,16 +1,30 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # Create a temporary directory
-TEMP_DIR=$(mktemp -d)
+TEMP_DIR="${GOALS_TEMP_DIR:-$(mktemp -d)}"
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
 # Common cgpt options
-CGPT_OPTIONS="-m claude-3-5-sonnet-20240620 -t 2000 -T 0.7"
+CGPT_OPTIONS="-m claude-3-5-sonnet-20240620 -t 2000 -T 0.1"
+
+collect_codebase_context() {
+    set -x
+    local ctx_src
+    # Try to find and execute ctx-src or code-to-gpt.sh
+    if command -v ctx-src >/dev/null 2>&1; then
+        ctx_src="ctx-src"
+    elif [ -f ~/code-to-gpt.sh ]; then
+        ctx_src="$HOME/code-to-gpt.sh"
+    elif [ -f "$(dirname "$0")/ctx-src" ]; then
+        ctx_src="$(dirname "$0")/ctx-src"
+    fi
+    "${ctx_src}"
+}
 
 # Function to perform initial analysis
 initial_analysis() {
-    CODEBASE_CONTEXT=$(ctx-src)
+    CODEBASE_CONTEXT=$(collect_codebase_context)
 
     cgpt $CGPT_OPTIONS <<EOF
 Analyze the following codebase context:
@@ -71,7 +85,7 @@ synthesize_goals() {
     COMPARISON="$1"
     STRUCTURE="$2"
 
-    cgpt $CGPT_OPTIONS <<EOF
+    cgpt $CGPT_OPTIONS -s 'output the file contents inside of a <file> tag' <<EOF
 Based on this comparison of extracted and original goals:
 
 $COMPARISON
@@ -86,7 +100,8 @@ Create an updated GOALS.md file that:
 3. Maintains the structure of the original GOALS.md if it exists, or uses a suitable structure if it doesn't
 4. Uses a compact markdown format
 
-Follow the updated GOALS.md content with a brief explanation of major changes and how the structure was maintained or adapted.
+Output the updated GOALS.md content inside a <file> tag.
+Follow the <file> tag with a brief explanation of major changes and how the structure was maintained or adapted.
 EOF
 }
 
@@ -106,7 +121,7 @@ main() {
 
     echo "Synthesizing goals..."
     SYNTHESIS=$(synthesize_goals "$COMPARISON" "$STRUCTURE")
-    echo "$SYNTHESIS" > GOALS.md
+    echo "$SYNTHESIS" | ./extract-xml-tag file > GOALS.md
 
     echo "Updated GOALS.md has been created."
 }
