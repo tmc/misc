@@ -231,7 +231,7 @@ if [ -d "$DIRECTORY/.git" ]; then
         echo "Git repository detected. Using git commands." >&2
     fi
     cd "$DIRECTORY" || exit 1
-    if $TRACKED_ONLY; then
+    if [ -n "${TRACKED_ONLY}" ]; then
         if $VERBOSE; then
             echo "Processing only tracked files." >&2
         fi
