@@ -44,6 +44,54 @@ func appendToBashHistory(command string) error {
 	return nil
 }
 
+func generateAndHandleCommand(llm *anthropic.LLM, ctx context.Context, input string) {
+	content := []llms.MessageContent{
+		llms.TextParts(llms.ChatMessageTypeSystem, systemPrompt),
+		llms.TextParts(llms.ChatMessageTypeHuman, fewShot1),
+		llms.TextParts(llms.ChatMessageTypeAI, fewShot2),
+		llms.TextParts(llms.ChatMessageTypeHuman, input),
+	}
+
+	var generatedCommand strings.Builder
+	completion, err := llm.GenerateContent(ctx, content, llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
+		generatedCommand.Write(chunk)
+		return nil
+	}))
+	if err != nil {
+		log.Fatal(err)
+	}
+	_ = completion
+
+	command := strings.TrimSpace(generatedCommand.String())
+	fmt.Printf("Generated command: %s\n", command)
+
+	if os.Getenv("INSHELLA_AUTORUN") != "" {
+		executeCommand(command)
+	} else {
+		fmt.Print("\nDo you want to run this command? (y/n): ")
+		reader := bufio.NewReader(os.Stdin)
+		response, _ := reader.ReadString('\n')
+		response = strings.TrimSpace(strings.ToLower(response))
+		if response == "y" || response == "yes" {
+			executeCommand(command)
+		}
+	}
+}
+
+func executeCommand(command string) {
+	cmd := exec.Command("sh", "-c", command)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	if err != nil {
+		fmt.Printf("Error running command: %v\n", err)
+	} else {
+		if err := appendToBashHistory(command); err != nil {
+			fmt.Printf("Error appending to bash history: %v\n", err)
+		}
+	}
+}
+
 func main() {
 	llm, err := anthropic.New(anthropic.WithModel("claude-3-5-sonnet-20240620"))
 	if err != nil {
@@ -51,81 +99,23 @@ func main() {
 	}
 	ctx := context.Background()
 
-	for {
+	if len(os.Args) > 1 {
+		// If command-line arguments are provided, use them directly
 		input := strings.Join(os.Args[1:], " ")
-		if input == "" {
-			fmt.Print("Enter your command (or 'exit' to quit): ")
-			reader := bufio.NewReader(os.Stdin)
-			input, _ = reader.ReadString('\n')
-			input = strings.TrimSpace(input)
-		}
-
-		if input == "exit" {
-			break
-		}
-
-		content := []llms.MessageContent{
-			llms.TextParts(llms.ChatMessageTypeSystem, systemPrompt),
-			llms.TextParts(llms.ChatMessageTypeHuman, fewShot1),
-			llms.TextParts(llms.ChatMessageTypeAI, fewShot2),
-			llms.TextParts(llms.ChatMessageTypeHuman, input),
-		}
-
-		var generatedCommand strings.Builder
-		completion, err := llm.GenerateContent(ctx, content, llms.WithStreamingFunc(func(ctx context.Context, chunk []byte) error {
-			fmt.Print(string(chunk))
-			generatedCommand.Write(chunk)
-			return nil
-		}))
-		fmt.Println()
-		if err != nil {
-			log.Fatal(err)
-		}
-		_ = completion
-
+		generateAndHandleCommand(llm, ctx, input)
+	} else {
+		// If no arguments, enter interactive mode
+		reader := bufio.NewReader(os.Stdin)
 		for {
-			fmt.Print("Do you want to (r)un, (e)dit, (g)enerate again, or (q)uit? ")
-			reader := bufio.NewReader(os.Stdin)
-			choice, _ := reader.ReadString('\n')
-			choice = strings.TrimSpace(strings.ToLower(choice))
+			fmt.Print("Enter your command (or 'exit' to quit): ")
+			input, _ := reader.ReadString('\n')
+			input = strings.TrimSpace(input)
 
-			switch choice {
-			case "r":
-				cmd := exec.Command("sh", "-c", generatedCommand.String())
-				cmd.Stdout = os.Stdout
-				cmd.Stderr = os.Stderr
-				err := cmd.Run()
-				if err != nil {
-					fmt.Printf("Error running command: %v\n", err)
-				} else {
-					// Append the command to bash history
-					if err := appendToBashHistory(generatedCommand.String()); err != nil {
-						fmt.Printf("Error appending to bash history: %v\n", err)
-					}
-				}
-			case "e":
-				fmt.Printf("Current command: %s\n", generatedCommand.String())
-				fmt.Print("Enter the edited command: ")
-				editedCommand, _ := reader.ReadString('\n')
-				editedCommand = strings.TrimSpace(editedCommand)
-				generatedCommand.Reset()
-				generatedCommand.WriteString(editedCommand)
-			case "g":
-				break
-			case "q":
-				return
-			default:
-				fmt.Println("Invalid choice. Please try again.")
-				continue
-			}
-
-			if choice == "g" {
+			if input == "exit" {
 				break
 			}
-		}
 
-		if len(os.Args) > 1 {
-			break
+			generateAndHandleCommand(llm, ctx, input)
 		}
 	}
 }
