@@ -261,22 +261,34 @@ is_git_repository() {
 
 # Function to get files respecting Git ignore rules and pathspec
 get_files() {
-    local pathspec_args=()
     if [ ${#PATHSPEC[@]} -gt 0 ]; then
-        pathspec_args=("${PATHSPEC[@]/#/--}")
-    fi
-
-    if git -C "$DIRECTORY" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        if $VERBOSE; then
+            echo "Processing specified files/patterns." >&2
+        fi
+        for path in "${PATHSPEC[@]}"; do
+            if [ -f "$path" ]; then
+                echo "$path"
+            elif [[ "$path" == *[*?]* ]]; then
+                # It's a wildcard pattern
+                find "$DIRECTORY" -path "$path" -type f
+            else
+                # It's a specific file path that doesn't exist
+                if $VERBOSE; then
+                    echo "Warning: File not found: $path" >&2
+                fi
+            fi
+        done
+    elif git -C "$DIRECTORY" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         if $TRACKED_ONLY; then
             if $VERBOSE; then
                 echo "Using tracked files only." >&2
             fi
-            git -C "$DIRECTORY" ls-files "${pathspec_args[@]}"
+            git -C "$DIRECTORY" ls-files
         else
             if $VERBOSE; then
                 echo "Including both tracked and untracked files." >&2
             fi
-            { git -C "$DIRECTORY" ls-files "${pathspec_args[@]}"; git -C "$DIRECTORY" ls-files --others --exclude-standard "${pathspec_args[@]}"; } | sort -u
+            { git -C "$DIRECTORY" ls-files; git -C "$DIRECTORY" ls-files --others --exclude-standard; } | sort -u
         fi
     else
         if $VERBOSE; then
@@ -285,11 +297,7 @@ get_files() {
                 echo "Note: --tracked-only has no effect outside of Git repositories." >&2
             fi
         fi
-        if [ ${#PATHSPEC[@]} -gt 0 ]; then
-            find "$DIRECTORY" \( -path "${PATHSPEC[0]}" $(printf ' -o -path "%s"' "${PATHSPEC[@]:1}") \) -type f
-        else
-            find "$DIRECTORY" -type f
-        fi
+        find "$DIRECTORY" -type f
     fi
 }
 
@@ -304,21 +312,15 @@ if is_git_repository "$DIRECTORY"; then
         echo "Git repository detected. Using git commands." >&2
     fi
     cd "$DIRECTORY" || exit 1
-    get_files | while read -r file; do
-        if [ -f "$file" ] && ! is_ignored_file "$file" && ! is_excluded_dir "$(dirname "$file")"; then
-            process_file "$DIRECTORY/$file"
-        fi
-    done
-else
-    if $VERBOSE; then
-        echo "No Git repository detected. Using find command." >&2
-    fi
-    get_files | while read -r file; do
-        if ! is_ignored_file "$file" && ! is_excluded_dir "$(dirname "$file")"; then
-            process_file "$file"
-        fi
-    done
 fi
+
+get_files | while read -r file; do
+    if [ -f "$file" ] && ! is_ignored_file "$file" && ! is_excluded_dir "$(dirname "$file")"; then
+        process_file "$file"
+    elif $VERBOSE; then
+        echo "Skipping non-existent or excluded file: $file" >&2
+    fi
+done
 
 if $USE_XML_TAGS; then
     echo "</root>"
