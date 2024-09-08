@@ -159,8 +159,9 @@ is_text_file() {
     local file="$1"
     local mime_type=$(file -b --mime-type "$file")
     local extension="${file##*.}"
-
-    if [[ "$mime_type" == text/* ]]; then
+    local file_type=$(file -b "$file")
+    # Check for text files without extensions
+    if [[ "$mime_type" == text/* ]] || [[ "$file_type" == *"text"* ]]; then
         return 0
     elif [[ "$mime_type" == application/x-empty ]] || [[ "$mime_type" == inode/x-empty ]]; then
         return 0
@@ -168,8 +169,26 @@ is_text_file() {
         return 0
     elif [[ "$mime_type" == application/xml ]] && $INCLUDE_XML; then
         return 0
+    elif [[ "$mime_type" == "application/json" ]]; then
+        return 0
+    elif [[ "$mime_type" == "application/x-yaml" ]]; then
+        return 0
+    # Check for compressed text files
+    elif [[ "$mime_type" == application/x-gzip ]] && [[ "${file%.*}" == *.txt ]]; then
+        return 0
+    # Additional checks for Unicode text files with BOM
+    elif [[ "$file_type" == *"Unicode text"* ]]; then
+        return 0
+    # Check for symbolic links to text files
+    elif [[ -L "$file" ]] && is_text_file "$(readlink -f "$file")"; then
+        return 0
     else
-        return 1
+        # Perform a more thorough check for text content
+        if head -c 1000 "$file" | LC_ALL=C grep -q '[^[:print:][:space:]]'; then
+            return 1
+        else
+            return 0
+        fi
     fi
 }
 
@@ -220,13 +239,16 @@ if $COUNT_TOKENS; then
     USE_XML_TAGS=false
 fi
 
+is_git_repository() {
+    git -C "$1" rev-parse --is-inside-work-tree >/dev/null 2>&1
+}
 # Main processing logic
 if $USE_XML_TAGS; then
     root_path=$(get_home_relative_dirpath "$DIRECTORY")
     echo "<root path=\"$root_path\">"
 fi
 
-if [ -d "$DIRECTORY/.git" ]; then
+if is_git_repository "$DIRECTORY"; then
     if $VERBOSE; then
         echo "Git repository detected. Using git commands." >&2
     fi
