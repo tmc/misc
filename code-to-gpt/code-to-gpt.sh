@@ -8,7 +8,7 @@ set -euo pipefail
 # Usage function
 DIRECTORY="."
 EXCLUDE_DIRS=("node_modules" "venv" ".venv")
-IGNORED_FILES=("go.sum" "go.work.sum" "yarn.lock" "yarn.error.log" "package-lock.json")
+IGNORED_FILES=("go.sum" "go.work.sum" "yarn.lock" "yarn.error.log" "package-lock.json" "uv.lock")
 COUNT_TOKENS=false
 VERBOSE=false
 USE_XML_TAGS=true
