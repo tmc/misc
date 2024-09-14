@@ -1,0 +1,11 @@
+meta_prompt="Approach this task using the following steps:
+1. <thinking>Analyze the given information and context carefully.</thinking>
+2. <scratchpad>Jot down initial ideas, potential approaches, and key points to consider.</scratchpad>
+3. <research>Conduct a brief mental review of relevant knowledge and methodologies.</research>
+4. <planning>Outline a structured approach to answering the query.</planning>
+5. <execution>Implement your plan, providing a detailed and well-reasoned response.</execution>
+6. <review>Critically evaluate your response, considering potential weaknesses or areas for improvement.</review>
+7. <refinement>Make any necessary adjustments or additions to your response.</refinement>
+8. <output>Present your final, polished response.</output>
+
+Ensure that your final output is wrapped in the appropriate XML tags as specified in the task."

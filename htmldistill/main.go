@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -14,24 +15,24 @@ import (
 )
 
 var (
-	flagInput = flag.String("input", "-", "Path to the input HTML file, or URL to download")
+	flagInput   = flag.String("input", "-", "Path to the input HTML file, or URL to download")
+	flagBaseURL = flag.String("base-url", "", "Optional base URL for input from stdin")
 )
 
 func main() {
-	fmt.Println("Hello World")
 	flag.Parse()
-	if err := run(*flagInput); err != nil {
+	if err := run(*flagInput, *flagBaseURL); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run(input string) error {
+func run(input string, baseURL string) error {
 	if urlLike(input) {
 		return runURL(input)
 	}
 	if input == "-" {
-		return runReader(os.Stdin)
+		return runReader(os.Stdin, baseURL)
 	}
 	return runFile(input)
 }
@@ -41,11 +42,21 @@ func urlLike(input string) bool {
 }
 
 func runURL(url string) error {
-	return handle(distiller.ApplyForURL(url, time.Minute, nil))
+	return handle(distiller.ApplyForURL(url, time.Minute, &distiller.Options{
+		LogFlags: distiller.LogEverything,
+	}))
 }
 
-func runReader(r io.Reader) error {
-	return handle(distiller.ApplyForReader(r, nil))
+func runReader(r io.Reader, baseURL string) error {
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return err
+	}
+	opts := &distiller.Options{
+		OriginalURL: u,
+		LogFlags:    distiller.LogEverything,
+	}
+	return handle(distiller.ApplyForReader(r, opts))
 }
 
 func runFile(path string) error {
@@ -56,28 +67,28 @@ func runFile(path string) error {
 
 func handle(result *distiller.Result, err error) error {
 	if err != nil {
-		return fmt.Errorf("failed to distill file: %w", err)
+		return fmt.Errorf("failed to distill content: %w", err)
 	}
-	o, err := OuterHTML(result.Node)
+	if result == nil || result.Node == nil {
+		return fmt.Errorf("no content extracted")
+	}
+	output, err := outerHTML(result.Node)
 	if err != nil {
-		return fmt.Errorf("failed to get outer html: %w", err)
+		return fmt.Errorf("failed to get outer HTML: %w", err)
 	}
-	fmt.Println(o)
+	fmt.Println(output)
 	return nil
 }
 
-// OuterHTML returns an HTML serialization of the element and its descendants.
-// The returned HTML value is escaped.
-func OuterHTML(node *html.Node) (string, error) {
+// outerHTML returns an HTML serialization of the element and its descendants.
+func outerHTML(node *html.Node) (string, error) {
 	if node == nil {
 		return "", nil
 	}
-
 	var buffer bytes.Buffer
 	err := html.Render(&buffer, node)
 	if err != nil {
 		return "", fmt.Errorf("failed to render HTML: %w", err)
 	}
-
 	return buffer.String(), nil
 }
