@@ -1,15 +1,6 @@
 IDEAS to implement
 
-- Ability to supply a pathspec
-
-Token Efficiency:
-- add option to detect identicial files at different locations
-- support some sort of summary/compression mechanism (e.g. local model to reduce larger token files that may be relevant but would be large with full contents -- note: could cache this / consider git notes)
-- support a specified token limit and do something more dynamic to fit in it? (probably too sophisticated)
-
 File Selection and Control:
-- add additional include/exclude rules (on top of existing policy) -- use git file space
-- add depth control
 - consider multi-dir specification
 - accept file/path list on stdin? globbing?
 - support some sort of rc/dotfile/ignore file?
@@ -20,6 +11,8 @@ Git Integration:
 - support some sort of git operations to identify relevant content (recently modified? unstaged?)
 - support some sort of diffing mechanism (perhaps git-backed)
 
-Content Processing:
-- clean up the xml/svg rules?
+Token Efficiency:
+- add option to detect identicial files at different locations
+- support some sort of summary/compression mechanism (e.g. local model to reduce larger token files that may be relevant but would be large with full contents -- note: could cache this / consider git notes)
+- support a specified token limit and do something more dynamic to fit in it? (probably too sophisticated)
 

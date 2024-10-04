@@ -1,79 +1,69 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # code-to-gpt.sh
-# This script preps content to feed into a large language model.
-# Read and print contents of text files in a directory, including untracked files by default
-
+# Process files for LLM input, respecting .gitignore and custom exclusions.
+# Usage: code-to-gpt.sh [options] <directory1> [<directory2> ...] [<pathspec>...] [-- <pathspec>...]
+#
+# For full usage instructions, run: ./code-to-gpt.sh --help
 set -euo pipefail
 
-# Usage function
-DIRECTORY="."
-EXCLUDE_DIRS=("node_modules" "venv" ".venv")
-IGNORED_FILES=("go.sum" "go.work.sum" "yarn.lock" "yarn.error.log" "package-lock.json" "uv.lock")
+# Default exclude patterns
+DEFAULT_EXCLUDES=(
+    ':!node_modules/**'
+    ':!venv/**'
+    ':!.venv/**'
+    ':!go.sum'
+    ':!go.work.sum'
+    ':!yarn.lock'
+    ':!yarn.error.log'
+    ':!package-lock.json'
+    ':!uv.lock'
+)
+DIRECTORIES=()
 COUNT_TOKENS=false
-VERBOSE=false
+VERBOSE=true
 USE_XML_TAGS=true
 INCLUDE_SVG=false
 INCLUDE_XML=false
-WC_LIMIT=10000
+WC_LIMIT=10000 # Maximum number of lines to process
 TRACKED_ONLY=false
-PATHSPEC=()
+PATHSPEC=("${DEFAULT_EXCLUDES[@]}")
 
 root_path=""
 
 # Function to print usage information
 print_usage() {
-    echo "Usage: $0 [OPTIONS] [<directory>] [<pathspec>...] [-- <pathspec>...]"
+    echo "Usage: $0 [OPTIONS] <directory1> [<directory2> ...] [<pathspec>...] [-- <pathspec>...]"
     echo "Options:"
     echo "  --count-tokens: Count tokens instead of outputting file contents"
-    echo "  --exclude-dir <dir>: Add a directory to the list of directories to exclude"
     echo "  --verbose: Enable verbose output"
     echo "  --no-xml-tags: Disable XML tags around content"
-    echo "  --exclude-svg: Exclude SVG files from processing (default behavior)"
-    echo "  --exclude-xml: Exclude XML files from processing (default behavior)"
     echo "  --include-svg: Explicitly include SVG files"
     echo "  --include-xml: Explicitly include XML files"
     echo "  --tracked-only: Only include tracked files in Git repositories"
-    echo "  <directory>: Specify the directory to process (default: current directory)"
-    echo "  <pathspec>: One or more pathspec patterns to filter files"
+    echo "  <directory>: Specify one or more directories to process"
+    echo "  <pathspec>: One or more pathspec patterns to filter files (overrides default excludes)"
+    echo ""
+    echo "Notes:"
+    echo "  - Options must come before directories and pathspecs."
+    echo "  - All arguments after the last directory are treated as pathspecs."
+    echo "  - Use -- to explicitly mark the beginning of pathspecs, especially for paths starting with -."
+    echo ""
+    echo "Examples:"
+    echo "  $0 --verbose /path/to/dir1 /path/to/dir2"
+    echo "  $0 --verbose /path/to/dir1 /path/to/dir2 '*.js' '*.py'"
+    echo "  $0 --verbose /path/to/dir1 /path/to/dir2 -- -file-with-dash.txt"
+    echo "  $0 /path/to/dir1 /path/to/dir2 '*.txt' '!excluded.txt'"
+    echo "  $0 /path/to/dir -- -file-with-dash.txt normal-file.txt"
 }
-
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --count-tokens)
-            COUNT_TOKENS=true
-            shift
-            ;;
-        --exclude-dir)
-            EXCLUDE_DIRS+=("$2")
-            shift 2
-            ;;
-        --verbose)
-            VERBOSE=true
-            shift
-            ;;
-        --no-xml-tags)
-            USE_XML_TAGS=false
-            shift
-            ;;
-        --exclude-svg)
-            INCLUDE_SVG=false
-            shift
-            ;;
-        --exclude-xml)
-            INCLUDE_XML=false
-            shift
-            ;;
-        --include-svg)
-            INCLUDE_SVG=true
-            shift
-            ;;
-        --include-xml)
-            INCLUDE_XML=true
-            shift
-            ;;
-        --tracked-only)
-            TRACKED_ONLY=true
+        --count-tokens|--verbose|--no-xml-tags|--exclude-svg|--exclude-xml|--include-svg|--include-xml|--tracked-only)
+            # Handle boolean options
+            # Option name, converted to uppercase, with dashes replaced by underscores
+            # e.g. --count-tokens -> COUNT_TOKENS
+            opt_name="$(echo "${1#--}" | sed 's/-/_/g' | tr '[:lower:]' '[:upper:]')"
+            declare "${opt_name}=true"
             shift
             ;;
         -h|--help)
@@ -82,44 +72,31 @@ while [[ $# -gt 0 ]]; do
             ;;
         --)
             shift
-            PATHSPEC+=("$@")
+            PATHSPEC=("${DEFAULT_EXCLUDES[@]}" "$@")
             break
             ;;
+        -*)
+            echo "Unknown option: $1" >&2
+            print_usage
+            exit 1
+            ;;
         *)
-            if [[ -d "$1" && "$DIRECTORY" == "." ]]; then
-                DIRECTORY="$1"
-            elif [[ -n "$1" && "$1" != -* ]]; then
-                PATHSPEC+=("$1")
+            if [[ -d "$1" ]]; then
+                DIRECTORIES+=("$1")
+                shift
             else
-                echo "Unknown option or invalid directory: $1" >&2
-                print_usage
-                exit 1
+                PATHSPEC=("$@")
+                break
             fi
-            shift
             ;;
     esac
 done
 
-# Function to check if a directory should be excluded
-is_excluded_dir() {
-    local dir="$1"
-    for excluded in "${EXCLUDE_DIRS[@]}"; do
-        if [[ "$dir" == *"/$excluded"* ]]; then
-            return 0
-        fi
-    done
-    return 1
-}
-
-# Function to check if a file should be ignored
-is_ignored_file() {
-    local file="$1"
-    for ignored in "${IGNORED_FILES[@]}"; do
-        if [[ "$(basename "$file")" == "$ignored" ]]; then
-            return 0
-        fi
-    done
-    return 1
+# verbose echo
+v_echo() {
+    if $VERBOSE; then
+        echo "$@" >&2
+    fi
 }
 
 # Function to get relative path to a directory from home directory with tilde
@@ -242,7 +219,7 @@ process_file() {
         token_count=$(tokencount "$file")
         echo "$token_count $relative_path"
     else
-        cat "$file" |sed -e 's/^/  /'
+        cat "$file" | sed -e 's/^/  /'
     fi
 
     if $USE_XML_TAGS; then
@@ -262,66 +239,79 @@ is_git_repository() {
 # Function to get files respecting Git ignore rules and pathspec
 get_files() {
     if [ ${#PATHSPEC[@]} -gt 0 ]; then
-        if $VERBOSE; then
-            echo "Processing specified files/patterns." >&2
-        fi
-        for path in "${PATHSPEC[@]}"; do
-            if [ -f "$path" ]; then
-                echo "$path"
-            elif [[ "$path" == *[*?]* ]]; then
-                # It's a wildcard pattern
-                find "$DIRECTORY" -path "$path" -type f
-            else
-                # It's a specific file path that doesn't exist
-                if $VERBOSE; then
-                    echo "Warning: File not found: $path" >&2
-                fi
-            fi
-        done
-    elif git -C "$DIRECTORY" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        if $TRACKED_ONLY; then
-            if $VERBOSE; then
-                echo "Using tracked files only." >&2
-            fi
-            git -C "$DIRECTORY" ls-files
+        
+        v_echo "Using pathspec: ${PATHSPEC[*]}"
+        if git -C "$DIRECTORY" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+            v_echo "Using git ls-files with pathspec"
+            git -C "$DIRECTORY" ls-files -z --exclude-standard "${PATHSPEC[@]}" | tr '\0' '\n'
         else
-            if $VERBOSE; then
-                echo "Including both tracked and untracked files." >&2
-            fi
-            { git -C "$DIRECTORY" ls-files; git -C "$DIRECTORY" ls-files --others --exclude-standard; } | sort -u
+            v_echo "Using find with pathspec"
+            find "$DIRECTORY" "${PATHSPEC[@]}" -type f
         fi
     else
-        if $VERBOSE; then
-            echo "Not a Git repository. Using find command." >&2
+        if git -C "$DIRECTORY" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
             if $TRACKED_ONLY; then
-                echo "Note: --tracked-only has no effect outside of Git repositories." >&2
+                git -C "$DIRECTORY" ls-files -z | tr '\0' '\n'
+            else
+                git -C "$DIRECTORY" ls-files -z --exclude-standard --others | tr '\0' '\n'
             fi
+        else
+            find "$DIRECTORY" -type f
         fi
-        find "$DIRECTORY" -type f
     fi
 }
 
 # Main processing logic
+# - Iterate over directories
+# - For each directory, get files and process them
+# - Optionally wrap the output in XML tags
+# - Optionally count tokens instead of outputting file contents
+
+# default to current directory if none are specified
+if [ ${#DIRECTORIES[@]} -eq 0 ]; then
+    DIRECTORIES=(".")
+fi
+# If we wrapping with xml, and have more than one directory, we need to wrap the output in a <source-code-roots> tag
 if $USE_XML_TAGS; then
-    root_path=$(get_home_relative_dirpath "$DIRECTORY")
-    echo "<root path=\"$root_path\">"
-fi
-
-if is_git_repository "$DIRECTORY"; then
-    if $VERBOSE; then
-        echo "Git repository detected. Using git commands." >&2
+    if [ ${#DIRECTORIES[@]} -gt 1 ]; then
+        echo "<source-code-roots>"
     fi
-    cd "$DIRECTORY" || exit 1
 fi
-
-get_files | while read -r file; do
-    if [ -f "$file" ] && ! is_ignored_file "$file" && ! is_excluded_dir "$(dirname "$file")"; then
-        process_file "$file"
-    elif $VERBOSE; then
-        echo "Skipping non-existent or excluded file: $file" >&2
+for DIRECTORY in "${DIRECTORIES[@]}"; do
+    if $USE_XML_TAGS; then
+        root_path="$(get_home_relative_dirpath "$DIRECTORY")"
+        echo "<root path=\"$root_path\">"
+    fi
+    if is_git_repository "$DIRECTORY"; then
+        
+        v_echo "Git repository detected in $DIRECTORY. Using git commands."
+        (
+            cd "$DIRECTORY" || exit 1
+            get_files | while read -r file; do
+                if [ -f "$file" ]; then
+                    process_file "$file"
+                elif $VERBOSE; then
+                    echo "Skipping non-existent file: $file" >&2
+                fi
+            done
+        )
+    else
+        
+        v_echo "Processing directory: $DIRECTORY"
+        get_files | while read -r file; do
+            if [ -f "$DIRECTORY/$file" ]; then
+                process_file "$DIRECTORY/$file"
+            elif $VERBOSE; then
+                echo "Skipping non-existent file: $DIRECTORY/$file" >&2
+            fi
+        done
+    fi
+    if $USE_XML_TAGS; then
+        echo "</root>"
     fi
 done
-
 if $USE_XML_TAGS; then
-    echo "</root>"
+    if [ ${#DIRECTORIES[@]} -gt 1 ]; then
+        echo "</source-code-roots>"
+    fi
 fi
