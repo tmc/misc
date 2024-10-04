@@ -1,0 +1,15 @@
+html2md converts HTML input to Markdown format.
+
+This command-line tool reads HTML from either standard input or a specified file
+and outputs the equivalent Markdown representation. It uses the html-to-markdown
+library with the GitHub Flavored Markdown plugin enabled by default.
+
+Usage:
+
+    html2md [-input=<filename>]
+
+The -input flag specifies the input file. If omitted or set to "-", html2md
+reads from standard input.
+
+html2md is designed to be simple and composable, following Unix philosophy. It
+can be easily integrated into pipelines or scripts for processing HTML content.

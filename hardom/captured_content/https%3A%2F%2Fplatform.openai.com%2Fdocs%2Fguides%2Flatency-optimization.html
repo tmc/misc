@@ -1,0 +1,566 @@
+<html lang="en" class="dark" data-theme="dark" style="color-scheme: dark;"><head>
+        <meta charset="utf-8">
+        <link rel="icon" type="image/png" href="/favicon-docs.png">
+        <link rel="icon" type="image/svg+xml" href="/favicon-docs.svg">
+        <link rel="preconnect" href="https://cdn.openai.com">
+        <link rel="preconnect" href="https://OWZ3QOIIJA-dsn.algolia.net" crossorigin="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#000000">
+        <title>Latency optimization - OpenAI API</title>
+        <meta name="description" content="Explore resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's developer platform.">
+        <link rel="manifest" href="/manifest.json">
+
+        <!-- Facebook / LinkedIn Meta Tags -->
+        <meta property="og:title" content="OpenAI Platform">
+        <meta property="og:image" content="https://cdn.openai.com/API/images/opengraph.png">
+        <meta property="og:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://platform.openai.com">
+
+        <!-- Twitter Meta Tags -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta property="twitter:domain" content="platform.openai.com">
+        <meta property="twitter:url" content="https://platform.openai.com">
+        <meta name="twitter:title" content="OpenAI Platform">
+        <meta name="twitter:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta name="twitter:image" content="https://cdn.openai.com/API/images/opengraph.png">
+      <script type="text/javascript" async="" src="https://widget.intercom.io/widget/dgkjq2bp"></script><script nonce="" type="module" crossorigin="" src="/static/index-CYTQyVAq.js"></script>
+      <link rel="stylesheet" crossorigin="" href="/static/C5CC7YPsR_.css">
+      <script nonce="" type="module">import.meta.url;import("_").catch(()=>1);(async function*(){})().next();if(location.protocol!="file:"){window.__vite_is_modern_browser=true}</script>
+      <script nonce="" type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
+    <link rel="modulepreload" as="script" crossorigin="" href="/static/C2aIRGLQOh.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/BFyog71B1I.js"><link rel="stylesheet" href="/static/CFkw7B_gm-.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/CJnlUOvsM-.js"><link rel="stylesheet" href="/static/BX9BFw3PsH.css"><link rel="stylesheet" href="/static/BKxHiQFIW6.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C4wedv2caf.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/C961Md9dp6.js"><link rel="stylesheet" href="/static/C9MBEX7jPb.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C24vLskmtV.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/D9oCOueJRr.js"><link rel="stylesheet" href="/static/CcFh4jCko7.css"><link rel="stylesheet" href="/static/DqyyrKcaOP.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/Dh6auKfXaX.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/Bq7L_yreGd.js"><link rel="stylesheet" href="/static/C8xVwo073p.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/yQ3rCgkFw7.js"><link rel="stylesheet" href="/static/CnivQy12om.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/De9Te-Rlz8.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/IyMja2T0sm.js"><link rel="stylesheet" href="/static/DDpxtZQhKj.css"><link rel="stylesheet" href="/static/B2IOrA8ktD.css"></head>
+    <body>
+        <noscript>You need to enable JavaScript to run this app.</noscript>
+        <div id="root"><div class="rl7uK"><div class="hDvly"><div class="vpev1"><div class="_5Amyn"><div class="flex"><div class="relative"><select class="bvkc-"><optgroup label="Organizations"><option value="org-dH3B6ymfbSTLBRRCfId1BRPR">Climate AI Hackathon 21</option><option value="org-mXJaZ8zXm1qhWbRj0yQxhQFN">tmc</option></optgroup></select><button id="select-trigger-radix-:r0:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" tabindex="-1" aria-hidden="true"><span class="RWOJJ"><span class="flex items-center gap-2 font-medium"><span class="qCm0E" role="presentation" data-variant="dark" style="--avatar-size: 25px; --avatar-initial-nudge: 0px;"><div class="_9uyMP">T</div></span>tmc</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button></div></div><div class="u-pgg">/</div><button id="select-trigger-radix-:r1:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" aria-haspopup="dialog" aria-expanded="false" aria-controls="radix-:r2:" data-state="closed"><span class="RWOJJ"><span class="font-medium" style="color: var(--text-default);">Default project</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button></div></div><div class="Aip-a"><button class="_8dPNb"><span class="tfB-7"><span class="_3Tbwl UuUwq"></span><span class="gw2x5"><span class="_3Tbwl RMlM5"></span></span></span></button></div></div><main class="unjkE" data-sidebar="expanded" data-mobile-menu="hidden"><aside class="EpwGB VO47n"><nav class="okBd0"><a class="w9s17" data-primary-nav-item="" href="/playground"><span class="EsOWR vaD2P" data-title="Playground">Playground</span><span class="EsOWR ksWxL" data-title="Playground">Playground</span></a><a class="w9s17" data-primary-nav-item="" href="/chat-completions"><span class="EsOWR vaD2P" data-title="Dashboard">Dashboard</span><span class="EsOWR ksWxL" data-title="Dashboard">Dashboard</span></a><a aria-current="page" class="w9s17 _1T-tk" data-primary-nav-item="" href="/docs"><span class="EsOWR vaD2P" data-title="Docs">Docs</span><span class="EsOWR ksWxL" data-title="Docs">Docs</span></a><a class="w9s17" data-primary-nav-item="" href="/docs/api-reference/introduction"><span class="EsOWR vaD2P" data-title="API reference">API reference</span><span class="EsOWR ksWxL" data-title="API">API</span></a></nav><div class="GVIPA"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="aTuAl"><div class="_0MyKb qyrrQ"><div class="search"><button type="button" class="DocSearch DocSearch-Button" aria-label="Search"><span class="DocSearch-Button-Container"><svg width="20" height="20" class="DocSearch-Search-Icon" viewBox="0 0 20 20"><path d="M14.386 14.386l4.0877 4.0877-4.0877-4.0877c-2.9418 2.9419-7.7115 2.9419-10.6533 0-2.9419-2.9418-2.9419-7.7115 0-10.6533 2.9418-2.9419 7.7115-2.9419 10.6533 0 2.9419 2.9418 2.9419 7.7115 0 10.6533z" stroke="currentColor" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="DocSearch-Button-Placeholder">Search</span></span><span class="DocSearch-Button-Keys"><kbd class="DocSearch-Button-Key">⌘</kbd><kbd class="DocSearch-Button-Key">K</kbd></span></button></div></div><div class="DH-HY qyrrQ QeXPj"><div class="side-nav-section"><div class="side-nav-header subheading">Get started</div><a class="scroll-link side-nav-item" href="/docs/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/models"><span class="side-nav-item-name">Models</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/changelog"><span class="side-nav-item-name">Changelog</span></a><a href="https://openai.com/policies" class="scroll-link side-nav-item" target="_blank" rel="noreferrer"><span class="side-nav-item-name">Terms and policies</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-icon"><path fill-rule="evenodd" d="M15 5a1 1 0 1 1 0-2h5a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V6.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L17.586 5H15ZM4 7a3 3 0 0 1 3-3h3a1 1 0 1 1 0 2H7a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3a1 1 0 1 1 2 0v3a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Capabilities</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-generation"><span class="side-nav-item-name">Text generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/images"><span class="side-nav-item-name">Image generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/vision"><span class="side-nav-item-name">Vision</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/embeddings"><span class="side-nav-item-name">Vector embeddings</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-to-speech"><span class="side-nav-item-name">Text to speech</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/speech-to-text"><span class="side-nav-item-name">Speech to text</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/moderation"><span class="side-nav-item-name">Moderation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/reasoning"><span class="side-nav-item-name">Reasoning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Guides</div><a class="scroll-link side-nav-item" href="/docs/guides/function-calling"><span class="side-nav-item-name">Function calling</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/structured-outputs"><span class="side-nav-item-name">Structured outputs</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/evals"><span class="side-nav-item-name">Evaluations</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/fine-tuning"><span class="side-nav-item-name">Fine-tuning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/distillation"><span class="side-nav-item-name">Distillation</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/realtime"><span class="side-nav-item-name">Realtime API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/batch"><span class="side-nav-item-name">Batch API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Assistants</div><a class="scroll-link side-nav-item" href="/docs/assistants/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/assistants/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/deep-dive"><span class="side-nav-item-name">Deep dive</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/tools"><span class="side-nav-item-name">Tools</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/assistants/whats-new"><span class="side-nav-item-name">What's new?</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/migration"><span class="side-nav-item-name">Migration guide</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">ChatGPT</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/actions"><span class="side-nav-item-name">Actions</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/gpts/release-notes"><span class="side-nav-item-name">Release notes</span></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Best practices</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/prompt-engineering"><span class="side-nav-item-name">Prompt engineering</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/production-best-practices"><span class="side-nav-item-name">Production best practices</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/safety-best-practices"><span class="side-nav-item-name">Safety best practices</span></a><a class="scroll-link side-nav-item" href="/docs/guides/prompt-caching"><span class="side-nav-item-name">Prompt caching</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/model-selection"><span class="side-nav-item-name">Model selection</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems active active-exact" data-side-nav-subitems="visible" href="/docs/guides/latency-optimization"><span class="side-nav-item-name">Latency optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><div class="side-nav-subitems"><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/latency-optimization/the-seven-ways-to-improve-latency"><span class="side-nav-item-name">The seven principles</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/latency-optimization/example"><span class="side-nav-item-name">Example</span></a></div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/optimizing-llm-accuracy"><span class="side-nav-item-name">Accuracy optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/advanced-usage"><span class="side-nav-item-name">Advanced usage</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Resources</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/libraries"><span class="side-nav-item-name">Libraries</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/examples"><span class="side-nav-item-name">Prompt examples</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/rate-limits"><span class="side-nav-item-name">Rate limits</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/error-codes"><span class="side-nav-item-name">Error codes</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/deprecations"><span class="side-nav-item-name">Deprecations</span></a></div></div></div></div></div></div></div></div><div class="EDOEc qyrrQ"><div class="q3jBs"><a href="https://cookbook.openai.com" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M14.447 7.106a1 1 0 0 1 .447 1.341l-4 8a1 1 0 1 1-1.788-.894l4-8a1 1 0 0 1 1.341-.447ZM6.6 7.2a1 1 0 0 1 .2 1.4L4.25 12l2.55 3.4a1 1 0 0 1-1.6 1.2l-3-4a1 1 0 0 1 0-1.2l3-4a1 1 0 0 1 1.4-.2Zm10.8 0a1 1 0 0 1 1.4.2l3 4a1 1 0 0 1 0 1.2l-3 4a1 1 0 0 1-1.6-1.2l2.55-3.4-2.55-3.4a1 1 0 0 1 .2-1.4Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Cookbook</span></span></a><a href="https://community.openai.com/categories" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M10.5 8.5a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12 5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7ZM3 9.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm1-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm16 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm-3 1a3 3 0 1 1 6 0 3 3 0 0 1-6 0ZM8 18c0-.974.438-1.684 1.142-2.185C9.876 15.293 10.911 15 12 15c1.09 0 2.124.293 2.858.815.704.5 1.142 1.21 1.142 2.185a1 1 0 1 0 2 0c0-1.692-.812-2.982-1.983-3.815C14.876 13.373 13.411 13 12 13c-1.41 0-2.876.373-4.017 1.185C6.812 15.018 6 16.308 6 18a1 1 0 1 0 2 0Zm-3.016-3.675a1 1 0 0 1-.809 1.16C2.79 15.732 2 16.486 2 17.5a1 1 0 1 1-2 0c0-2.41 1.978-3.655 3.825-3.985a1 1 0 0 1 1.16.81Zm14.84 1.16a1 1 0 1 1 .351-1.97C22.022 13.845 24 15.09 24 17.5a1 1 0 1 1-2 0c0-1.014-.79-1.768-2.175-2.015Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Forum</span></span></a><button class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12 9a1 1 0 0 0-.879.522 1 1 0 0 1-1.754-.96A3 3 0 0 1 12 7c1.515 0 2.567 1.006 2.866 2.189.302 1.189-.156 2.574-1.524 3.258A.618.618 0 0 0 13 13a1 1 0 1 1-2 0c0-.992.56-1.898 1.447-2.342.455-.227.572-.618.48-.978C12.836 9.314 12.529 9 12 9Z" clip-rule="evenodd"></path><path d="M13.1 16a1.1 1.1 0 1 1-2.2 0 1.1 1.1 0 0 1 2.2 0Z"></path></svg></span><span class="_0LIzz">Help</span></span></button><a class="-ySo1 FDGXZ" data-primary-nav-item="" aria-haspopup="true" aria-expanded="false" href="/settings"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.568 3.5a1 1 0 0 0-.863.494l-.811 1.381A3.001 3.001 0 0 1 7.33 6.856l-1.596.013a1 1 0 0 0-.858.501l-.439.761a1 1 0 0 0-.004.992l.792 1.4a3 3 0 0 1 0 2.954l-.792 1.4a1 1 0 0 0 .004.992l.439.76a1 1 0 0 0 .858.502l1.596.013a3 3 0 0 1 2.564 1.48l.811 1.382a1 1 0 0 0 .863.494h.87a1 1 0 0 0 .862-.494l.812-1.381a3.001 3.001 0 0 1 2.563-1.481l1.596-.013a1 1 0 0 0 .86-.501l.438-.761a1 1 0 0 0 .004-.992l-.793-1.4a3 3 0 0 1 0-2.954l.793-1.4a1 1 0 0 0-.004-.992l-.439-.76a1 1 0 0 0-.858-.502l-1.597-.013a3 3 0 0 1-2.563-1.48L13.3 3.993a1 1 0 0 0-.862-.494h-.87ZM8.98 2.981A3.001 3.001 0 0 1 11.568 1.5h.87c1.064 0 2.049.564 2.588 1.481l.811 1.382a1 1 0 0 0 .855.494l1.596.013a3 3 0 0 1 2.575 1.502l.44.76a3 3 0 0 1 .011 2.975l-.792 1.4a1 1 0 0 0 0 .985l.792 1.401a3 3 0 0 1-.012 2.974l-.439.761a3.001 3.001 0 0 1-2.575 1.503l-1.597.012a1 1 0 0 0-.854.494l-.811 1.382a3.001 3.001 0 0 1-2.588 1.481h-.87a3.001 3.001 0 0 1-2.588-1.481l-.811-1.382a1 1 0 0 0-.855-.494l-1.596-.012a3.001 3.001 0 0 1-2.576-1.503l-.438-.76a3 3 0 0 1-.013-2.975l.793-1.4a1 1 0 0 0 0-.985l-.793-1.4a3 3 0 0 1 .013-2.975l.438-.761A3.001 3.001 0 0 1 5.718 4.87l1.596-.013a1 1 0 0 0 .855-.494l.81-1.382Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12.003 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM8.502 12a3.5 3.5 0 1 1 7 .001 3.5 3.5 0 0 1-7-.001Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Settings</span></span></a><div class="LwKwt"><button class="jYGOC" type="button" id="radix-:r3:" aria-haspopup="menu" aria-expanded="false" data-state="closed"><span class="qCm0E" role="presentation" data-variant="light"><div class="_8ufcO"><img src="https://lh3.googleusercontent.com/a/ACg8ocLahjE0y72DP3dxsDWlC2UR4uGhyySAPayi5gmRmLoIL7h-xd7L=s96-c" class="mImKu" alt="" role="presentation" data-loaded=""></div></span></button></div></div></div></aside><div class="_7j8ow"><div class="qLnXc"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="ImBcX"><div class="docs-scroll-container" data-important-algolia-crawl="true"><div class="page-body full-width flush docs-page"><div class="markdown-page markdown-content latency-optimization"><div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/latency-optimization"><h1 class="anchor-heading" data-name="latency-optimization">Latency optimization<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h1></a></div>
+<p>This guide covers the core set of principles you can apply to improve latency across a wide variety of LLM-related use cases. These techniques come from working with a wide range of customers and developers on production applications, so they should apply regardless of what you're building – from a granular workflow to an end-to-end chatbot!</p>
+<p>While there's many individual techniques, we'll be grouping them into <strong>seven principles</strong> meant to represent a high-level taxonomy of approaches for improving latency.</p>
+<p>At the end, we'll walk through an <a href="/docs/guides/latency-optimization/example">example</a> to see how they can be applied.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/the-seven-principles"><h2 class="anchor-heading" data-name="the-seven-principles">The seven principles<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<ol>
+<li><a href="/docs/guides/latency-optimization/1-process-tokens-faster">Process tokens faster.</a></li>
+<li><a href="/docs/guides/latency-optimization/2-generate-fewer-tokens">Generate fewer tokens.</a></li>
+<li><a href="/docs/guides/latency-optimization/3-use-fewer-input-tokens">Use fewer input tokens.</a></li>
+<li><a href="/docs/guides/latency-optimization/4-make-fewer-requests">Make fewer requests.</a></li>
+<li><a href="/docs/guides/latency-optimization/5-parallelize">Parallelize.</a></li>
+<li><a href="/docs/guides/latency-optimization/6-make-your-users-wait-less">Make your users wait less.</a></li>
+<li><a href="/docs/guides/latency-optimization/7-don-t-default-to-an-llm">Don't default to an LLM.</a></li>
+</ol>
+<div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p>You can use the friendly, catchy acronym PGIRPWD to remember these. (Processing, Generation, Input, Requests, Parallelize, Waiting, Don't)</p></div></div></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/1-process-tokens-faster"><h3 class="anchor-heading" data-name="1-process-tokens-faster">1. Process tokens faster<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p><strong>Inference speed</strong> is probably the first thing that comes to mind when addressing latency (but as you'll see soon, it's far from the only one). This refers to the actual <strong>rate at which the LLM processes tokens</strong>, and is often measured in TPM (tokens per minute) or TPS (tokens per second).</p>
+<p>The main factor that influences inference speed is <strong>model size</strong> – smaller models usually run faster (and cheaper), and when used correctly can even outperform larger models. To maintain high quality performance with smaller models you can explore:</p>
+<ul>
+<li>using a longer, <a href="/docs/guides/prompt-engineering/tactic-specify-the-steps-required-to-complete-a-task">more detailed prompt</a>,</li>
+<li>adding (more) <a href="/docs/guides/prompt-engineering/tactic-provide-examples">few-shot examples</a>, or</li>
+<li><a href="/docs/guides/fine-tuning">fine-tuning</a> / distillation.</li>
+</ul>
+<div class="deep-dive"><div class="deep-dive-header"><div><div class="deep-dive-heading"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12.945 1.17a1 1 0 0 1 .811 1.16l-.368 2.088a1 1 0 1 1-1.97-.347l.369-2.089a1 1 0 0 1 1.158-.811ZM5.85 2.73a1 1 0 0 1 1.393.246L8.39 4.614A1 1 0 1 1 6.751 5.76L5.604 4.123a1 1 0 0 1 .245-1.393Zm3.724 5.328a1 1 0 0 1 1.06-.06l10.244 5.646a1 1 0 0 1 .09 1.695l-1.749 1.225 1.139 1.654a1 1 0 0 1-.25 1.386l-3.282 2.298a1 1 0 0 1-1.393-.246l-1.147-1.638-1.634 1.144a1 1 0 0 1-1.56-.654L9.166 9.04a1 1 0 0 1 .408-.981Zm1.907 2.69 1.322 7.867 1.155-.809a1 1 0 0 1 1.393.246l1.147 1.638 1.65-1.155-1.139-1.655a1 1 0 0 1 .25-1.386l1.248-.873-7.026-3.873ZM1.957 8.865a1 1 0 0 1 1.159-.811l2.089.368a1 1 0 1 1-.348 1.97l-2.089-.369a1 1 0 0 1-.81-1.158Z" clip-rule="evenodd"></path></svg><div class="subheading">Deep dive</div></div><div class="deep-dive-title">Compute capacity &amp; inference optimizations</div></div><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="deep-dive-expand-icon"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/2-generate-fewer-tokens"><h3 class="anchor-heading" data-name="2-generate-fewer-tokens">2. Generate fewer tokens<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Generating tokens is almost always the highest latency step when using an LLM: as a general heuristic, <strong>cutting 50% of your output tokens may cut ~50% your latency</strong>. The way you reduce your output size will depend on output type:</p>
+<p>If you're generating <strong>natural language</strong>, simply <strong>asking the model to be more concise</strong> ("under 20 words" or "be very brief") may help. You can also use few shot examples and/or fine-tuning to teach the model shorter responses.</p>
+<p>If you're generating <strong>structured output</strong>, try to <strong>minimize your output syntax</strong> where possible: shorten function names, omit named arguments, coalesce parameters, etc.</p>
+<p>Finally, while not common, you can also use <code>max_tokens</code> or <code>stop_tokens</code> to end your generation early.</p>
+<p>Always remember: an output token cut is a (milli)second earned!</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/3-use-fewer-input-tokens"><h3 class="anchor-heading" data-name="3-use-fewer-input-tokens">3. Use fewer input tokens<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>While reducing the number of input tokens does result in lower latency, this is not usually a significant factor – <strong>cutting 50% of your prompt may only result in a 1-5% latency improvement</strong>. Unless you're working with truly massive context sizes (documents, images), you may want to spend your efforts elsewhere.</p>
+<p>That being said, if you <em>are</em> working with massive contexts (or you're set on squeezing every last bit of performance <em>and</em> you've exhausted all other options) you can use the following techniques to reduce your input tokens:</p>
+<ul>
+<li><strong>Fine-tuning the model</strong>, to replace the need for lengthy instructions / examples.</li>
+<li><strong>Filtering context input</strong>, like pruning RAG results, cleaning HTML, etc.</li>
+<li><strong>Maximize shared prompt prefix</strong>, by putting dynamic portions (e.g. RAG results, history, etc) later in the prompt. This makes your request more <a href="https://medium.com/@joaolages/kv-caching-explained-276520203249" target="_blank" rel="noopener noreferrer">KV cache</a>-friendly (which most LLM providers use) and means fewer input tokens are processed on each request. (<a href="https://lilianweng.github.io/posts/2023-01-10-inference-optimization/" target="_blank" rel="noopener noreferrer">why?</a>)</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/4-make-fewer-requests"><h3 class="anchor-heading" data-name="4-make-fewer-requests">4. Make fewer requests<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Each time you make a request you incur some round-trip latency – this can start to add up.</p>
+<p>If you have sequential steps for the LLM to perform, instead of firing off one request per step consider <strong>putting them in a single prompt and getting them all in a single response</strong>. You'll avoid the additional round-trip latency, and potentially also reduce complexity of processing multiple responses.</p>
+<p>An approach to doing this is by collecting your steps in an enumerated list in the combined prompt, and then requesting the model to return the results in named fields in a JSON. This way you can easily parse out and reference each result!</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/5-parallelize"><h3 class="anchor-heading" data-name="5-parallelize">5. Parallelize<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Parallelization can be very powerful when performing multiple steps with an LLM.</p>
+<p>If the steps <strong>are <em>not</em> strictly sequential</strong>, you can <strong>split them out into parallel calls</strong>. Two shirts take just as long to dry as one.</p>
+<p>If the steps <strong><em>are</em> strictly sequential</strong>, however, you might still be able to <strong>leverage speculative execution</strong>. This is particularly effective for classification steps where one outcome is more likely than the others (e.g. moderation).</p>
+<ol>
+<li>Start step 1 &amp; step 2 simultaneously (e.g. input moderation &amp; story generation)</li>
+<li>Verify the result of step 1</li>
+<li>If result was not the expected, cancel step 2 (and retry if necessary)</li>
+</ol>
+<p>If your guess for step 1 is right, then you essentially got to run it with zero added latency!</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/6-make-your-users-wait-less"><h3 class="anchor-heading" data-name="6-make-your-users-wait-less">6. Make your users wait less<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>There's a huge difference between <strong>waiting</strong> and <strong>watching progress happen</strong> – make sure your users experience the latter. Here are a few techniques:</p>
+<ul>
+<li><strong>Streaming</strong>: The single most effective approach, as it cuts the <em>waiting</em> time to a second or less. (ChatGPT would feel pretty different if you saw nothing until each response was done.)</li>
+<li><strong>Chunking</strong>: If your output needs further processing before being shown to the user (moderation, translation) consider <strong>processing it in chunks</strong> instead of all at once. Do this by streaming to your backend, then sending processed chunks to your frontend.</li>
+<li><strong>Show your steps</strong>: If you're taking multiple steps or using tools, surface this to the user. The more real progress you can show, the better.</li>
+<li><strong>Loading states</strong>: Spinners and progress bars go a long way.</li>
+</ul>
+<p>Note that while <strong>showing your steps &amp; having loading states</strong> have a mostly
+psychological effect, <strong>streaming &amp; chunking</strong> genuinely do reduce overall
+latency once you consider the app + user system: the user will finish reading a response
+sooner.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/7-don-t-default-to-an-llm"><h3 class="anchor-heading" data-name="7-don-t-default-to-an-llm">7. Don't default to an LLM<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>LLMs are extremely powerful and versatile, and are therefore sometimes used in cases where a <strong>faster classical method</strong> would be more appropriate. Identifying such cases may allow you to cut your latency significantly. Consider the following examples:</p>
+<ul>
+<li><strong>Hard-coding:</strong> If your <strong>output</strong> is highly constrained, you may not need an LLM to generate it. Action confirmations, refusal messages, and requests for standard input are all great candidates to be hard-coded. (You can even use the age-old method of coming up with a few variations for each.)</li>
+<li><strong>Pre-computing:</strong> If your <strong>input</strong> is constrained (e.g. category selection) you can generate multiple responses in advance, and just make sure you never show the same one to a user twice.</li>
+<li><strong>Leveraging UI:</strong> Summarized metrics, reports, or search results are sometimes better conveyed with classical, bespoke UI components rather than LLM-generated text.</li>
+<li><strong>Traditional optimization techniques:</strong> An LLM application is still an application; binary search, caching, hash maps, and runtime complexity are all <em>still</em> useful in a world of LLMs.</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/example"><h2 class="anchor-heading" data-name="example">Example<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Let's now look at a sample application, identify potential latency optimizations, and propose some solutions!</p>
+<p>We'll be analyzing the architecture and prompts of a hypothetical customer service bot inspired by real production applications. The <a href="/docs/guides/latency-optimization/architecture-and-prompts">architecture and prompts</a> section sets the stage, and the <a href="/docs/guides/latency-optimization/analysis-and-optimizations">analysis and optimizations</a> section will walk through the latency optimization process.</p>
+<div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p>You'll notice this example doesn't cover every single principle, much like real-world use cases don't require applying every technique.</p></div></div></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/architecture-and-prompts"><h3 class="anchor-heading" data-name="architecture-and-prompts">Architecture and prompts<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>The following is the <strong>initial architecture</strong> for a hypothetical <strong>customer service bot</strong>. This is what we'll be making changes to.</p>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-latency-customer-service-0.png" alt="Assistants object architecture diagram"></p>
+<p>At a high level, the diagram flow describes the following process:</p>
+<ol>
+<li>A user sends a message as part of an ongoing conversation.</li>
+<li>The last message is turned into a <strong>self-contained query</strong> (see examples in prompt).</li>
+<li>We determine whether or not <strong>additional (retrieved) information is required</strong> to respond to that query.</li>
+<li><strong>Retrieval</strong> is performed, producing search results.</li>
+<li>The assistant <strong>reasons</strong> about the user's query and search results, and <strong>produces a response</strong>.</li>
+<li>The response is sent back to the user.</li>
+</ol>
+<p>Below are the prompts used in each part of the diagram. While they are still only hypothetical and simplified, they are written with the same structure and wording that you would find in a production application.</p>
+<div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p>Places where you see placeholders like "<strong>[user input here]</strong>" represent dynamic portions, that would be replaced by actual data at runtime.</p></div></div></div></div>
+<div class="expn"><div class="expn-title" role="button" aria-expanded="false" aria-controls="expander-0"><div class="expn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.293 4.293a1 1 0 0 1 1.414 0l7 7a1 1 0 0 1 0 1.414l-7 7a1 1 0 0 1-1.414-1.414L14.586 12 8.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="expn-label">Query contextualization prompt</div></div><div class="expn-content hidden" id="expander-0"><p>Re-writes user query to be a self-contained search query.</p><div class="example-chat-container"><div class="example-chat-messages"><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">SYSTEM</span></div></div><div class="example-chat-message-text">Given the previous conversation, re-write the last user query so it contains
+all necessary context.
+
+# Example
+History: [{user: "What is your return policy?"},{assistant: "..."}]
+User Query: "How long does it cover?"
+Response: "How long does the return policy cover?"
+
+# Conversation
+[last 3 messages of conversation]
+
+# User Query
+[last user query]
+</div></div><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">USER</span></div></div><div class="example-chat-message-text">[JSON-formatted input conversation here]</div></div></div></div></div></div>
+<div class="expn"><div class="expn-title" role="button" aria-expanded="false" aria-controls="expander-1"><div class="expn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.293 4.293a1 1 0 0 1 1.414 0l7 7a1 1 0 0 1 0 1.414l-7 7a1 1 0 0 1-1.414-1.414L14.586 12 8.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="expn-label">Retrieval check prompt</div></div><div class="expn-content hidden" id="expander-1"><p>Determines whether a query requires performing retrieval to respond.</p><div class="example-chat-container"><div class="example-chat-messages"><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">SYSTEM</span></div></div><div class="example-chat-message-text">Given a user query, determine whether it requires doing a realtime lookup to
+respond to.
+
+# Examples
+User Query: "How can I return this item after 30 days?"
+Response: "true"
+
+User Query: "Thank you!"
+Response: "false"
+</div></div><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">USER</span></div></div><div class="example-chat-message-text">[input user query here]</div></div></div></div></div></div>
+<div class="expn"><div class="expn-title" role="button" aria-expanded="false" aria-controls="expander-2"><div class="expn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.293 4.293a1 1 0 0 1 1.414 0l7 7a1 1 0 0 1 0 1.414l-7 7a1 1 0 0 1-1.414-1.414L14.586 12 8.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="expn-label">Assistant prompt</div></div><div class="expn-content hidden" id="expander-2"><p>Fills the fields of a JSON to reason through a pre-defined set of steps to produce a final response given a user conversation and relevant retrieved information.</p><div class="example-chat-container"><div class="example-chat-messages"><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">SYSTEM</span></div></div><div class="example-chat-message-text">You are a helpful customer service bot.
+
+Use the result JSON to reason about each user query - use the retrieved context.
+
+# Example
+
+User: "My computer screen is cracked! I want it fixed now!!!"
+
+Assistant Response:
+{
+"message_is_conversation_continuation": "True",
+"number_of_messages_in_conversation_so_far": "1",
+"user_sentiment": "Aggravated",
+"query_type": "Hardware Issue",
+"response_tone": "Validating and solution-oriented",
+"response_requirements": "Propose options for repair or replacement.",
+"user_requesting_to_talk_to_human": "False",
+"enough_information_in_context": "True"
+"response": "..."
+}
+</div></div><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">USER</span></div></div><div class="example-chat-message-text"># Relevant Information
+` ` `
+[retrieved context]
+` ` `
+</div></div><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">USER</span></div></div><div class="example-chat-message-text">[input user query here]</div></div></div></div></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/analysis-and-optimizations"><h3 class="anchor-heading" data-name="analysis-and-optimizations">Analysis and optimizations<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/part-1-looking-at-retrieval-prompts"><h4 class="anchor-heading" data-name="part-1-looking-at-retrieval-prompts">Part 1: Looking at retrieval prompts<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>Looking at the architecture, the first thing that stands out is the <strong>consecutive GPT-4 calls</strong> - these hint at a potential inefficiency, and can often be replaced by a single call or parallel calls.</p>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-latency-customer-service-2.png" alt="Assistants object architecture diagram"></p>
+<p>In this case, since the check for retrieval requires the contextualized query, let's <strong>combine them into a single prompt</strong> to <a href="/docs/guides/latency-optimization/4-make-fewer-requests">make fewer requests</a>.</p>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-latency-customer-service-3.png" alt="Assistants object architecture diagram"></p>
+<div class="expn"><div class="expn-title" role="button" aria-expanded="false" aria-controls="expander-3"><div class="expn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.293 4.293a1 1 0 0 1 1.414 0l7 7a1 1 0 0 1 0 1.414l-7 7a1 1 0 0 1-1.414-1.414L14.586 12 8.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="expn-label">Combined query contextualization and retrieval check prompt</div></div><div class="expn-content hidden" id="expander-3"><p><strong>What changed?</strong> Before, we had one prompt to re-write the query and one to determine whether this requires doing a retrieval lookup. Now, this combined prompt does both. Specifically, notice the updated instruction in the first line of the prompt, and the updated output JSON:</p><div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-jsx" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span></code><span><span>{
+</span></span><span><span>query:</span><span class="hljs-string">"[contextualized query]"</span><span>,
+</span></span><span><span>retrieval:</span><span class="hljs-string">"[true/false - whether retrieval is required]"</span><span>
+</span></span><span>}</span></code></pre></div></div><div class="example-chat-container"><div class="example-chat-messages"><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">SYSTEM</span></div></div><div class="example-chat-message-text">Given the previous conversation, re-write the last user query so it contains
+all necessary context. Then, determine whether the full request requires doing a
+realtime lookup to respond to.
+
+Respond in the following form:
+{
+query:"[contextualized query]",
+retrieval:"[true/false - whether retrieval is required]"
+}
+
+# Examples
+
+History: [{user: "What is your return policy?"},{assistant: "..."}]
+User Query: "How long does it cover?"
+Response: {query: "How long does the return policy cover?", retrieval: "true"}
+
+History: [{user: "How can I return this item after 30 days?"},{assistant: "..."}]
+User Query: "Thank you!"
+Response: {query: "Thank you!", retrieval: "false"}
+
+# Conversation
+[last 3 messages of conversation]
+
+# User Query
+[last user query]
+</div></div><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">USER</span></div></div><div class="example-chat-message-text">[JSON-formatted input conversation here]</div></div></div></div></div></div>
+<br>
+<p>Actually, adding context and determining whether to retrieve are very straightforward and well defined tasks, so we can likely use a <strong>smaller, fine-tuned model</strong> instead. Switching to GPT-3.5 will let us <a href="/docs/guides/latency-optimization/1-process-tokens-faster">process tokens faster</a>.</p>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-latency-customer-service-4.png" alt="Assistants object architecture diagram"></p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/part-2-analyzing-the-assistant-prompt"><h4 class="anchor-heading" data-name="part-2-analyzing-the-assistant-prompt">Part 2: Analyzing the assistant prompt<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>Let's now direct our attention to the Assistant prompt. There seem to be many distinct steps happening as it fills the JSON fields – this could indicate an opportunity to <a href="/docs/guides/latency-optimization/5-parallelize">parallelize</a>.</p>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-latency-customer-service-5.png" alt="Assistants object architecture diagram"></p>
+<p>However, let's pretend we have run some tests and discovered that splitting the reasoning steps in the JSON produces worse responses, so we need to explore different solutions.</p>
+<p><strong>Could we use a fine-tuned GPT-3.5 instead of GPT-4?</strong> Maybe – but in general, open-ended responses from assistants are best left to GPT-4 so it can better handle a greater range of cases. That being said, looking at the reasoning steps themselves, they may not all require GPT-4 level reasoning to produce. The well defined, limited scope nature makes them and <strong>good potential candidates for fine-tuning</strong>.</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-jsx" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span></code><span><span>{
+</span></span><span><span></span><span class="hljs-attr">"message_is_conversation_continuation"</span><span>: </span><span class="hljs-string">"True"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"number_of_messages_in_conversation_so_far"</span><span>: </span><span class="hljs-string">"1"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"user_sentiment"</span><span>: </span><span class="hljs-string">"Aggravated"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"query_type"</span><span>: </span><span class="hljs-string">"Hardware Issue"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"response_tone"</span><span>: </span><span class="hljs-string">"Validating and solution-oriented"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"response_requirements"</span><span>: </span><span class="hljs-string">"Propose options for repair or replacement."</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"user_requesting_to_talk_to_human"</span><span>: </span><span class="hljs-string">"False"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"enough_information_in_context"</span><span>: </span><span class="hljs-string">"True"</span><span> </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-string">"response"</span><span>: </span><span class="hljs-string">"..."</span><span> </span><span class="hljs-comment">// X -- benefits from GPT-4</span><span>
+</span></span><span>}</span></code></pre></div></div>
+<p>This opens up the possibility of a trade-off. Do we keep this as a <strong>single request entirely generated by GPT-4</strong>, or <strong>split it into two sequential requests</strong> and use GPT-3.5 for all but the final response? We have a case of conflicting principles: the first option lets us <a href="/docs/guides/latency-optimization/4-make-fewer-requests">make fewer requests</a>, but the second may let us <a href="/docs/guides/latency-optimization/1-process-tokens-faster">process tokens faster</a>.</p>
+<p>As with many optimization tradeoffs, the answer will depend on the details. For example:</p>
+<ul>
+<li>The proportion of tokens in the <code>response</code> vs the other fields.</li>
+<li>The average latency decrease from processing most fields faster.</li>
+<li>The average latency <em>increase</em> from doing two requests instead of one.</li>
+</ul>
+<p>The conclusion will vary by case, and the best way to make the determiation is by testing this with production examples. In this case let's pretend the tests indicated it's favorable to split the prompt in two to <a href="/docs/guides/latency-optimization/1-process-tokens-faster">process tokens faster</a>.</p>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-latency-customer-service-6.png" alt="Assistants object architecture diagram"></p>
+<p><strong>Note:</strong> We'll be grouping <code>response</code> and <code>enough_information_in_context</code> together in the second prompt to avoid passing the retrieved context to both new prompts.</p>
+<div class="expn"><div class="expn-title" role="button" aria-expanded="false" aria-controls="expander-4"><div class="expn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.293 4.293a1 1 0 0 1 1.414 0l7 7a1 1 0 0 1 0 1.414l-7 7a1 1 0 0 1-1.414-1.414L14.586 12 8.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="expn-label">Assistants prompt - reasoning</div></div><div class="expn-content hidden" id="expander-4"><p>This prompt will be passed to GPT-3.5 and can be fine-tuned on curated examples.</p><p><strong>What changed?</strong> The "enough_information_in_context" and "response" fields were removed, and the retrieval results are no longer loaded into this prompt.</p><div class="example-chat-container"><div class="example-chat-messages"><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">SYSTEM</span></div></div><div class="example-chat-message-text">You are a helpful customer service bot.
+
+Based on the previous conversation, respond in a JSON to determine the required
+fields.
+
+# Example
+
+User: "My freaking computer screen is cracked!"
+
+Assistant Response:
+{
+"message_is_conversation_continuation": "True",
+"number_of_messages_in_conversation_so_far": "1",
+"user_sentiment": "Aggravated",
+"query_type": "Hardware Issue",
+"response_tone": "Validating and solution-oriented",
+"response_requirements": "Propose options for repair or replacement.",
+"user_requesting_to_talk_to_human": "False",
+}</div></div></div></div></div></div>
+<div class="expn"><div class="expn-title" role="button" aria-expanded="false" aria-controls="expander-5"><div class="expn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.293 4.293a1 1 0 0 1 1.414 0l7 7a1 1 0 0 1 0 1.414l-7 7a1 1 0 0 1-1.414-1.414L14.586 12 8.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="expn-label">Assistants prompt - response</div></div><div class="expn-content hidden" id="expander-5"><p>This prompt will be processed by GPT-4 and will receive the reasoning steps determined in the prior prompt, as well as the results from retrieval.</p><p><strong>What changed?</strong> All steps were removed except for "enough_information_in_context" and "response". Additionally, the JSON we were previously filling in as output will be passed in to this prompt.</p><div class="example-chat-container"><div class="example-chat-messages"><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">SYSTEM</span></div></div><div class="example-chat-message-text">You are a helpful customer service bot.
+
+Use the retrieved context, as well as these pre-classified fields, to respond to
+the user's query.
+
+# Reasoning Fields
+` ` `
+[reasoning json determined in previous GPT-3.5 call]
+` ` `
+
+# Example
+
+User: "My freaking computer screen is cracked!"
+
+Assistant Response:
+{
+"enough_information_in_context": "True"
+"response": "..."
+}
+</div></div><div class="example-chat-message"><div class="example-chat-role"><div class="example-chat-subheading subheading"><span class="example-chat-role-text">USER</span></div></div><div class="example-chat-message-text"># Relevant Information
+` ` `
+[retrieved context]
+` ` `</div></div></div></div></div></div>
+<br>
+<p>In fact, now that the reasoning prompt does not depend on the retrieved context we can <a href="/docs/guides/latency-optimization/5-parallelize">parallelize</a> and fire it off at the same time as the retrieval prompts.</p>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-latency-customer-service-6b.png" alt="Assistants object architecture diagram"></p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/part-3-optimizing-the-structured-output"><h4 class="anchor-heading" data-name="part-3-optimizing-the-structured-output">Part 3: Optimizing the structured output<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>Let's take another look at the reasoning prompt.</p>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-latency-customer-service-7b.png" alt="Assistants object architecture diagram"></p>
+<p>Taking a closer look at the reasoning JSON you may notice the field names themselves are quite long.</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-jsx" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span></code><span><span>{
+</span></span><span><span></span><span class="hljs-attr">"message_is_conversation_continuation"</span><span>: </span><span class="hljs-string">"True"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"number_of_messages_in_conversation_so_far"</span><span>: </span><span class="hljs-string">"1"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"user_sentiment"</span><span>: </span><span class="hljs-string">"Aggravated"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"query_type"</span><span>: </span><span class="hljs-string">"Hardware Issue"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"response_tone"</span><span>: </span><span class="hljs-string">"Validating and solution-oriented"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"response_requirements"</span><span>: </span><span class="hljs-string">"Propose options for repair or replacement."</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span><span></span><span class="hljs-attr">"user_requesting_to_talk_to_human"</span><span>: </span><span class="hljs-string">"False"</span><span>, </span><span class="hljs-comment">// &lt;-</span><span>
+</span></span><span>}</span></code></pre></div></div>
+<p>By making them shorter and moving explanations to the comments we can <a href="/docs/guides/latency-optimization/2-generate-fewer-tokens">generate fewer tokens</a>.</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-jsx" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span></code><span><span>{
+</span></span><span><span></span><span class="hljs-attr">"cont"</span><span>: </span><span class="hljs-string">"True"</span><span>, </span><span class="hljs-comment">// whether last message is a continuation</span><span>
+</span></span><span><span></span><span class="hljs-attr">"n_msg"</span><span>: </span><span class="hljs-string">"1"</span><span>, </span><span class="hljs-comment">// number of messages in the continued conversation</span><span>
+</span></span><span><span></span><span class="hljs-attr">"tone_in"</span><span>: </span><span class="hljs-string">"Aggravated"</span><span>, </span><span class="hljs-comment">// sentiment of user query</span><span>
+</span></span><span><span></span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"Hardware Issue"</span><span>, </span><span class="hljs-comment">// type of the user query</span><span>
+</span></span><span><span></span><span class="hljs-attr">"tone_out"</span><span>: </span><span class="hljs-string">"Validating and solution-oriented"</span><span>, </span><span class="hljs-comment">// desired tone for response</span><span>
+</span></span><span><span></span><span class="hljs-attr">"reqs"</span><span>: </span><span class="hljs-string">"Propose options for repair or replacement."</span><span>, </span><span class="hljs-comment">// response requirements</span><span>
+</span></span><span><span></span><span class="hljs-attr">"human"</span><span>: </span><span class="hljs-string">"False"</span><span>, </span><span class="hljs-comment">// whether user is expressing want to talk to human</span><span>
+</span></span><span>}</span></code></pre></div></div>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-latency-customer-service-8b.png" alt="Assistants object architecture diagram"></p>
+<p>This small change removed 19 output tokens.&nbsp;While with GPT-3.5 this may only result in a few millisecond improvement, with GPT-4 this could shave off up to a second.</p>
+<p><img src="https://cdn.openai.com/API/docs/images/token-counts-latency-customer-service-large.png" alt="Assistants object architecture diagram"></p>
+<p>You might imagine, however, how this can have quite a significant impact for larger model outputs.</p>
+<p>We could go further and use single chatacters for the JSON fields, or put everything in an array, but this may start to hurt our response quality. The best way to know, once again, is through testing.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/example-wrap-up"><h4 class="anchor-heading" data-name="example-wrap-up">Example wrap-up<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>Let's review the optimizations we implemented for the customer service bot example:</p>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-latency-customer-service-11b.png" alt="Assistants object architecture diagram"></p>
+<ol>
+<li><strong>Combined</strong> query contextualization and retrieval check steps to <a href="/docs/guides/latency-optimization/4-make-fewer-requests">make fewer requests</a>.</li>
+<li>For the new prompt, <strong>switched to a smaller, fine-tuned GPT-3.5</strong> to <a href="/docs/guides/latency-optimization/1-process-tokens-faster">process tokens faster</a>.</li>
+<li>Split the assistant prompt in two, <strong>switching to a smaller, fine-tuned GPT-3.5</strong> for the reasoning, again to <a href="/docs/guides/latency-optimization/1-process-tokens-faster">process tokens faster</a>.</li>
+<li><a href="/docs/guides/latency-optimization/5-parallelize">Parallelized</a> the retrieval checks and the reasoning steps.</li>
+<li><strong>Shortened reasoning field names</strong> and moved comments into the prompt, to <a href="/docs/guides/latency-optimization/2-generate-fewer-tokens">generate fewer tokens</a>.</li>
+</ol>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/latency-optimization/conclusion"><h2 class="anchor-heading" data-name="conclusion">Conclusion<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>You should now be familiar with the core set of principles you can use to improve latency in your LLM application. As you explore these techniques, always remember to measure where your latency is coming from, and test the impact of each solution your try. Now go make your application <em>fly!</em></p></div><div class="docs-footer"><div class="docs-feedback">Was this page useful?<button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Helpful" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12.132 2.504a1 1 0 0 1 .992-.496l.454.056a4 4 0 0 1 3.327 5.146L16.354 9h.718c2.638 0 4.553 2.508 3.86 5.053l-1.364 5A4 4 0 0 1 15.708 22H6a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3h2c.26 0 .5-.14.628-.364l3.504-6.132ZM10 20h5.709a2 2 0 0 0 1.93-1.474l1.363-5A2 2 0 0 0 17.072 11H15a1 1 0 0 1-.956-1.294l.95-3.084a2 2 0 0 0-1.462-2.537l-3.168 5.543A2.723 2.723 0 0 1 9 10.81V19a1 1 0 0 0 1 1Zm-3-9v8c0 .35.06.687.17 1H6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h1Z" clip-rule="evenodd"></path></svg></span></span></button><button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Thumbs down" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.873 21.496a1 1 0 0 1-.992.496l-.454-.056A4 4 0 0 1 7.1 16.79L7.65 15h-.718c-2.637 0-4.553-2.508-3.859-5.052l1.364-5A4 4 0 0 1 8.296 2h9.709a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-2c-.26 0-.5.14-.628.364l-3.504 6.132ZM14.005 4h-5.71a2 2 0 0 0-1.929 1.474l-1.363 5A2 2 0 0 0 6.933 13h2.072a1 1 0 0 1 .955 1.294l-.949 3.084a2 2 0 0 0 1.462 2.537l3.167-5.543a2.723 2.723 0 0 1 1.364-1.182V5a1 1 0 0 0-1-1Zm3 9V5c0-.35-.06-.687-.171-1h1.17a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1Z" clip-rule="evenodd"></path></svg></span></span></button></div></div></div></div></div></div></div></div></div></div></div></main><div data-testid="compliance-management-wrapper"></div></div><div class="layers-root"></div></div>
+      <script nonce="" nomodule="">!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-polyfill" src="/static/polyfills-legacy-DO_EefdF.js"></script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-entry" data-src="/static/index-legacy-U3KC6Hpc.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+    
+
+<div class="CRjGu"></div><iframe id="intercom-frame" style="position: absolute !important; opacity: 0 !important; width: 1px !important; height: 1px !important; top: 0 !important; left: 0 !important; border: none !important; display: block !important; z-index: -1 !important; pointer-events: none;" aria-hidden="true" tabindex="-1" title="Intercom"></iframe><div class="intercom-lightweight-app"><style id="intercom-lightweight-app-style" type="text/css">
+  @keyframes intercom-lightweight-app-launcher {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes intercom-lightweight-app-gradient {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes intercom-lightweight-app-messenger {
+    0% {
+      opacity: 0;
+      transform: scale(0);
+    }
+    40% {
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .intercom-lightweight-app {
+    position: fixed;
+    z-index: 2147483001;
+    width: 0;
+    height: 0;
+    font-family: intercom-font, "Helvetica Neue", "Apple Color Emoji", Helvetica, Arial, sans-serif;
+  }
+
+  .intercom-lightweight-app-gradient {
+    position: fixed;
+    z-index: 2147483002;
+    width: 500px;
+    height: 500px;
+    bottom: 0;
+    right: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at bottom right,
+      rgba(29, 39, 54, 0.16) 0%,
+      rgba(29, 39, 54, 0) 72%);
+    animation: intercom-lightweight-app-gradient 200ms ease-out;
+  }
+
+  .intercom-lightweight-app-launcher {
+    position: fixed;
+    z-index: 2147483003;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none;
+    bottom: 20px;
+    right: 20px;
+    max-width: 48px;
+    width: 48px;
+    max-height: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #202123;
+    cursor: pointer;
+    box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.06), 0 2px 32px 0 rgba(0, 0, 0, 0.16);
+    transition: transform 167ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    box-sizing: content-box;
+  }
+
+
+  .intercom-lightweight-app-launcher:hover {
+    transition: transform 250ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    transform: scale(1.1)
+  }
+
+  .intercom-lightweight-app-launcher:active {
+    transform: scale(0.85);
+    transition: transform 134ms cubic-bezier(0.45, 0, 0.2, 1);
+  }
+
+
+  .intercom-lightweight-app-launcher:focus {
+    outline: none;
+
+    
+  }
+
+  .intercom-lightweight-app-launcher-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 48px;
+    height: 48px;
+    transition: transform 100ms linear, opacity 80ms linear;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg {
+    height: 44px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-custom-icon-open {
+    max-height: 24px;
+    max-width: 24px;
+
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize {
+    
+        opacity: 0;
+        transform: rotate(-60deg) scale(0);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-messenger {
+    position: fixed;
+    z-index: 2147483003;
+    overflow: hidden;
+    background-color: white;
+    animation: intercom-lightweight-app-messenger 250ms cubic-bezier(0, 1, 1, 1);
+    transform-origin: bottom right;
+
+    
+        width: 400px;
+        height: calc(100% - 40px);
+        max-height: 704px;
+        min-height: 250px;
+        right: 20px;
+        bottom: 20px;
+        box-shadow: 0 5px 40px rgba(0,0,0,0.16);
+      
+
+    border-radius: 16px;
+  }
+
+  .intercom-lightweight-app-messenger-header {
+    height: 64px;
+    border-bottom: none;
+    background: #202123
+
+    
+  }
+
+  .intercom-lightweight-app-messenger-footer{
+    position:absolute;
+    bottom:0;
+    width: 100%;
+    height: 80px;
+    background: #fff;
+    font-size: 14px;
+    line-height: 21px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.05);
+    
+  }
+
+  @media print {
+    .intercom-lightweight-app {
+      display: none;
+    }
+  }
+</style></div></body></html>

@@ -1,0 +1,546 @@
+<html lang="en" class="dark" data-theme="dark" style="color-scheme: dark;"><head>
+        <meta charset="utf-8">
+        <link rel="icon" type="image/png" href="/favicon-docs.png">
+        <link rel="icon" type="image/svg+xml" href="/favicon-docs.svg">
+        <link rel="preconnect" href="https://cdn.openai.com">
+        <link rel="preconnect" href="https://OWZ3QOIIJA-dsn.algolia.net" crossorigin="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#000000">
+        <title>Assistants Deep Dive - OpenAI API</title>
+        <meta name="description" content="Explore resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's developer platform.">
+        <link rel="manifest" href="/manifest.json">
+
+        <!-- Facebook / LinkedIn Meta Tags -->
+        <meta property="og:title" content="OpenAI Platform">
+        <meta property="og:image" content="https://cdn.openai.com/API/images/opengraph.png">
+        <meta property="og:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://platform.openai.com">
+
+        <!-- Twitter Meta Tags -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta property="twitter:domain" content="platform.openai.com">
+        <meta property="twitter:url" content="https://platform.openai.com">
+        <meta name="twitter:title" content="OpenAI Platform">
+        <meta name="twitter:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta name="twitter:image" content="https://cdn.openai.com/API/images/opengraph.png">
+      <script type="text/javascript" async="" src="https://widget.intercom.io/widget/dgkjq2bp"></script><script nonce="" type="module" crossorigin="" src="/static/index-CYTQyVAq.js"></script>
+      <link rel="stylesheet" crossorigin="" href="/static/C5CC7YPsR_.css">
+      <script nonce="" type="module">import.meta.url;import("_").catch(()=>1);(async function*(){})().next();if(location.protocol!="file:"){window.__vite_is_modern_browser=true}</script>
+      <script nonce="" type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
+    <link rel="modulepreload" as="script" crossorigin="" href="/static/C2aIRGLQOh.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/BFyog71B1I.js"><link rel="stylesheet" href="/static/CFkw7B_gm-.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/CJnlUOvsM-.js"><link rel="stylesheet" href="/static/BX9BFw3PsH.css"><link rel="stylesheet" href="/static/BKxHiQFIW6.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C4wedv2caf.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/C961Md9dp6.js"><link rel="stylesheet" href="/static/C9MBEX7jPb.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C24vLskmtV.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/D9oCOueJRr.js"><link rel="stylesheet" href="/static/CcFh4jCko7.css"><link rel="stylesheet" href="/static/DqyyrKcaOP.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/Dh6auKfXaX.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/Bq7L_yreGd.js"><link rel="stylesheet" href="/static/C8xVwo073p.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/yQ3rCgkFw7.js"><link rel="stylesheet" href="/static/CnivQy12om.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/De9Te-Rlz8.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/IyMja2T0sm.js"><link rel="stylesheet" href="/static/DDpxtZQhKj.css"><link rel="stylesheet" href="/static/B2IOrA8ktD.css"><style data-emotion="css" data-s=""></style></head>
+    <body>
+        <noscript>You need to enable JavaScript to run this app.</noscript>
+        <div id="root"><div class="rl7uK"><div class="hDvly"><div class="vpev1"><div class="_5Amyn"><div class="flex"><div class="relative"><select class="bvkc-"><optgroup label="Organizations"><option value="org-dH3B6ymfbSTLBRRCfId1BRPR">Climate AI Hackathon 21</option><option value="org-mXJaZ8zXm1qhWbRj0yQxhQFN">tmc</option></optgroup></select><button id="select-trigger-radix-:r0:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" tabindex="-1" aria-hidden="true"><span class="RWOJJ"><span class="flex items-center gap-2 font-medium"><span class="qCm0E" role="presentation" data-variant="dark" style="--avatar-size: 25px; --avatar-initial-nudge: 0px;"><div class="_9uyMP">T</div></span>tmc</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button></div></div><div class="u-pgg">/</div><button id="select-trigger-radix-:r1:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" aria-haspopup="dialog" aria-expanded="false" aria-controls="radix-:r2:" data-state="closed"><span class="RWOJJ"><span class="font-medium" style="color: var(--text-default);">Default project</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button></div></div><div class="Aip-a"><button class="_8dPNb"><span class="tfB-7"><span class="_3Tbwl UuUwq"></span><span class="gw2x5"><span class="_3Tbwl RMlM5"></span></span></span></button></div></div><main class="unjkE" data-sidebar="expanded" data-mobile-menu="hidden"><aside class="EpwGB VO47n"><nav class="okBd0"><a class="w9s17" data-primary-nav-item="" href="/playground"><span class="EsOWR vaD2P" data-title="Playground">Playground</span><span class="EsOWR ksWxL" data-title="Playground">Playground</span></a><a class="w9s17" data-primary-nav-item="" href="/chat-completions"><span class="EsOWR vaD2P" data-title="Dashboard">Dashboard</span><span class="EsOWR ksWxL" data-title="Dashboard">Dashboard</span></a><a aria-current="page" class="w9s17 _1T-tk" data-primary-nav-item="" href="/docs"><span class="EsOWR vaD2P" data-title="Docs">Docs</span><span class="EsOWR ksWxL" data-title="Docs">Docs</span></a><a class="w9s17" data-primary-nav-item="" href="/docs/api-reference/assistants"><span class="EsOWR vaD2P" data-title="API reference">API reference</span><span class="EsOWR ksWxL" data-title="API">API</span></a></nav><div class="GVIPA"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="aTuAl"><div class="_0MyKb qyrrQ"><div class="search"><button type="button" class="DocSearch DocSearch-Button" aria-label="Search"><span class="DocSearch-Button-Container"><svg width="20" height="20" class="DocSearch-Search-Icon" viewBox="0 0 20 20"><path d="M14.386 14.386l4.0877 4.0877-4.0877-4.0877c-2.9418 2.9419-7.7115 2.9419-10.6533 0-2.9419-2.9418-2.9419-7.7115 0-10.6533 2.9418-2.9419 7.7115-2.9419 10.6533 0 2.9419 2.9418 2.9419 7.7115 0 10.6533z" stroke="currentColor" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="DocSearch-Button-Placeholder">Search</span></span><span class="DocSearch-Button-Keys"><kbd class="DocSearch-Button-Key">⌘</kbd><kbd class="DocSearch-Button-Key">K</kbd></span></button></div></div><div class="DH-HY qyrrQ QeXPj"><div class="side-nav-section"><div class="side-nav-header subheading">Get started</div><a class="scroll-link side-nav-item" href="/docs/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/models"><span class="side-nav-item-name">Models</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/changelog"><span class="side-nav-item-name">Changelog</span></a><a href="https://openai.com/policies" class="scroll-link side-nav-item" target="_blank" rel="noreferrer"><span class="side-nav-item-name">Terms and policies</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-icon"><path fill-rule="evenodd" d="M15 5a1 1 0 1 1 0-2h5a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V6.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L17.586 5H15ZM4 7a3 3 0 0 1 3-3h3a1 1 0 1 1 0 2H7a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3a1 1 0 1 1 2 0v3a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Capabilities</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-generation"><span class="side-nav-item-name">Text generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/images"><span class="side-nav-item-name">Image generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/vision"><span class="side-nav-item-name">Vision</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/embeddings"><span class="side-nav-item-name">Vector embeddings</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-to-speech"><span class="side-nav-item-name">Text to speech</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/speech-to-text"><span class="side-nav-item-name">Speech to text</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/moderation"><span class="side-nav-item-name">Moderation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/reasoning"><span class="side-nav-item-name">Reasoning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Guides</div><a class="scroll-link side-nav-item" href="/docs/guides/function-calling"><span class="side-nav-item-name">Function calling</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/structured-outputs"><span class="side-nav-item-name">Structured outputs</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/evals"><span class="side-nav-item-name">Evaluations</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/fine-tuning"><span class="side-nav-item-name">Fine-tuning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/distillation"><span class="side-nav-item-name">Distillation</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/realtime"><span class="side-nav-item-name">Realtime API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/batch"><span class="side-nav-item-name">Batch API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Assistants</div><a class="scroll-link side-nav-item" href="/docs/assistants/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/assistants/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems active active-exact" data-side-nav-subitems="visible" href="/docs/assistants/deep-dive"><span class="side-nav-item-name">Deep dive</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><div class="side-nav-subitems"><a class="scroll-link side-nav-item side-nav-child" href="/docs/assistants/deep-dive/creating-assistants"><span class="side-nav-item-name">Creating assistants</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/assistants/deep-dive/managing-threads-and-messages"><span class="side-nav-item-name">Managing threads and messages</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/assistants/deep-dive/runs-and-run-steps"><span class="side-nav-item-name">Runs and run steps</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/assistants/deep-dive/data-access-guidance"><span class="side-nav-item-name">Data access guidance</span></a></div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/tools"><span class="side-nav-item-name">Tools</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/assistants/whats-new"><span class="side-nav-item-name">What's new?</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/migration"><span class="side-nav-item-name">Migration guide</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">ChatGPT</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/actions"><span class="side-nav-item-name">Actions</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/gpts/release-notes"><span class="side-nav-item-name">Release notes</span></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Best practices</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/prompt-engineering"><span class="side-nav-item-name">Prompt engineering</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/production-best-practices"><span class="side-nav-item-name">Production best practices</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/safety-best-practices"><span class="side-nav-item-name">Safety best practices</span></a><a class="scroll-link side-nav-item" href="/docs/guides/prompt-caching"><span class="side-nav-item-name">Prompt caching</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/model-selection"><span class="side-nav-item-name">Model selection</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/latency-optimization"><span class="side-nav-item-name">Latency optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/optimizing-llm-accuracy"><span class="side-nav-item-name">Accuracy optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/advanced-usage"><span class="side-nav-item-name">Advanced usage</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Resources</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/libraries"><span class="side-nav-item-name">Libraries</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/examples"><span class="side-nav-item-name">Prompt examples</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/rate-limits"><span class="side-nav-item-name">Rate limits</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/error-codes"><span class="side-nav-item-name">Error codes</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/deprecations"><span class="side-nav-item-name">Deprecations</span></a></div></div></div></div></div></div></div></div><div class="EDOEc qyrrQ"><div class="q3jBs"><a href="https://cookbook.openai.com" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M14.447 7.106a1 1 0 0 1 .447 1.341l-4 8a1 1 0 1 1-1.788-.894l4-8a1 1 0 0 1 1.341-.447ZM6.6 7.2a1 1 0 0 1 .2 1.4L4.25 12l2.55 3.4a1 1 0 0 1-1.6 1.2l-3-4a1 1 0 0 1 0-1.2l3-4a1 1 0 0 1 1.4-.2Zm10.8 0a1 1 0 0 1 1.4.2l3 4a1 1 0 0 1 0 1.2l-3 4a1 1 0 0 1-1.6-1.2l2.55-3.4-2.55-3.4a1 1 0 0 1 .2-1.4Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Cookbook</span></span></a><a href="https://community.openai.com/categories" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M10.5 8.5a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12 5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7ZM3 9.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm1-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm16 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm-3 1a3 3 0 1 1 6 0 3 3 0 0 1-6 0ZM8 18c0-.974.438-1.684 1.142-2.185C9.876 15.293 10.911 15 12 15c1.09 0 2.124.293 2.858.815.704.5 1.142 1.21 1.142 2.185a1 1 0 1 0 2 0c0-1.692-.812-2.982-1.983-3.815C14.876 13.373 13.411 13 12 13c-1.41 0-2.876.373-4.017 1.185C6.812 15.018 6 16.308 6 18a1 1 0 1 0 2 0Zm-3.016-3.675a1 1 0 0 1-.809 1.16C2.79 15.732 2 16.486 2 17.5a1 1 0 1 1-2 0c0-2.41 1.978-3.655 3.825-3.985a1 1 0 0 1 1.16.81Zm14.84 1.16a1 1 0 1 1 .351-1.97C22.022 13.845 24 15.09 24 17.5a1 1 0 1 1-2 0c0-1.014-.79-1.768-2.175-2.015Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Forum</span></span></a><button class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12 9a1 1 0 0 0-.879.522 1 1 0 0 1-1.754-.96A3 3 0 0 1 12 7c1.515 0 2.567 1.006 2.866 2.189.302 1.189-.156 2.574-1.524 3.258A.618.618 0 0 0 13 13a1 1 0 1 1-2 0c0-.992.56-1.898 1.447-2.342.455-.227.572-.618.48-.978C12.836 9.314 12.529 9 12 9Z" clip-rule="evenodd"></path><path d="M13.1 16a1.1 1.1 0 1 1-2.2 0 1.1 1.1 0 0 1 2.2 0Z"></path></svg></span><span class="_0LIzz">Help</span></span></button><a class="-ySo1 FDGXZ" data-primary-nav-item="" aria-haspopup="true" aria-expanded="false" href="/settings"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.568 3.5a1 1 0 0 0-.863.494l-.811 1.381A3.001 3.001 0 0 1 7.33 6.856l-1.596.013a1 1 0 0 0-.858.501l-.439.761a1 1 0 0 0-.004.992l.792 1.4a3 3 0 0 1 0 2.954l-.792 1.4a1 1 0 0 0 .004.992l.439.76a1 1 0 0 0 .858.502l1.596.013a3 3 0 0 1 2.564 1.48l.811 1.382a1 1 0 0 0 .863.494h.87a1 1 0 0 0 .862-.494l.812-1.381a3.001 3.001 0 0 1 2.563-1.481l1.596-.013a1 1 0 0 0 .86-.501l.438-.761a1 1 0 0 0 .004-.992l-.793-1.4a3 3 0 0 1 0-2.954l.793-1.4a1 1 0 0 0-.004-.992l-.439-.76a1 1 0 0 0-.858-.502l-1.597-.013a3 3 0 0 1-2.563-1.48L13.3 3.993a1 1 0 0 0-.862-.494h-.87ZM8.98 2.981A3.001 3.001 0 0 1 11.568 1.5h.87c1.064 0 2.049.564 2.588 1.481l.811 1.382a1 1 0 0 0 .855.494l1.596.013a3 3 0 0 1 2.575 1.502l.44.76a3 3 0 0 1 .011 2.975l-.792 1.4a1 1 0 0 0 0 .985l.792 1.401a3 3 0 0 1-.012 2.974l-.439.761a3.001 3.001 0 0 1-2.575 1.503l-1.597.012a1 1 0 0 0-.854.494l-.811 1.382a3.001 3.001 0 0 1-2.588 1.481h-.87a3.001 3.001 0 0 1-2.588-1.481l-.811-1.382a1 1 0 0 0-.855-.494l-1.596-.012a3.001 3.001 0 0 1-2.576-1.503l-.438-.76a3 3 0 0 1-.013-2.975l.793-1.4a1 1 0 0 0 0-.985l-.793-1.4a3 3 0 0 1 .013-2.975l.438-.761A3.001 3.001 0 0 1 5.718 4.87l1.596-.013a1 1 0 0 0 .855-.494l.81-1.382Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12.003 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM8.502 12a3.5 3.5 0 1 1 7 .001 3.5 3.5 0 0 1-7-.001Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Settings</span></span></a><div class="LwKwt"><button class="jYGOC" type="button" id="radix-:r3:" aria-haspopup="menu" aria-expanded="false" data-state="closed"><span class="qCm0E" role="presentation" data-variant="light"><div class="_8ufcO"><img src="https://lh3.googleusercontent.com/a/ACg8ocLahjE0y72DP3dxsDWlC2UR4uGhyySAPayi5gmRmLoIL7h-xd7L=s96-c" class="mImKu" alt="" role="presentation" data-loaded=""></div></span></button></div></div></div></aside><div class="_7j8ow"><div class="qLnXc"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="ImBcX"><div class="docs-scroll-container" data-important-algolia-crawl="true"><div class="page-body full-width flush docs-page"><div class="markdown-page markdown-content markdown-prompt-blockquote assistants-overview"><div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/agents"><h1 class="anchor-heading" data-name="agents"><p>Assistants API Deep dive <div class="css-1mgbxaa e1y162941">Beta</div></p><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h1></a></div>
+<p>As described in the <a href="/docs/assistants/overview">Assistants Overview</a>, there are several concepts involved in building an app with the Assistants API.</p>
+<p>This guide goes deeper into each of these concepts.</p>
+<p>If you want to get started coding right away, check out the <a href="/docs/assistants/quickstart">Assistants API Quickstart</a>.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/creating-assistants"><h2 class="anchor-heading" data-name="creating-assistants">Creating Assistants<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p>We recommend using OpenAI's 
+<a href="/docs/models/gpt-4-and-gpt-4-turbo">latest models</a> with the Assistants API
+for best results and maximum compatibility with tools.</p></div></div></div></div>
+<p>To get started, creating an Assistant only requires specifying the <code>model</code> to use. But you can further customize the behavior of the Assistant:</p>
+<ol>
+<li>Use the <code>instructions</code> parameter to guide the personality of the Assistant and define its goals. Instructions are similar to system messages in the Chat Completions API.</li>
+<li>Use the <code>tools</code> parameter to give the Assistant access to up to 128 tools. You can give it access to OpenAI-hosted tools like <code>code_interpreter</code> and <code>file_search</code>, or call a third-party tools via a <code>function</code> calling.</li>
+<li>Use the <code>tool_resources</code> parameter to give the tools like <code>code_interpreter</code> and <code>file_search</code> access to files. Files are uploaded using the <code>File</code> <a href="/docs/api-reference/files/create">upload endpoint</a> and must have the <code>purpose</code> set to <code>assistants</code> to be used with this API.</li>
+</ol>
+<p>For example, to create an Assistant that can create data visualization based on a <code>.csv</code> file, first upload a file.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option><option value="curl">curl</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span></code><span><span>file = client.files.create(
+</span></span><span><span>  file=</span><span class="hljs-built_in">open</span><span>(</span><span class="hljs-string">"revenue-forecast.csv"</span><span>, </span><span class="hljs-string">"rb"</span><span>),
+</span></span><span><span>  purpose=</span><span class="hljs-string">'assistants'</span><span>
+</span></span><span>)</span></code></pre></div></div>
+<p>Then, create the Assistant with the <code>code_interpreter</code> tool enabled and provide the file as a resource to the tool.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option><option value="curl">curl</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span></code><span><span>assistant = client.beta.assistants.create(
+</span></span><span><span>  name=</span><span class="hljs-string">"Data visualizer"</span><span>,
+</span></span><span><span>  description=</span><span class="hljs-string">"You are great at creating beautiful data visualizations. You analyze data present in .csv files, understand trends, and come up with data visualizations relevant to those trends. You also share a brief text summary of the trends observed."</span><span>,
+</span></span><span><span>  model=</span><span class="hljs-string">"gpt-4o"</span><span>,
+</span></span><span><span>  tools=[{</span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"code_interpreter"</span><span>}],
+</span></span><span>  tool_resources={
+</span><span><span>    </span><span class="hljs-string">"code_interpreter"</span><span>: {
+</span></span><span><span>      </span><span class="hljs-string">"file_ids"</span><span>: [file.</span><span class="hljs-built_in">id</span><span>]
+</span></span><span>    }
+</span><span>  }
+</span><span>)</span></code></pre></div></div>
+<p>You can attach a maximum of 20 files to <code>code_interpreter</code> and 10,000 files to <code>file_search</code> (using <code>vector_store</code> <a href="/docs/api-reference/vector-stores/object">objects</a>).</p>
+<p>Each file can be at most 512 MB in size and have a maximum of 5,000,000 tokens. By default, the size of all the files uploaded in your project cannot exceed 100 GB, but you can reach out to our support team to increase this limit.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/managing-threads-and-messages"><h2 class="anchor-heading" data-name="managing-threads-and-messages">Managing Threads and Messages<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Threads and Messages represent a conversation session between an Assistant and a user. There is a limit of 100,000 Messages per Thread. Once the size of the Messages exceeds the context window of the model, the Thread will attempt to smartly truncate messages, before fully dropping the ones it considers the least important.</p>
+<p>You can create a Thread with an initial list of Messages like this:</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option><option value="curl">curl</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span></code><span><span>thread = client.beta.threads.create(
+</span></span><span>  messages=[
+</span><span>    {
+</span><span><span>      </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>,
+</span></span><span><span>      </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"Create 3 data visualizations based on the trends in this file."</span><span>,
+</span></span><span><span>      </span><span class="hljs-string">"attachments"</span><span>: [
+</span></span><span>        {
+</span><span><span>          </span><span class="hljs-string">"file_id"</span><span>: file.</span><span class="hljs-built_in">id</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"tools"</span><span>: [{</span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"code_interpreter"</span><span>}]
+</span></span><span>        }
+</span><span>      ]
+</span><span>    }
+</span><span>  ]
+</span><span>)</span></code></pre></div></div>
+<p>Messages can contain text, images, or file attachment. Message <code>attachments</code> are helper methods that add files to a thread's <code>tool_resources</code>. You can also choose to add files to the <code>thread.tool_resources</code> directly.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/creating-image-input-content"><h3 class="anchor-heading" data-name="creating-image-input-content">Creating image input content<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Message content can contain either external image URLs or File IDs uploaded via the <a href="/docs/api-reference/files/create">File API</a>. Only <a href="/docs/models">models</a> with Vision support can accept image input. Supported image content types include png, jpg, gif, and webp. When creating image files, pass <code>purpose="vision"</code> to allow you to later download and display the input content. Currently, there is a 100GB limit per project. Please contact us to request a limit increase.</p>
+<p>Tools cannot access image content unless specified. To pass image files to Code Interpreter, add the file ID in the message <code>attachments</code> list to allow the tool to read and analyze the input. Image URLs cannot be downloaded in Code Interpreter today.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option><option value="curl">curl</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span></code><span><span>file = client.files.create(
+</span></span><span><span>  file=</span><span class="hljs-built_in">open</span><span>(</span><span class="hljs-string">"myimage.png"</span><span>, </span><span class="hljs-string">"rb"</span><span>),
+</span></span><span><span>  purpose=</span><span class="hljs-string">"vision"</span><span>
+</span></span><span>)
+</span><span>thread = client.beta.threads.create(
+</span><span>  messages=[
+</span><span>    {
+</span><span><span>      </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>,
+</span></span><span><span>      </span><span class="hljs-string">"content"</span><span>: [
+</span></span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"text"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"text"</span><span>: </span><span class="hljs-string">"What is the difference between these images?"</span><span>
+</span></span><span>        },
+</span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"image_url"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"image_url"</span><span>: {</span><span class="hljs-string">"url"</span><span>: </span><span class="hljs-string">"https://example.com/image.png"</span><span>}
+</span></span><span>        },
+</span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"image_file"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"image_file"</span><span>: {</span><span class="hljs-string">"file_id"</span><span>: file.</span><span class="hljs-built_in">id</span><span>}
+</span></span><span>        },
+</span><span>      ],
+</span><span>    }
+</span><span>  ]
+</span><span>)</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/low-or-high-fidelity-image-understanding"><h4 class="anchor-heading" data-name="low-or-high-fidelity-image-understanding">Low or high fidelity image understanding<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>By controlling the <code>detail</code> parameter, which has three options, <code>low</code>, <code>high</code>, or <code>auto</code>, you have control over how the model processes the image and generates its textual understanding.</p>
+<ul>
+<li><code>low</code> will enable the "low res" mode. The model will receive a low-res 512px x 512px version of the image, and represent the image with a budget of 85 tokens. This allows the API to return faster responses and consume fewer input tokens for use cases that do not require high detail.</li>
+<li><code>high</code> will enable "high res" mode, which first allows the model to see the low res image and then creates detailed crops of input images based on the input image size. Use the <a href="https://openai.com/api/pricing/" target="_blank" rel="noopener noreferrer">pricing calculator</a> to see token counts for various image sizes.</li>
+</ul>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option><option value="curl">curl</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span></code><span><span>thread = client.beta.threads.create(
+</span></span><span>  messages=[
+</span><span>    {
+</span><span><span>      </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>,
+</span></span><span><span>      </span><span class="hljs-string">"content"</span><span>: [
+</span></span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"text"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"text"</span><span>: </span><span class="hljs-string">"What is this an image of?"</span><span>
+</span></span><span>        },
+</span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"image_url"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"image_url"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-string">"url"</span><span>: </span><span class="hljs-string">"https://example.com/image.png"</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"detail"</span><span>: </span><span class="hljs-string">"high"</span><span>
+</span></span><span>          }
+</span><span>        },
+</span><span>      ],
+</span><span>    }
+</span><span>  ]
+</span><span>)</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/context-window-management"><h3 class="anchor-heading" data-name="context-window-management">Context window management<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>The Assistants API automatically manages the truncation to ensure it stays within the model's maximum context length. You can customize this behavior by specifying the maximum tokens you'd like a run to utilize and/or the maximum number of recent messages you'd like to include in a run.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/max-completion-and-max-prompt-tokens"><h4 class="anchor-heading" data-name="max-completion-and-max-prompt-tokens">Max Completion and Max Prompt Tokens<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>To control the token usage in a single Run, set <code>max_prompt_tokens</code> and <code>max_completion_tokens</code> when creating the Run. These limits apply to the total number of tokens used in all completions throughout the Run's lifecycle.</p>
+<p>For example, initiating a Run with <code>max_prompt_tokens</code> set to 500 and <code>max_completion_tokens</code> set to 1000 means the first completion will truncate the thread to 500 tokens and cap the output at 1000 tokens. If only 200 prompt tokens and 300 completion tokens are used in the first completion, the second completion will have available limits of 300 prompt tokens and 700 completion tokens.</p>
+<p>If a completion reaches the <code>max_completion_tokens</code> limit, the Run will terminate with a status of <code>incomplete</code>, and details will be provided in the <code>incomplete_details</code> field of the Run object.</p>
+<div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p>When using the File Search tool, we recommend setting the max_prompt_tokens to no less
+than 20,000. For longer conversations or multiple interactions with File Search,
+consider increasing this limit to 50,000, or ideally, removing the max_prompt_tokens
+limits altogether to get the highest quality results.</p></div></div></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/truncation-strategy"><h4 class="anchor-heading" data-name="truncation-strategy">Truncation Strategy<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>You may also specify a truncation strategy to control how your thread should be rendered into the model's context window.
+Using a truncation strategy of type <code>auto</code> will use OpenAI's default truncation strategy. Using a truncation strategy of type <code>last_messages</code> will allow you to specify the number of the most recent messages to include in the context window.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/message-annotations"><h3 class="anchor-heading" data-name="message-annotations">Message annotations<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Messages created by Assistants may contain <a href="/docs/api-reference/messages/object#messages/object-content"><code>annotations</code></a> within the <code>content</code> array of the object. Annotations provide information around how you should annotate the text in the Message.</p>
+<p>There are two types of Annotations:</p>
+<ol>
+<li><code>file_citation</code>: File citations are created by the <a href="/docs/assistants/tools/file-search"><code>file_search</code></a> tool and define references to a specific file that was uploaded and used by the Assistant to generate the response.</li>
+<li><code>file_path</code>: File path annotations are created by the <a href="/docs/assistants/tools/code-interpreter"><code>code_interpreter</code></a> tool and contain references to the files generated by the tool.</li>
+</ol>
+<p>When annotations are present in the Message object, you'll see illegible model-generated substrings in the text that you should replace with the annotations. These strings may look something like <code>【13†source】</code> or <code>sandbox:/mnt/data/file.csv</code>. Here’s an example python code snippet that replaces these strings with information present in the annotations.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span></code><span><span class="hljs-comment"># Retrieve the message object</span><span>
+</span></span><span>message = client.beta.threads.messages.retrieve(
+</span><span><span>  thread_id=</span><span class="hljs-string">"..."</span><span>,
+</span></span><span><span>  message_id=</span><span class="hljs-string">"..."</span><span>
+</span></span><span>)
+</span><span><span></span><span class="hljs-comment"># Extract the message content</span><span>
+</span></span><span><span>message_content = message.content[</span><span class="hljs-number">0</span><span>].text
+</span></span><span>annotations = message_content.annotations
+</span><span>citations = []
+</span><span><span></span><span class="hljs-comment"># Iterate over the annotations and add footnotes</span><span>
+</span></span><span><span></span><span class="hljs-keyword">for</span><span> index, annotation </span><span class="hljs-keyword">in</span><span> </span><span class="hljs-built_in">enumerate</span><span>(annotations):
+</span></span><span><span>    </span><span class="hljs-comment"># Replace the text with a footnote</span><span>
+</span></span><span><span>    message_content.value = message_content.value.replace(annotation.text, </span><span class="hljs-string">f' [</span><span class="hljs-string hljs-subst">{index}</span><span class="hljs-string">]'</span><span>)
+</span></span><span><span>    </span><span class="hljs-comment"># Gather citations based on annotation attributes</span><span>
+</span></span><span><span>    </span><span class="hljs-keyword">if</span><span> (file_citation := </span><span class="hljs-built_in">getattr</span><span>(annotation, </span><span class="hljs-string">'file_citation'</span><span>, </span><span class="hljs-literal">None</span><span>)):
+</span></span><span>        cited_file = client.files.retrieve(file_citation.file_id)
+</span><span><span>        citations.append(</span><span class="hljs-string">f'[</span><span class="hljs-string hljs-subst">{index}</span><span class="hljs-string">] </span><span class="hljs-string hljs-subst">{file_citation.quote}</span><span class="hljs-string"> from </span><span class="hljs-string hljs-subst">{cited_file.filename}</span><span class="hljs-string">'</span><span>)
+</span></span><span><span>    </span><span class="hljs-keyword">elif</span><span> (file_path := </span><span class="hljs-built_in">getattr</span><span>(annotation, </span><span class="hljs-string">'file_path'</span><span>, </span><span class="hljs-literal">None</span><span>)):
+</span></span><span>        cited_file = client.files.retrieve(file_path.file_id)
+</span><span><span>        citations.append(</span><span class="hljs-string">f'[</span><span class="hljs-string hljs-subst">{index}</span><span class="hljs-string">] Click &lt;here&gt; to download </span><span class="hljs-string hljs-subst">{cited_file.filename}</span><span class="hljs-string">'</span><span>)
+</span></span><span><span>        </span><span class="hljs-comment"># Note: File download functionality not implemented above for brevity</span><span>
+</span></span><span><span></span><span class="hljs-comment"># Add footnotes to the end of the message before displaying to user</span><span>
+</span></span><span><span>message_content.value += </span><span class="hljs-string">'\n'</span><span> + </span><span class="hljs-string">'\n'</span><span>.join(citations)</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/runs-and-run-steps"><h2 class="anchor-heading" data-name="runs-and-run-steps">Runs and Run Steps<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>When you have all the context you need from your user in the Thread, you can run the Thread with an Assistant of your choice.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option><option value="curl">curl</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span></code><span><span>run = client.beta.threads.runs.create(
+</span></span><span><span>  thread_id=thread.</span><span class="hljs-built_in">id</span><span>,
+</span></span><span><span>  assistant_id=assistant.</span><span class="hljs-built_in">id</span><span>
+</span></span><span>)</span></code></pre></div></div>
+<p>By default, a Run will use the <code>model</code> and <code>tools</code> configuration specified in Assistant object, but you can override most of these when creating the Run for added flexibility:</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option><option value="curl">curl</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span></code><span><span>run = client.beta.threads.runs.create(
+</span></span><span><span>  thread_id=thread.</span><span class="hljs-built_in">id</span><span>,
+</span></span><span><span>  assistant_id=assistant.</span><span class="hljs-built_in">id</span><span>,
+</span></span><span><span>  model=</span><span class="hljs-string">"gpt-4o"</span><span>,
+</span></span><span><span>  instructions=</span><span class="hljs-string">"New instructions that override the Assistant instructions"</span><span>,
+</span></span><span><span>  tools=[{</span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"code_interpreter"</span><span>}, {</span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"file_search"</span><span>}]
+</span></span><span>)</span></code></pre></div></div>
+<p>Note: <code>tool_resources</code> associated with the Assistant cannot be overridden during Run creation. You must use the <a href="/docs/api-reference/assistants/modifyAssistant">modify Assistant</a> endpoint to do this.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/run-lifecycle"><h4 class="anchor-heading" data-name="run-lifecycle">Run lifecycle<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>Run objects can have multiple statuses.</p>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-run-statuses-v2.png" alt="Run lifecycle - diagram showing possible status transitions"></p>
+<table><thead><tr><th>Status</th><th>Definition</th></tr></thead><tbody><tr><td><code>queued</code></td><td>When Runs are first created or when you complete the <code>required_action</code>, they are moved to a queued status. They should almost immediately move to <code>in_progress</code>.</td></tr><tr><td><code>in_progress</code></td><td>While in_progress, the Assistant uses the model and tools to perform steps. You can view progress being made by the Run by examining the <a href="/docs/api-reference/runs/step-object">Run Steps</a>.</td></tr><tr><td><code>completed</code></td><td>The Run successfully completed! You can now view all Messages the Assistant added to the Thread, and all the steps the Run took. You can also continue the conversation by adding more user Messages to the Thread and creating another Run.</td></tr><tr><td><code>requires_action</code></td><td>When using the <a href="/docs/assistants/tools/function-calling">Function calling</a> tool, the Run will move to a <code>required_action</code> state once the model determines the names and arguments of the functions to be called. You must then run those functions and <a href="/docs/api-reference/runs/submitToolOutputs">submit the outputs</a> before the run proceeds. If the outputs are not provided before the <code>expires_at</code> timestamp passes (roughly 10 mins past creation), the run will move to an expired status.</td></tr><tr><td><code>expired</code></td><td>This happens when the function calling outputs were not submitted before <code>expires_at</code> and the run expires. Additionally, if the runs take too long to execute and go beyond the time stated in <code>expires_at</code>, our systems will expire the run.</td></tr><tr><td><code>cancelling</code></td><td>You can attempt to cancel an <code>in_progress</code> run using the <a href="/docs/api-reference/runs/cancelRun">Cancel Run</a> endpoint. Once the attempt to cancel succeeds, status of the Run moves to <code>cancelled</code>. Cancellation is attempted but not guaranteed.</td></tr><tr><td><code>cancelled</code></td><td>Run was successfully cancelled.</td></tr><tr><td><code>failed</code></td><td>You can view the reason for the failure by looking at the <code>last_error</code> object in the Run. The timestamp for the failure will be recorded under <code>failed_at</code>.</td></tr><tr><td><code>incomplete</code></td><td>Run ended due to <code>max_prompt_tokens</code> or <code>max_completion_tokens</code> reached. You can view the specific reason by looking at the <code>incomplete_details</code> object in the Run.</td></tr></tbody></table>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/polling-for-updates"><h4 class="anchor-heading" data-name="polling-for-updates">Polling for updates<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>If you are not using <a href="/docs/assistants/overview/step-4-create-a-run?context=with-streaming">streaming</a>, in order to keep the status of your run up to date, you will have to periodically <a href="/docs/api-reference/runs/getRun">retrieve the Run</a> object. You can check the status of the run each time you retrieve the object to determine what your application should do next.</p>
+<p>You can optionally use Polling Helpers in our <a href="https://github.com/openai/openai-node?tab=readme-ov-file#polling-helpers" target="_blank" rel="noopener noreferrer">Node</a> and <a href="https://github.com/openai/openai-python?tab=readme-ov-file#polling-helpers" target="_blank" rel="noopener noreferrer">Python</a> SDKs to help you with this. These helpers will automatically poll the Run object for you and return the Run object when it's in a terminal state.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/thread-locks"><h4 class="anchor-heading" data-name="thread-locks">Thread locks<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>When a Run is <code>in_progress</code> and not in a terminal state, the Thread is locked. This means that:</p>
+<ul>
+<li>New Messages cannot be added to the Thread.</li>
+<li>New Runs cannot be created on the Thread.</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/run-steps"><h4 class="anchor-heading" data-name="run-steps">Run steps<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p><img src="https://cdn.openai.com/API/docs/images/diagram-2.png" alt="Run steps lifecycle - diagram showing possible status transitions"></p>
+<p>Run step statuses have the same meaning as Run statuses.</p>
+<p>Most of the interesting detail in the Run Step object lives in the <code>step_details</code> field. There can be two types of step details:</p>
+<ol>
+<li><code>message_creation</code>: This Run Step is created when the Assistant creates a Message on the Thread.</li>
+<li><code>tool_calls</code>: This Run Step is created when the Assistant calls a tool. Details around this are covered in the relevant sections of the <a href="/docs/assistants/tools">Tools</a> guide.</li>
+</ol>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/assistants/deep-dive/data-access-guidance"><h2 class="anchor-heading" data-name="data-access-guidance">Data Access Guidance<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Currently, Assistants, Threads, Messages, and Vector Stores created via the API are scoped to the Project they're created in. As such, any person with API key access to that Project is able to read or write Assistants, Threads, Messages, and Runs in the Project.</p>
+<p>We strongly recommend the following data access controls:</p>
+<ul>
+<li><em>Implement authorization.</em> Before performing reads or writes on Assistants, Threads, Messages, and Vector Stores, ensure that the end-user is authorized to do so. For example, store in your database the object IDs that the end-user has access to, and check it before fetching the object ID with the API.</li>
+<li><em>Restrict API key access.</em> Carefully consider who in your organization should have API keys and be part of a Project. Periodically audit this list. API keys enable a wide range of operations including reading and modifying sensitive information, such as Messages and Files.</li>
+<li><em>Create separate accounts.</em> Consider creating separate Projects for different applications in order to isolate data across multiple applications.</li>
+</ul></div><div class="docs-footer"><div class="docs-feedback">Was this page useful?<button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Helpful" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12.132 2.504a1 1 0 0 1 .992-.496l.454.056a4 4 0 0 1 3.327 5.146L16.354 9h.718c2.638 0 4.553 2.508 3.86 5.053l-1.364 5A4 4 0 0 1 15.708 22H6a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3h2c.26 0 .5-.14.628-.364l3.504-6.132ZM10 20h5.709a2 2 0 0 0 1.93-1.474l1.363-5A2 2 0 0 0 17.072 11H15a1 1 0 0 1-.956-1.294l.95-3.084a2 2 0 0 0-1.462-2.537l-3.168 5.543A2.723 2.723 0 0 1 9 10.81V19a1 1 0 0 0 1 1Zm-3-9v8c0 .35.06.687.17 1H6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h1Z" clip-rule="evenodd"></path></svg></span></span></button><button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Thumbs down" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.873 21.496a1 1 0 0 1-.992.496l-.454-.056A4 4 0 0 1 7.1 16.79L7.65 15h-.718c-2.637 0-4.553-2.508-3.859-5.052l1.364-5A4 4 0 0 1 8.296 2h9.709a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-2c-.26 0-.5.14-.628.364l-3.504 6.132ZM14.005 4h-5.71a2 2 0 0 0-1.929 1.474l-1.363 5A2 2 0 0 0 6.933 13h2.072a1 1 0 0 1 .955 1.294l-.949 3.084a2 2 0 0 0 1.462 2.537l3.167-5.543a2.723 2.723 0 0 1 1.364-1.182V5a1 1 0 0 0-1-1Zm3 9V5c0-.35-.06-.687-.171-1h1.17a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1Z" clip-rule="evenodd"></path></svg></span></span></button></div></div></div></div></div></div></div></div></div></div></div></main><div data-testid="compliance-management-wrapper"></div></div><div class="layers-root"></div></div>
+      <script nonce="" nomodule="">!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-polyfill" src="/static/polyfills-legacy-DO_EefdF.js"></script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-entry" data-src="/static/index-legacy-U3KC6Hpc.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+    
+
+<div class="CRjGu"></div><iframe id="intercom-frame" style="position: absolute !important; opacity: 0 !important; width: 1px !important; height: 1px !important; top: 0 !important; left: 0 !important; border: none !important; display: block !important; z-index: -1 !important; pointer-events: none;" aria-hidden="true" tabindex="-1" title="Intercom"></iframe><div class="intercom-lightweight-app"><style id="intercom-lightweight-app-style" type="text/css">
+  @keyframes intercom-lightweight-app-launcher {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes intercom-lightweight-app-gradient {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes intercom-lightweight-app-messenger {
+    0% {
+      opacity: 0;
+      transform: scale(0);
+    }
+    40% {
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .intercom-lightweight-app {
+    position: fixed;
+    z-index: 2147483001;
+    width: 0;
+    height: 0;
+    font-family: intercom-font, "Helvetica Neue", "Apple Color Emoji", Helvetica, Arial, sans-serif;
+  }
+
+  .intercom-lightweight-app-gradient {
+    position: fixed;
+    z-index: 2147483002;
+    width: 500px;
+    height: 500px;
+    bottom: 0;
+    right: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at bottom right,
+      rgba(29, 39, 54, 0.16) 0%,
+      rgba(29, 39, 54, 0) 72%);
+    animation: intercom-lightweight-app-gradient 200ms ease-out;
+  }
+
+  .intercom-lightweight-app-launcher {
+    position: fixed;
+    z-index: 2147483003;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none;
+    bottom: 20px;
+    right: 20px;
+    max-width: 48px;
+    width: 48px;
+    max-height: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #202123;
+    cursor: pointer;
+    box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.06), 0 2px 32px 0 rgba(0, 0, 0, 0.16);
+    transition: transform 167ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    box-sizing: content-box;
+  }
+
+
+  .intercom-lightweight-app-launcher:hover {
+    transition: transform 250ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    transform: scale(1.1)
+  }
+
+  .intercom-lightweight-app-launcher:active {
+    transform: scale(0.85);
+    transition: transform 134ms cubic-bezier(0.45, 0, 0.2, 1);
+  }
+
+
+  .intercom-lightweight-app-launcher:focus {
+    outline: none;
+
+    
+  }
+
+  .intercom-lightweight-app-launcher-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 48px;
+    height: 48px;
+    transition: transform 100ms linear, opacity 80ms linear;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg {
+    height: 44px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-custom-icon-open {
+    max-height: 24px;
+    max-width: 24px;
+
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize {
+    
+        opacity: 0;
+        transform: rotate(-60deg) scale(0);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-messenger {
+    position: fixed;
+    z-index: 2147483003;
+    overflow: hidden;
+    background-color: white;
+    animation: intercom-lightweight-app-messenger 250ms cubic-bezier(0, 1, 1, 1);
+    transform-origin: bottom right;
+
+    
+        width: 400px;
+        height: calc(100% - 40px);
+        max-height: 704px;
+        min-height: 250px;
+        right: 20px;
+        bottom: 20px;
+        box-shadow: 0 5px 40px rgba(0,0,0,0.16);
+      
+
+    border-radius: 16px;
+  }
+
+  .intercom-lightweight-app-messenger-header {
+    height: 64px;
+    border-bottom: none;
+    background: #202123
+
+    
+  }
+
+  .intercom-lightweight-app-messenger-footer{
+    position:absolute;
+    bottom:0;
+    width: 100%;
+    height: 80px;
+    background: #fff;
+    font-size: 14px;
+    line-height: 21px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.05);
+    
+  }
+
+  @media print {
+    .intercom-lightweight-app {
+      display: none;
+    }
+  }
+</style></div></body></html>

@@ -1,0 +1,580 @@
+<html lang="en" class="dark" data-theme="dark" style="color-scheme: dark;"><head>
+        <meta charset="utf-8">
+        <link rel="icon" type="image/png" href="/favicon-docs.png">
+        <link rel="icon" type="image/svg+xml" href="/favicon-docs.svg">
+        <link rel="preconnect" href="https://cdn.openai.com">
+        <link rel="preconnect" href="https://OWZ3QOIIJA-dsn.algolia.net" crossorigin="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#000000">
+        <title>Vision - OpenAI API</title>
+        <meta name="description" content="Explore resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's developer platform.">
+        <link rel="manifest" href="/manifest.json">
+
+        <!-- Facebook / LinkedIn Meta Tags -->
+        <meta property="og:title" content="OpenAI Platform">
+        <meta property="og:image" content="https://cdn.openai.com/API/images/opengraph.png">
+        <meta property="og:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://platform.openai.com">
+
+        <!-- Twitter Meta Tags -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta property="twitter:domain" content="platform.openai.com">
+        <meta property="twitter:url" content="https://platform.openai.com">
+        <meta name="twitter:title" content="OpenAI Platform">
+        <meta name="twitter:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta name="twitter:image" content="https://cdn.openai.com/API/images/opengraph.png">
+      <script type="text/javascript" async="" src="https://widget.intercom.io/widget/dgkjq2bp"></script><script nonce="" type="module" crossorigin="" src="/static/index-CYTQyVAq.js"></script>
+      <link rel="stylesheet" crossorigin="" href="/static/C5CC7YPsR_.css">
+      <script nonce="" type="module">import.meta.url;import("_").catch(()=>1);(async function*(){})().next();if(location.protocol!="file:"){window.__vite_is_modern_browser=true}</script>
+      <script nonce="" type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
+    <link rel="modulepreload" as="script" crossorigin="" href="/static/C2aIRGLQOh.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/BFyog71B1I.js"><link rel="stylesheet" href="/static/CFkw7B_gm-.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/CJnlUOvsM-.js"><link rel="stylesheet" href="/static/BX9BFw3PsH.css"><link rel="stylesheet" href="/static/BKxHiQFIW6.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C4wedv2caf.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/C961Md9dp6.js"><link rel="stylesheet" href="/static/C9MBEX7jPb.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C24vLskmtV.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/D9oCOueJRr.js"><link rel="stylesheet" href="/static/CcFh4jCko7.css"><link rel="stylesheet" href="/static/DqyyrKcaOP.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/Dh6auKfXaX.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/Bq7L_yreGd.js"><link rel="stylesheet" href="/static/C8xVwo073p.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/yQ3rCgkFw7.js"><link rel="stylesheet" href="/static/CnivQy12om.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/De9Te-Rlz8.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/IyMja2T0sm.js"><link rel="stylesheet" href="/static/DDpxtZQhKj.css"><link rel="stylesheet" href="/static/B2IOrA8ktD.css"></head>
+    <body>
+        <noscript>You need to enable JavaScript to run this app.</noscript>
+        <div id="root"><div class="rl7uK"><div class="hDvly"><div class="vpev1"><div class="_5Amyn"><button id="select-trigger-radix-:r0:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" aria-haspopup="dialog" aria-expanded="false" aria-controls="radix-:r1:" data-state="closed"><span class="RWOJJ"><span class="flex items-center gap-2 font-medium"><span class="qCm0E" role="presentation" data-variant="dark" style="--avatar-size: 25px; --avatar-initial-nudge: 0px;"><div class="_9uyMP">T</div></span>tmc</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button><div class="u-pgg">/</div><button id="select-trigger-radix-:r2:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" aria-haspopup="dialog" aria-expanded="false" aria-controls="radix-:r3:" data-state="closed"><span class="RWOJJ"><span class="font-medium" style="color: var(--text-default);">Default project</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button></div></div><div class="Aip-a"><nav class="okBd0"><a class="w9s17" data-primary-nav-item="" href="/playground"><span class="EsOWR vaD2P" data-title="Playground">Playground</span><span class="EsOWR ksWxL" data-title="Playground">Playground</span></a><a class="w9s17" data-primary-nav-item="" href="/chat-completions"><span class="EsOWR vaD2P" data-title="Dashboard">Dashboard</span><span class="EsOWR ksWxL" data-title="Dashboard">Dashboard</span></a><a aria-current="page" class="w9s17 _1T-tk" data-primary-nav-item="" href="/docs"><span class="EsOWR vaD2P" data-title="Docs">Docs</span><span class="EsOWR ksWxL" data-title="Docs">Docs</span></a><a class="w9s17" data-primary-nav-item="" href="/docs/api-reference/chat"><span class="EsOWR vaD2P" data-title="API reference">API reference</span><span class="EsOWR ksWxL" data-title="API">API</span></a></nav><a class="nav-item KAMRO" href="/settings"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" aria-haspopup="true" aria-expanded="false"><path fill-rule="evenodd" d="M11.568 3.5a1 1 0 0 0-.863.494l-.811 1.381A3.001 3.001 0 0 1 7.33 6.856l-1.596.013a1 1 0 0 0-.858.501l-.439.761a1 1 0 0 0-.004.992l.792 1.4a3 3 0 0 1 0 2.954l-.792 1.4a1 1 0 0 0 .004.992l.439.76a1 1 0 0 0 .858.502l1.596.013a3 3 0 0 1 2.564 1.48l.811 1.382a1 1 0 0 0 .863.494h.87a1 1 0 0 0 .862-.494l.812-1.381a3.001 3.001 0 0 1 2.563-1.481l1.596-.013a1 1 0 0 0 .86-.501l.438-.761a1 1 0 0 0 .004-.992l-.793-1.4a3 3 0 0 1 0-2.954l.793-1.4a1 1 0 0 0-.004-.992l-.439-.76a1 1 0 0 0-.858-.502l-1.597-.013a3 3 0 0 1-2.563-1.48L13.3 3.993a1 1 0 0 0-.862-.494h-.87ZM8.98 2.981A3.001 3.001 0 0 1 11.568 1.5h.87c1.064 0 2.049.564 2.588 1.481l.811 1.382a1 1 0 0 0 .855.494l1.596.013a3 3 0 0 1 2.575 1.502l.44.76a3 3 0 0 1 .011 2.975l-.792 1.4a1 1 0 0 0 0 .985l.792 1.401a3 3 0 0 1-.012 2.974l-.439.761a3.001 3.001 0 0 1-2.575 1.503l-1.597.012a1 1 0 0 0-.854.494l-.811 1.382a3.001 3.001 0 0 1-2.588 1.481h-.87a3.001 3.001 0 0 1-2.588-1.481l-.811-1.382a1 1 0 0 0-.855-.494l-1.596-.012a3.001 3.001 0 0 1-2.576-1.503l-.438-.76a3 3 0 0 1-.013-2.975l.793-1.4a1 1 0 0 0 0-.985l-.793-1.4a3 3 0 0 1 .013-2.975l.438-.761A3.001 3.001 0 0 1 5.718 4.87l1.596-.013a1 1 0 0 0 .855-.494l.81-1.382Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12.003 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM8.502 12a3.5 3.5 0 1 1 7 .001 3.5 3.5 0 0 1-7-.001Z" clip-rule="evenodd"></path></svg></a><div class="LwKwt"><button class="jYGOC" type="button" id="radix-:r4:" aria-haspopup="menu" aria-expanded="false" data-state="closed"><span class="qCm0E" role="presentation" data-variant="light"><div class="_8ufcO"><img src="https://lh3.googleusercontent.com/a/ACg8ocLahjE0y72DP3dxsDWlC2UR4uGhyySAPayi5gmRmLoIL7h-xd7L=s96-c" class="mImKu" alt="" role="presentation" data-loaded=""></div></span></button></div></div></div><main class="unjkE" data-sidebar="expanded" data-mobile-menu="hidden"><aside class="EpwGB"><div class="GVIPA"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="aTuAl"><div class="_0MyKb qyrrQ"><div class="search"><button type="button" class="DocSearch DocSearch-Button" aria-label="Search"><span class="DocSearch-Button-Container"><svg width="20" height="20" class="DocSearch-Search-Icon" viewBox="0 0 20 20"><path d="M14.386 14.386l4.0877 4.0877-4.0877-4.0877c-2.9418 2.9419-7.7115 2.9419-10.6533 0-2.9419-2.9418-2.9419-7.7115 0-10.6533 2.9418-2.9419 7.7115-2.9419 10.6533 0 2.9419 2.9418 2.9419 7.7115 0 10.6533z" stroke="currentColor" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="DocSearch-Button-Placeholder">Search</span></span><span class="DocSearch-Button-Keys"><kbd class="DocSearch-Button-Key">⌘</kbd><kbd class="DocSearch-Button-Key">K</kbd></span></button></div></div><div class="DH-HY qyrrQ QeXPj"><div class="side-nav-section"><div class="side-nav-header subheading">Get started</div><a class="scroll-link side-nav-item" href="/docs/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/models"><span class="side-nav-item-name">Models</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/changelog"><span class="side-nav-item-name">Changelog</span></a><a href="https://openai.com/policies" class="scroll-link side-nav-item" target="_blank" rel="noreferrer"><span class="side-nav-item-name">Terms and policies</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-icon"><path fill-rule="evenodd" d="M15 5a1 1 0 1 1 0-2h5a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V6.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L17.586 5H15ZM4 7a3 3 0 0 1 3-3h3a1 1 0 1 1 0 2H7a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3a1 1 0 1 1 2 0v3a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Capabilities</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-generation"><span class="side-nav-item-name">Text generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/images"><span class="side-nav-item-name">Image generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item active active-exact" href="/docs/guides/vision"><span class="side-nav-item-name">Vision</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/embeddings"><span class="side-nav-item-name">Vector embeddings</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-to-speech"><span class="side-nav-item-name">Text to speech</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/speech-to-text"><span class="side-nav-item-name">Speech to text</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/moderation"><span class="side-nav-item-name">Moderation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/reasoning"><span class="side-nav-item-name">Reasoning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Guides</div><a class="scroll-link side-nav-item" href="/docs/guides/function-calling"><span class="side-nav-item-name">Function calling</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/structured-outputs"><span class="side-nav-item-name">Structured outputs</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/evals"><span class="side-nav-item-name">Evaluations</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/fine-tuning"><span class="side-nav-item-name">Fine-tuning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/distillation"><span class="side-nav-item-name">Distillation</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/realtime"><span class="side-nav-item-name">Realtime API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/batch"><span class="side-nav-item-name">Batch API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Assistants</div><a class="scroll-link side-nav-item" href="/docs/assistants/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/assistants/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/deep-dive"><span class="side-nav-item-name">Deep dive</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/tools"><span class="side-nav-item-name">Tools</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/assistants/whats-new"><span class="side-nav-item-name">What's new?</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/migration"><span class="side-nav-item-name">Migration guide</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">ChatGPT</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/actions"><span class="side-nav-item-name">Actions</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/gpts/release-notes"><span class="side-nav-item-name">Release notes</span></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Best practices</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/prompt-engineering"><span class="side-nav-item-name">Prompt engineering</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/production-best-practices"><span class="side-nav-item-name">Production best practices</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/safety-best-practices"><span class="side-nav-item-name">Safety best practices</span></a><a class="scroll-link side-nav-item" href="/docs/guides/prompt-caching"><span class="side-nav-item-name">Prompt caching</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/model-selection"><span class="side-nav-item-name">Model selection</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/latency-optimization"><span class="side-nav-item-name">Latency optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/optimizing-llm-accuracy"><span class="side-nav-item-name">Accuracy optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/advanced-usage"><span class="side-nav-item-name">Advanced usage</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Resources</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/libraries"><span class="side-nav-item-name">Libraries</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/examples"><span class="side-nav-item-name">Prompt examples</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/rate-limits"><span class="side-nav-item-name">Rate limits</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/error-codes"><span class="side-nav-item-name">Error codes</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/deprecations"><span class="side-nav-item-name">Deprecations</span></a></div></div></div></div></div></div></div></div><div class="EDOEc qyrrQ"><div class="q3jBs"><a href="https://cookbook.openai.com" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M14.447 7.106a1 1 0 0 1 .447 1.341l-4 8a1 1 0 1 1-1.788-.894l4-8a1 1 0 0 1 1.341-.447ZM6.6 7.2a1 1 0 0 1 .2 1.4L4.25 12l2.55 3.4a1 1 0 0 1-1.6 1.2l-3-4a1 1 0 0 1 0-1.2l3-4a1 1 0 0 1 1.4-.2Zm10.8 0a1 1 0 0 1 1.4.2l3 4a1 1 0 0 1 0 1.2l-3 4a1 1 0 0 1-1.6-1.2l2.55-3.4-2.55-3.4a1 1 0 0 1 .2-1.4Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Cookbook</span></span></a><a href="https://community.openai.com/categories" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M10.5 8.5a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12 5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7ZM3 9.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm1-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm16 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm-3 1a3 3 0 1 1 6 0 3 3 0 0 1-6 0ZM8 18c0-.974.438-1.684 1.142-2.185C9.876 15.293 10.911 15 12 15c1.09 0 2.124.293 2.858.815.704.5 1.142 1.21 1.142 2.185a1 1 0 1 0 2 0c0-1.692-.812-2.982-1.983-3.815C14.876 13.373 13.411 13 12 13c-1.41 0-2.876.373-4.017 1.185C6.812 15.018 6 16.308 6 18a1 1 0 1 0 2 0Zm-3.016-3.675a1 1 0 0 1-.809 1.16C2.79 15.732 2 16.486 2 17.5a1 1 0 1 1-2 0c0-2.41 1.978-3.655 3.825-3.985a1 1 0 0 1 1.16.81Zm14.84 1.16a1 1 0 1 1 .351-1.97C22.022 13.845 24 15.09 24 17.5a1 1 0 1 1-2 0c0-1.014-.79-1.768-2.175-2.015Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Forum</span></span></a><button class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12 9a1 1 0 0 0-.879.522 1 1 0 0 1-1.754-.96A3 3 0 0 1 12 7c1.515 0 2.567 1.006 2.866 2.189.302 1.189-.156 2.574-1.524 3.258A.618.618 0 0 0 13 13a1 1 0 1 1-2 0c0-.992.56-1.898 1.447-2.342.455-.227.572-.618.48-.978C12.836 9.314 12.529 9 12 9Z" clip-rule="evenodd"></path><path d="M13.1 16a1.1 1.1 0 1 1-2.2 0 1.1 1.1 0 0 1 2.2 0Z"></path></svg></span><span class="_0LIzz">Help</span></span></button></div></div></aside><div class="_7j8ow"><div class="qLnXc"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="ImBcX"><div class="docs-scroll-container" data-important-algolia-crawl="true"><div class="page-body full-width flush docs-page"><div class="markdown-page markdown-content markdown-prompt-blockquote"><div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/vision"><h1 class="anchor-heading" data-name="vision">Vision<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h1></a></div>
+<p>Many OpenAI <a href="/docs/models">models</a> have vision capabilities, meaning the models can take in images and answer questions about them. Historically, language model systems have been limited by taking in a single input modality, text.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/quickstart"><h2 class="anchor-heading" data-name="quickstart">Quickstart<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Images are made available to the model in two main ways: by passing a link to the image or by passing the base64 encoded image directly in the request. Images can be passed in the <code>user</code> messages.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small">What's in this image?</div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="curl">curl</option><option value="node">node</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>
+</span><span>client = OpenAI()
+</span><span>
+</span><span>response = client.chat.completions.create(
+</span><span><span>  model=</span><span class="hljs-string">"gpt-4o-mini"</span><span>,
+</span></span><span>  messages=[
+</span><span>    {
+</span><span><span>      </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>,
+</span></span><span><span>      </span><span class="hljs-string">"content"</span><span>: [
+</span></span><span><span>        {</span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"text"</span><span>, </span><span class="hljs-string">"text"</span><span>: </span><span class="hljs-string">"What’s in this image?"</span><span>},
+</span></span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"image_url"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"image_url"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-string">"url"</span><span>: </span><span class="hljs-string">"https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"</span><span>,
+</span></span><span>          },
+</span><span>        },
+</span><span>      ],
+</span><span>    }
+</span><span>  ],
+</span><span><span>  max_tokens=</span><span class="hljs-number">300</span><span>,
+</span></span><span>)
+</span><span>
+</span><span><span></span><span class="hljs-built_in">print</span><span>(response.choices[</span><span class="hljs-number">0</span><span>])</span></span></code></pre></div></div>
+<p>The model is best at answering general questions about what is present in the images. While it does understand the relationship between objects in images, it is not yet optimized to answer detailed questions about the location of certain objects in an image. For example, you can ask it what color a car is or what some ideas for dinner might be based on what is in you fridge, but if you show it an image of a room and ask it where the chair is, it may not answer the question correctly.</p>
+<p>It is important to keep in mind the <a href="/docs/guides/vision/limitations">limitations of the model</a> as you explore what use-cases visual understanding can be applied to.</p>
+<a href="https://cookbook.openai.com/examples/gpt_with_vision_for_video_understanding" target="_blank"><div class="icon-item mt-6"><div class="icon-item-icon"><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"></path></svg></div><div class="icon-item-right"><div class="icon-item-title"><div class="icon-item-title body-large">Video understanding with vision</div><div class="pointer"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9.293 7.293a1 1 0 0 1 1.414 0l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L12.586 12 9.293 8.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div></div><div class="icon-item-desc body-small"><p>Learn how to use use GPT-4 with Vision to understand videos in the OpenAI Cookbook</p></div></div></div></a>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/uploading-base-64-encoded-images"><h2 class="anchor-heading" data-name="uploading-base-64-encoded-images">Uploading base 64 encoded images<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>If you have an image or set of images locally, you can pass those to the model in base 64 encoded format, here is an example of this in action:</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span><span class="react-syntax-highlighter-line-number">26
+</span><span class="react-syntax-highlighter-line-number">27
+</span><span class="react-syntax-highlighter-line-number">28
+</span><span class="react-syntax-highlighter-line-number">29
+</span><span class="react-syntax-highlighter-line-number">30
+</span><span class="react-syntax-highlighter-line-number">31
+</span><span class="react-syntax-highlighter-line-number">32
+</span><span class="react-syntax-highlighter-line-number">33
+</span><span class="react-syntax-highlighter-line-number">34
+</span><span class="react-syntax-highlighter-line-number">35
+</span><span class="react-syntax-highlighter-line-number">36
+</span><span class="react-syntax-highlighter-line-number">37
+</span><span class="react-syntax-highlighter-line-number">38
+</span><span class="react-syntax-highlighter-line-number">39
+</span><span class="react-syntax-highlighter-line-number">40
+</span><span class="react-syntax-highlighter-line-number">41
+</span><span class="react-syntax-highlighter-line-number">42
+</span><span class="react-syntax-highlighter-line-number">43
+</span><span class="react-syntax-highlighter-line-number">44
+</span><span class="react-syntax-highlighter-line-number">45
+</span><span class="react-syntax-highlighter-line-number">46
+</span><span class="react-syntax-highlighter-line-number">47
+</span></code><span><span class="hljs-keyword">import</span><span> base64
+</span></span><span><span></span><span class="hljs-keyword">import</span><span> requests
+</span></span><span>
+</span><span><span></span><span class="hljs-comment"># OpenAI API Key</span><span>
+</span></span><span><span>api_key = </span><span class="hljs-string">"YOUR_OPENAI_API_KEY"</span><span>
+</span></span><span>
+</span><span><span></span><span class="hljs-comment"># Function to encode the image</span><span>
+</span></span><span><span></span><span class="hljs-function hljs-keyword">def</span><span class="hljs-function"> </span><span class="hljs-function hljs-title">encode_image</span><span class="hljs-function">(</span><span class="hljs-function hljs-params">image_path</span><span class="hljs-function">):</span><span>
+</span></span><span><span>  </span><span class="hljs-keyword">with</span><span> </span><span class="hljs-built_in">open</span><span>(image_path, </span><span class="hljs-string">"rb"</span><span>) </span><span class="hljs-keyword">as</span><span> image_file:
+</span></span><span><span>    </span><span class="hljs-keyword">return</span><span> base64.b64encode(image_file.read()).decode(</span><span class="hljs-string">'utf-8'</span><span>)
+</span></span><span>
+</span><span><span></span><span class="hljs-comment"># Path to your image</span><span>
+</span></span><span><span>image_path = </span><span class="hljs-string">"path_to_your_image.jpg"</span><span>
+</span></span><span>
+</span><span><span></span><span class="hljs-comment"># Getting the base64 string</span><span>
+</span></span><span>base64_image = encode_image(image_path)
+</span><span>
+</span><span>headers = {
+</span><span><span>  </span><span class="hljs-string">"Content-Type"</span><span>: </span><span class="hljs-string">"application/json"</span><span>,
+</span></span><span><span>  </span><span class="hljs-string">"Authorization"</span><span>: </span><span class="hljs-string">f"Bearer </span><span class="hljs-string hljs-subst">{api_key}</span><span class="hljs-string">"</span><span>
+</span></span><span>}
+</span><span>
+</span><span>payload = {
+</span><span><span>  </span><span class="hljs-string">"model"</span><span>: </span><span class="hljs-string">"gpt-4o-mini"</span><span>,
+</span></span><span><span>  </span><span class="hljs-string">"messages"</span><span>: [
+</span></span><span>    {
+</span><span><span>      </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>,
+</span></span><span><span>      </span><span class="hljs-string">"content"</span><span>: [
+</span></span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"text"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"text"</span><span>: </span><span class="hljs-string">"What’s in this image?"</span><span>
+</span></span><span>        },
+</span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"image_url"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"image_url"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-string">"url"</span><span>: </span><span class="hljs-string">f"data:image/jpeg;base64,</span><span class="hljs-string hljs-subst">{base64_image}</span><span class="hljs-string">"</span><span>
+</span></span><span>          }
+</span><span>        }
+</span><span>      ]
+</span><span>    }
+</span><span>  ],
+</span><span><span>  </span><span class="hljs-string">"max_tokens"</span><span>: </span><span class="hljs-number">300</span><span>
+</span></span><span>}
+</span><span>
+</span><span><span>response = requests.post(</span><span class="hljs-string">"https://api.openai.com/v1/chat/completions"</span><span>, headers=headers, json=payload)
+</span></span><span>
+</span><span><span></span><span class="hljs-built_in">print</span><span>(response.json())</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/multiple-image-inputs"><h2 class="anchor-heading" data-name="multiple-image-inputs">Multiple image inputs<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>The Chat Completions API is capable of taking in and processing multiple image inputs in both base64 encoded format or as an image URL. The model will process each image and use the information from all of them to answer the question.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small">Multiple image inputs</div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="curl">curl</option><option value="node">node</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span><span class="react-syntax-highlighter-line-number">26
+</span><span class="react-syntax-highlighter-line-number">27
+</span><span class="react-syntax-highlighter-line-number">28
+</span><span class="react-syntax-highlighter-line-number">29
+</span><span class="react-syntax-highlighter-line-number">30
+</span><span class="react-syntax-highlighter-line-number">31
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>
+</span><span>client = OpenAI()
+</span><span>response = client.chat.completions.create(
+</span><span><span>  model=</span><span class="hljs-string">"gpt-4o-mini"</span><span>,
+</span></span><span>  messages=[
+</span><span>    {
+</span><span><span>      </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>,
+</span></span><span><span>      </span><span class="hljs-string">"content"</span><span>: [
+</span></span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"text"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"text"</span><span>: </span><span class="hljs-string">"What are in these images? Is there any difference between them?"</span><span>,
+</span></span><span>        },
+</span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"image_url"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"image_url"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-string">"url"</span><span>: </span><span class="hljs-string">"https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"</span><span>,
+</span></span><span>          },
+</span><span>        },
+</span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"image_url"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"image_url"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-string">"url"</span><span>: </span><span class="hljs-string">"https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"</span><span>,
+</span></span><span>          },
+</span><span>        },
+</span><span>      ],
+</span><span>    }
+</span><span>  ],
+</span><span><span>  max_tokens=</span><span class="hljs-number">300</span><span>,
+</span></span><span>)
+</span><span><span></span><span class="hljs-built_in">print</span><span>(response.choices[</span><span class="hljs-number">0</span><span>])</span></span></code></pre></div></div>
+<p>Here the model is shown two copies of the same image and can answer questions about both or each of the images independently.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/low-or-high-fidelity-image-understanding"><h2 class="anchor-heading" data-name="low-or-high-fidelity-image-understanding">Low or high fidelity image understanding<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>By controlling the <code>detail</code> parameter, which has three options, <code>low</code>, <code>high</code>, or <code>auto</code>, you have control over how the model processes the image and generates its textual understanding. By default, the model will use the <code>auto</code> setting which will look at the image input size and decide if it should use the <code>low</code> or <code>high</code> setting.</p>
+<ul>
+<li><code>low</code> will enable the "low res" mode. The model will receive a low-res 512px x 512px version of the image, and represent the image with a budget of 85 tokens. This allows the API to return faster responses and consume fewer input tokens for use cases that do not require high detail.</li>
+<li><code>high</code> will enable "high res" mode, which first allows the model to first see the low res image (using 85 tokens) and then creates detailed crops using 170 tokens for each 512px x 512px tile.</li>
+</ul>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small">Choosing the detail level</div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="curl">curl</option><option value="node">node</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>
+</span><span>client = OpenAI()
+</span><span>
+</span><span>response = client.chat.completions.create(
+</span><span><span>  model=</span><span class="hljs-string">"gpt-4o-mini"</span><span>,
+</span></span><span>  messages=[
+</span><span>    {
+</span><span><span>      </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>,
+</span></span><span><span>      </span><span class="hljs-string">"content"</span><span>: [
+</span></span><span><span>        {</span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"text"</span><span>, </span><span class="hljs-string">"text"</span><span>: </span><span class="hljs-string">"What’s in this image?"</span><span>},
+</span></span><span>        {
+</span><span><span>          </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"image_url"</span><span>,
+</span></span><span><span>          </span><span class="hljs-string">"image_url"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-string">"url"</span><span>: </span><span class="hljs-string">"https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"detail"</span><span>: </span><span class="hljs-string">"high"</span><span>
+</span></span><span>          },
+</span><span>        },
+</span><span>      ],
+</span><span>    }
+</span><span>  ],
+</span><span><span>  max_tokens=</span><span class="hljs-number">300</span><span>,
+</span></span><span>)
+</span><span>
+</span><span><span></span><span class="hljs-built_in">print</span><span>(response.choices[</span><span class="hljs-number">0</span><span>].message.content)</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/managing-images"><h2 class="anchor-heading" data-name="managing-images">Managing images<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>The Chat Completions API, unlike the Assistants API, is not stateful. That means you have to manage the messages (including images) you pass to the model yourself. If you want to pass the same image to the model multiple times, you will have to pass the image each time you make a request to the API.</p>
+<p>For long running conversations, we suggest passing images via URL's instead of base64. The latency of the model can also be improved by downsizing your images ahead of time to be less than the maximum size they are expected them to be. For low res mode, we expect a 512px x 512px image. For high res mode, the short side of the image should be less than 768px and the long side should be less than 2,000px.</p>
+<p>After an image has been processed by the model, it is deleted from OpenAI servers and not retained. <a href="https://openai.com/enterprise-privacy" target="_blank" rel="noopener noreferrer">We do not use data uploaded via the OpenAI API to train our models</a>.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/limitations"><h2 class="anchor-heading" data-name="limitations">Limitations<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>While GPT-4 with vision is powerful and can be used in many situations, it is important to understand the limitations of the model. Here are some of the limitations we are aware of:</p>
+<ul>
+<li>Medical images: The model is not suitable for interpreting specialized medical images like CT scans and shouldn't be used for medical advice.</li>
+<li>Non-English: The model may not perform optimally when handling images with text of non-Latin alphabets, such as Japanese or Korean.</li>
+<li>Small text: Enlarge text within the image to improve readability, but avoid cropping important details.</li>
+<li>Rotation: The model may misinterpret rotated / upside-down text or images.</li>
+<li>Visual elements: The model may struggle to understand graphs or text where colors or styles like solid, dashed, or dotted lines vary.</li>
+<li>Spatial reasoning: The model struggles with tasks requiring precise spatial localization, such as identifying chess positions.</li>
+<li>Accuracy: The model may generate incorrect descriptions or captions in certain scenarios.</li>
+<li>Image shape: The model struggles with panoramic and fisheye images.</li>
+<li>Metadata and resizing: The model doesn't process original file names or metadata, and images are resized before analysis, affecting their original dimensions.</li>
+<li>Counting: May give approximate counts for objects in images.</li>
+<li>CAPTCHAS: For safety reasons, we have implemented a system to block the submission of CAPTCHAs.</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/calculating-costs"><h2 class="anchor-heading" data-name="calculating-costs">Calculating costs<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Image inputs are metered and charged in tokens, just as text inputs are. The token cost of a given image is determined by two factors: its size, and the <code>detail</code> option on each image_url block. All images with <code>detail: low</code> cost 85 tokens each. <code>detail: high</code> images are first scaled to fit within a 2048 x 2048 square, maintaining their aspect ratio. Then, they are scaled such that the shortest side of the image is 768px long. Finally, we count how many 512px squares the image consists of. Each of those squares costs <strong>170 tokens</strong>. Another <strong>85 tokens</strong> are always added to the final total.</p>
+<p>Here are some examples demonstrating the above.</p>
+<ul>
+<li>A 1024 x 1024 square image in <code>detail: high</code> mode costs 765 tokens
+<ul>
+<li>1024 is less than 2048, so there is no initial resize.</li>
+<li>The shortest side is 1024, so we scale the image down to 768 x 768.</li>
+<li>4 512px square tiles are needed to represent the image, so the final token cost is <code>170 * 4 + 85 = 765</code>.</li>
+</ul>
+</li>
+<li>A 2048 x 4096 image in <code>detail: high</code> mode costs 1105 tokens
+<ul>
+<li>We scale down the image to 1024 x 2048 to fit within the 2048 square.</li>
+<li>The shortest side is 1024, so we further scale down to 768 x 1536.</li>
+<li>6 512px tiles are needed, so the final token cost is <code>170 * 6 + 85 = 1105</code>.</li>
+</ul>
+</li>
+<li>A 4096 x 8192 image in <code>detail: low</code> most costs 85 tokens
+<ul>
+<li>Regardless of input size, low detail images are a fixed cost.</li>
+</ul>
+</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/faq"><h2 class="anchor-heading" data-name="faq">FAQ<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/can-i-fine-tune-the-image-capabilities-in-gpt-4"><h3 class="anchor-heading" data-name="can-i-fine-tune-the-image-capabilities-in-gpt-4">Can I fine-tune the image capabilities in <code>gpt-4</code>?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>No, we do not support fine-tuning the image capabilities of <code>gpt-4</code> at this time.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/can-i-use-gpt-4-to-generate-images"><h3 class="anchor-heading" data-name="can-i-use-gpt-4-to-generate-images">Can I use <code>gpt-4</code> to generate images?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>No, you can use <code>dall-e-3</code> to generate images and <code>gpt-4o</code>, <code>gpt-4o-mini</code> or <code>gpt-4-turbo</code> to understand images.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/what-type-of-files-can-i-upload"><h3 class="anchor-heading" data-name="what-type-of-files-can-i-upload">What type of files can I upload?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>We currently support PNG (.png), JPEG (.jpeg and .jpg), WEBP (.webp), and non-animated GIF (.gif).</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/is-there-a-limit-to-the-size-of-the-image-i-can-upload"><h3 class="anchor-heading" data-name="is-there-a-limit-to-the-size-of-the-image-i-can-upload">Is there a limit to the size of the image I can upload?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Yes, we restrict image uploads to 20MB per image.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/can-i-delete-an-image-i-uploaded"><h3 class="anchor-heading" data-name="can-i-delete-an-image-i-uploaded">Can I delete an image I uploaded?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>No, we will delete the image for you automatically after it has been processed by the model.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/where-can-i-learn-more-about-the-considerations-of-gpt-4-with-vision"><h3 class="anchor-heading" data-name="where-can-i-learn-more-about-the-considerations-of-gpt-4-with-vision">Where can I learn more about the considerations of GPT-4 with Vision?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>You can find details about our evaluations, preparation, and mitigation work in the <a href="https://openai.com/contributions/gpt-4v" target="_blank" rel="noopener noreferrer">GPT-4 with Vision system card</a>.</p>
+<p>We have further implemented a system to block the submission of CAPTCHAs.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/how-do-rate-limits-for-gpt-4-with-vision-work"><h3 class="anchor-heading" data-name="how-do-rate-limits-for-gpt-4-with-vision-work">How do rate limits for GPT-4 with Vision work?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>We process images at the token level, so each image we process counts towards your tokens per minute (TPM) limit. See the calculating costs section for details on the formula used to determine token count per image.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/can-gpt-4-with-vision-understand-image-metadata"><h3 class="anchor-heading" data-name="can-gpt-4-with-vision-understand-image-metadata">Can GPT-4 with Vision understand image metadata?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>No, the model does not receive image metadata.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/vision/what-happens-if-my-image-is-unclear"><h3 class="anchor-heading" data-name="what-happens-if-my-image-is-unclear">What happens if my image is unclear?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>If an image is ambiguous or unclear, the model will do its best to interpret it. However, the results may be less accurate. A good rule of thumb is that if an average human cannot see the info in an image at the resolutions used in low/high res mode, then the model cannot either.</p></div><div class="docs-footer"><div class="docs-feedback">Was this page useful?<button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Helpful" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12.132 2.504a1 1 0 0 1 .992-.496l.454.056a4 4 0 0 1 3.327 5.146L16.354 9h.718c2.638 0 4.553 2.508 3.86 5.053l-1.364 5A4 4 0 0 1 15.708 22H6a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3h2c.26 0 .5-.14.628-.364l3.504-6.132ZM10 20h5.709a2 2 0 0 0 1.93-1.474l1.363-5A2 2 0 0 0 17.072 11H15a1 1 0 0 1-.956-1.294l.95-3.084a2 2 0 0 0-1.462-2.537l-3.168 5.543A2.723 2.723 0 0 1 9 10.81V19a1 1 0 0 0 1 1Zm-3-9v8c0 .35.06.687.17 1H6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h1Z" clip-rule="evenodd"></path></svg></span></span></button><button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Thumbs down" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.873 21.496a1 1 0 0 1-.992.496l-.454-.056A4 4 0 0 1 7.1 16.79L7.65 15h-.718c-2.637 0-4.553-2.508-3.859-5.052l1.364-5A4 4 0 0 1 8.296 2h9.709a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-2c-.26 0-.5.14-.628.364l-3.504 6.132ZM14.005 4h-5.71a2 2 0 0 0-1.929 1.474l-1.363 5A2 2 0 0 0 6.933 13h2.072a1 1 0 0 1 .955 1.294l-.949 3.084a2 2 0 0 0 1.462 2.537l3.167-5.543a2.723 2.723 0 0 1 1.364-1.182V5a1 1 0 0 0-1-1Zm3 9V5c0-.35-.06-.687-.171-1h1.17a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1Z" clip-rule="evenodd"></path></svg></span></span></button></div></div></div></div></div></div></div></div></div></div></div></main><div data-testid="compliance-management-wrapper"></div></div><div class="layers-root"></div></div>
+      <script nonce="" nomodule="">!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-polyfill" src="/static/polyfills-legacy-DO_EefdF.js"></script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-entry" data-src="/static/index-legacy-U3KC6Hpc.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+    
+
+<div class="CRjGu"></div><iframe id="intercom-frame" style="position: absolute !important; opacity: 0 !important; width: 1px !important; height: 1px !important; top: 0 !important; left: 0 !important; border: none !important; display: block !important; z-index: -1 !important; pointer-events: none;" aria-hidden="true" tabindex="-1" title="Intercom"></iframe><div class="intercom-lightweight-app"><style id="intercom-lightweight-app-style" type="text/css">
+  @keyframes intercom-lightweight-app-launcher {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes intercom-lightweight-app-gradient {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes intercom-lightweight-app-messenger {
+    0% {
+      opacity: 0;
+      transform: scale(0);
+    }
+    40% {
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .intercom-lightweight-app {
+    position: fixed;
+    z-index: 2147483001;
+    width: 0;
+    height: 0;
+    font-family: intercom-font, "Helvetica Neue", "Apple Color Emoji", Helvetica, Arial, sans-serif;
+  }
+
+  .intercom-lightweight-app-gradient {
+    position: fixed;
+    z-index: 2147483002;
+    width: 500px;
+    height: 500px;
+    bottom: 0;
+    right: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at bottom right,
+      rgba(29, 39, 54, 0.16) 0%,
+      rgba(29, 39, 54, 0) 72%);
+    animation: intercom-lightweight-app-gradient 200ms ease-out;
+  }
+
+  .intercom-lightweight-app-launcher {
+    position: fixed;
+    z-index: 2147483003;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none;
+    bottom: 20px;
+    right: 20px;
+    max-width: 48px;
+    width: 48px;
+    max-height: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #202123;
+    cursor: pointer;
+    box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.06), 0 2px 32px 0 rgba(0, 0, 0, 0.16);
+    transition: transform 167ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    box-sizing: content-box;
+  }
+
+
+  .intercom-lightweight-app-launcher:hover {
+    transition: transform 250ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    transform: scale(1.1)
+  }
+
+  .intercom-lightweight-app-launcher:active {
+    transform: scale(0.85);
+    transition: transform 134ms cubic-bezier(0.45, 0, 0.2, 1);
+  }
+
+
+  .intercom-lightweight-app-launcher:focus {
+    outline: none;
+
+    
+  }
+
+  .intercom-lightweight-app-launcher-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 48px;
+    height: 48px;
+    transition: transform 100ms linear, opacity 80ms linear;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg {
+    height: 44px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-custom-icon-open {
+    max-height: 24px;
+    max-width: 24px;
+
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize {
+    
+        opacity: 0;
+        transform: rotate(-60deg) scale(0);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-messenger {
+    position: fixed;
+    z-index: 2147483003;
+    overflow: hidden;
+    background-color: white;
+    animation: intercom-lightweight-app-messenger 250ms cubic-bezier(0, 1, 1, 1);
+    transform-origin: bottom right;
+
+    
+        width: 400px;
+        height: calc(100% - 40px);
+        max-height: 704px;
+        min-height: 250px;
+        right: 20px;
+        bottom: 20px;
+        box-shadow: 0 5px 40px rgba(0,0,0,0.16);
+      
+
+    border-radius: 16px;
+  }
+
+  .intercom-lightweight-app-messenger-header {
+    height: 64px;
+    border-bottom: none;
+    background: #202123
+
+    
+  }
+
+  .intercom-lightweight-app-messenger-footer{
+    position:absolute;
+    bottom:0;
+    width: 100%;
+    height: 80px;
+    background: #fff;
+    font-size: 14px;
+    line-height: 21px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.05);
+    
+  }
+
+  @media print {
+    .intercom-lightweight-app {
+      display: none;
+    }
+  }
+</style></div></body></html>

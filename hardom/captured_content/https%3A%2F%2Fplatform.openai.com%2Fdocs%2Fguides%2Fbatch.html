@@ -1,0 +1,439 @@
+<html lang="en" class="dark" data-theme="dark" style="color-scheme: dark;"><head>
+        <meta charset="utf-8">
+        <link rel="icon" type="image/png" href="/favicon-docs.png">
+        <link rel="icon" type="image/svg+xml" href="/favicon-docs.svg">
+        <link rel="preconnect" href="https://cdn.openai.com">
+        <link rel="preconnect" href="https://OWZ3QOIIJA-dsn.algolia.net" crossorigin="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#000000">
+        <title>Batch - OpenAI API</title>
+        <meta name="description" content="Explore resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's developer platform.">
+        <link rel="manifest" href="/manifest.json">
+
+        <!-- Facebook / LinkedIn Meta Tags -->
+        <meta property="og:title" content="OpenAI Platform">
+        <meta property="og:image" content="https://cdn.openai.com/API/images/opengraph.png">
+        <meta property="og:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://platform.openai.com">
+
+        <!-- Twitter Meta Tags -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta property="twitter:domain" content="platform.openai.com">
+        <meta property="twitter:url" content="https://platform.openai.com">
+        <meta name="twitter:title" content="OpenAI Platform">
+        <meta name="twitter:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta name="twitter:image" content="https://cdn.openai.com/API/images/opengraph.png">
+      <script type="text/javascript" async="" src="https://widget.intercom.io/widget/dgkjq2bp"></script><script nonce="" type="module" crossorigin="" src="/static/index-CYTQyVAq.js"></script>
+      <link rel="stylesheet" crossorigin="" href="/static/C5CC7YPsR_.css">
+      <script nonce="" type="module">import.meta.url;import("_").catch(()=>1);(async function*(){})().next();if(location.protocol!="file:"){window.__vite_is_modern_browser=true}</script>
+      <script nonce="" type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
+    <link rel="modulepreload" as="script" crossorigin="" href="/static/C2aIRGLQOh.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/BFyog71B1I.js"><link rel="stylesheet" href="/static/CFkw7B_gm-.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/CJnlUOvsM-.js"><link rel="stylesheet" href="/static/BX9BFw3PsH.css"><link rel="stylesheet" href="/static/BKxHiQFIW6.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C4wedv2caf.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/C961Md9dp6.js"><link rel="stylesheet" href="/static/C9MBEX7jPb.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C24vLskmtV.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/D9oCOueJRr.js"><link rel="stylesheet" href="/static/CcFh4jCko7.css"><link rel="stylesheet" href="/static/DqyyrKcaOP.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/Dh6auKfXaX.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/Bq7L_yreGd.js"><link rel="stylesheet" href="/static/C8xVwo073p.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/yQ3rCgkFw7.js"><link rel="stylesheet" href="/static/CnivQy12om.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/De9Te-Rlz8.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/IyMja2T0sm.js"><link rel="stylesheet" href="/static/DDpxtZQhKj.css"><link rel="stylesheet" href="/static/B2IOrA8ktD.css"></head>
+    <body>
+        <noscript>You need to enable JavaScript to run this app.</noscript>
+        <div id="root"><div class="rl7uK"><div class="hDvly"><div class="vpev1"><div class="_5Amyn"><div class="flex"><div class="relative"><select class="bvkc-"><optgroup label="Organizations"><option value="org-dH3B6ymfbSTLBRRCfId1BRPR">Climate AI Hackathon 21</option><option value="org-mXJaZ8zXm1qhWbRj0yQxhQFN">tmc</option></optgroup></select><button id="select-trigger-radix-:r0:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" tabindex="-1" aria-hidden="true"><span class="RWOJJ"><span class="flex items-center gap-2 font-medium"><span class="qCm0E" role="presentation" data-variant="dark" style="--avatar-size: 25px; --avatar-initial-nudge: 0px;"><div class="_9uyMP">T</div></span>tmc</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button></div></div><div class="u-pgg">/</div><button id="select-trigger-radix-:r1:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" aria-haspopup="dialog" aria-expanded="false" aria-controls="radix-:r2:" data-state="closed"><span class="RWOJJ"><span class="font-medium" style="color: var(--text-default);">Default project</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button></div></div><div class="Aip-a"><button class="_8dPNb"><span class="tfB-7"><span class="_3Tbwl UuUwq"></span><span class="gw2x5"><span class="_3Tbwl RMlM5"></span></span></span></button></div></div><main class="unjkE" data-sidebar="expanded" data-mobile-menu="hidden"><aside class="EpwGB VO47n"><nav class="okBd0"><a class="w9s17" data-primary-nav-item="" href="/playground"><span class="EsOWR vaD2P" data-title="Playground">Playground</span><span class="EsOWR ksWxL" data-title="Playground">Playground</span></a><a class="w9s17" data-primary-nav-item="" href="/chat-completions"><span class="EsOWR vaD2P" data-title="Dashboard">Dashboard</span><span class="EsOWR ksWxL" data-title="Dashboard">Dashboard</span></a><a aria-current="page" class="w9s17 _1T-tk" data-primary-nav-item="" href="/docs"><span class="EsOWR vaD2P" data-title="Docs">Docs</span><span class="EsOWR ksWxL" data-title="Docs">Docs</span></a><a class="w9s17" data-primary-nav-item="" href="/docs/api-reference/batch"><span class="EsOWR vaD2P" data-title="API reference">API reference</span><span class="EsOWR ksWxL" data-title="API">API</span></a></nav><div class="GVIPA"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="aTuAl"><div class="_0MyKb qyrrQ"><div class="search"><button type="button" class="DocSearch DocSearch-Button" aria-label="Search"><span class="DocSearch-Button-Container"><svg width="20" height="20" class="DocSearch-Search-Icon" viewBox="0 0 20 20"><path d="M14.386 14.386l4.0877 4.0877-4.0877-4.0877c-2.9418 2.9419-7.7115 2.9419-10.6533 0-2.9419-2.9418-2.9419-7.7115 0-10.6533 2.9418-2.9419 7.7115-2.9419 10.6533 0 2.9419 2.9418 2.9419 7.7115 0 10.6533z" stroke="currentColor" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="DocSearch-Button-Placeholder">Search</span></span><span class="DocSearch-Button-Keys"><kbd class="DocSearch-Button-Key">⌘</kbd><kbd class="DocSearch-Button-Key">K</kbd></span></button></div></div><div class="DH-HY qyrrQ QeXPj"><div class="side-nav-section"><div class="side-nav-header subheading">Get started</div><a class="scroll-link side-nav-item" href="/docs/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/models"><span class="side-nav-item-name">Models</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/changelog"><span class="side-nav-item-name">Changelog</span></a><a href="https://openai.com/policies" class="scroll-link side-nav-item" target="_blank" rel="noreferrer"><span class="side-nav-item-name">Terms and policies</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-icon"><path fill-rule="evenodd" d="M15 5a1 1 0 1 1 0-2h5a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V6.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L17.586 5H15ZM4 7a3 3 0 0 1 3-3h3a1 1 0 1 1 0 2H7a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3a1 1 0 1 1 2 0v3a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Capabilities</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-generation"><span class="side-nav-item-name">Text generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/images"><span class="side-nav-item-name">Image generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/vision"><span class="side-nav-item-name">Vision</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/embeddings"><span class="side-nav-item-name">Vector embeddings</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-to-speech"><span class="side-nav-item-name">Text to speech</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/speech-to-text"><span class="side-nav-item-name">Speech to text</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/moderation"><span class="side-nav-item-name">Moderation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/reasoning"><span class="side-nav-item-name">Reasoning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Guides</div><a class="scroll-link side-nav-item" href="/docs/guides/function-calling"><span class="side-nav-item-name">Function calling</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/structured-outputs"><span class="side-nav-item-name">Structured outputs</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/evals"><span class="side-nav-item-name">Evaluations</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/fine-tuning"><span class="side-nav-item-name">Fine-tuning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/distillation"><span class="side-nav-item-name">Distillation</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/realtime"><span class="side-nav-item-name">Realtime API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems active active-exact" data-side-nav-subitems="visible" href="/docs/guides/batch"><span class="side-nav-item-name">Batch API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><div class="side-nav-subitems"><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/batch/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/batch/getting-started"><span class="side-nav-item-name">Getting started</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/batch/model-availability"><span class="side-nav-item-name">Model availability</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/batch/rate-limits"><span class="side-nav-item-name">Rate limits</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/batch/batch-expiration"><span class="side-nav-item-name">Batch expiration</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/batch/other-resources"><span class="side-nav-item-name">Other resources</span></a></div></div><div class="side-nav-section"><div class="side-nav-header subheading">Assistants</div><a class="scroll-link side-nav-item" href="/docs/assistants/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/assistants/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/deep-dive"><span class="side-nav-item-name">Deep dive</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/tools"><span class="side-nav-item-name">Tools</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/assistants/whats-new"><span class="side-nav-item-name">What's new?</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/migration"><span class="side-nav-item-name">Migration guide</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">ChatGPT</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/actions"><span class="side-nav-item-name">Actions</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/gpts/release-notes"><span class="side-nav-item-name">Release notes</span></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Best practices</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/prompt-engineering"><span class="side-nav-item-name">Prompt engineering</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/production-best-practices"><span class="side-nav-item-name">Production best practices</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/safety-best-practices"><span class="side-nav-item-name">Safety best practices</span></a><a class="scroll-link side-nav-item" href="/docs/guides/prompt-caching"><span class="side-nav-item-name">Prompt caching</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/model-selection"><span class="side-nav-item-name">Model selection</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/latency-optimization"><span class="side-nav-item-name">Latency optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/optimizing-llm-accuracy"><span class="side-nav-item-name">Accuracy optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/advanced-usage"><span class="side-nav-item-name">Advanced usage</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Resources</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/libraries"><span class="side-nav-item-name">Libraries</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/examples"><span class="side-nav-item-name">Prompt examples</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/rate-limits"><span class="side-nav-item-name">Rate limits</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/error-codes"><span class="side-nav-item-name">Error codes</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/deprecations"><span class="side-nav-item-name">Deprecations</span></a></div></div></div></div></div></div></div></div><div class="EDOEc qyrrQ"><div class="q3jBs"><a href="https://cookbook.openai.com" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M14.447 7.106a1 1 0 0 1 .447 1.341l-4 8a1 1 0 1 1-1.788-.894l4-8a1 1 0 0 1 1.341-.447ZM6.6 7.2a1 1 0 0 1 .2 1.4L4.25 12l2.55 3.4a1 1 0 0 1-1.6 1.2l-3-4a1 1 0 0 1 0-1.2l3-4a1 1 0 0 1 1.4-.2Zm10.8 0a1 1 0 0 1 1.4.2l3 4a1 1 0 0 1 0 1.2l-3 4a1 1 0 0 1-1.6-1.2l2.55-3.4-2.55-3.4a1 1 0 0 1 .2-1.4Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Cookbook</span></span></a><a href="https://community.openai.com/categories" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M10.5 8.5a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12 5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7ZM3 9.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm1-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm16 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm-3 1a3 3 0 1 1 6 0 3 3 0 0 1-6 0ZM8 18c0-.974.438-1.684 1.142-2.185C9.876 15.293 10.911 15 12 15c1.09 0 2.124.293 2.858.815.704.5 1.142 1.21 1.142 2.185a1 1 0 1 0 2 0c0-1.692-.812-2.982-1.983-3.815C14.876 13.373 13.411 13 12 13c-1.41 0-2.876.373-4.017 1.185C6.812 15.018 6 16.308 6 18a1 1 0 1 0 2 0Zm-3.016-3.675a1 1 0 0 1-.809 1.16C2.79 15.732 2 16.486 2 17.5a1 1 0 1 1-2 0c0-2.41 1.978-3.655 3.825-3.985a1 1 0 0 1 1.16.81Zm14.84 1.16a1 1 0 1 1 .351-1.97C22.022 13.845 24 15.09 24 17.5a1 1 0 1 1-2 0c0-1.014-.79-1.768-2.175-2.015Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Forum</span></span></a><button class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12 9a1 1 0 0 0-.879.522 1 1 0 0 1-1.754-.96A3 3 0 0 1 12 7c1.515 0 2.567 1.006 2.866 2.189.302 1.189-.156 2.574-1.524 3.258A.618.618 0 0 0 13 13a1 1 0 1 1-2 0c0-.992.56-1.898 1.447-2.342.455-.227.572-.618.48-.978C12.836 9.314 12.529 9 12 9Z" clip-rule="evenodd"></path><path d="M13.1 16a1.1 1.1 0 1 1-2.2 0 1.1 1.1 0 0 1 2.2 0Z"></path></svg></span><span class="_0LIzz">Help</span></span></button><a class="-ySo1 FDGXZ" data-primary-nav-item="" aria-haspopup="true" aria-expanded="false" href="/settings"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.568 3.5a1 1 0 0 0-.863.494l-.811 1.381A3.001 3.001 0 0 1 7.33 6.856l-1.596.013a1 1 0 0 0-.858.501l-.439.761a1 1 0 0 0-.004.992l.792 1.4a3 3 0 0 1 0 2.954l-.792 1.4a1 1 0 0 0 .004.992l.439.76a1 1 0 0 0 .858.502l1.596.013a3 3 0 0 1 2.564 1.48l.811 1.382a1 1 0 0 0 .863.494h.87a1 1 0 0 0 .862-.494l.812-1.381a3.001 3.001 0 0 1 2.563-1.481l1.596-.013a1 1 0 0 0 .86-.501l.438-.761a1 1 0 0 0 .004-.992l-.793-1.4a3 3 0 0 1 0-2.954l.793-1.4a1 1 0 0 0-.004-.992l-.439-.76a1 1 0 0 0-.858-.502l-1.597-.013a3 3 0 0 1-2.563-1.48L13.3 3.993a1 1 0 0 0-.862-.494h-.87ZM8.98 2.981A3.001 3.001 0 0 1 11.568 1.5h.87c1.064 0 2.049.564 2.588 1.481l.811 1.382a1 1 0 0 0 .855.494l1.596.013a3 3 0 0 1 2.575 1.502l.44.76a3 3 0 0 1 .011 2.975l-.792 1.4a1 1 0 0 0 0 .985l.792 1.401a3 3 0 0 1-.012 2.974l-.439.761a3.001 3.001 0 0 1-2.575 1.503l-1.597.012a1 1 0 0 0-.854.494l-.811 1.382a3.001 3.001 0 0 1-2.588 1.481h-.87a3.001 3.001 0 0 1-2.588-1.481l-.811-1.382a1 1 0 0 0-.855-.494l-1.596-.012a3.001 3.001 0 0 1-2.576-1.503l-.438-.76a3 3 0 0 1-.013-2.975l.793-1.4a1 1 0 0 0 0-.985l-.793-1.4a3 3 0 0 1 .013-2.975l.438-.761A3.001 3.001 0 0 1 5.718 4.87l1.596-.013a1 1 0 0 0 .855-.494l.81-1.382Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12.003 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM8.502 12a3.5 3.5 0 1 1 7 .001 3.5 3.5 0 0 1-7-.001Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Settings</span></span></a><div class="LwKwt"><button class="jYGOC" type="button" id="radix-:r3:" aria-haspopup="menu" aria-expanded="false" data-state="closed"><span class="qCm0E" role="presentation" data-variant="light"><div class="_8ufcO"><img src="https://lh3.googleusercontent.com/a/ACg8ocLahjE0y72DP3dxsDWlC2UR4uGhyySAPayi5gmRmLoIL7h-xd7L=s96-c" class="mImKu" alt="" role="presentation" data-loaded=""></div></span></button></div></div></div></aside><div class="_7j8ow"><div class="qLnXc"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="ImBcX"><div class="docs-scroll-container" data-important-algolia-crawl="true"><div class="page-body full-width flush docs-page"><div class="markdown-page markdown-content batch"><div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/batch-api"><h1 class="anchor-heading" data-name="batch-api">Batch API<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h1></a></div>
+<p>Learn how to use OpenAI's Batch API to send asynchronous groups of requests with 50% lower costs, a separate pool of significantly higher rate limits, and a clear 24-hour turnaround time. The service is ideal for processing jobs that don't require immediate responses. You can also <a href="/docs/api-reference/batch">explore the API reference directly here</a>.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/overview"><h2 class="anchor-heading" data-name="overview">Overview<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>While some uses of the OpenAI Platform require you to send synchronous requests, there are many cases where requests do not need an immediate response or <a href="/docs/guides/rate-limits">rate limits</a> prevent you from executing a large number of queries quickly. Batch processing jobs are often helpful in use cases like:</p>
+<ol>
+<li>running evaluations</li>
+<li>classifying large datasets</li>
+<li>embedding content repositories</li>
+</ol>
+<p>The Batch API offers a straightforward set of endpoints that allow you to collect a set of requests into a single file, kick off a batch processing job to execute these requests, query for the status of that batch while the underlying requests execute, and eventually retrieve the collected results when the batch is complete.</p>
+<p>Compared to using standard endpoints directly, Batch API has:</p>
+<ol>
+<li><strong>Better cost efficiency:</strong> 50% cost discount compared to synchronous APIs</li>
+<li><strong>Higher rate limits:</strong> <a href="/settings/organization/limits">Substantially more headroom</a> compared to the synchronous APIs</li>
+<li><strong>Fast completion times:</strong> Each batch completes within 24 hours (and often more quickly)</li>
+</ol>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/getting-started"><h2 class="anchor-heading" data-name="getting-started">Getting Started<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/1-preparing-your-batch-file"><h3 class="anchor-heading" data-name="1-preparing-your-batch-file">1. Preparing Your Batch File<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Batches start with a <code>.jsonl</code> file where each line contains the details of an individual request to the API. For now, the available endpoints are <code>/v1/chat/completions</code> (<a href="/docs/api-reference/chat">Chat Completions API</a>) and <code>/v1/embeddings</code> (<a href="/docs/api-reference/embeddings">Embeddings API</a>). For a given input file, the parameters in each line's <code>body</code> field are the same as the parameters for the underlying endpoint. Each request must include a unique <code>custom_id</code> value, which you can use to reference results after completion. Here's an example of an input file with 2 requests. Note that each input file can only include requests to a single model.</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-jsonl" style="white-space: pre;"><span><span>{</span><span class="hljs-attr">"custom_id"</span><span>: </span><span class="hljs-string">"request-1"</span><span>, </span><span class="hljs-attr">"method"</span><span>: </span><span class="hljs-string">"POST"</span><span>, </span><span class="hljs-attr">"url"</span><span>: </span><span class="hljs-string">"/v1/chat/completions"</span><span>, </span><span class="hljs-attr">"body"</span><span>: {</span><span class="hljs-attr">"model"</span><span>: </span><span class="hljs-string">"gpt-3.5-turbo-0125"</span><span>, </span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"You are a helpful assistant."</span><span>},{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Hello world!"</span><span>}],</span><span class="hljs-attr">"max_tokens"</span><span>: </span><span class="hljs-number">1000</span><span>}}
+</span></span><span><span>{</span><span class="hljs-attr">"custom_id"</span><span>: </span><span class="hljs-string">"request-2"</span><span>, </span><span class="hljs-attr">"method"</span><span>: </span><span class="hljs-string">"POST"</span><span>, </span><span class="hljs-attr">"url"</span><span>: </span><span class="hljs-string">"/v1/chat/completions"</span><span>, </span><span class="hljs-attr">"body"</span><span>: {</span><span class="hljs-attr">"model"</span><span>: </span><span class="hljs-string">"gpt-3.5-turbo-0125"</span><span>, </span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"You are an unhelpful assistant."</span><span>},{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Hello world!"</span><span>}],</span><span class="hljs-attr">"max_tokens"</span><span>: </span><span class="hljs-number">1000</span><span>}}</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/2-uploading-your-batch-input-file"><h3 class="anchor-heading" data-name="2-uploading-your-batch-input-file">2. Uploading Your Batch Input File<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Similar to our <a href="/docs/guides/fine-tuning/">Fine-tuning API</a>, you must first upload your input file so that you can reference it correctly when kicking off batches. Upload your <code>.jsonl</code> file using the <a href="/docs/api-reference/files">Files API</a>.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small">Upload files for Batch API</div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="curl">curl</option><option value="node">node</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span>batch_input_file = client.files.create(
+</span><span><span>  file=</span><span class="hljs-built_in">open</span><span>(</span><span class="hljs-string">"batchinput.jsonl"</span><span>, </span><span class="hljs-string">"rb"</span><span>),
+</span></span><span><span>  purpose=</span><span class="hljs-string">"batch"</span><span>
+</span></span><span>)</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/3-creating-the-batch"><h3 class="anchor-heading" data-name="3-creating-the-batch">3. Creating the Batch<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Once you've successfully uploaded your input file, you can use the input File object's ID to create a batch. In this case, let's assume the file ID is <code>file-abc123</code>. For now, the completion window can only be set to <code>24h</code>. You can also provide custom metadata via an optional <code>metadata</code> parameter.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small">Create the Batch</div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="curl">curl</option><option value="node">node</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span></code><span><span>batch_input_file_id = batch_input_file.</span><span class="hljs-built_in">id</span><span>
+</span></span><span>
+</span><span>client.batches.create(
+</span><span>    input_file_id=batch_input_file_id,
+</span><span><span>    endpoint=</span><span class="hljs-string">"/v1/chat/completions"</span><span>,
+</span></span><span><span>    completion_window=</span><span class="hljs-string">"24h"</span><span>,
+</span></span><span>    metadata={
+</span><span><span>      </span><span class="hljs-string">"description"</span><span>: </span><span class="hljs-string">"nightly eval job"</span><span>
+</span></span><span>    }
+</span><span>)</span></code></pre></div></div>
+<p>This request will return a <a href="/docs/api-reference/batch/object">Batch object</a> with metadata about your batch:</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span></code><span><span>{
+</span></span><span><span>  </span><span class="hljs-string">"id"</span><span>: </span><span class="hljs-string">"batch_abc123"</span><span>,
+</span></span><span><span>  </span><span class="hljs-string">"object"</span><span>: </span><span class="hljs-string">"batch"</span><span>,
+</span></span><span><span>  </span><span class="hljs-string">"endpoint"</span><span>: </span><span class="hljs-string">"/v1/chat/completions"</span><span>,
+</span></span><span><span>  </span><span class="hljs-string">"errors"</span><span>: null,
+</span></span><span><span>  </span><span class="hljs-string">"input_file_id"</span><span>: </span><span class="hljs-string">"file-abc123"</span><span>,
+</span></span><span><span>  </span><span class="hljs-string">"completion_window"</span><span>: </span><span class="hljs-string">"24h"</span><span>,
+</span></span><span><span>  </span><span class="hljs-string">"status"</span><span>: </span><span class="hljs-string">"validating"</span><span>,
+</span></span><span><span>  </span><span class="hljs-string">"output_file_id"</span><span>: null,
+</span></span><span><span>  </span><span class="hljs-string">"error_file_id"</span><span>: null,
+</span></span><span><span>  </span><span class="hljs-string">"created_at"</span><span>: </span><span class="hljs-number">1714508499</span><span>,
+</span></span><span><span>  </span><span class="hljs-string">"in_progress_at"</span><span>: null,
+</span></span><span><span>  </span><span class="hljs-string">"expires_at"</span><span>: </span><span class="hljs-number">1714536634</span><span>,
+</span></span><span><span>  </span><span class="hljs-string">"completed_at"</span><span>: null,
+</span></span><span><span>  </span><span class="hljs-string">"failed_at"</span><span>: null,
+</span></span><span><span>  </span><span class="hljs-string">"expired_at"</span><span>: null,
+</span></span><span><span>  </span><span class="hljs-string">"request_counts"</span><span>: {
+</span></span><span><span>    </span><span class="hljs-string">"total"</span><span>: </span><span class="hljs-number">0</span><span>,
+</span></span><span><span>    </span><span class="hljs-string">"completed"</span><span>: </span><span class="hljs-number">0</span><span>,
+</span></span><span><span>    </span><span class="hljs-string">"failed"</span><span>: </span><span class="hljs-number">0</span><span>
+</span></span><span>  },
+</span><span><span>  </span><span class="hljs-string">"metadata"</span><span>: null
+</span></span><span>}</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/4-checking-the-status-of-a-batch"><h3 class="anchor-heading" data-name="4-checking-the-status-of-a-batch">4. Checking the Status of a Batch<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>You can check the status of a batch at any time, which will also return a Batch object.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small">Check the status of a batch</div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="curl">curl</option><option value="node">node</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span><span>client.batches.retrieve(</span><span class="hljs-string">"batch_abc123"</span><span>)</span></span></code></pre></div></div>
+<p>The status of a given Batch object can be any of the following:</p>
+<table><thead><tr><th>Status</th><th>Description</th></tr></thead><tbody><tr><td><code>validating</code></td><td>the input file is being validated before the batch can begin</td></tr><tr><td><code>failed</code></td><td>the input file has failed the validation process</td></tr><tr><td><code>in_progress</code></td><td>the input file was successfully validated and the batch is currently being run</td></tr><tr><td><code>finalizing</code></td><td>the batch has completed and the results are being prepared</td></tr><tr><td><code>completed</code></td><td>the batch has been completed and the results are ready</td></tr><tr><td><code>expired</code></td><td>the batch was not able to be completed within the 24-hour time window</td></tr><tr><td><code>cancelling</code></td><td>the batch is being cancelled (may take up to 10 minutes)</td></tr><tr><td><code>cancelled</code></td><td>the batch was cancelled</td></tr></tbody></table>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/5-retrieving-the-results"><h3 class="anchor-heading" data-name="5-retrieving-the-results">5. Retrieving the Results<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Once the batch is complete, you can download the output by making a request against the <a href="/docs/api-reference/files">Files API</a> via the <code>output_file_id</code> field from the Batch object and writing it to a file on your machine, in this case <code>batch_output.jsonl</code></p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small">Retrieving the batch results</div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="curl">curl</option><option value="node">node</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span><span>file_response = client.files.content(</span><span class="hljs-string">"file-xyz123"</span><span>)
+</span></span><span><span></span><span class="hljs-built_in">print</span><span>(file_response.text)</span></span></code></pre></div></div>
+<p>The output <code>.jsonl</code> file will have one response line for every successful request line in the input file. Any failed requests in the batch will have their error information written to an error file that can be found via the batch's <code>error_file_id</code>.</p>
+<div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p>Note that the output line order <strong>may not match</strong> the input line order. Instead of
+relying on order to process your results, use the custom_id field which will be
+present in each line of your output file and allow you to map requests in your input
+to results in your output.</p></div></div></div></div>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-jsonl" style="white-space: pre;"><span><span>{</span><span class="hljs-attr">"id"</span><span>: </span><span class="hljs-string">"batch_req_123"</span><span>, </span><span class="hljs-attr">"custom_id"</span><span>: </span><span class="hljs-string">"request-2"</span><span>, </span><span class="hljs-attr">"response"</span><span>: {</span><span class="hljs-attr">"status_code"</span><span>: </span><span class="hljs-number">200</span><span>, </span><span class="hljs-attr">"request_id"</span><span>: </span><span class="hljs-string">"req_123"</span><span>, </span><span class="hljs-attr">"body"</span><span>: {</span><span class="hljs-attr">"id"</span><span>: </span><span class="hljs-string">"chatcmpl-123"</span><span>, </span><span class="hljs-attr">"object"</span><span>: </span><span class="hljs-string">"chat.completion"</span><span>, </span><span class="hljs-attr">"created"</span><span>: </span><span class="hljs-number">1711652795</span><span>, </span><span class="hljs-attr">"model"</span><span>: </span><span class="hljs-string">"gpt-3.5-turbo-0125"</span><span>, </span><span class="hljs-attr">"choices"</span><span>: [{</span><span class="hljs-attr">"index"</span><span>: </span><span class="hljs-number">0</span><span>, </span><span class="hljs-attr">"message"</span><span>: {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Hello."</span><span>}, </span><span class="hljs-attr">"logprobs"</span><span>: </span><span class="hljs-literal">null</span><span>, </span><span class="hljs-attr">"finish_reason"</span><span>: </span><span class="hljs-string">"stop"</span><span>}], </span><span class="hljs-attr">"usage"</span><span>: {</span><span class="hljs-attr">"prompt_tokens"</span><span>: </span><span class="hljs-number">22</span><span>, </span><span class="hljs-attr">"completion_tokens"</span><span>: </span><span class="hljs-number">2</span><span>, </span><span class="hljs-attr">"total_tokens"</span><span>: </span><span class="hljs-number">24</span><span>}, </span><span class="hljs-attr">"system_fingerprint"</span><span>: </span><span class="hljs-string">"fp_123"</span><span>}}, </span><span class="hljs-attr">"error"</span><span>: </span><span class="hljs-literal">null</span><span>}
+</span></span><span><span>{</span><span class="hljs-attr">"id"</span><span>: </span><span class="hljs-string">"batch_req_456"</span><span>, </span><span class="hljs-attr">"custom_id"</span><span>: </span><span class="hljs-string">"request-1"</span><span>, </span><span class="hljs-attr">"response"</span><span>: {</span><span class="hljs-attr">"status_code"</span><span>: </span><span class="hljs-number">200</span><span>, </span><span class="hljs-attr">"request_id"</span><span>: </span><span class="hljs-string">"req_789"</span><span>, </span><span class="hljs-attr">"body"</span><span>: {</span><span class="hljs-attr">"id"</span><span>: </span><span class="hljs-string">"chatcmpl-abc"</span><span>, </span><span class="hljs-attr">"object"</span><span>: </span><span class="hljs-string">"chat.completion"</span><span>, </span><span class="hljs-attr">"created"</span><span>: </span><span class="hljs-number">1711652789</span><span>, </span><span class="hljs-attr">"model"</span><span>: </span><span class="hljs-string">"gpt-3.5-turbo-0125"</span><span>, </span><span class="hljs-attr">"choices"</span><span>: [{</span><span class="hljs-attr">"index"</span><span>: </span><span class="hljs-number">0</span><span>, </span><span class="hljs-attr">"message"</span><span>: {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Hello! How can I assist you today?"</span><span>}, </span><span class="hljs-attr">"logprobs"</span><span>: </span><span class="hljs-literal">null</span><span>, </span><span class="hljs-attr">"finish_reason"</span><span>: </span><span class="hljs-string">"stop"</span><span>}], </span><span class="hljs-attr">"usage"</span><span>: {</span><span class="hljs-attr">"prompt_tokens"</span><span>: </span><span class="hljs-number">20</span><span>, </span><span class="hljs-attr">"completion_tokens"</span><span>: </span><span class="hljs-number">9</span><span>, </span><span class="hljs-attr">"total_tokens"</span><span>: </span><span class="hljs-number">29</span><span>}, </span><span class="hljs-attr">"system_fingerprint"</span><span>: </span><span class="hljs-string">"fp_3ba"</span><span>}}, </span><span class="hljs-attr">"error"</span><span>: </span><span class="hljs-literal">null</span><span>}</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/6-cancelling-a-batch"><h3 class="anchor-heading" data-name="6-cancelling-a-batch">6. Cancelling a Batch<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>If necessary, you can cancel an ongoing batch. The batch's status will change to <code>cancelling</code> until in-flight requests are complete (up to 10 minutes), after which the status will change to <code>cancelled</code>.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small">Cancelling a batch</div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="curl">curl</option><option value="node">node</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span><span>client.batches.cancel(</span><span class="hljs-string">"batch_abc123"</span><span>)</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/7-getting-a-list-of-all-batches"><h3 class="anchor-heading" data-name="7-getting-a-list-of-all-batches">7. Getting a List of All Batches<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>At any time, you can see all your batches. For users with many batches, you can use the <code>limit</code> and <code>after</code> parameters to paginate your results.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small">Getting a list of all batches</div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="curl">curl</option><option value="node">node</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span><span>client.batches.</span><span class="hljs-built_in">list</span><span>(limit=</span><span class="hljs-number">10</span><span>)</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/model-availability"><h2 class="anchor-heading" data-name="model-availability">Model Availability<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>The Batch API can currently be used to execute queries against the following models. The Batch API supports text and vision inputs in the same format as the endpoints for these models:</p>
+<ul>
+<li><code>gpt-4o</code></li>
+<li><code>gpt-4o-2024-08-06</code></li>
+<li><code>gpt-4o-mini</code></li>
+<li><code>gpt-4-turbo</code></li>
+<li><code>gpt-4</code></li>
+<li><code>gpt-4-32k</code></li>
+<li><code>gpt-3.5-turbo</code></li>
+<li><code>gpt-3.5-turbo-16k</code></li>
+<li><code>gpt-4-turbo-preview</code></li>
+<li><code>gpt-4-vision-preview</code></li>
+<li><code>gpt-4-turbo-2024-04-09</code></li>
+<li><code>gpt-4-0314</code></li>
+<li><code>gpt-4-32k-0314</code></li>
+<li><code>gpt-4-32k-0613</code></li>
+<li><code>gpt-3.5-turbo-0301</code></li>
+<li><code>gpt-3.5-turbo-16k-0613</code></li>
+<li><code>gpt-3.5-turbo-1106</code></li>
+<li><code>gpt-3.5-turbo-0613</code></li>
+<li><code>text-embedding-3-large</code></li>
+<li><code>text-embedding-3-small</code></li>
+<li><code>text-embedding-ada-002</code></li>
+</ul>
+<p>The Batch API also supports <a href="/docs/guides/fine-tuning/what-models-can-be-fine-tuned">fine-tuned models</a>.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/rate-limits"><h2 class="anchor-heading" data-name="rate-limits">Rate Limits<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Batch API rate limits are separate from existing per-model rate limits. The Batch API has two new types of rate limits:</p>
+<ol>
+<li><strong>Per-batch limits:</strong> A single batch may include up to 50,000 requests, and a batch input file can be up to 100 MB in size. Note that <code>/v1/embeddings</code> batches are also restricted to a maximum of 50,000 embedding inputs across all requests in the batch.</li>
+<li><strong>Enqueued prompt tokens per model:</strong> Each model has a maximum number of enqueued prompt tokens allowed for batch processing. You can find these limits on the <a href="/settings/organization/limits">Platform Settings page</a>.</li>
+</ol>
+<p>There are no limits for output tokens or number of submitted requests for the Batch API today. Because Batch API rate limits are a new, separate pool, <strong>using the Batch API will not consume tokens from your standard per-model rate limits</strong>, thereby offering you a convenient way to increase the number of requests and processed tokens you can use when querying our API.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/batch-expiration"><h2 class="anchor-heading" data-name="batch-expiration">Batch Expiration<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Batches that do not complete in time eventually move to an <code>expired</code> state; unfinished requests within that batch are cancelled, and any responses to completed requests are made available via the batch's output file. You will be charged for tokens consumed from any completed requests.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/batch/other-resources"><h2 class="anchor-heading" data-name="other-resources">Other Resources<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>For more concrete examples, visit <strong><a href="https://cookbook.openai.com/examples/batch_processing" target="_blank" rel="noopener noreferrer">the OpenAI Cookbook</a></strong>, which contains sample code for use cases like classification, sentiment analysis, and summary generation.</p></div><div class="docs-footer"><div class="docs-feedback">Was this page useful?<button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Helpful" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12.132 2.504a1 1 0 0 1 .992-.496l.454.056a4 4 0 0 1 3.327 5.146L16.354 9h.718c2.638 0 4.553 2.508 3.86 5.053l-1.364 5A4 4 0 0 1 15.708 22H6a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3h2c.26 0 .5-.14.628-.364l3.504-6.132ZM10 20h5.709a2 2 0 0 0 1.93-1.474l1.363-5A2 2 0 0 0 17.072 11H15a1 1 0 0 1-.956-1.294l.95-3.084a2 2 0 0 0-1.462-2.537l-3.168 5.543A2.723 2.723 0 0 1 9 10.81V19a1 1 0 0 0 1 1Zm-3-9v8c0 .35.06.687.17 1H6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h1Z" clip-rule="evenodd"></path></svg></span></span></button><button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Thumbs down" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.873 21.496a1 1 0 0 1-.992.496l-.454-.056A4 4 0 0 1 7.1 16.79L7.65 15h-.718c-2.637 0-4.553-2.508-3.859-5.052l1.364-5A4 4 0 0 1 8.296 2h9.709a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-2c-.26 0-.5.14-.628.364l-3.504 6.132ZM14.005 4h-5.71a2 2 0 0 0-1.929 1.474l-1.363 5A2 2 0 0 0 6.933 13h2.072a1 1 0 0 1 .955 1.294l-.949 3.084a2 2 0 0 0 1.462 2.537l3.167-5.543a2.723 2.723 0 0 1 1.364-1.182V5a1 1 0 0 0-1-1Zm3 9V5c0-.35-.06-.687-.171-1h1.17a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1Z" clip-rule="evenodd"></path></svg></span></span></button></div></div></div></div></div></div></div></div></div></div></div></main><div data-testid="compliance-management-wrapper"></div></div><div class="layers-root"></div></div>
+      <script nonce="" nomodule="">!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-polyfill" src="/static/polyfills-legacy-DO_EefdF.js"></script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-entry" data-src="/static/index-legacy-U3KC6Hpc.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+    
+
+<div class="CRjGu"></div><iframe id="intercom-frame" style="position: absolute !important; opacity: 0 !important; width: 1px !important; height: 1px !important; top: 0 !important; left: 0 !important; border: none !important; display: block !important; z-index: -1 !important; pointer-events: none;" aria-hidden="true" tabindex="-1" title="Intercom"></iframe><div class="intercom-lightweight-app"><style id="intercom-lightweight-app-style" type="text/css">
+  @keyframes intercom-lightweight-app-launcher {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes intercom-lightweight-app-gradient {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes intercom-lightweight-app-messenger {
+    0% {
+      opacity: 0;
+      transform: scale(0);
+    }
+    40% {
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .intercom-lightweight-app {
+    position: fixed;
+    z-index: 2147483001;
+    width: 0;
+    height: 0;
+    font-family: intercom-font, "Helvetica Neue", "Apple Color Emoji", Helvetica, Arial, sans-serif;
+  }
+
+  .intercom-lightweight-app-gradient {
+    position: fixed;
+    z-index: 2147483002;
+    width: 500px;
+    height: 500px;
+    bottom: 0;
+    right: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at bottom right,
+      rgba(29, 39, 54, 0.16) 0%,
+      rgba(29, 39, 54, 0) 72%);
+    animation: intercom-lightweight-app-gradient 200ms ease-out;
+  }
+
+  .intercom-lightweight-app-launcher {
+    position: fixed;
+    z-index: 2147483003;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none;
+    bottom: 20px;
+    right: 20px;
+    max-width: 48px;
+    width: 48px;
+    max-height: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #202123;
+    cursor: pointer;
+    box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.06), 0 2px 32px 0 rgba(0, 0, 0, 0.16);
+    transition: transform 167ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    box-sizing: content-box;
+  }
+
+
+  .intercom-lightweight-app-launcher:hover {
+    transition: transform 250ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    transform: scale(1.1)
+  }
+
+  .intercom-lightweight-app-launcher:active {
+    transform: scale(0.85);
+    transition: transform 134ms cubic-bezier(0.45, 0, 0.2, 1);
+  }
+
+
+  .intercom-lightweight-app-launcher:focus {
+    outline: none;
+
+    
+  }
+
+  .intercom-lightweight-app-launcher-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 48px;
+    height: 48px;
+    transition: transform 100ms linear, opacity 80ms linear;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg {
+    height: 44px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-custom-icon-open {
+    max-height: 24px;
+    max-width: 24px;
+
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize {
+    
+        opacity: 0;
+        transform: rotate(-60deg) scale(0);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-messenger {
+    position: fixed;
+    z-index: 2147483003;
+    overflow: hidden;
+    background-color: white;
+    animation: intercom-lightweight-app-messenger 250ms cubic-bezier(0, 1, 1, 1);
+    transform-origin: bottom right;
+
+    
+        width: 400px;
+        height: calc(100% - 40px);
+        max-height: 704px;
+        min-height: 250px;
+        right: 20px;
+        bottom: 20px;
+        box-shadow: 0 5px 40px rgba(0,0,0,0.16);
+      
+
+    border-radius: 16px;
+  }
+
+  .intercom-lightweight-app-messenger-header {
+    height: 64px;
+    border-bottom: none;
+    background: #202123
+
+    
+  }
+
+  .intercom-lightweight-app-messenger-footer{
+    position:absolute;
+    bottom:0;
+    width: 100%;
+    height: 80px;
+    background: #fff;
+    font-size: 14px;
+    line-height: 21px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.05);
+    
+  }
+
+  @media print {
+    .intercom-lightweight-app {
+      display: none;
+    }
+  }
+</style></div></body></html>

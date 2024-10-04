@@ -1,0 +1,1045 @@
+<html lang="en" class="dark" data-theme="dark" style="color-scheme: dark;"><head>
+        <meta charset="utf-8">
+        <link rel="icon" type="image/png" href="/favicon-docs.png">
+        <link rel="icon" type="image/svg+xml" href="/favicon-docs.svg">
+        <link rel="preconnect" href="https://cdn.openai.com">
+        <link rel="preconnect" href="https://OWZ3QOIIJA-dsn.algolia.net" crossorigin="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#000000">
+        <title>Fine-tuning - OpenAI API</title>
+        <meta name="description" content="Explore resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's developer platform.">
+        <link rel="manifest" href="/manifest.json">
+
+        <!-- Facebook / LinkedIn Meta Tags -->
+        <meta property="og:title" content="OpenAI Platform">
+        <meta property="og:image" content="https://cdn.openai.com/API/images/opengraph.png">
+        <meta property="og:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://platform.openai.com">
+
+        <!-- Twitter Meta Tags -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta property="twitter:domain" content="platform.openai.com">
+        <meta property="twitter:url" content="https://platform.openai.com">
+        <meta name="twitter:title" content="OpenAI Platform">
+        <meta name="twitter:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta name="twitter:image" content="https://cdn.openai.com/API/images/opengraph.png">
+      <script type="text/javascript" async="" src="https://widget.intercom.io/widget/dgkjq2bp"></script><script nonce="" type="module" crossorigin="" src="/static/index-CYTQyVAq.js"></script>
+      <link rel="stylesheet" crossorigin="" href="/static/C5CC7YPsR_.css">
+      <script nonce="" type="module">import.meta.url;import("_").catch(()=>1);(async function*(){})().next();if(location.protocol!="file:"){window.__vite_is_modern_browser=true}</script>
+      <script nonce="" type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
+    <link rel="modulepreload" as="script" crossorigin="" href="/static/C2aIRGLQOh.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/BFyog71B1I.js"><link rel="stylesheet" href="/static/CFkw7B_gm-.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/CJnlUOvsM-.js"><link rel="stylesheet" href="/static/BX9BFw3PsH.css"><link rel="stylesheet" href="/static/BKxHiQFIW6.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C4wedv2caf.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/C961Md9dp6.js"><link rel="stylesheet" href="/static/C9MBEX7jPb.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C24vLskmtV.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/D9oCOueJRr.js"><link rel="stylesheet" href="/static/CcFh4jCko7.css"><link rel="stylesheet" href="/static/DqyyrKcaOP.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/Dh6auKfXaX.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/Bq7L_yreGd.js"><link rel="stylesheet" href="/static/C8xVwo073p.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/yQ3rCgkFw7.js"><link rel="stylesheet" href="/static/CnivQy12om.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/De9Te-Rlz8.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/IyMja2T0sm.js"><link rel="stylesheet" href="/static/DDpxtZQhKj.css"><link rel="stylesheet" href="/static/B2IOrA8ktD.css"></head>
+    <body>
+        <noscript>You need to enable JavaScript to run this app.</noscript>
+        <div id="root"><div class="rl7uK"><div class="hDvly"><div class="vpev1"><div class="_5Amyn"><div class="flex"><div class="relative"><select class="bvkc-"><optgroup label="Organizations"><option value="org-dH3B6ymfbSTLBRRCfId1BRPR">Climate AI Hackathon 21</option><option value="org-mXJaZ8zXm1qhWbRj0yQxhQFN">tmc</option></optgroup></select><button id="select-trigger-radix-:r0:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" tabindex="-1" aria-hidden="true"><span class="RWOJJ"><span class="flex items-center gap-2 font-medium"><span class="qCm0E" role="presentation" data-variant="dark" style="--avatar-size: 25px; --avatar-initial-nudge: 0px;"><div class="_9uyMP">T</div></span>tmc</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button></div></div><div class="u-pgg">/</div><button id="select-trigger-radix-:r1:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" aria-haspopup="dialog" aria-expanded="false" aria-controls="radix-:r2:" data-state="closed"><span class="RWOJJ"><span class="font-medium" style="color: var(--text-default);">Default project</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button></div></div><div class="Aip-a"><button class="_8dPNb"><span class="tfB-7"><span class="_3Tbwl UuUwq"></span><span class="gw2x5"><span class="_3Tbwl RMlM5"></span></span></span></button></div></div><main class="unjkE" data-sidebar="expanded" data-mobile-menu="hidden"><aside class="EpwGB VO47n"><nav class="okBd0"><a class="w9s17" data-primary-nav-item="" href="/playground"><span class="EsOWR vaD2P" data-title="Playground">Playground</span><span class="EsOWR ksWxL" data-title="Playground">Playground</span></a><a class="w9s17" data-primary-nav-item="" href="/chat-completions"><span class="EsOWR vaD2P" data-title="Dashboard">Dashboard</span><span class="EsOWR ksWxL" data-title="Dashboard">Dashboard</span></a><a aria-current="page" class="w9s17 _1T-tk" data-primary-nav-item="" href="/docs"><span class="EsOWR vaD2P" data-title="Docs">Docs</span><span class="EsOWR ksWxL" data-title="Docs">Docs</span></a><a class="w9s17" data-primary-nav-item="" href="/docs/api-reference/fine-tuning"><span class="EsOWR vaD2P" data-title="API reference">API reference</span><span class="EsOWR ksWxL" data-title="API">API</span></a></nav><div class="GVIPA"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="aTuAl"><div class="_0MyKb qyrrQ"><div class="search"><button type="button" class="DocSearch DocSearch-Button" aria-label="Search"><span class="DocSearch-Button-Container"><svg width="20" height="20" class="DocSearch-Search-Icon" viewBox="0 0 20 20"><path d="M14.386 14.386l4.0877 4.0877-4.0877-4.0877c-2.9418 2.9419-7.7115 2.9419-10.6533 0-2.9419-2.9418-2.9419-7.7115 0-10.6533 2.9418-2.9419 7.7115-2.9419 10.6533 0 2.9419 2.9418 2.9419 7.7115 0 10.6533z" stroke="currentColor" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="DocSearch-Button-Placeholder">Search</span></span><span class="DocSearch-Button-Keys"><kbd class="DocSearch-Button-Key">⌘</kbd><kbd class="DocSearch-Button-Key">K</kbd></span></button></div></div><div class="DH-HY qyrrQ QeXPj"><div class="side-nav-section"><div class="side-nav-header subheading">Get started</div><a class="scroll-link side-nav-item" href="/docs/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/models"><span class="side-nav-item-name">Models</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/changelog"><span class="side-nav-item-name">Changelog</span></a><a href="https://openai.com/policies" class="scroll-link side-nav-item" target="_blank" rel="noreferrer"><span class="side-nav-item-name">Terms and policies</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-icon"><path fill-rule="evenodd" d="M15 5a1 1 0 1 1 0-2h5a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V6.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L17.586 5H15ZM4 7a3 3 0 0 1 3-3h3a1 1 0 1 1 0 2H7a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3a1 1 0 1 1 2 0v3a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Capabilities</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-generation"><span class="side-nav-item-name">Text generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/images"><span class="side-nav-item-name">Image generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/vision"><span class="side-nav-item-name">Vision</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/embeddings"><span class="side-nav-item-name">Vector embeddings</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-to-speech"><span class="side-nav-item-name">Text to speech</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/speech-to-text"><span class="side-nav-item-name">Speech to text</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/moderation"><span class="side-nav-item-name">Moderation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/reasoning"><span class="side-nav-item-name">Reasoning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Guides</div><a class="scroll-link side-nav-item" href="/docs/guides/function-calling"><span class="side-nav-item-name">Function calling</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/structured-outputs"><span class="side-nav-item-name">Structured outputs</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/evals"><span class="side-nav-item-name">Evaluations</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems active active-exact" data-side-nav-subitems="visible" href="/docs/guides/fine-tuning"><span class="side-nav-item-name">Fine-tuning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><div class="side-nav-subitems"><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/fine-tuning/when-to-use-fine-tuning"><span class="side-nav-item-name">When to use fine-tuning</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/fine-tuning/common-use-cases"><span class="side-nav-item-name">Common use cases</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/fine-tuning/preparing-your-dataset"><span class="side-nav-item-name">Preparing your dataset</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/fine-tuning/vision"><span class="side-nav-item-name">Vision fine-tuning</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/fine-tuning/create-a-fine-tuned-model"><span class="side-nav-item-name">Create a fine-tuned model</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/fine-tuning/use-a-fine-tuned-model"><span class="side-nav-item-name">Use a fine-tuned model</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/fine-tuning/use-a-checkpointed-model"><span class="side-nav-item-name">Use a checkpointed model</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/fine-tuning/analyzing-your-fine-tuned-model"><span class="side-nav-item-name">Analyzing your fine-tuned model</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/fine-tuning/fine-tuning-examples"><span class="side-nav-item-name">Fine-tuning examples</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/fine-tuning/fine-tuning-integrations"><span class="side-nav-item-name">Fine-tuning integrations</span></a><a class="scroll-link side-nav-item side-nav-child" href="/docs/guides/fine-tuning/faq"><span class="side-nav-item-name">FAQ</span></a></div><a class="scroll-link side-nav-item" href="/docs/guides/distillation"><span class="side-nav-item-name">Distillation</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/realtime"><span class="side-nav-item-name">Realtime API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/batch"><span class="side-nav-item-name">Batch API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Assistants</div><a class="scroll-link side-nav-item" href="/docs/assistants/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/assistants/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/deep-dive"><span class="side-nav-item-name">Deep dive</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/tools"><span class="side-nav-item-name">Tools</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/assistants/whats-new"><span class="side-nav-item-name">What's new?</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/migration"><span class="side-nav-item-name">Migration guide</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">ChatGPT</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/actions"><span class="side-nav-item-name">Actions</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/gpts/release-notes"><span class="side-nav-item-name">Release notes</span></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Best practices</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/prompt-engineering"><span class="side-nav-item-name">Prompt engineering</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/production-best-practices"><span class="side-nav-item-name">Production best practices</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/safety-best-practices"><span class="side-nav-item-name">Safety best practices</span></a><a class="scroll-link side-nav-item" href="/docs/guides/prompt-caching"><span class="side-nav-item-name">Prompt caching</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/model-selection"><span class="side-nav-item-name">Model selection</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/latency-optimization"><span class="side-nav-item-name">Latency optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/optimizing-llm-accuracy"><span class="side-nav-item-name">Accuracy optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/advanced-usage"><span class="side-nav-item-name">Advanced usage</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Resources</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/libraries"><span class="side-nav-item-name">Libraries</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/examples"><span class="side-nav-item-name">Prompt examples</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/rate-limits"><span class="side-nav-item-name">Rate limits</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/error-codes"><span class="side-nav-item-name">Error codes</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/deprecations"><span class="side-nav-item-name">Deprecations</span></a></div></div></div></div></div></div></div></div><div class="EDOEc qyrrQ"><div class="q3jBs"><a href="https://cookbook.openai.com" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M14.447 7.106a1 1 0 0 1 .447 1.341l-4 8a1 1 0 1 1-1.788-.894l4-8a1 1 0 0 1 1.341-.447ZM6.6 7.2a1 1 0 0 1 .2 1.4L4.25 12l2.55 3.4a1 1 0 0 1-1.6 1.2l-3-4a1 1 0 0 1 0-1.2l3-4a1 1 0 0 1 1.4-.2Zm10.8 0a1 1 0 0 1 1.4.2l3 4a1 1 0 0 1 0 1.2l-3 4a1 1 0 0 1-1.6-1.2l2.55-3.4-2.55-3.4a1 1 0 0 1 .2-1.4Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Cookbook</span></span></a><a href="https://community.openai.com/categories" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M10.5 8.5a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12 5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7ZM3 9.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm1-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm16 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm-3 1a3 3 0 1 1 6 0 3 3 0 0 1-6 0ZM8 18c0-.974.438-1.684 1.142-2.185C9.876 15.293 10.911 15 12 15c1.09 0 2.124.293 2.858.815.704.5 1.142 1.21 1.142 2.185a1 1 0 1 0 2 0c0-1.692-.812-2.982-1.983-3.815C14.876 13.373 13.411 13 12 13c-1.41 0-2.876.373-4.017 1.185C6.812 15.018 6 16.308 6 18a1 1 0 1 0 2 0Zm-3.016-3.675a1 1 0 0 1-.809 1.16C2.79 15.732 2 16.486 2 17.5a1 1 0 1 1-2 0c0-2.41 1.978-3.655 3.825-3.985a1 1 0 0 1 1.16.81Zm14.84 1.16a1 1 0 1 1 .351-1.97C22.022 13.845 24 15.09 24 17.5a1 1 0 1 1-2 0c0-1.014-.79-1.768-2.175-2.015Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Forum</span></span></a><button class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12 9a1 1 0 0 0-.879.522 1 1 0 0 1-1.754-.96A3 3 0 0 1 12 7c1.515 0 2.567 1.006 2.866 2.189.302 1.189-.156 2.574-1.524 3.258A.618.618 0 0 0 13 13a1 1 0 1 1-2 0c0-.992.56-1.898 1.447-2.342.455-.227.572-.618.48-.978C12.836 9.314 12.529 9 12 9Z" clip-rule="evenodd"></path><path d="M13.1 16a1.1 1.1 0 1 1-2.2 0 1.1 1.1 0 0 1 2.2 0Z"></path></svg></span><span class="_0LIzz">Help</span></span></button><a class="-ySo1 FDGXZ" data-primary-nav-item="" aria-haspopup="true" aria-expanded="false" href="/settings"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.568 3.5a1 1 0 0 0-.863.494l-.811 1.381A3.001 3.001 0 0 1 7.33 6.856l-1.596.013a1 1 0 0 0-.858.501l-.439.761a1 1 0 0 0-.004.992l.792 1.4a3 3 0 0 1 0 2.954l-.792 1.4a1 1 0 0 0 .004.992l.439.76a1 1 0 0 0 .858.502l1.596.013a3 3 0 0 1 2.564 1.48l.811 1.382a1 1 0 0 0 .863.494h.87a1 1 0 0 0 .862-.494l.812-1.381a3.001 3.001 0 0 1 2.563-1.481l1.596-.013a1 1 0 0 0 .86-.501l.438-.761a1 1 0 0 0 .004-.992l-.793-1.4a3 3 0 0 1 0-2.954l.793-1.4a1 1 0 0 0-.004-.992l-.439-.76a1 1 0 0 0-.858-.502l-1.597-.013a3 3 0 0 1-2.563-1.48L13.3 3.993a1 1 0 0 0-.862-.494h-.87ZM8.98 2.981A3.001 3.001 0 0 1 11.568 1.5h.87c1.064 0 2.049.564 2.588 1.481l.811 1.382a1 1 0 0 0 .855.494l1.596.013a3 3 0 0 1 2.575 1.502l.44.76a3 3 0 0 1 .011 2.975l-.792 1.4a1 1 0 0 0 0 .985l.792 1.401a3 3 0 0 1-.012 2.974l-.439.761a3.001 3.001 0 0 1-2.575 1.503l-1.597.012a1 1 0 0 0-.854.494l-.811 1.382a3.001 3.001 0 0 1-2.588 1.481h-.87a3.001 3.001 0 0 1-2.588-1.481l-.811-1.382a1 1 0 0 0-.855-.494l-1.596-.012a3.001 3.001 0 0 1-2.576-1.503l-.438-.76a3 3 0 0 1-.013-2.975l.793-1.4a1 1 0 0 0 0-.985l-.793-1.4a3 3 0 0 1 .013-2.975l.438-.761A3.001 3.001 0 0 1 5.718 4.87l1.596-.013a1 1 0 0 0 .855-.494l.81-1.382Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12.003 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM8.502 12a3.5 3.5 0 1 1 7 .001 3.5 3.5 0 0 1-7-.001Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Settings</span></span></a><div class="LwKwt"><button class="jYGOC" type="button" id="radix-:r3:" aria-haspopup="menu" aria-expanded="false" data-state="closed"><span class="qCm0E" role="presentation" data-variant="light"><div class="_8ufcO"><img src="https://lh3.googleusercontent.com/a/ACg8ocLahjE0y72DP3dxsDWlC2UR4uGhyySAPayi5gmRmLoIL7h-xd7L=s96-c" class="mImKu" alt="" role="presentation" data-loaded=""></div></span></button></div></div></div></aside><div class="_7j8ow"><div class="qLnXc"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="ImBcX"><div class="docs-scroll-container" data-important-algolia-crawl="true"><div class="page-body full-width flush docs-page"><div class="markdown-page markdown-content"><div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/fine-tuning"><h1 class="anchor-heading" data-name="fine-tuning">Fine-tuning<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h1></a></div>
+<p>Fine-tuning lets you get more out of the models available through the API by providing:</p>
+<ul>
+<li>Higher quality results than prompting</li>
+<li>Ability to train on more examples than can fit in a prompt</li>
+<li>Token savings due to shorter prompts</li>
+<li>Lower latency requests</li>
+</ul>
+<p>OpenAI's text generation models have been pre-trained on a vast amount of text. To use the models effectively, we include instructions and sometimes several examples in a prompt. Using demonstrations to show how to perform a task is often called "few-shot learning."</p>
+<p>Fine-tuning improves on few-shot learning by training on many more examples than can fit in the prompt, letting you achieve better results on a wide number of tasks. <strong>Once a model has been fine-tuned, you won't need to provide as many examples in the prompt.</strong> This saves costs and enables lower-latency requests.</p>
+<p>At a high level, fine-tuning involves the following steps:</p>
+<ol>
+<li>Prepare and upload training data</li>
+<li>Train a new fine-tuned model</li>
+<li>Evaluate results and go back to step 1 if needed</li>
+<li>Use your fine-tuned model</li>
+</ol>
+<p>Visit our <a href="https://openai.com/api/pricing" target="_blank" rel="noopener noreferrer">pricing page</a> to learn more about how fine-tuned model training and usage are billed.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/which-models-can-be-fine-tuned"><h3 class="anchor-heading" data-name="which-models-can-be-fine-tuned">Which models can be fine-tuned?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Fine-tuning is currently available for the following models:</p>
+<ul>
+<li><code>gpt-4o-2024-08-06</code></li>
+<li><code>gpt-4o-mini-2024-07-18</code></li>
+<li><code>gpt-4-0613</code></li>
+<li><code>gpt-3.5-turbo-0125</code></li>
+<li><code>gpt-3.5-turbo-1106</code></li>
+<li><code>gpt-3.5-turbo-0613</code></li>
+<li><code>babbage-002</code></li>
+<li><code>davinci-002</code></li>
+</ul>
+<div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p>New fine-tuning training runs on <code>babbage-002</code> and <code>davinci-002</code> will no longer be supported starting October 28, 2024.</p></div></div></div></div>
+<p>You can also fine-tune a fine-tuned model, which is useful if you acquire additional data and don't want to repeat the previous training steps.</p>
+<p>We expect <code>gpt-4o-mini</code> to be the right model for most users in terms of performance, cost, and ease of use.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/when-to-use-fine-tuning"><h2 class="anchor-heading" data-name="when-to-use-fine-tuning">When to use fine-tuning<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Fine-tuning OpenAI text generation models can make them better for specific applications, but it requires a careful investment of time and effort. We recommend first attempting to get good results with prompt engineering, prompt chaining (breaking complex tasks into multiple prompts), and <a href="/docs/guides/function-calling">function calling</a>, with the key reasons being:</p>
+<ul>
+<li>There are many tasks at which our models may not initially appear to perform well, but results can be improved with the right prompts - thus fine-tuning may not be necessary</li>
+<li>Iterating over prompts and other tactics has a much faster feedback loop than iterating with fine-tuning, which requires creating datasets and running training jobs</li>
+<li>In cases where fine-tuning is still necessary, initial prompt engineering work is not wasted - we typically see best results when using a good prompt in the fine-tuning data (or combining prompt chaining / tool use with fine-tuning)</li>
+</ul>
+<p>Our <a href="/docs/guides/prompt-engineering">prompt engineering guide</a> provides a background on some of the most effective strategies and tactics for getting better performance without fine-tuning. You may find it helpful to iterate quickly on prompts in our <a href="/playground">playground</a>.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/common-use-cases"><h3 class="anchor-heading" data-name="common-use-cases">Common use cases<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Some common use cases where fine-tuning can improve results:</p>
+<ul>
+<li>Setting the style, tone, format, or other qualitative aspects</li>
+<li>Improving reliability at producing a desired output</li>
+<li>Correcting failures to follow complex prompts</li>
+<li>Handling many edge cases in specific ways</li>
+<li>Performing a new skill or task that’s hard to articulate in a prompt</li>
+</ul>
+<p>One high-level way to think about these cases is when it’s easier to "show, not tell". In the sections to come, we will explore how to set up data for fine-tuning and various examples where fine-tuning improves the performance over the baseline model.</p>
+<p>Another scenario where fine-tuning is effective is reducing cost and/or latency by replacing a more expensive model like <code>gpt-4o</code> with a fine-tuned <code>gpt-4o-mini</code> model. If you can achieve good results with <code>gpt-4o</code>, you can often reach similar quality with a fine-tuned <code>gpt-4o-mini</code> model by fine-tuning on the <code>gpt-4o</code> completions, possibly with a shortened instruction prompt.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/preparing-your-dataset"><h2 class="anchor-heading" data-name="preparing-your-dataset">Preparing your dataset<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Once you have determined that fine-tuning is the right solution (i.e. you’ve optimized your prompt as far as it can take you and identified problems that the model still has), you’ll need to prepare data for training the model. You should create a diverse set of demonstration conversations that are similar to the conversations you will ask the model to respond to at inference time in production.</p>
+<p>Each example in the dataset should be a conversation in the same format as our <a href="/docs/api-reference/chat/create">Chat Completions API</a>, specifically a list of messages where each message has a role, content, and <a href="/docs/api-reference/chat/create#chat/create-chat/create-messages-name">optional name</a>. At least some of the training examples should directly target cases where the prompted model is not behaving as desired, and the provided assistant messages in the data should be the ideal responses you want the model to provide.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/example-format"><h3 class="anchor-heading" data-name="example-format">Example format<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>In this example, our goal is to create a chatbot that occasionally gives sarcastic responses, these are three training examples (conversations) we could create for a dataset:</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-jsonl" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span></code><span><span>{</span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Marv is a factual chatbot that is also sarcastic."</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"What's the capital of France?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Paris, as if everyone doesn't know that already."</span><span>}]}
+</span></span><span><span>{</span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Marv is a factual chatbot that is also sarcastic."</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Who wrote 'Romeo and Juliet'?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Oh, just some guy named William Shakespeare. Ever heard of him?"</span><span>}]}
+</span></span><span><span>{</span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Marv is a factual chatbot that is also sarcastic."</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"How far is the Moon from Earth?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Around 384,400 kilometers. Give or take a few, like that really matters."</span><span>}]}</span></span></code></pre></div></div>
+<p>The conversational chat format is required to fine-tune <code>gpt-4o-mini</code> and <code>gpt-3.5-turbo</code>. For <code>babbage-002</code> and <code>davinci-002</code>, you can follow the prompt completion pair format as shown below.</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-json" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span></code><span><span>{</span><span class="hljs-attr">"prompt"</span><span>: </span><span class="hljs-string">"&lt;prompt text&gt;"</span><span>, </span><span class="hljs-attr">"completion"</span><span>: </span><span class="hljs-string">"&lt;ideal generated text&gt;"</span><span>}
+</span></span><span><span>{</span><span class="hljs-attr">"prompt"</span><span>: </span><span class="hljs-string">"&lt;prompt text&gt;"</span><span>, </span><span class="hljs-attr">"completion"</span><span>: </span><span class="hljs-string">"&lt;ideal generated text&gt;"</span><span>}
+</span></span><span><span>{</span><span class="hljs-attr">"prompt"</span><span>: </span><span class="hljs-string">"&lt;prompt text&gt;"</span><span>, </span><span class="hljs-attr">"completion"</span><span>: </span><span class="hljs-string">"&lt;ideal generated text&gt;"</span><span>}</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/multi-turn-chat-examples"><h3 class="anchor-heading" data-name="multi-turn-chat-examples">Multi-turn chat examples<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Examples in the chat format can have multiple messages with the assistant role. The default behavior during fine-tuning is to train on all assistant messages within a single example. To skip fine-tuning on specific assistant messages, a <code>weight</code> key can be added disable fine-tuning on that message, allowing you to control which assistant messages are learned. The allowed values for <code>weight</code> are currently 0 or 1. Some examples using <code>weight</code> for the chat format are below.</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-jsonl" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span></code><span><span>{</span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Marv is a factual chatbot that is also sarcastic."</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"What's the capital of France?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Paris"</span><span>, </span><span class="hljs-attr">"weight"</span><span>: </span><span class="hljs-number">0</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Can you be more sarcastic?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Paris, as if everyone doesn't know that already."</span><span>, </span><span class="hljs-attr">"weight"</span><span>: </span><span class="hljs-number">1</span><span>}]}
+</span></span><span><span>{</span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Marv is a factual chatbot that is also sarcastic."</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Who wrote 'Romeo and Juliet'?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"William Shakespeare"</span><span>, </span><span class="hljs-attr">"weight"</span><span>: </span><span class="hljs-number">0</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Can you be more sarcastic?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Oh, just some guy named William Shakespeare. Ever heard of him?"</span><span>, </span><span class="hljs-attr">"weight"</span><span>: </span><span class="hljs-number">1</span><span>}]}
+</span></span><span><span>{</span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Marv is a factual chatbot that is also sarcastic."</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"How far is the Moon from Earth?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"384,400 kilometers"</span><span>, </span><span class="hljs-attr">"weight"</span><span>: </span><span class="hljs-number">0</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Can you be more sarcastic?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Around 384,400 kilometers. Give or take a few, like that really matters."</span><span>, </span><span class="hljs-attr">"weight"</span><span>: </span><span class="hljs-number">1</span><span>}]}</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/crafting-prompts"><h3 class="anchor-heading" data-name="crafting-prompts">Crafting prompts<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>We generally recommend taking the set of instructions and prompts that you found worked best for the model prior to fine-tuning, and including them in every training example. This should let you reach the best and most general results, especially if you have relatively few (e.g. under a hundred) training examples.</p>
+<p>If you would like to shorten the instructions or prompts that are repeated in every example to save costs, keep in mind that the model will likely behave as if those instructions were included, and it may be hard to get the model to ignore those "baked-in" instructions at inference time.</p>
+<p>It may take more training examples to arrive at good results, as the model has to learn entirely through demonstration and without guided instructions.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/example-count-recommendations"><h3 class="anchor-heading" data-name="example-count-recommendations">Example count recommendations<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>To fine-tune a model, you are required to provide at least 10 examples. We typically see clear improvements from fine-tuning on 50 to 100 training examples with <code>gpt-4o-mini</code> and <code>gpt-3.5-turbo</code>, but the right number varies greatly based on the exact use case.</p>
+<p>We recommend starting with 50 well-crafted demonstrations and seeing if the model shows signs of improvement after fine-tuning. In some cases that may be sufficient, but even if the model is not yet production quality, clear improvements are a good sign that providing more data will continue to improve the model. No improvement suggests that you may need to rethink how to set up the task for the model or restructure the data before scaling beyond a limited example set.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/train-and-test-splits"><h3 class="anchor-heading" data-name="train-and-test-splits">Train and test splits<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>After collecting the initial dataset, we recommend splitting it into a training and test portion. When submitting a fine-tuning job with both training and test files, we will provide statistics on both during the course of training. These statistics will be your initial signal of how much the model is improving. Additionally, constructing a test set early on will be useful in making sure you are able to evaluate the model after training, by generating samples on the test set.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/token-limits"><h3 class="anchor-heading" data-name="token-limits">Token limits<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Token limits depend on the model you select. Here is an overview of the maximum inference context length and training examples context length for <code>gpt-4o-mini</code> and <code>gpt-3.5-turbo</code> models:</p>
+<div class="models-table"><table><thead><tr><th>Model</th><th>Inference context length</th><th>Training examples context length</th></tr></thead><tbody><tr><td><code>gpt-4o-2024-08-06</code></td><td>128,000 tokens</td><td>65,536 tokens (128k coming soon)</td></tr><tr><td><code>gpt-4o-mini-2024-07-18</code></td><td>128,000 tokens</td><td>65,536 tokens (128k coming soon)</td></tr><tr><td><code>gpt-3.5-turbo-0125</code></td><td>16,385 tokens</td><td>16,385 tokens</td></tr><tr><td><code>gpt-3.5-turbo-1106</code></td><td>16,385 tokens</td><td>16,385 tokens</td></tr><tr><td><code>gpt-3.5-turbo-0613</code></td><td>16,385 tokens</td><td>4,096 tokens</td></tr></tbody></table></div>
+<p>Examples longer than the default will be truncated to the maximum context length which removes tokens from the end of the training example(s). To be sure that your entire training example fits in context, consider checking that the total token counts in the message contents are under the limit.</p>
+<p>You can compute token counts using our <a href="https://cookbook.openai.com/examples/How_to_count_tokens_with_tiktoken.ipynb" target="_blank" rel="noopener noreferrer">counting tokens notebook</a> from the OpenAI cookbook.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/estimate-costs"><h3 class="anchor-heading" data-name="estimate-costs">Estimate costs<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>For detailed pricing on training costs, as well as input and output costs for a deployed fine-tuned model, visit our <a href="https://openai.com/pricing" target="_blank" rel="noopener noreferrer">pricing page</a>. Note that we don't charge for tokens used for training validation. To estimate the cost of a specific fine-tuning training job, use the following formula:</p>
+<blockquote>
+<p>(base training cost per 1M input tokens ÷ 1M) × number of tokens in the input file × number of epochs trained</p>
+</blockquote>
+<p>For a training file with 100,000 tokens trained over 3 epochs, the expected cost would be:</p>
+<ul>
+<li>~$0.90 USD with <code>gpt-4o-mini-2024-07-18</code> after the free period ends on October 31, 2024.</li>
+<li>~$2.40 USD with <code>gpt-3.5-turbo-0125</code>.</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/check-data-formatting"><h3 class="anchor-heading" data-name="check-data-formatting">Check data formatting<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Once you have compiled a dataset and before you create a fine-tuning job, it is important to check the data formatting. To do this, we created a simple Python script which you can use to find potential errors, review token counts, and estimate the cost of a fine-tuning job.</p>
+<a href="https://cookbook.openai.com/examples/chat_finetuning_data_prep" target="_blank"><div class="icon-item mt-6"><div class="icon-item-icon"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg></div><div class="icon-item-right"><div class="icon-item-title"><div class="icon-item-title body-large">Fine-tuning data format validation</div><div class="pointer"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9.293 7.293a1 1 0 0 1 1.414 0l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L12.586 12 9.293 8.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div></div><div class="icon-item-desc body-small"><p>Learn about fine-tuning data formatting</p></div></div></div></a>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/upload-a-training-file"><h3 class="anchor-heading" data-name="upload-a-training-file">Upload a training file<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Once you have the data validated, the file needs to be uploaded using the <a href="/docs/api-reference/files/create">Files API</a> in order to be used with a fine-tuning jobs:</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option><option value="curl">curl</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span>client.files.create(
+</span><span><span>  file=</span><span class="hljs-built_in">open</span><span>(</span><span class="hljs-string">"mydata.jsonl"</span><span>, </span><span class="hljs-string">"rb"</span><span>),
+</span></span><span><span>  purpose=</span><span class="hljs-string">"fine-tune"</span><span>
+</span></span><span>)</span></code></pre></div></div>
+<p>After you upload the file, it may take some time to process. While the file is processing, you can still create a fine-tuning job but it will not start until the file processing has completed.</p>
+<p>The maximum file upload size is 1 GB, though we do not suggest fine-tuning with that amount of data since you are unlikely to need that large of an amount to see improvements.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/vision"><h2 class="anchor-heading" data-name="vision"><p>Vision fine-tuning</p><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Fine-tuning is also possible with images in your JSONL files. Just as you can <a href="/docs/guides/vision">send one or many image inputs to chat completions</a>, you can include those same message types within your training data. Images can be provided either as HTTP URLs or data URLs containing <a href="/docs/guides/vision/uploading-base-64-encoded-images">base64 encoded images</a>.</p>
+<p>Here's an example of an image message on a line of your JSONL file. Below, the JSON object is expanded for readibility, but typically this JSON would appear on a single line in your data file:</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-json" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span></code><span><span>{
+</span></span><span><span>  </span><span class="hljs-attr">"messages"</span><span>: [
+</span></span><span><span>    { </span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"You are an assistant that identifies uncommon cheeses."</span><span> },
+</span></span><span><span>    { </span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"What is this cheese?"</span><span> },
+</span></span><span><span>    { </span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: [
+</span></span><span>        {
+</span><span><span>          </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"image_url"</span><span>,
+</span></span><span><span>          </span><span class="hljs-attr">"image_url"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-attr">"url"</span><span>: </span><span class="hljs-string">"https://upload.wikimedia.org/wikipedia/commons/3/36/Danbo_Cheese.jpg"</span><span>
+</span></span><span>          }
+</span><span>        }
+</span><span>      ]
+</span><span>    },
+</span><span><span>    { </span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Danbo"</span><span> }
+</span></span><span>  ]
+</span><span>}</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/image-dataset-limits"><h3 class="anchor-heading" data-name="image-dataset-limits">Image dataset limits<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<ul>
+<li>Your training file can contain a maximum of 50,000 examples that contain images (not including text examples).</li>
+<li>Each example can have at most 10 images.</li>
+<li>Each image can be at most 10 MB.</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/large-file-uploads"><h3 class="anchor-heading" data-name="large-file-uploads">Large file uploads<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<ul>
+<li>Your training files might get quite large. You can upload files up to 8 GB in multiple parts using the <a href="/docs/api-reference/uploads">Uploads API</a> as opposed to the <a href="/docs/api-reference/files">Files API</a>, which only allows file uploads of up to 512 MB.</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/other-considerations-for-vision-fine-tuning"><h3 class="anchor-heading" data-name="other-considerations-for-vision-fine-tuning">Other considerations for vision fine-tuning<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<ul>
+<li>Your images must be RGB or RGBA image mode.</li>
+<li>You cannot include images as output from messages with the <code>assistant</code> role.</li>
+<li>For low or high fidelity image understanding, you can control the <code>detail</code> parameter of <code>image_url</code> by setting it to <code>low</code>, <code>high</code>, or <code>auto</code>. This will also affect the number of tokens per image that the model sees during training time. <a href="/docs/guides/vision/low-or-high-fidelity-image-understanding">See here for more information</a>.</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/content-moderation-policy"><h3 class="anchor-heading" data-name="content-moderation-policy">Content moderation policy<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<ul>
+<li>Your training images cannot contain pictures of people, faces, CAPTCHAs, or images that violate our terms of use. <strong>Datasets containing these images will be automatically rejected.</strong></li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/create-a-fine-tuned-model"><h2 class="anchor-heading" data-name="create-a-fine-tuned-model">Create a fine-tuned model<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>After ensuring you have the right amount and structure for your dataset, and have uploaded the file, the next step is to create a fine-tuning job. We support creating fine-tuning jobs via the <a href="/finetune">fine-tuning UI</a> or programmatically.</p>
+<p>To start a fine-tuning job using the OpenAI SDK:</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span>client.fine_tuning.jobs.create(
+</span><span><span>  training_file=</span><span class="hljs-string">"file-abc123"</span><span>,
+</span></span><span><span>  model=</span><span class="hljs-string">"gpt-4o-mini-2024-07-18"</span><span>
+</span></span><span>)</span></code></pre></div></div>
+<p>In this example, <code>model</code> is the name of the model you want to fine-tune. Note that only specific model snapshots (like <code>gpt-4o-mini-2024-07-18</code> in this case) can be used for this parameter, as listed in our <a href="/docs/guides/fine-tuning/which-models-can-be-fine-tuned">supported models</a>. The <code>training_file</code> parameter is the file ID that was returned when the training file was uploaded to the OpenAI API. You can customize your fine-tuned model's name using the <a href="/docs/api-reference/fine-tuning/create#fine-tuning/create-suffix">suffix parameter</a>.</p>
+<p>To set additional fine-tuning parameters like the <code>validation_file</code> or <code>hyperparameters</code>, please refer to the <a href="/docs/api-reference/fine-tuning/create">API specification for fine-tuning</a>.</p>
+<p>After you've started a fine-tuning job, it may take some time to complete. Your job may be queued behind other jobs in our system, and training a model can take minutes or hours depending on the model and dataset size. After the model training is completed, the user who created the fine-tuning job will receive an email confirmation.</p>
+<p>In addition to creating a fine-tuning job, you can also list existing jobs, retrieve the status of a job, or cancel a job.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span><span></span><span class="hljs-comment"># List 10 fine-tuning jobs</span><span>
+</span></span><span><span>client.fine_tuning.jobs.</span><span class="hljs-built_in">list</span><span>(limit=</span><span class="hljs-number">10</span><span>)
+</span></span><span>
+</span><span><span></span><span class="hljs-comment"># Retrieve the state of a fine-tune</span><span>
+</span></span><span><span>client.fine_tuning.jobs.retrieve(</span><span class="hljs-string">"ftjob-abc123"</span><span>)
+</span></span><span>
+</span><span><span></span><span class="hljs-comment"># Cancel a job</span><span>
+</span></span><span><span>client.fine_tuning.jobs.cancel(</span><span class="hljs-string">"ftjob-abc123"</span><span>)
+</span></span><span>
+</span><span><span></span><span class="hljs-comment"># List up to 10 events from a fine-tuning job</span><span>
+</span></span><span><span>client.fine_tuning.jobs.list_events(fine_tuning_job_id=</span><span class="hljs-string">"ftjob-abc123"</span><span>, limit=</span><span class="hljs-number">10</span><span>)
+</span></span><span>
+</span><span><span></span><span class="hljs-comment"># Delete a fine-tuned model (must be an owner of the org the model was created in)</span><span>
+</span></span><span><span>client.models.delete(</span><span class="hljs-string">"ft:gpt-3.5-turbo:acemeco:suffix:abc123"</span><span>)</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/use-a-fine-tuned-model"><h2 class="anchor-heading" data-name="use-a-fine-tuned-model">Use a fine-tuned model<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>When a job has succeeded, you will see the <code>fine_tuned_model</code> field populated with the name of the model when you retrieve the job details. You may now specify this model as a parameter to in the <a href="/docs/api-reference/chat">Chat Completions</a> API, and make requests to it using the <a href="/playground">Playground</a>.</p>
+<p>After your job is completed, the model should be available right away for inference use. In some cases, it may take several minutes for your model to become ready to handle requests. If requests to your model time out or the model name cannot be found, it is likely because your model is still being loaded. If this happens, try again in a few minutes.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span>completion = client.chat.completions.create(
+</span><span><span>  model=</span><span class="hljs-string">"ft:gpt-4o-mini:my-org:custom_suffix:id"</span><span>,
+</span></span><span>  messages=[
+</span><span><span>    {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"You are a helpful assistant."</span><span>},
+</span></span><span><span>    {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"Hello!"</span><span>}
+</span></span><span>  ]
+</span><span>)
+</span><span><span></span><span class="hljs-built_in">print</span><span>(completion.choices[</span><span class="hljs-number">0</span><span>].message)</span></span></code></pre></div></div>
+<p>You can start making requests by passing the model name as shown above and in our <a href="/docs/guides/text-generation/chat-completions-api">GPT guide</a>.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/use-a-checkpointed-model"><h2 class="anchor-heading" data-name="use-a-checkpointed-model">Use a checkpointed model<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>In addition to creating a final fine-tuned model at the end of each fine-tuning job, OpenAI will create one full model checkpoint for you at the end of each training epoch. These checkpoints are themselves full models that can be used within our completions and chat-completions endpoints. Checkpoints are useful as they potentially provide a version of your fine-tuned model from before it experienced overfitting.</p>
+<p>To access these checkpoints,</p>
+<ol>
+<li>Wait until a job succeeds, which you can verify by <a href="/docs/api-reference/fine-tuning/retrieve">querying the status of a job.</a></li>
+<li><a href="/docs/api-reference/fine-tuning/list-checkpoints">Query the checkpoints endpoint</a> with your fine-tuning job ID to access a list of model checkpoints for the fine-tuning job.</li>
+</ol>
+<p>For each checkpoint object, you will see the <code>fine_tuned_model_checkpoint</code> field populated with the name of the model checkpoint. You may now use this model just like you would with the <a href="/docs/guides/fine-tuning/use-a-fine-tuned-model">final fine-tuned model</a>.</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-json" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span></code><span><span>{
+</span></span><span><span>    </span><span class="hljs-attr">"object"</span><span>: </span><span class="hljs-string">"fine_tuning.job.checkpoint"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"id"</span><span>: </span><span class="hljs-string">"ftckpt_zc4Q7MP6XxulcVzj4MZdwsAB"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"created_at"</span><span>: </span><span class="hljs-number">1519129973</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"fine_tuned_model_checkpoint"</span><span>: </span><span class="hljs-string">"ft:gpt-3.5-turbo-0125:my-org:custom-suffix:96olL566:ckpt-step-2000"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"metrics"</span><span>: {
+</span></span><span><span>        </span><span class="hljs-attr">"full_valid_loss"</span><span>: </span><span class="hljs-number">0.134</span><span>,
+</span></span><span><span>        </span><span class="hljs-attr">"full_valid_mean_token_accuracy"</span><span>: </span><span class="hljs-number">0.874</span><span>
+</span></span><span>    },
+</span><span><span>    </span><span class="hljs-attr">"fine_tuning_job_id"</span><span>: </span><span class="hljs-string">"ftjob-abc123"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"step_number"</span><span>: </span><span class="hljs-number">2000</span><span>
+</span></span><span>}</span></code></pre></div></div>
+<p>Each checkpoint will specify its:</p>
+<ul>
+<li><code>step_number</code>: The step at which the checkpoint was created (where each epoch is number of steps in the training set divided by the batch size)</li>
+<li><code>metrics</code>: an object containing the metrics for your fine-tuning job at the step when the checkpoint was created.</li>
+</ul>
+<p>Currently, only the checkpoints for the last 3 epochs of the job are saved and available for use. We plan to release more complex and flexible checkpointing strategies in the near future.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/analyzing-your-fine-tuned-model"><h2 class="anchor-heading" data-name="analyzing-your-fine-tuned-model">Analyzing your fine-tuned model<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>We provide the following training metrics computed over the course of training:</p>
+<ul>
+<li>training loss</li>
+<li>training token accuracy</li>
+<li>valid loss</li>
+<li>valid token accuracy</li>
+</ul>
+<p>Valid loss and valid token accuracy are computed in two different ways - on a small batch of the data during each step, and on the full valid split at the end of each epoch. The full valid loss and full valid token accuracy metrics are the most accurate metric tracking the overall performance of your model. These statistics are meant to provide a sanity check that training went smoothly (loss should decrease, token accuracy should increase). While an active fine-tuning jobs is running, you can view an event object which contains some useful metrics:</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-json" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span></code><span><span>{
+</span></span><span><span>    </span><span class="hljs-attr">"object"</span><span>: </span><span class="hljs-string">"fine_tuning.job.event"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"id"</span><span>: </span><span class="hljs-string">"ftevent-abc-123"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"created_at"</span><span>: </span><span class="hljs-number">1693582679</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"level"</span><span>: </span><span class="hljs-string">"info"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"message"</span><span>: </span><span class="hljs-string">"Step 300/300: training loss=0.15, validation loss=0.27, full validation loss=0.40"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"data"</span><span>: {
+</span></span><span><span>        </span><span class="hljs-attr">"step"</span><span>: </span><span class="hljs-number">300</span><span>,
+</span></span><span><span>        </span><span class="hljs-attr">"train_loss"</span><span>: </span><span class="hljs-number">0.14991648495197296</span><span>,
+</span></span><span><span>        </span><span class="hljs-attr">"valid_loss"</span><span>: </span><span class="hljs-number">0.26569826706596045</span><span>,
+</span></span><span><span>        </span><span class="hljs-attr">"total_steps"</span><span>: </span><span class="hljs-number">300</span><span>,
+</span></span><span><span>        </span><span class="hljs-attr">"full_valid_loss"</span><span>: </span><span class="hljs-number">0.4032616495084362</span><span>,
+</span></span><span><span>        </span><span class="hljs-attr">"train_mean_token_accuracy"</span><span>: </span><span class="hljs-number">0.9444444179534912</span><span>,
+</span></span><span><span>        </span><span class="hljs-attr">"valid_mean_token_accuracy"</span><span>: </span><span class="hljs-number">0.9565217391304348</span><span>,
+</span></span><span><span>        </span><span class="hljs-attr">"full_valid_mean_token_accuracy"</span><span>: </span><span class="hljs-number">0.9089635854341737</span><span>
+</span></span><span>    },
+</span><span><span>    </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"metrics"</span><span>
+</span></span><span>}</span></code></pre></div></div>
+<p>After a fine-tuning job has finished, you can also see metrics around how the training process went by <a href="/docs/api-reference/fine-tuning/retrieve">querying a fine-tuning job</a>, extracting a file ID from the <code>result_files</code>, and then <a href="/docs/api-reference/files/retrieve-contents">retrieving that files content</a>. Each results CSV file has the following columns: <code>step</code>, <code>train_loss</code>, <code>train_accuracy</code>, <code>valid_loss</code>, and <code>valid_mean_token_accuracy</code>.</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-csv" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span></code><span><span>step,train_loss,train_accuracy,valid_loss,valid_mean_token_accuracy
+</span></span><span>1,1.52347,0.0,,
+</span><span>2,0.57719,0.0,,
+</span><span>3,3.63525,0.0,,
+</span><span>4,1.72257,0.0,,
+</span><span>5,1.52379,0.0,,</span></code></pre></div></div>
+<p>While metrics can be helpful, evaluating samples from the fine-tuned model provides the most relevant sense of model quality. We recommend generating samples from both the base model and the fine-tuned model on a test set, and comparing the samples side by side. The test set should ideally include the full distribution of inputs that you might send to the model in a production use case. If manual evaluation is too time-consuming, consider using our <a href="https://github.com/openai/evals" target="_blank" rel="noopener noreferrer">Evals library</a> to automate future evaluations.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/iterating-on-data-quality"><h3 class="anchor-heading" data-name="iterating-on-data-quality">Iterating on data quality<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>If the results from a fine-tuning job are not as good as you expected, consider the following ways to adjust the training dataset:</p>
+<ul>
+<li>Collect examples to target remaining issues
+<ul>
+<li>If the model still isn’t good at certain aspects, add training examples that directly show the model how to do these aspects correctly</li>
+</ul>
+</li>
+<li>Scrutinize existing examples for issues
+<ul>
+<li>If your model has grammar, logic, or style issues, check if your data has any of the same issues. For instance, if the model now says "I will schedule this meeting for you" (when it shouldn’t), see if existing examples teach the model to say it can do new things that it can’t do</li>
+</ul>
+</li>
+<li>Consider the balance and diversity of data
+<ul>
+<li>If 60% of the assistant responses in the data says "I cannot answer this", but at inference time only 5% of responses should say that, you will likely get an overabundance of refusals</li>
+</ul>
+</li>
+<li>Make sure your training examples contain all of the information needed for the response
+<ul>
+<li>If we want the model to compliment a user based on their personal traits and a training example includes assistant compliments for traits not found in the preceding conversation, the model may learn to hallucinate information</li>
+</ul>
+</li>
+<li>Look at the agreement / consistency in the training examples
+<ul>
+<li>If multiple people created the training data, it’s likely that model performance will be limited by the level of agreement / consistency between people. For instance, in a text extraction task, if people only agreed on 70% of extracted snippets, the model would likely not be able to do better than this</li>
+</ul>
+</li>
+<li>Make sure your all of your training examples are in the same format, as expected for inference</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/iterating-on-data-quantity"><h3 class="anchor-heading" data-name="iterating-on-data-quantity">Iterating on data quantity<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Once you’re satisfied with the quality and distribution of the examples, you can consider scaling up the number of training examples. This tends to help the model learn the task better, especially around possible "edge cases". We expect a similar amount of improvement every time you double the number of training examples. You can loosely estimate the expected quality gain from increasing the training data size by:</p>
+<ul>
+<li>Fine-tuning on your current dataset</li>
+<li>Fine-tuning on half of your current dataset</li>
+<li>Observing the quality gap between the two</li>
+</ul>
+<p>In general, if you have to make a trade-off, a smaller amount of high-quality data is generally more effective than a larger amount of low-quality data.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/iterating-on-hyperparameters"><h3 class="anchor-heading" data-name="iterating-on-hyperparameters">Iterating on hyperparameters<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>We allow you to specify the following hyperparameters:</p>
+<ul>
+<li>epochs</li>
+<li>learning rate multiplier</li>
+<li>batch size</li>
+</ul>
+<p>We recommend initially training without specifying any of these, allowing us to pick a default for you based on dataset size, then adjusting if you observe the following:</p>
+<ul>
+<li>If the model does not follow the training data as much as expected increase the number of epochs by 1 or 2
+<ul>
+<li>This is more common for tasks for which there is a single ideal completion (or a small set of ideal completions which are similar). Some examples include classification, entity extraction, or structured parsing. These are often tasks for which you can compute a final accuracy metric against a reference answer.</li>
+</ul>
+</li>
+<li>If the model becomes less diverse than expected decrease the number of epochs by 1 or 2
+<ul>
+<li>This is more common for tasks for which there are a wide range of possible good completions</li>
+</ul>
+</li>
+<li>If the model does not appear to be converging, increase the learning rate multiplier</li>
+</ul>
+<p>You can set the hyperparameters as is shown below:</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span>client.fine_tuning.jobs.create(
+</span><span><span>  training_file=</span><span class="hljs-string">"file-abc123"</span><span>,
+</span></span><span><span>  model=</span><span class="hljs-string">"gpt-4o-mini-2024-07-18"</span><span>,
+</span></span><span>  hyperparameters={
+</span><span><span>    </span><span class="hljs-string">"n_epochs"</span><span>:</span><span class="hljs-number">2</span><span>
+</span></span><span>  }
+</span><span>)</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/fine-tuning-examples"><h2 class="anchor-heading" data-name="fine-tuning-examples">Fine-tuning examples<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Now that we have explored the basics of the fine-tuning API, let’s look at going through the fine-tuning lifecycle for a few different use cases.</p>
+<div class="expn"><div class="expn-title" role="button" aria-expanded="false" aria-controls="expander-0"><div class="expn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.293 4.293a1 1 0 0 1 1.414 0l7 7a1 1 0 0 1 0 1.414l-7 7a1 1 0 0 1-1.414-1.414L14.586 12 8.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="expn-label">Style and tone</div></div><div class="expn-content hidden" id="expander-0"><p>In this example, we will explore how to build a fine-tuned model which gets the model follow specific style and tone guidance beyond what is possible with prompting alone.</p><p>To begin, we create a sample set of messages showing what the model should which in this case is misspelled words.</p><div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-jsonl" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span></code><span><span>{</span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Marv is a factual chatbot that is also sarcastic."</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"What's the capital of France?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Paris, as if everyone doesn't know that already."</span><span>}]}
+</span></span><span><span>{</span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Marv is a factual chatbot that is also sarcastic."</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Who wrote 'Romeo and Juliet'?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Oh, just some guy named William Shakespeare. Ever heard of him?"</span><span>}]}
+</span></span><span><span>{</span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Marv is a factual chatbot that is also sarcastic."</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"How far is the Moon from Earth?"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Around 384,400 kilometers. Give or take a few, like that really matters."</span><span>}]}</span></span></code></pre></div></div><p>If you want to follow along and create a fine-tuned model yourself, you will need at least 10 examples.</p><p>After getting the data that will potentially improve the model, the next step is to check if the data meets all the <a href="/docs/guides/fine-tuning/check-data-formatting">formatting requirements</a>.</p><p>Now that we have the data formatted and validated, the final training step is to kick off a job to create the fine-tuned model. You can do this via the OpenAI CLI or one of our SDKs as shown below:</p><div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span>file = client.files.create(
+</span><span><span>  file=</span><span class="hljs-built_in">open</span><span>(</span><span class="hljs-string">"marv.jsonl"</span><span>, </span><span class="hljs-string">"rb"</span><span>),
+</span></span><span><span>  purpose=</span><span class="hljs-string">"fine-tune"</span><span>
+</span></span><span>)
+</span><span>
+</span><span>client.fine_tuning.jobs.create(
+</span><span><span>  training_file=file.</span><span class="hljs-built_in">id</span><span>,
+</span></span><span><span>  model=</span><span class="hljs-string">"gpt-4o-mini-2024-07-18"</span><span>
+</span></span><span>)</span></code></pre></div></div><p>Once the training job is done, you will be able to <a href="/docs/guides/fine-tuning/use-a-fine-tuned-model">use your fine-tuned model</a>.</p></div></div>
+<div class="expn"><div class="expn-title" role="button" aria-expanded="false" aria-controls="expander-1"><div class="expn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.293 4.293a1 1 0 0 1 1.414 0l7 7a1 1 0 0 1 0 1.414l-7 7a1 1 0 0 1-1.414-1.414L14.586 12 8.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="expn-label">Structured output</div></div><div class="expn-content hidden" id="expander-1"><p>Another type of use case which works really well with fine-tuning is getting the model to provide structured information, in this case about sports headlines:</p><div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-jsonl" style="white-space: pre;"><span><span>{</span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Given a sports headline, provide the following fields in a JSON dict, where applicable: \"player\" (full name), \"team\", \"sport\", and \"gender\"."</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Sources: Colts grant RB Taylor OK to seek trade"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"{\"player\": \"Jonathan Taylor\", \"team\": \"Colts\", \"sport\": \"football\", \"gender\": \"male\" }"</span><span>}]}
+</span></span><span><span>{</span><span class="hljs-attr">"messages"</span><span>: [{</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"Given a sports headline, provide the following fields in a JSON dict, where applicable: \"player\" (full name), \"team\", \"sport\", and \"gender\"."</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"OSU 'split down middle' on starting QB battle"</span><span>}, {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"{\"player\": null, \"team\": \"OSU\", \"sport\": \"football\", \"gender\": null }"</span><span>}]}</span></span></code></pre></div></div><p>If you want to follow along and create a fine-tuned model yourself, you will need at least 10 examples.</p><p>After getting the data that will potentially improve the model, the next step is to check if the data meets all the <a href="/docs/guides/fine-tuning/check-data-formatting">formatting requirements</a>.</p><p>Now that we have the data formatted and validated, the final training step is to kick off a job to create the fine-tuned model. You can do this via the OpenAI CLI or one of our SDKs as shown below:</p><div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>client = OpenAI()
+</span><span>
+</span><span>file = client.files.create(
+</span><span><span>  file=</span><span class="hljs-built_in">open</span><span>(</span><span class="hljs-string">"sports-context.jsonl"</span><span>, </span><span class="hljs-string">"rb"</span><span>),
+</span></span><span><span>  purpose=</span><span class="hljs-string">"fine-tune"</span><span>
+</span></span><span>)
+</span><span>
+</span><span>client.fine_tuning.jobs.create(
+</span><span><span>  training_file=file.</span><span class="hljs-built_in">id</span><span>,
+</span></span><span><span>  model=</span><span class="hljs-string">"gpt-4o-mini-2024-07-18"</span><span>
+</span></span><span>)</span></code></pre></div></div><p>Once the training job is done, you will be able to <a href="/docs/guides/fine-tuning/use-a-fine-tuned-model">use your fine-tuned model</a> and make a request that looks like the following:</p><div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span></code><span><span>completion = client.chat.completions.create(
+</span></span><span><span>  model=</span><span class="hljs-string">"ft:gpt-4o-mini:my-org:custom_suffix:id"</span><span>,
+</span></span><span>  messages=[
+</span><span><span>    {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"Given a sports headline, provide the following fields in a JSON dict, where applicable: player (full name), team, sport, and gender"</span><span>},
+</span></span><span><span>    {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"Richardson wins 100m at worlds to cap comeback"</span><span>}
+</span></span><span>  ]
+</span><span>)
+</span><span>
+</span><span><span></span><span class="hljs-built_in">print</span><span>(completion.choices[</span><span class="hljs-number">0</span><span>].message)</span></span></code></pre></div></div><p>Based on the formatted training data, the response should look like the following:</p><div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-json" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span></code><span><span>{
+</span></span><span><span>    </span><span class="hljs-attr">"player"</span><span>: </span><span class="hljs-string">"Sha'Carri Richardson"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"team"</span><span>: </span><span class="hljs-literal">null</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"sport"</span><span>: </span><span class="hljs-string">"track and field"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"gender"</span><span>: </span><span class="hljs-string">"female"</span><span>
+</span></span><span>}</span></code></pre></div></div></div></div>
+<div class="expn"><div class="expn-title" role="button" aria-expanded="false" aria-controls="expander-2"><div class="expn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.293 4.293a1 1 0 0 1 1.414 0l7 7a1 1 0 0 1 0 1.414l-7 7a1 1 0 0 1-1.414-1.414L14.586 12 8.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="expn-label">Tool calling</div></div><div class="expn-content hidden" id="expander-2"><p>The chat completions API supports <a href="/docs/guides/function-calling">tool calling</a>. Including a long list of tools in the completions API can consume a considerable number of prompt tokens and sometimes the model hallucinates or does not provide valid JSON output.</p><p>Fine-tuning a model with tool calling examples can allow you to:</p><ul>
+<li>Get similarly formatted responses even when the full tool definition isn't present</li>
+<li>Get more accurate and consistent outputs</li>
+</ul><p>Format your examples as shown, with each line including a list of "messages" and an optional list of "tools":</p><div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-json" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span><span class="react-syntax-highlighter-line-number">26
+</span><span class="react-syntax-highlighter-line-number">27
+</span><span class="react-syntax-highlighter-line-number">28
+</span><span class="react-syntax-highlighter-line-number">29
+</span><span class="react-syntax-highlighter-line-number">30
+</span><span class="react-syntax-highlighter-line-number">31
+</span><span class="react-syntax-highlighter-line-number">32
+</span><span class="react-syntax-highlighter-line-number">33
+</span><span class="react-syntax-highlighter-line-number">34
+</span><span class="react-syntax-highlighter-line-number">35
+</span><span class="react-syntax-highlighter-line-number">36
+</span><span class="react-syntax-highlighter-line-number">37
+</span><span class="react-syntax-highlighter-line-number">38
+</span></code><span><span>{
+</span></span><span><span>    </span><span class="hljs-attr">"messages"</span><span>: [
+</span></span><span><span>        { </span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"What is the weather in San Francisco?"</span><span> },
+</span></span><span>        {
+</span><span><span>            </span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>,
+</span></span><span><span>            </span><span class="hljs-attr">"tool_calls"</span><span>: [
+</span></span><span>                {
+</span><span><span>                    </span><span class="hljs-attr">"id"</span><span>: </span><span class="hljs-string">"call_id"</span><span>,
+</span></span><span><span>                    </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"function"</span><span>,
+</span></span><span><span>                    </span><span class="hljs-attr">"function"</span><span>: {
+</span></span><span><span>                        </span><span class="hljs-attr">"name"</span><span>: </span><span class="hljs-string">"get_current_weather"</span><span>,
+</span></span><span><span>                        </span><span class="hljs-attr">"arguments"</span><span>: </span><span class="hljs-string">"{\"location\": \"San Francisco, USA\", \"format\": \"celsius\"}"</span><span>
+</span></span><span>                    }
+</span><span>                }
+</span><span>            ]
+</span><span>        }
+</span><span>    ],
+</span><span><span>    </span><span class="hljs-attr">"tools"</span><span>: [
+</span></span><span>        {
+</span><span><span>            </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"function"</span><span>,
+</span></span><span><span>            </span><span class="hljs-attr">"function"</span><span>: {
+</span></span><span><span>                </span><span class="hljs-attr">"name"</span><span>: </span><span class="hljs-string">"get_current_weather"</span><span>,
+</span></span><span><span>                </span><span class="hljs-attr">"description"</span><span>: </span><span class="hljs-string">"Get the current weather"</span><span>,
+</span></span><span><span>                </span><span class="hljs-attr">"parameters"</span><span>: {
+</span></span><span><span>                    </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"object"</span><span>,
+</span></span><span><span>                    </span><span class="hljs-attr">"properties"</span><span>: {
+</span></span><span><span>                        </span><span class="hljs-attr">"location"</span><span>: {
+</span></span><span><span>                            </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"string"</span><span>,
+</span></span><span><span>                            </span><span class="hljs-attr">"description"</span><span>: </span><span class="hljs-string">"The city and country, eg. San Francisco, USA"</span><span>
+</span></span><span>                        },
+</span><span><span>                        </span><span class="hljs-attr">"format"</span><span>: { </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"string"</span><span>, </span><span class="hljs-attr">"enum"</span><span>: [</span><span class="hljs-string">"celsius"</span><span>, </span><span class="hljs-string">"fahrenheit"</span><span>] }
+</span></span><span>                    },
+</span><span><span>                    </span><span class="hljs-attr">"required"</span><span>: [</span><span class="hljs-string">"location"</span><span>, </span><span class="hljs-string">"format"</span><span>]
+</span></span><span>                }
+</span><span>            }
+</span><span>        }
+</span><span>    ]
+</span><span>}</span></code></pre></div></div><p>If you want to follow along and create a fine-tuned model yourself, you will need at least 10 examples.</p><p>If your goal is to use less tokens, some useful techniques are:</p><ul>
+<li>Omit function and parameter descriptions: remove the description field from function and parameters</li>
+<li>Omit parameters: remove the entire properties field from the parameters object</li>
+<li>Omit function entirely: remove the entire function object from the functions array</li>
+</ul><p>If your goal is to maximize the correctness of the function calling output, we recommend using the same tool definitions for both training and querying the fine-tuned model.</p><p>Fine-tuning on function calling can also be used to customize the model's response to function outputs. To do this you can include a function response message and an assistant message interpreting that response:</p><div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-json" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span></code><span><span>{
+</span></span><span><span>    </span><span class="hljs-attr">"messages"</span><span>: [
+</span></span><span><span>        {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"What is the weather in San Francisco?"</span><span>},
+</span></span><span><span>        {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"tool_calls"</span><span>: [{</span><span class="hljs-attr">"id"</span><span>: </span><span class="hljs-string">"call_id"</span><span>, </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"function"</span><span>, </span><span class="hljs-attr">"function"</span><span>: {</span><span class="hljs-attr">"name"</span><span>: </span><span class="hljs-string">"get_current_weather"</span><span>, </span><span class="hljs-attr">"arguments"</span><span>: </span><span class="hljs-string">"{\"location\": \"San Francisco, USA\", \"format\": \"celsius\"}"</span><span>}}]}
+</span></span><span><span>        {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"tool"</span><span>, </span><span class="hljs-attr">"tool_call_id"</span><span>: </span><span class="hljs-string">"call_id"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"21.0"</span><span>},
+</span></span><span><span>        {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"It is 21 degrees celsius in San Francisco, CA"</span><span>}
+</span></span><span>    ],
+</span><span><span>    </span><span class="hljs-attr">"tools"</span><span>: [...] </span><span class="hljs-comment">// same as before</span><span>
+</span></span><span>}</span></code></pre></div></div><p><a href="/docs/guides/function-calling">Parallel function calling</a> is enabled by default
+and can be disabled by using <code>
+parallel_tool_calls: false
+</code> in the training example.</p></div></div>
+<div class="expn"><div class="expn-title" role="button" aria-expanded="false" aria-controls="expander-3"><div class="expn-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M8.293 4.293a1 1 0 0 1 1.414 0l7 7a1 1 0 0 1 0 1.414l-7 7a1 1 0 0 1-1.414-1.414L14.586 12 8.293 5.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="expn-label">Function calling</div></div><div class="expn-content hidden" id="expander-3"><div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p><code>function_call</code> and <code>functions</code> have been deprecated in favor of <code>tools</code> it is recommended to use the <code>tools</code> parameter instead.</p></div></div></div></div><p>The chat completions API supports <a href="/docs/guides/function-calling">function calling</a>. Including a long list of functions in the completions API can consume a considerable number of prompt tokens and sometimes the model hallucinates or does not provide valid JSON output.</p><p>Fine-tuning a model with function calling examples can allow you to:</p><ul>
+<li>Get similarly formatted responses even when the full function definition isn't present</li>
+<li>Get more accurate and consistent outputs</li>
+</ul><p>Format your examples as shown, with each line including a list of "messages" and an optional list of "functions":</p><div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-json" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span><span class="react-syntax-highlighter-line-number">26
+</span><span class="react-syntax-highlighter-line-number">27
+</span><span class="react-syntax-highlighter-line-number">28
+</span><span class="react-syntax-highlighter-line-number">29
+</span></code><span><span>{
+</span></span><span><span>    </span><span class="hljs-attr">"messages"</span><span>: [
+</span></span><span><span>        { </span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"What is the weather in San Francisco?"</span><span> },
+</span></span><span>        {
+</span><span><span>            </span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>,
+</span></span><span><span>            </span><span class="hljs-attr">"function_call"</span><span>: {
+</span></span><span><span>                </span><span class="hljs-attr">"name"</span><span>: </span><span class="hljs-string">"get_current_weather"</span><span>,
+</span></span><span><span>                </span><span class="hljs-attr">"arguments"</span><span>: </span><span class="hljs-string">"{\"location\": \"San Francisco, USA\", \"format\": \"celsius\"}"</span><span>
+</span></span><span>            }
+</span><span>        }
+</span><span>    ],
+</span><span><span>    </span><span class="hljs-attr">"functions"</span><span>: [
+</span></span><span>        {
+</span><span><span>            </span><span class="hljs-attr">"name"</span><span>: </span><span class="hljs-string">"get_current_weather"</span><span>,
+</span></span><span><span>            </span><span class="hljs-attr">"description"</span><span>: </span><span class="hljs-string">"Get the current weather"</span><span>,
+</span></span><span><span>            </span><span class="hljs-attr">"parameters"</span><span>: {
+</span></span><span><span>                </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"object"</span><span>,
+</span></span><span><span>                </span><span class="hljs-attr">"properties"</span><span>: {
+</span></span><span><span>                    </span><span class="hljs-attr">"location"</span><span>: {
+</span></span><span><span>                        </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"string"</span><span>,
+</span></span><span><span>                        </span><span class="hljs-attr">"description"</span><span>: </span><span class="hljs-string">"The city and country, eg. San Francisco, USA"</span><span>
+</span></span><span>                    },
+</span><span><span>                    </span><span class="hljs-attr">"format"</span><span>: { </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"string"</span><span>, </span><span class="hljs-attr">"enum"</span><span>: [</span><span class="hljs-string">"celsius"</span><span>, </span><span class="hljs-string">"fahrenheit"</span><span>] }
+</span></span><span>                },
+</span><span><span>                </span><span class="hljs-attr">"required"</span><span>: [</span><span class="hljs-string">"location"</span><span>, </span><span class="hljs-string">"format"</span><span>]
+</span></span><span>            }
+</span><span>        }
+</span><span>    ]
+</span><span>}</span></code></pre></div></div><p>If you want to follow along and create a fine-tuned model yourself, you will need at least 10 examples.</p><p>If your goal is to use less tokens, some useful techniques are:</p><ul>
+<li>Omit function and parameter descriptions: remove the description field from function and parameters</li>
+<li>Omit parameters: remove the entire properties field from the parameters object</li>
+<li>Omit function entirely: remove the entire function object from the functions array</li>
+</ul><p>If your goal is to maximize the correctness of the function calling output, we recommend using the same function definitions for both training and querying the fine-tuned model.</p><p>Fine-tuning on function calling can also be used to customize the model's response to function outputs. To do this you can include a function response message and an assistant message interpreting that response:</p><div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-json" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span></code><span><span>{
+</span></span><span><span>    </span><span class="hljs-attr">"messages"</span><span>: [
+</span></span><span><span>        {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"What is the weather in San Francisco?"</span><span>},
+</span></span><span><span>        {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"function_call"</span><span>: {</span><span class="hljs-attr">"name"</span><span>: </span><span class="hljs-string">"get_current_weather"</span><span>, </span><span class="hljs-attr">"arguments"</span><span>: </span><span class="hljs-string">"{\"location\": \"San Francisco, USA\", \"format\": \"celsius\"}"</span><span>}}
+</span></span><span><span>        {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"function"</span><span>, </span><span class="hljs-attr">"name"</span><span>: </span><span class="hljs-string">"get_current_weather"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"21.0"</span><span>},
+</span></span><span><span>        {</span><span class="hljs-attr">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-attr">"content"</span><span>: </span><span class="hljs-string">"It is 21 degrees celsius in San Francisco, CA"</span><span>}
+</span></span><span>    ],
+</span><span><span>    </span><span class="hljs-attr">"functions"</span><span>: [...] </span><span class="hljs-comment">// same as before</span><span>
+</span></span><span>}</span></code></pre></div></div></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/fine-tuning-integrations"><h1 class="anchor-heading" data-name="fine-tuning-integrations">Fine-tuning integrations<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h1></a></div>
+<p>OpenAI provides the ability for you to integrate your fine-tuning jobs with 3rd parties via our integration framework. Integrations generally allow you to track
+job state, status, metrics, hyperparameters, and other job-related information in a 3rd party system. You can also use integrations to trigger actions in a 3rd party system based on job state changes. Currently, the only supported integration is with <a href="https://wandb.ai" target="_blank" rel="noopener noreferrer">Weights and Biases</a>, but more are coming soon.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/weights-and-biases-integration"><h2 class="anchor-heading" data-name="weights-and-biases-integration">Weights and Biases Integration<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p><a href="https://wandb.ai" target="_blank" rel="noopener noreferrer">Weights and Biases (W&amp;B)</a> is a popular tool for tracking machine learning experiments. You can use the OpenAI integration with W&amp;B to track your fine-tuning jobs in W&amp;B. This integration will automatically log metrics, hyperparameters, and other job-related information to the W&amp;B project you specify.</p>
+<p>To integrate your fine-tuning jobs with W&amp;B, you'll need to</p>
+<ol>
+<li>Provide authentication credentials for your Weights and Biases account to OpenAI</li>
+<li>Configure the W&amp;B integration when creating new fine-tuning jobs</li>
+</ol>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/authenticate-your-weights-and-biases-account-with-openai"><h3 class="anchor-heading" data-name="authenticate-your-weights-and-biases-account-with-openai">Authenticate your Weights and Biases account with OpenAI<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Authentication is done by submitting a valid W&amp;B API key to OpenAI. Currently, this can only be done via the <a href="https://platform.openai.com/account/organization" target="_blank" rel="noopener noreferrer">Account Dashboard</a>, and only by account administrators. Your W&amp;B API key will be stored encrypted within OpenAI and will allow OpenAI to post metrics and metadata on your behalf to W&amp;B when your fine-tuning jobs are running. Attempting to enable a W&amp;B integration on a fine-tuning job without first authenticating your OpenAI organization with WandB will result in an error.</p>
+<img class="wandb-auth-image" src="https://cdn.openai.com/API/images/guides/WandB_Integration.png">
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/enable-the-weights-and-biases-integration"><h3 class="anchor-heading" data-name="enable-the-weights-and-biases-integration">Enable the Weights and Biases integration<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>When creating a new fine-tuning job, you can enable the W&amp;B integration by including a new <code>"wandb"</code> integration under the <code>integrations</code> field in the job creation request. This integration allows you to specify the W&amp;B Project that you wish the newly created W&amp;B Run to show up under.</p>
+<p>Here's an example of how to enable the W&amp;B integration when creating a new fine-tuning job:</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-bash" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span></code><span><span>curl -X POST \\
+</span></span><span><span>    -H </span><span class="hljs-string">"Content-Type: application/json"</span><span> \\
+</span></span><span><span>    -H </span><span class="hljs-string">"Authorization: Bearer </span><span class="hljs-string hljs-variable">$OPENAI_API_KEY</span><span class="hljs-string">"</span><span> \\
+</span></span><span><span>    -d </span><span class="hljs-string">'{
+</span></span><span class="hljs-string">    "model": "gpt-4o-mini-2024-07-18",
+</span><span class="hljs-string">    "training_file": "file-ABC123",
+</span><span class="hljs-string">    "validation_file": "file-DEF456",
+</span><span class="hljs-string">    "integrations": [
+</span><span class="hljs-string">        {
+</span><span class="hljs-string">            "type": "wandb",
+</span><span class="hljs-string">            "wandb": {
+</span><span class="hljs-string">                "project": "custom-wandb-project",
+</span><span class="hljs-string">                "tags": ["project:tag", "lineage"]
+</span><span class="hljs-string">            }
+</span><span class="hljs-string">        }
+</span><span class="hljs-string">    ]
+</span><span><span class="hljs-string">}'</span><span> https://api.openai.com/v1/fine_tuning/</span><span class="hljs-built_in">jobs</span></span></code></pre></div></div>
+<p>By default, the Run ID and Run display name are the ID of your fine-tuning job (e.g. <code>ftjob-abc123</code>). You can customize the display name of the run by including a <code>"name"</code> field in the <code>wandb</code> object. You can also include a <code>"tags"</code> field in the <code>wandb</code> object to add tags to the W&amp;B Run (tags must be &lt;= 64 character strings and there is a maximum of 50 tags).</p>
+<p>Sometimes it is convenient to explicitly set the <a href="https://docs.wandb.ai/guides/runs/manage-runs#send-new-runs-to-a-team" target="_blank" rel="noopener noreferrer">W&amp;B Entity</a> to be associated with the run. You can do this by including an <code>"entity"</code> field in the <code>wandb</code> object. If you do not include an <code>"entity"</code> field, the W&amp;B entity will default to the default W&amp;B entity associated with the API key you registered previously.</p>
+<p>The full specification for the integration can be found in our <a href="/docs/api-reference/fine-tuning/create">fine-tuning job creation</a> documentation.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/view-your-fine-tuning-job-in-weights-and-biases"><h3 class="anchor-heading" data-name="view-your-fine-tuning-job-in-weights-and-biases">View your fine-tuning job in Weights and Biases<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Once you've created a fine-tuning job with the W&amp;B integration enabled, you can view the job in W&amp;B by navigating to the W&amp;B project you specified in the job creation request. Your run should be located at the URL: <code>https://wandb.ai/&lt;WANDB-ENTITY&gt;/&lt;WANDB-PROJECT&gt;/runs/ftjob-ABCDEF</code>.</p>
+<p>You should see a new run with the name and tags you specified in the job creation request. The Run Config will contain relevant job metadata such as:</p>
+<ul>
+<li><code>model</code>: The model you are fine-tuning</li>
+<li><code>training_file</code>: The ID of the training file</li>
+<li><code>validation_file</code>: The ID of the validation file</li>
+<li><code>hyperparameters</code>: The hyperparameters used for the job (e.g. <code>n_epochs</code>, <code>learning_rate_multiplier</code>, <code>batch_size</code>)</li>
+<li><code>seed</code>: The random seed used for the job</li>
+</ul>
+<p>Likewise, OpenAI will set some default tags on the run to make it easier for your to search and filter. These tags will be prefixed with <code>"openai/"</code> and will include:</p>
+<ul>
+<li><code>openai/fine-tuning</code>: Tag to let you know this run is a fine-tuning job</li>
+<li><code>openai/ft-abc123</code>: The ID of the fine-tuning job</li>
+<li><code>openai/gpt-4o-mini</code>: The model you are fine-tuning</li>
+</ul>
+<p>An example W&amp;B run generated from an OpenAI fine-tuning job is shown below:</p>
+<img class="wandb-auth-image" src="https://cdn.openai.com/API/images/guides/WandB_Integration_Dashboard1.png">
+<p>Metrics for each step of the fine-tuning job will be logged to the W&amp;B run. These metrics are the same metrics provided in the <a href="/docs/api-reference/fine-tuning/list-events">fine-tuning job event</a> object and are the same metrics your can view via the <a href="https://platform.openai.com/finetune" target="_blank" rel="noopener noreferrer">OpenAI fine-tuning Dashboard</a>. You can use W&amp;B's visualization tools to track the progress of your fine-tuning job and compare it to other fine-tuning jobs you've run.</p>
+<p>An example of the metrics logged to a W&amp;B run is shown below:</p>
+<img class="wandb-auth-image" src="https://cdn.openai.com/API/images/guides/WandB_Integration_Dashboard2.png">
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/faq"><h2 class="anchor-heading" data-name="faq">FAQ<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/when-should-i-use-fine-tuning-vs-embeddings-retrieval-augmented-generation"><h3 class="anchor-heading" data-name="when-should-i-use-fine-tuning-vs-embeddings-retrieval-augmented-generation">When should I use fine-tuning vs embeddings / retrieval augmented generation?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Embeddings with retrieval is best suited for cases when you need to have a large database of documents with relevant context and information.</p>
+<p>By default OpenAI’s models are trained to be helpful generalist assistants. Fine-tuning can be used to make a model which is narrowly focused, and exhibits specific ingrained behavior patterns. Retrieval strategies can be used to make new information available to a model by providing it with relevant context before generating its response. Retrieval strategies are not an alternative to fine-tuning and can in fact be complementary to it.</p>
+<p>You can explore the differences between these options further in this Developer Day talk:</p>
+<iframe width="100%" height="315" src="https://www.youtube-nocookie.com/embed/ahnGLM-RC1Y?si=cPQngClssVG_R2_q" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen=""></iframe>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/how-do-i-know-if-my-fine-tuned-model-is-actually-better-than-the-base-model"><h3 class="anchor-heading" data-name="how-do-i-know-if-my-fine-tuned-model-is-actually-better-than-the-base-model">How do I know if my fine-tuned model is actually better than the base model?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>We recommend generating samples from both the base model and the fine-tuned model on a test set of chat conversations, and comparing the samples side by side. For more comprehensive evaluations, consider using the <a href="https://github.com/openai/evals" target="_blank" rel="noopener noreferrer">OpenAI evals framework</a> to create an eval specific to your use case.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/can-i-continue-fine-tuning-a-model-that-has-already-been-fine-tuned"><h3 class="anchor-heading" data-name="can-i-continue-fine-tuning-a-model-that-has-already-been-fine-tuned">Can I continue fine-tuning a model that has already been fine-tuned?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Yes, you can pass the name of a fine-tuned model into the <code>model</code> parameter when creating a fine-tuning job. This will start a new fine-tuning job using the fine-tuned model as the starting point.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/how-can-i-estimate-the-cost-of-fine-tuning-a-model"><h3 class="anchor-heading" data-name="how-can-i-estimate-the-cost-of-fine-tuning-a-model">How can I estimate the cost of fine-tuning a model?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Please refer to the <a href="/docs/guides/fine-tuning/estimate-costs">estimate cost</a> section above.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/how-many-fine-tuning-jobs-can-i-have-running-at-once"><h3 class="anchor-heading" data-name="how-many-fine-tuning-jobs-can-i-have-running-at-once">How many fine-tuning jobs can I have running at once?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Please refer to our <a href="/docs/guides/rate-limits/what-are-the-rate-limits-for-our-api">rate limit page</a> for the most up to date information on the limits.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/how-do-rate-limits-work-on-fine-tuned-models"><h3 class="anchor-heading" data-name="how-do-rate-limits-work-on-fine-tuned-models">How do rate limits work on fine-tuned models?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>A fine-tuned model pulls from the same shared rate limit as the model it is based off of. For example, if you use half your TPM rate limit in a given time period with the standard <code>gpt-4o-mini</code> model, any model(s) you fine-tuned from <code>gpt-4o-mini</code> would only have the remaining half of the TPM rate limit accessible since the capacity is shared across all models of the same type.</p>
+<p>Put another way, having fine-tuned models does not give you more capacity to use our models from a total throughput perspective.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/fine-tuning/can-i-use-the-v1-fine-tunes-endpoint"><h3 class="anchor-heading" data-name="can-i-use-the-v1-fine-tunes-endpoint">Can I use the /v1/fine-tunes endpoint?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>The <code>/v1/fine-tunes</code> endpoint has been deprecated in favor of the <code>/v1/fine_tuning/jobs</code> endpoint.</p>
+<p>For users migrating from <code>/v1/fine-tunes</code> to the updated <code>/v1/fine_tuning/jobs</code> API and newer models, the main difference you can expect is the updated API. The legacy prompt completion pair data format has been retained for the updated <code>babbage-002</code> and <code>davinci-002</code> models to ensure a smooth transition. The new models will support fine-tuning with 4k token context and have a knowledge cutoff of September 2021.</p>
+<p>For most tasks, you should expect to get better performance from <code>gpt-4o-mini</code> than from the GPT base models.</p></div><div class="docs-footer"><div class="docs-feedback">Was this page useful?<button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Helpful" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12.132 2.504a1 1 0 0 1 .992-.496l.454.056a4 4 0 0 1 3.327 5.146L16.354 9h.718c2.638 0 4.553 2.508 3.86 5.053l-1.364 5A4 4 0 0 1 15.708 22H6a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3h2c.26 0 .5-.14.628-.364l3.504-6.132ZM10 20h5.709a2 2 0 0 0 1.93-1.474l1.363-5A2 2 0 0 0 17.072 11H15a1 1 0 0 1-.956-1.294l.95-3.084a2 2 0 0 0-1.462-2.537l-3.168 5.543A2.723 2.723 0 0 1 9 10.81V19a1 1 0 0 0 1 1Zm-3-9v8c0 .35.06.687.17 1H6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h1Z" clip-rule="evenodd"></path></svg></span></span></button><button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Thumbs down" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.873 21.496a1 1 0 0 1-.992.496l-.454-.056A4 4 0 0 1 7.1 16.79L7.65 15h-.718c-2.637 0-4.553-2.508-3.859-5.052l1.364-5A4 4 0 0 1 8.296 2h9.709a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-2c-.26 0-.5.14-.628.364l-3.504 6.132ZM14.005 4h-5.71a2 2 0 0 0-1.929 1.474l-1.363 5A2 2 0 0 0 6.933 13h2.072a1 1 0 0 1 .955 1.294l-.949 3.084a2 2 0 0 0 1.462 2.537l3.167-5.543a2.723 2.723 0 0 1 1.364-1.182V5a1 1 0 0 0-1-1Zm3 9V5c0-.35-.06-.687-.171-1h1.17a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1Z" clip-rule="evenodd"></path></svg></span></span></button></div></div></div></div></div></div></div></div></div></div></div></main><div data-testid="compliance-management-wrapper"></div></div><div class="layers-root"></div></div>
+      <script nonce="" nomodule="">!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-polyfill" src="/static/polyfills-legacy-DO_EefdF.js"></script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-entry" data-src="/static/index-legacy-U3KC6Hpc.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+    
+
+<div class="CRjGu"></div><iframe id="intercom-frame" style="position: absolute !important; opacity: 0 !important; width: 1px !important; height: 1px !important; top: 0 !important; left: 0 !important; border: none !important; display: block !important; z-index: -1 !important; pointer-events: none;" aria-hidden="true" tabindex="-1" title="Intercom"></iframe><div class="intercom-lightweight-app"><style id="intercom-lightweight-app-style" type="text/css">
+  @keyframes intercom-lightweight-app-launcher {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes intercom-lightweight-app-gradient {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes intercom-lightweight-app-messenger {
+    0% {
+      opacity: 0;
+      transform: scale(0);
+    }
+    40% {
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .intercom-lightweight-app {
+    position: fixed;
+    z-index: 2147483001;
+    width: 0;
+    height: 0;
+    font-family: intercom-font, "Helvetica Neue", "Apple Color Emoji", Helvetica, Arial, sans-serif;
+  }
+
+  .intercom-lightweight-app-gradient {
+    position: fixed;
+    z-index: 2147483002;
+    width: 500px;
+    height: 500px;
+    bottom: 0;
+    right: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at bottom right,
+      rgba(29, 39, 54, 0.16) 0%,
+      rgba(29, 39, 54, 0) 72%);
+    animation: intercom-lightweight-app-gradient 200ms ease-out;
+  }
+
+  .intercom-lightweight-app-launcher {
+    position: fixed;
+    z-index: 2147483003;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none;
+    bottom: 20px;
+    right: 20px;
+    max-width: 48px;
+    width: 48px;
+    max-height: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #202123;
+    cursor: pointer;
+    box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.06), 0 2px 32px 0 rgba(0, 0, 0, 0.16);
+    transition: transform 167ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    box-sizing: content-box;
+  }
+
+
+  .intercom-lightweight-app-launcher:hover {
+    transition: transform 250ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    transform: scale(1.1)
+  }
+
+  .intercom-lightweight-app-launcher:active {
+    transform: scale(0.85);
+    transition: transform 134ms cubic-bezier(0.45, 0, 0.2, 1);
+  }
+
+
+  .intercom-lightweight-app-launcher:focus {
+    outline: none;
+
+    
+  }
+
+  .intercom-lightweight-app-launcher-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 48px;
+    height: 48px;
+    transition: transform 100ms linear, opacity 80ms linear;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg {
+    height: 44px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-custom-icon-open {
+    max-height: 24px;
+    max-width: 24px;
+
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize {
+    
+        opacity: 0;
+        transform: rotate(-60deg) scale(0);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-messenger {
+    position: fixed;
+    z-index: 2147483003;
+    overflow: hidden;
+    background-color: white;
+    animation: intercom-lightweight-app-messenger 250ms cubic-bezier(0, 1, 1, 1);
+    transform-origin: bottom right;
+
+    
+        width: 400px;
+        height: calc(100% - 40px);
+        max-height: 704px;
+        min-height: 250px;
+        right: 20px;
+        bottom: 20px;
+        box-shadow: 0 5px 40px rgba(0,0,0,0.16);
+      
+
+    border-radius: 16px;
+  }
+
+  .intercom-lightweight-app-messenger-header {
+    height: 64px;
+    border-bottom: none;
+    background: #202123
+
+    
+  }
+
+  .intercom-lightweight-app-messenger-footer{
+    position:absolute;
+    bottom:0;
+    width: 100%;
+    height: 80px;
+    background: #fff;
+    font-size: 14px;
+    line-height: 21px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.05);
+    
+  }
+
+  @media print {
+    .intercom-lightweight-app {
+      display: none;
+    }
+  }
+</style></div></body></html>

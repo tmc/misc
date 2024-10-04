@@ -1,0 +1,42 @@
+backend: anthropic
+messages:
+- role: system
+  text: you are an internal google documentation tool for go programs pushing for
+    excellent external documentation of tools and programs to accelerate the adoption
+    of go in ai. Do not start it with Package main as binaries should be documented
+    in a better fashion. Do not talk point out dependencies
+- role: human
+  text: "output a go package comment to document this tool in the style that rob pike,
+    alan donovan, or russ cox would\n<root path=\"~/go/src/github.com/tmc/misc/html2md\">\n<file
+    path=\"./go.mod\">\n  module github.com/tmc/misc/html2md\n  \n  go 1.22.4\n  \n
+    \ require github.com/JohannesKaufmann/html-to-markdown v1.6.0\n  \n  require (\n
+    \ \tgithub.com/PuerkitoBio/goquery v1.9.2 // indirect\n  \tgithub.com/andybalholm/cascadia
+    v1.3.2 // indirect\n  \tgolang.org/x/net v0.25.0 // indirect\n  \tgopkg.in/yaml.v2
+    v2.4.0 // indirect\n  )\n</file>\n<file path=\"./main.go\">\n  package main\n
+    \ \n  import (\n  \t\"flag\"\n  \t\"fmt\"\n  \t\"io\"\n  \t\"log\"\n  \t\"os\"\n
+    \ \n  \tmd \"github.com/JohannesKaufmann/html-to-markdown\"\n  \t\"github.com/JohannesKaufmann/html-to-markdown/plugin\"\n
+    \ )\n  \n  var flagInput = flag.String(\"input\", \"-\", \"input file (default:
+    stdin)\")\n  \n  func main() {\n  \tflag.Parse()\n  \tif flag.NArg() > 0 {\n  \t\tflag.Usage()\n
+    \ \t\tos.Exit(1)\n  \t}\n  \tif err := run(*flagInput); err != nil {\n  \t\tlog.Fatal(err)\n
+    \ \t}\n  }\n  \n  func run(input string) error {\n  \tvar r io.Reader\n  \tif
+    input == \"-\" {\n  \t\tr = os.Stdin\n  \t} else {\n  \t\tf, err := os.Open(input)\n
+    \ \t\tif err != nil {\n  \t\t\treturn err\n  \t\t}\n  \t\tdefer f.Close()\n  \t\tr
+    = f\n  \t}\n  \n  \tmd, err := convert(r)\n  \tif err != nil {\n  \t\treturn err\n
+    \ \t}\n  \tfmt.Println(md)\n  \treturn nil\n  }\n  \n  func convert(r io.Reader)
+    (string, error) {\n  \tconv := md.NewConverter(\"\", true, nil)\n  \tconv.Use(plugin.GitHubFlavored())\n
+    \ \tmarkdown, err := conv.ConvertReader(r)\n  \tif err != nil {\n  \t\treturn
+    \"\", err\n  \t}\n  \treturn markdown.String(), nil\n  }\n</file>\n<file path=\"./readme\">\n</file>\n"
+- role: ai
+  text: "Here's a package comment for the html2md tool in the style that Rob Pike,
+    Alan Donovan, or Russ Cox might use:\n\n/*\nHtml2md converts HTML input to Markdown
+    format.\n\nThis command-line tool reads HTML from either standard input or a specified
+    file\nand outputs the equivalent Markdown representation. It uses the\ngithub.com/JohannesKaufmann/html-to-markdown
+    package to perform the conversion,\nwith GitHub Flavored Markdown enabled by default.\n\nUsage:\n\n\thtml2md
+    [-input=<filename>]\n\nThe -input flag specifies the input file. If omitted or
+    set to \"-\", html2md\nreads from standard input.\n\nHtml2md is designed to be
+    simple and composable, following Unix philosophy. It\ncan be easily integrated
+    into pipelines or scripts for processing HTML content.\n*/\n\nThis comment provides
+    a concise overview of the tool's purpose, usage, and design philosophy, which
+    aligns with the Go team's approach to documentation. It focuses on the essential
+    information a user would need to understand and use the tool effectively."
+model: claude-3-5-sonnet-20240620

@@ -1,0 +1,1165 @@
+<html lang="en" class="dark" data-theme="dark" style="color-scheme: dark;"><head>
+        <meta charset="utf-8">
+        <link rel="icon" type="image/png" href="/favicon-docs.png">
+        <link rel="icon" type="image/svg+xml" href="/favicon-docs.svg">
+        <link rel="preconnect" href="https://cdn.openai.com">
+        <link rel="preconnect" href="https://OWZ3QOIIJA-dsn.algolia.net" crossorigin="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#000000">
+        <title>Function Calling - OpenAI API</title>
+        <meta name="description" content="Explore resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's developer platform.">
+        <link rel="manifest" href="/manifest.json">
+
+        <!-- Facebook / LinkedIn Meta Tags -->
+        <meta property="og:title" content="OpenAI Platform">
+        <meta property="og:image" content="https://cdn.openai.com/API/images/opengraph.png">
+        <meta property="og:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta property="og:type" content="website">
+        <meta property="og:url" content="https://platform.openai.com">
+
+        <!-- Twitter Meta Tags -->
+        <meta name="twitter:card" content="summary_large_image">
+        <meta property="twitter:domain" content="platform.openai.com">
+        <meta property="twitter:url" content="https://platform.openai.com">
+        <meta name="twitter:title" content="OpenAI Platform">
+        <meta name="twitter:description" content="Explore developer resources, tutorials, API docs, and dynamic examples to get the most out of OpenAI's platform.">
+        <meta name="twitter:image" content="https://cdn.openai.com/API/images/opengraph.png">
+      <script type="text/javascript" async="" src="https://widget.intercom.io/widget/dgkjq2bp"></script><script nonce="" type="module" crossorigin="" src="/static/index-CYTQyVAq.js"></script>
+      <link rel="stylesheet" crossorigin="" href="/static/C5CC7YPsR_.css">
+      <script nonce="" type="module">import.meta.url;import("_").catch(()=>1);(async function*(){})().next();if(location.protocol!="file:"){window.__vite_is_modern_browser=true}</script>
+      <script nonce="" type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
+    <link rel="modulepreload" as="script" crossorigin="" href="/static/C2aIRGLQOh.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/BFyog71B1I.js"><link rel="stylesheet" href="/static/CFkw7B_gm-.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/CJnlUOvsM-.js"><link rel="stylesheet" href="/static/BX9BFw3PsH.css"><link rel="stylesheet" href="/static/BKxHiQFIW6.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C4wedv2caf.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/C961Md9dp6.js"><link rel="stylesheet" href="/static/C9MBEX7jPb.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/C24vLskmtV.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/D9oCOueJRr.js"><link rel="stylesheet" href="/static/CcFh4jCko7.css"><link rel="stylesheet" href="/static/DqyyrKcaOP.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/Dh6auKfXaX.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/Bq7L_yreGd.js"><link rel="stylesheet" href="/static/C8xVwo073p.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/yQ3rCgkFw7.js"><link rel="stylesheet" href="/static/CnivQy12om.css"><link rel="modulepreload" as="script" crossorigin="" href="/static/De9Te-Rlz8.js"><link rel="modulepreload" as="script" crossorigin="" href="/static/IyMja2T0sm.js"><link rel="stylesheet" href="/static/DDpxtZQhKj.css"><link rel="stylesheet" href="/static/B2IOrA8ktD.css"></head>
+    <body>
+        <noscript>You need to enable JavaScript to run this app.</noscript>
+        <div id="root"><div class="rl7uK"><div class="hDvly"><div class="vpev1"><div class="_5Amyn"><div class="flex"><div class="relative"><select class="bvkc-"><optgroup label="Organizations"><option value="org-dH3B6ymfbSTLBRRCfId1BRPR">Climate AI Hackathon 21</option><option value="org-mXJaZ8zXm1qhWbRj0yQxhQFN">tmc</option></optgroup></select><button id="select-trigger-radix-:r0:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" tabindex="-1" aria-hidden="true"><span class="RWOJJ"><span class="flex items-center gap-2 font-medium"><span class="qCm0E" role="presentation" data-variant="dark" style="--avatar-size: 25px; --avatar-initial-nudge: 0px;"><div class="_9uyMP">T</div></span>tmc</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button></div></div><div class="u-pgg">/</div><button id="select-trigger-radix-:r1:" type="button" class="ICo9Y" data-variant="bare" data-size="lg" data-gutter-size="sm" aria-haspopup="dialog" aria-expanded="false" aria-controls="radix-:r2:" data-state="closed"><span class="RWOJJ"><span class="font-medium" style="color: var(--text-default);">Default project</span></span><div class="relative flex items-center gap-2"><svg width="8" height="11" viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="uF-Qb"><path fill-rule="evenodd" clip-rule="evenodd" d="M4.34151 0.747423C4.71854 0.417526 5.28149 0.417526 5.65852 0.747423L9.65852 4.24742C10.0742 4.61111 10.1163 5.24287 9.75259 5.6585C9.38891 6.07414 8.75715 6.11626 8.34151 5.75258L5.00001 2.82877L1.65852 5.75258C1.24288 6.11626 0.61112 6.07414 0.247438 5.6585C-0.116244 5.24287 -0.0741267 4.61111 0.34151 4.24742L4.34151 0.747423ZM0.246065 10.3578C0.608879 9.94139 1.24055 9.89795 1.65695 10.2608L5.00001 13.1737L8.34308 10.2608C8.75948 9.89795 9.39115 9.94139 9.75396 10.3578C10.1168 10.7742 10.0733 11.4058 9.65695 11.7687L5.65695 15.2539C5.28043 15.582 4.7196 15.582 4.34308 15.2539L0.343082 11.7687C-0.0733128 11.4058 -0.116749 10.7742 0.246065 10.3578Z"></path></svg></div></button></div></div><div class="Aip-a"><button class="_8dPNb"><span class="tfB-7"><span class="_3Tbwl UuUwq"></span><span class="gw2x5"><span class="_3Tbwl RMlM5"></span></span></span></button></div></div><main class="unjkE" data-sidebar="expanded" data-mobile-menu="hidden"><aside class="EpwGB VO47n"><nav class="okBd0"><a class="w9s17" data-primary-nav-item="" href="/playground"><span class="EsOWR vaD2P" data-title="Playground">Playground</span><span class="EsOWR ksWxL" data-title="Playground">Playground</span></a><a class="w9s17" data-primary-nav-item="" href="/chat-completions"><span class="EsOWR vaD2P" data-title="Dashboard">Dashboard</span><span class="EsOWR ksWxL" data-title="Dashboard">Dashboard</span></a><a aria-current="page" class="w9s17 _1T-tk" data-primary-nav-item="" href="/docs"><span class="EsOWR vaD2P" data-title="Docs">Docs</span><span class="EsOWR ksWxL" data-title="Docs">Docs</span></a><a class="w9s17" data-primary-nav-item="" href="/docs/api-reference/chat"><span class="EsOWR vaD2P" data-title="API reference">API reference</span><span class="EsOWR ksWxL" data-title="API">API</span></a></nav><div class="GVIPA"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="aTuAl"><div class="_0MyKb qyrrQ"><div class="search"><button type="button" class="DocSearch DocSearch-Button" aria-label="Search"><span class="DocSearch-Button-Container"><svg width="20" height="20" class="DocSearch-Search-Icon" viewBox="0 0 20 20"><path d="M14.386 14.386l4.0877 4.0877-4.0877-4.0877c-2.9418 2.9419-7.7115 2.9419-10.6533 0-2.9419-2.9418-2.9419-7.7115 0-10.6533 2.9418-2.9419 7.7115-2.9419 10.6533 0 2.9419 2.9418 2.9419 7.7115 0 10.6533z" stroke="currentColor" fill="none" fill-rule="evenodd" stroke-linecap="round" stroke-linejoin="round"></path></svg><span class="DocSearch-Button-Placeholder">Search</span></span><span class="DocSearch-Button-Keys"><kbd class="DocSearch-Button-Key">⌘</kbd><kbd class="DocSearch-Button-Key">K</kbd></span></button></div></div><div class="DH-HY qyrrQ QeXPj"><div class="side-nav-section"><div class="side-nav-header subheading">Get started</div><a class="scroll-link side-nav-item" href="/docs/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/models"><span class="side-nav-item-name">Models</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/changelog"><span class="side-nav-item-name">Changelog</span></a><a href="https://openai.com/policies" class="scroll-link side-nav-item" target="_blank" rel="noreferrer"><span class="side-nav-item-name">Terms and policies</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-icon"><path fill-rule="evenodd" d="M15 5a1 1 0 1 1 0-2h5a1 1 0 0 1 1 1v5a1 1 0 1 1-2 0V6.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L17.586 5H15ZM4 7a3 3 0 0 1 3-3h3a1 1 0 1 1 0 2H7a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3a1 1 0 1 1 2 0v3a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V7Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Capabilities</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-generation"><span class="side-nav-item-name">Text generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/images"><span class="side-nav-item-name">Image generation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/vision"><span class="side-nav-item-name">Vision</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/embeddings"><span class="side-nav-item-name">Vector embeddings</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/text-to-speech"><span class="side-nav-item-name">Text to speech</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/speech-to-text"><span class="side-nav-item-name">Speech to text</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/moderation"><span class="side-nav-item-name">Moderation</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/reasoning"><span class="side-nav-item-name">Reasoning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Guides</div><a class="scroll-link side-nav-item active active-exact" href="/docs/guides/function-calling"><span class="side-nav-item-name">Function calling</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/structured-outputs"><span class="side-nav-item-name">Structured outputs</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/evals"><span class="side-nav-item-name">Evaluations</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/fine-tuning"><span class="side-nav-item-name">Fine-tuning</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/distillation"><span class="side-nav-item-name">Distillation</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/realtime"><span class="side-nav-item-name">Realtime API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/batch"><span class="side-nav-item-name">Batch API</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Assistants</div><a class="scroll-link side-nav-item" href="/docs/assistants/overview"><span class="side-nav-item-name">Overview</span></a><a class="scroll-link side-nav-item" href="/docs/assistants/quickstart"><span class="side-nav-item-name">Quickstart</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/deep-dive"><span class="side-nav-item-name">Deep dive</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/tools"><span class="side-nav-item-name">Tools</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/assistants/whats-new"><span class="side-nav-item-name">What's new?</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/assistants/migration"><span class="side-nav-item-name">Migration guide</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">ChatGPT</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/actions"><span class="side-nav-item-name">Actions</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/gpts/release-notes"><span class="side-nav-item-name">Release notes</span></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Best practices</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/prompt-engineering"><span class="side-nav-item-name">Prompt engineering</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/production-best-practices"><span class="side-nav-item-name">Production best practices</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/guides/safety-best-practices"><span class="side-nav-item-name">Safety best practices</span></a><a class="scroll-link side-nav-item" href="/docs/guides/prompt-caching"><span class="side-nav-item-name">Prompt caching</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/model-selection"><span class="side-nav-item-name">Model selection</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/latency-optimization"><span class="side-nav-item-name">Latency optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/optimizing-llm-accuracy"><span class="side-nav-item-name">Accuracy optimization</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/advanced-usage"><span class="side-nav-item-name">Advanced usage</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a></div><div class="side-nav-section"><div class="side-nav-header subheading">Resources</div><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/libraries"><span class="side-nav-item-name">Libraries</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/examples"><span class="side-nav-item-name">Prompt examples</span></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/rate-limits"><span class="side-nav-item-name">Rate limits</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item side-nav-item-has-subitems" data-side-nav-subitems="hidden" href="/docs/guides/error-codes"><span class="side-nav-item-name">Error codes</span><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24" class="side-nav-mobile-chevron"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></a><a class="scroll-link side-nav-item" href="/docs/deprecations"><span class="side-nav-item-name">Deprecations</span></a></div></div></div></div></div></div></div></div><div class="EDOEc qyrrQ"><div class="q3jBs"><a href="https://cookbook.openai.com" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M14.447 7.106a1 1 0 0 1 .447 1.341l-4 8a1 1 0 1 1-1.788-.894l4-8a1 1 0 0 1 1.341-.447ZM6.6 7.2a1 1 0 0 1 .2 1.4L4.25 12l2.55 3.4a1 1 0 0 1-1.6 1.2l-3-4a1 1 0 0 1 0-1.2l3-4a1 1 0 0 1 1.4-.2Zm10.8 0a1 1 0 0 1 1.4.2l3 4a1 1 0 0 1 0 1.2l-3 4a1 1 0 0 1-1.6-1.2l2.55-3.4-2.55-3.4a1 1 0 0 1 .2-1.4Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Cookbook</span></span></a><a href="https://community.openai.com/categories" target="_blank" rel="noopener noreferrer" class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M10.5 8.5a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12 5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7ZM3 9.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0Zm1-3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm16 2a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm-3 1a3 3 0 1 1 6 0 3 3 0 0 1-6 0ZM8 18c0-.974.438-1.684 1.142-2.185C9.876 15.293 10.911 15 12 15c1.09 0 2.124.293 2.858.815.704.5 1.142 1.21 1.142 2.185a1 1 0 1 0 2 0c0-1.692-.812-2.982-1.983-3.815C14.876 13.373 13.411 13 12 13c-1.41 0-2.876.373-4.017 1.185C6.812 15.018 6 16.308 6 18a1 1 0 1 0 2 0Zm-3.016-3.675a1 1 0 0 1-.809 1.16C2.79 15.732 2 16.486 2 17.5a1 1 0 1 1-2 0c0-2.41 1.978-3.655 3.825-3.985a1 1 0 0 1 1.16.81Zm14.84 1.16a1 1 0 1 1 .351-1.97C22.022 13.845 24 15.09 24 17.5a1 1 0 1 1-2 0c0-1.014-.79-1.768-2.175-2.015Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Forum</span></span></a><button class="-ySo1 FDGXZ" aria-haspopup="true" aria-expanded="false"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16ZM2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12 9a1 1 0 0 0-.879.522 1 1 0 0 1-1.754-.96A3 3 0 0 1 12 7c1.515 0 2.567 1.006 2.866 2.189.302 1.189-.156 2.574-1.524 3.258A.618.618 0 0 0 13 13a1 1 0 1 1-2 0c0-.992.56-1.898 1.447-2.342.455-.227.572-.618.48-.978C12.836 9.314 12.529 9 12 9Z" clip-rule="evenodd"></path><path d="M13.1 16a1.1 1.1 0 1 1-2.2 0 1.1 1.1 0 0 1 2.2 0Z"></path></svg></span><span class="_0LIzz">Help</span></span></button><a class="-ySo1 FDGXZ" data-primary-nav-item="" aria-haspopup="true" aria-expanded="false" href="/settings"><span class="_1h-SG"><span class="-k7Gw"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.568 3.5a1 1 0 0 0-.863.494l-.811 1.381A3.001 3.001 0 0 1 7.33 6.856l-1.596.013a1 1 0 0 0-.858.501l-.439.761a1 1 0 0 0-.004.992l.792 1.4a3 3 0 0 1 0 2.954l-.792 1.4a1 1 0 0 0 .004.992l.439.76a1 1 0 0 0 .858.502l1.596.013a3 3 0 0 1 2.564 1.48l.811 1.382a1 1 0 0 0 .863.494h.87a1 1 0 0 0 .862-.494l.812-1.381a3.001 3.001 0 0 1 2.563-1.481l1.596-.013a1 1 0 0 0 .86-.501l.438-.761a1 1 0 0 0 .004-.992l-.793-1.4a3 3 0 0 1 0-2.954l.793-1.4a1 1 0 0 0-.004-.992l-.439-.76a1 1 0 0 0-.858-.502l-1.597-.013a3 3 0 0 1-2.563-1.48L13.3 3.993a1 1 0 0 0-.862-.494h-.87ZM8.98 2.981A3.001 3.001 0 0 1 11.568 1.5h.87c1.064 0 2.049.564 2.588 1.481l.811 1.382a1 1 0 0 0 .855.494l1.596.013a3 3 0 0 1 2.575 1.502l.44.76a3 3 0 0 1 .011 2.975l-.792 1.4a1 1 0 0 0 0 .985l.792 1.401a3 3 0 0 1-.012 2.974l-.439.761a3.001 3.001 0 0 1-2.575 1.503l-1.597.012a1 1 0 0 0-.854.494l-.811 1.382a3.001 3.001 0 0 1-2.588 1.481h-.87a3.001 3.001 0 0 1-2.588-1.481l-.811-1.382a1 1 0 0 0-.855-.494l-1.596-.012a3.001 3.001 0 0 1-2.576-1.503l-.438-.76a3 3 0 0 1-.013-2.975l.793-1.4a1 1 0 0 0 0-.985l-.793-1.4a3 3 0 0 1 .013-2.975l.438-.761A3.001 3.001 0 0 1 5.718 4.87l1.596-.013a1 1 0 0 0 .855-.494l.81-1.382Z" clip-rule="evenodd"></path><path fill-rule="evenodd" d="M12.003 10.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3ZM8.502 12a3.5 3.5 0 1 1 7 .001 3.5 3.5 0 0 1-7-.001Z" clip-rule="evenodd"></path></svg></span><span class="_0LIzz">Settings</span></span></a><div class="LwKwt"><button class="jYGOC" type="button" id="radix-:r3:" aria-haspopup="menu" aria-expanded="false" data-state="closed"><span class="qCm0E" role="presentation" data-variant="light"><div class="_8ufcO"><img src="https://lh3.googleusercontent.com/a/ACg8ocLahjE0y72DP3dxsDWlC2UR4uGhyySAPayi5gmRmLoIL7h-xd7L=s96-c" class="mImKu" alt="" role="presentation" data-loaded=""></div></span></button></div></div></div></aside><div class="_7j8ow"><div class="qLnXc"><div class="JGDzZ"><div class="fKGG4"><div class="NmUvH"><div class="_00hoS"><div class="ImBcX"><div class="docs-scroll-container" data-important-algolia-crawl="true"><div class="page-body full-width flush docs-page"><div class="markdown-page markdown-content markdown-prompt-blockquote"><div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/function-calling"><h1 class="anchor-heading" data-name="function-calling">Function calling<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h1></a></div>
+<p>Learn how to connect large language models to external tools.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/introduction"><h2 class="anchor-heading" data-name="introduction">Introduction<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Function calling allows you to connect models like <code>gpt-4o</code> to external tools and systems. This is useful for many things such as empowering AI assistants with capabilities, or building deep integrations between your applications and the models.</p>
+<p>In August 2024, we launched Structured Outputs. When you turn it on by setting <code>strict: true</code>, in your function definition, Structured Outputs ensures that the arguments generated by the model for a function call exactly match the JSON Schema you provided in the function definition.</p>
+<div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p>As an alternative to function calling you can instead constrain the model's regular output to match a JSON Schema of your choosing. <a href="/docs/guides/structured-outputs/function-calling-vs-response-format">Learn more</a> about when to use function calling vs when to control the model's normal output by using <code>response_format</code>.</p></div></div></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/example-use-cases"><h3 class="anchor-heading" data-name="example-use-cases">Example use cases<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Function calling is useful for a large number of use cases, such as:</p>
+<ol>
+<li><strong>Enabling assistants to fetch data:</strong> an AI assistant needs to fetch the latest customer data from an internal system when a user asks “what are my recent orders?” before it can generate the response to the user</li>
+<li><strong>Enabling assistants to take actions:</strong> an AI assistant needs to schedule meetings based on user preferences and calendar availability.</li>
+<li><strong>Enabling assistants to perform computation:</strong> a math tutor assistant needs to perform a math computation.</li>
+<li><strong>Building rich workflows:</strong> a data extraction pipeline that fetches raw text, then converts it to structured data and saves it in a database.</li>
+<li><strong>Modifying your applications' UI:</strong> you can use function calls that update the UI based on user input, for example, rendering a pin on a map.</li>
+</ol>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/lifecycle"><h2 class="anchor-heading" data-name="lifecycle"><p>The lifecycle of a function call</p><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p><img src="https://cdn.openai.com/API/docs/images/function-calling-diagram.png" alt="Function Calling diagram"></p>
+<p>When you use the OpenAI API with function calling, the model never actually executes functions itself, instead in step 3 the model simply generates parameters that can be used to call your function, which your code can then choose how to handle, likely by calling the indicated function. Your application is always in full control.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/how-to"><h2 class="anchor-heading" data-name="how-to"><p>How to use function calling</p><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Function calling is supported in both the <a href="/docs/guides/text-generation/chat-completions-api">Chat Completions API</a>, <a href="/docs/assistants/overview">Assistants API</a>, and the <a href="/docs/guides/batch">Batch API</a>. This guide focuses on function calling using the Chat Completions API. We have a separate guide for <a href="/docs/assistants/tools/function-calling">function calling using the Assistants API</a>.</p>
+<p>For the following example, we are building a conversational assistant which is able to help users with their delivery orders. Rather than requiring your users to interact with a typical form, your user can chat with an AI-powered assistant. In order to make this assistant helpful, we want to give it the ability to look up orders and reply with real data about the user’s orders.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/step-1-pick-a-function-in-your-codebase-that-the-model-should-be-able-to-call"><h3 class="anchor-heading" data-name="step-1-pick-a-function-in-your-codebase-that-the-model-should-be-able-to-call">Step 1: Pick a function in your codebase that the model should be able to call<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>The starting point for function calling is choosing a function in your own codebase that you’d like to enable the model to generate arguments for.</p>
+<p>For this example, let’s imagine you want to allow the model to call the <code>get_delivery_date</code> function in your codebase which accepts an <code>order_id</code> and queries your database to determine the delivery date for a given package. Your function might look like something like the following.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span></code><span><span class="hljs-comment"># This is the function that we want the model to be able to call</span><span>
+</span></span><span><span></span><span class="hljs-function hljs-keyword">def</span><span class="hljs-function"> </span><span class="hljs-function hljs-title">get_delivery_date</span><span class="hljs-function">(</span><span class="hljs-function hljs-params">order_id: </span><span class="hljs-function hljs-params hljs-built_in">str</span><span class="hljs-function">) -&gt; datetime:</span><span>
+</span></span><span><span>    </span><span class="hljs-comment"># Connect to the database</span><span>
+</span></span><span><span>    conn = sqlite3.connect(</span><span class="hljs-string">'ecommerce.db'</span><span>)
+</span></span><span>    cursor = conn.cursor()
+</span><span><span>    </span><span class="hljs-comment"># ...</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/step-2-describe-your-function-to-the-model-so-it-knows-how-to-call-it"><h3 class="anchor-heading" data-name="step-2-describe-your-function-to-the-model-so-it-knows-how-to-call-it">Step 2: Describe your function to the model so it knows how to call it<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Now we know what function we wish to allow the model to call, we will create a “function definition” that describes the function to the model. This definition describes both what the function does (and potentially when it should be called) and what parameters are required to call the function.</p>
+<p>The <code>parameters</code> section of your function definition should be described using JSON Schema. If and when the model generates a function call, it will use this information to generate arguments according to your provided schema.</p>
+<p>In this example it may look like this:</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-json" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span></code><span><span>{
+</span></span><span><span>    </span><span class="hljs-attr">"name"</span><span>: </span><span class="hljs-string">"get_delivery_date"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"description"</span><span>: </span><span class="hljs-string">"Get the delivery date for a customer's order. Call this whenever you need to know the delivery date, for example when a customer asks 'Where is my package'"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"parameters"</span><span>: {
+</span></span><span><span>        </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"object"</span><span>,
+</span></span><span><span>        </span><span class="hljs-attr">"properties"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-attr">"order_id"</span><span>: {
+</span></span><span><span>                </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"string"</span><span>,
+</span></span><span><span>                </span><span class="hljs-attr">"description"</span><span>: </span><span class="hljs-string">"The customer's order ID."</span><span>,
+</span></span><span>            },
+</span><span>        },
+</span><span><span>        </span><span class="hljs-attr">"required"</span><span>: [</span><span class="hljs-string">"order_id"</span><span>],
+</span></span><span><span>        </span><span class="hljs-attr">"additionalProperties"</span><span>: </span><span class="hljs-literal">false</span><span>,
+</span></span><span>    }
+</span><span>}</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/step-3-pass-your-function-definitions-as-available-tools-to-the-model-along-with-the-messages"><h3 class="anchor-heading" data-name="step-3-pass-your-function-definitions-as-available-tools-to-the-model-along-with-the-messages">Step 3: Pass your function definitions as available “tools” to the model, along with the messages<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Next we need to provide our function definitions within an array of available “tools” when calling the Chat Completions API.</p>
+<p>As always, we will provide an array of “messages”, which could for example contain your prompt or a whole back and forth conversation between the user and an assistant.</p>
+<p>This example shows how you may call the Chat Completions API providing relevant functions and messages for an assistant that handles customer inquiries for a store.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span><span class="react-syntax-highlighter-line-number">26
+</span><span class="react-syntax-highlighter-line-number">27
+</span><span class="react-syntax-highlighter-line-number">28
+</span><span class="react-syntax-highlighter-line-number">29
+</span><span class="react-syntax-highlighter-line-number">30
+</span><span class="react-syntax-highlighter-line-number">31
+</span></code><span><span>tools = [
+</span></span><span>    {
+</span><span><span>        </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"function"</span><span>,
+</span></span><span><span>        </span><span class="hljs-string">"function"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-string">"name"</span><span>: </span><span class="hljs-string">"get_delivery_date"</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"description"</span><span>: </span><span class="hljs-string">"Get the delivery date for a customer's order. Call this whenever you need to know the delivery date, for example when a customer asks 'Where is my package'"</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"parameters"</span><span>: {
+</span></span><span><span>                </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"object"</span><span>,
+</span></span><span><span>                </span><span class="hljs-string">"properties"</span><span>: {
+</span></span><span><span>                    </span><span class="hljs-string">"order_id"</span><span>: {
+</span></span><span><span>                        </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"string"</span><span>,
+</span></span><span><span>                        </span><span class="hljs-string">"description"</span><span>: </span><span class="hljs-string">"The customer's order ID."</span><span>,
+</span></span><span>                    },
+</span><span>                },
+</span><span><span>                </span><span class="hljs-string">"required"</span><span>: [</span><span class="hljs-string">"order_id"</span><span>],
+</span></span><span><span>                </span><span class="hljs-string">"additionalProperties"</span><span>: </span><span class="hljs-literal">False</span><span>,
+</span></span><span>            },
+</span><span>        }
+</span><span>    }
+</span><span>]
+</span><span>
+</span><span>messages = [
+</span><span><span>    {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"You are a helpful customer support assistant. Use the supplied tools to assist the user."</span><span>},
+</span></span><span><span>    {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"Hi, can you tell me the delivery date for my order?"</span><span>}
+</span></span><span>]
+</span><span>
+</span><span>response = openai.chat.completions.create(
+</span><span><span>    model=</span><span class="hljs-string">"gpt-4o"</span><span>,
+</span></span><span>    messages=messages,
+</span><span>    tools=tools,
+</span><span>)</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/step-4-receive-and-handle-the-model-response"><h3 class="anchor-heading" data-name="step-4-receive-and-handle-the-model-response">Step 4: Receive and handle the model response<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/if-the-model-decides-that-no-function-should-be-called"><h4 class="anchor-heading" data-name="if-the-model-decides-that-no-function-should-be-called">If the model decides that no function should be called<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>If the model does not generate a function call, then the response will contain a direct reply to the user in the normal way that Chat Completions does.</p>
+<p>For example, in this case <code>chat_response.choices[0].message</code> may contain:</p>
+<div class="code-sample code-sample-oneliner dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><span><span>chat.completionsMessage(content=</span><span class="hljs-string">'Hi there! I can help with that. Can you please provide your order ID?'</span><span>, role=</span><span class="hljs-string">'assistant'</span><span>, function_call=</span><span class="hljs-literal">None</span><span>, tool_calls=</span><span class="hljs-literal">None</span><span>)</span></span></code></pre></div></div>
+<p>In an assistant use case you will typically want to show this response to the user and let them respond to it, in which case you will call the API again (with both the latest responses from the assistant and user appended to the <code>messages</code>).</p>
+<p>Let's assume our user responded with their order id, and we sent the following request to the API.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span><span class="react-syntax-highlighter-line-number">26
+</span><span class="react-syntax-highlighter-line-number">27
+</span><span class="react-syntax-highlighter-line-number">28
+</span><span class="react-syntax-highlighter-line-number">29
+</span><span class="react-syntax-highlighter-line-number">30
+</span><span class="react-syntax-highlighter-line-number">31
+</span><span class="react-syntax-highlighter-line-number">32
+</span></code><span><span>tools = [
+</span></span><span>    {
+</span><span><span>        </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"function"</span><span>,
+</span></span><span><span>        </span><span class="hljs-string">"function"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-string">"name"</span><span>: </span><span class="hljs-string">"get_delivery_date"</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"description"</span><span>: </span><span class="hljs-string">"Get the delivery date for a customer's order. Call this whenever you need to know the delivery date, for example when a customer asks 'Where is my package'"</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"parameters"</span><span>: {
+</span></span><span><span>                </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"object"</span><span>,
+</span></span><span><span>                </span><span class="hljs-string">"properties"</span><span>: {
+</span></span><span><span>                    </span><span class="hljs-string">"order_id"</span><span>: {
+</span></span><span><span>                        </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"string"</span><span>,
+</span></span><span><span>                        </span><span class="hljs-string">"description"</span><span>: </span><span class="hljs-string">"The customer's order ID."</span><span>
+</span></span><span>                    }
+</span><span>                },
+</span><span><span>                </span><span class="hljs-string">"required"</span><span>: [</span><span class="hljs-string">"order_id"</span><span>],
+</span></span><span><span>                </span><span class="hljs-string">"additionalProperties"</span><span>: </span><span class="hljs-literal">False</span><span>
+</span></span><span>            }
+</span><span>        }
+</span><span>    }
+</span><span>]
+</span><span>
+</span><span>messages = []
+</span><span><span>messages.append({</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"You are a helpful customer support assistant. Use the supplied tools to assist the user."</span><span>})
+</span></span><span><span>messages.append({</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"Hi, can you tell me the delivery date for my order?"</span><span>})
+</span></span><span class="highlighted-row"><span>messages.append({</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"Hi there! I can help with that. Can you please provide your order ID?"</span><span>})
+</span></span><span class="highlighted-row"><span>messages.append({</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"i think it is order_12345"</span><span>})
+</span></span><span>
+</span><span>response = client.chat.completions.create(
+</span><span><span>    model=</span><span class="hljs-string">'gpt-4o'</span><span>,
+</span></span><span>    messages=messages,
+</span><span>    tools=tools
+</span><span>)</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/if-the-model-generated-a-function-call"><h4 class="anchor-heading" data-name="if-the-model-generated-a-function-call">If the model generated a function call<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>If the model generated a function call, it will generate the arguments for the call (based on the <code>parameters</code> definition you provided).</p>
+<p>Here is an example response showing this:</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span></code><span><span>Choice(
+</span></span><span><span>    finish_reason=</span><span class="hljs-string">'tool_calls'</span><span>, 
+</span></span><span><span>    index=</span><span class="hljs-number">0</span><span>, 
+</span></span><span><span>    logprobs=</span><span class="hljs-literal">None</span><span>, 
+</span></span><span>    message=chat.completionsMessage(
+</span><span><span>        content=</span><span class="hljs-literal">None</span><span>, 
+</span></span><span><span>        role=</span><span class="hljs-string">'assistant'</span><span>, 
+</span></span><span><span>        function_call=</span><span class="hljs-literal">None</span><span>, 
+</span></span><span>        tool_calls=[
+</span><span>            chat.completionsMessageToolCall(
+</span><span><span>                </span><span class="hljs-built_in">id</span><span>=</span><span class="hljs-string">'call_62136354'</span><span>, 
+</span></span><span>                function=Function(
+</span><span><span>                    arguments=</span><span class="hljs-string">'{"order_id":"order_12345"}'</span><span>, 
+</span></span><span><span>                    name=</span><span class="hljs-string">'get_delivery_date'</span><span>), 
+</span></span><span><span>                </span><span class="hljs-built_in">type</span><span>=</span><span class="hljs-string">'function'</span><span>)
+</span></span><span>        ])
+</span><span>)</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/handling-the-model-response-indicating-that-a-function-should-be-called"><h4 class="anchor-heading" data-name="handling-the-model-response-indicating-that-a-function-should-be-called">Handling the model response indicating that a function should be called<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>Assuming the response indicates that a function should be called, your code will now handle this:</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span></code><span><span class="hljs-comment"># Extract the arguments for get_delivery_date</span><span>
+</span></span><span><span></span><span class="hljs-comment"># Note this code assumes we have already determined that the model generated a function call. See below for a more production ready example that shows how to check if the model generated a function call</span><span>
+</span></span><span><span>tool_call = response.choices[</span><span class="hljs-number">0</span><span>].message.tool_calls[</span><span class="hljs-number">0</span><span>]
+</span></span><span><span>arguments = json.loads(tool_call[</span><span class="hljs-string">'function'</span><span>][</span><span class="hljs-string">'arguments'</span><span>])
+</span></span><span>
+</span><span><span>order_id = arguments.get(</span><span class="hljs-string">'order_id'</span><span>)
+</span></span><span>
+</span><span><span></span><span class="hljs-comment"># Call the get_delivery_date function with the extracted order_id</span><span>
+</span></span><span>delivery_date = get_delivery_date(order_id)</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/step-5-provide-the-function-call-result-back-to-the-model"><h3 class="anchor-heading" data-name="step-5-provide-the-function-call-result-back-to-the-model">Step 5: Provide the function call result back to the model<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Now we have executed the function call locally, we need to provide the result of this function call back to the Chat Completions API so the model can generate the actual response that the user should see:</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span><span class="react-syntax-highlighter-line-number">26
+</span><span class="react-syntax-highlighter-line-number">27
+</span><span class="react-syntax-highlighter-line-number">28
+</span><span class="react-syntax-highlighter-line-number">29
+</span><span class="react-syntax-highlighter-line-number">30
+</span><span class="react-syntax-highlighter-line-number">31
+</span><span class="react-syntax-highlighter-line-number">32
+</span><span class="react-syntax-highlighter-line-number">33
+</span><span class="react-syntax-highlighter-line-number">34
+</span><span class="react-syntax-highlighter-line-number">35
+</span><span class="react-syntax-highlighter-line-number">36
+</span><span class="react-syntax-highlighter-line-number">37
+</span><span class="react-syntax-highlighter-line-number">38
+</span><span class="react-syntax-highlighter-line-number">39
+</span><span class="react-syntax-highlighter-line-number">40
+</span><span class="react-syntax-highlighter-line-number">41
+</span><span class="react-syntax-highlighter-line-number">42
+</span><span class="react-syntax-highlighter-line-number">43
+</span><span class="react-syntax-highlighter-line-number">44
+</span><span class="react-syntax-highlighter-line-number">45
+</span><span class="react-syntax-highlighter-line-number">46
+</span><span class="react-syntax-highlighter-line-number">47
+</span><span class="react-syntax-highlighter-line-number">48
+</span><span class="react-syntax-highlighter-line-number">49
+</span><span class="react-syntax-highlighter-line-number">50
+</span><span class="react-syntax-highlighter-line-number">51
+</span><span class="react-syntax-highlighter-line-number">52
+</span><span class="react-syntax-highlighter-line-number">53
+</span><span class="react-syntax-highlighter-line-number">54
+</span><span class="react-syntax-highlighter-line-number">55
+</span><span class="react-syntax-highlighter-line-number">56
+</span></code><span><span class="hljs-comment"># Simulate the order_id and delivery_date</span><span>
+</span></span><span><span>order_id = </span><span class="hljs-string">"order_12345"</span><span>
+</span></span><span>delivery_date = datetime.now()
+</span><span>
+</span><span><span></span><span class="hljs-comment"># Simulate the tool call response</span><span>
+</span></span><span>response = {
+</span><span><span>    </span><span class="hljs-string">"choices"</span><span>: [
+</span></span><span>        {
+</span><span><span>            </span><span class="hljs-string">"message"</span><span>: {
+</span></span><span><span>                </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>,
+</span></span><span><span>                </span><span class="hljs-string">"tool_calls"</span><span>: [
+</span></span><span>                    {
+</span><span><span>                        </span><span class="hljs-string">"id"</span><span>: </span><span class="hljs-string">"call_62136354"</span><span>,
+</span></span><span><span>                        </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"function"</span><span>,
+</span></span><span><span>                        </span><span class="hljs-string">"function"</span><span>: {
+</span></span><span><span>                            </span><span class="hljs-string">"arguments"</span><span>: </span><span class="hljs-string">"{'order_id': 'order_12345'}"</span><span>,
+</span></span><span><span>                            </span><span class="hljs-string">"name"</span><span>: </span><span class="hljs-string">"get_delivery_date"</span><span>
+</span></span><span>                        }
+</span><span>                    }
+</span><span>                ]
+</span><span>            }
+</span><span>        }
+</span><span>    ]
+</span><span>}
+</span><span>
+</span><span><span></span><span class="hljs-comment"># Create a message containing the result of the function call</span><span>
+</span></span><span>function_call_result_message = {
+</span><span><span>    </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"tool"</span><span>,
+</span></span><span><span>    </span><span class="hljs-string">"content"</span><span>: json.dumps({
+</span></span><span><span>        </span><span class="hljs-string">"order_id"</span><span>: order_id,
+</span></span><span><span>        </span><span class="hljs-string">"delivery_date"</span><span>: delivery_date.strftime(</span><span class="hljs-string">'%Y-%m-%d %H:%M:%S'</span><span>)
+</span></span><span>    }),
+</span><span><span>    </span><span class="hljs-string">"tool_call_id"</span><span>: response[</span><span class="hljs-string">'choices'</span><span>][</span><span class="hljs-number">0</span><span>][</span><span class="hljs-string">'message'</span><span>][</span><span class="hljs-string">'tool_calls'</span><span>][</span><span class="hljs-number">0</span><span>][</span><span class="hljs-string">'id'</span><span>]
+</span></span><span>}
+</span><span>
+</span><span><span></span><span class="hljs-comment"># Prepare the chat completion call payload</span><span>
+</span></span><span>completion_payload = {
+</span><span><span>    </span><span class="hljs-string">"model"</span><span>: </span><span class="hljs-string">"gpt-4o"</span><span>,
+</span></span><span><span>    </span><span class="hljs-string">"messages"</span><span>: [
+</span></span><span><span>        {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"You are a helpful customer support assistant. Use the supplied tools to assist the user."</span><span>},
+</span></span><span><span>        {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"Hi, can you tell me the delivery date for my order?"</span><span>},
+</span></span><span><span>        {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"assistant"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"Hi there! I can help with that. Can you please provide your order ID?"</span><span>},
+</span></span><span><span>        {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"i think it is order_12345"</span><span>},
+</span></span><span><span>        response[</span><span class="hljs-string">'choices'</span><span>][</span><span class="hljs-number">0</span><span>][</span><span class="hljs-string">'message'</span><span>],
+</span></span><span>        function_call_result_message
+</span><span>    ]
+</span><span>}
+</span><span>
+</span><span><span></span><span class="hljs-comment"># Call the OpenAI API's chat completions endpoint to send the tool call result back to the model</span><span>
+</span></span><span>response = openai.chat.completions.create(
+</span><span><span>    model=completion_payload[</span><span class="hljs-string">"model"</span><span>],
+</span></span><span><span>    messages=completion_payload[</span><span class="hljs-string">"messages"</span><span>]
+</span></span><span>)
+</span><span>
+</span><span><span></span><span class="hljs-comment"># Print the response from the API. In this case it will typically contain a message such as "The delivery date for your order #12345 is xyz. Is there anything else I can help you with?"</span><span>
+</span></span><span><span></span><span class="hljs-built_in">print</span><span>(response)</span></span></code></pre></div></div>
+<p>That’s all you need to give <code>gpt-4o</code> access to your functions.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/edge-cases"><h3 class="anchor-heading" data-name="edge-cases"><p>Handling edge cases</p><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p>We recommend using the SDK to handle the edge cases described below. If for any reason you cannot use the SDK, you should handle these cases in your code.</p></div></div></div></div>
+<p>When you receive a response from the API, if you're not using the SDK, there are a number of edge cases that production code should handle.</p>
+<p>In general, the API will return a valid function call, but there are some edge cases when this won’t happen, such as when you have specified <code>max_tokens</code> and the model’s response is cut off as a result.</p>
+<p>This sample explains them:</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span><span class="react-syntax-highlighter-line-number">26
+</span><span class="react-syntax-highlighter-line-number">27
+</span><span class="react-syntax-highlighter-line-number">28
+</span><span class="react-syntax-highlighter-line-number">29
+</span><span class="react-syntax-highlighter-line-number">30
+</span><span class="react-syntax-highlighter-line-number">31
+</span><span class="react-syntax-highlighter-line-number">32
+</span><span class="react-syntax-highlighter-line-number">33
+</span></code><span><span class="hljs-comment"># Check if the conversation was too long for the context window</span><span>
+</span></span><span><span></span><span class="hljs-keyword">if</span><span> response[</span><span class="hljs-string">'choices'</span><span>][</span><span class="hljs-number">0</span><span>][</span><span class="hljs-string">'message'</span><span>][</span><span class="hljs-string">'finish_reason'</span><span>] == </span><span class="hljs-string">"length"</span><span>:
+</span></span><span><span>    </span><span class="hljs-built_in">print</span><span>(</span><span class="hljs-string">"Error: The conversation was too long for the context window."</span><span>)
+</span></span><span><span>    </span><span class="hljs-comment"># Handle the error as needed, e.g., by truncating the conversation or asking for clarification</span><span>
+</span></span><span>    handle_length_error(response)
+</span><span>    
+</span><span><span></span><span class="hljs-comment"># Check if the model's output included copyright material (or similar)</span><span>
+</span></span><span><span></span><span class="hljs-keyword">if</span><span> response[</span><span class="hljs-string">'choices'</span><span>][</span><span class="hljs-number">0</span><span>][</span><span class="hljs-string">'message'</span><span>][</span><span class="hljs-string">'finish_reason'</span><span>] == </span><span class="hljs-string">"content_filter"</span><span>:
+</span></span><span><span>    </span><span class="hljs-built_in">print</span><span>(</span><span class="hljs-string">"Error: The content was filtered due to policy violations."</span><span>)
+</span></span><span><span>    </span><span class="hljs-comment"># Handle the error as needed, e.g., by modifying the request or notifying the user</span><span>
+</span></span><span>    handle_content_filter_error(response)
+</span><span>    
+</span><span><span></span><span class="hljs-comment"># Check if the model has made a tool_call. This is the case either if the "finish_reason" is "tool_calls" or if the "finish_reason" is "stop" and our API request had forced a function call</span><span>
+</span></span><span><span></span><span class="hljs-keyword">if</span><span> (response[</span><span class="hljs-string">'choices'</span><span>][</span><span class="hljs-number">0</span><span>][</span><span class="hljs-string">'message'</span><span>][</span><span class="hljs-string">'finish_reason'</span><span>] == </span><span class="hljs-string">"tool_calls"</span><span> </span><span class="hljs-keyword">or</span><span> 
+</span></span><span><span>    </span><span class="hljs-comment"># This handles the edge case where if we forced the model to call one of our functions, the finish_reason will actually be "stop" instead of "tool_calls"</span><span>
+</span></span><span><span>    (our_api_request_forced_a_tool_call </span><span class="hljs-keyword">and</span><span> response[</span><span class="hljs-string">'choices'</span><span>][</span><span class="hljs-number">0</span><span>][</span><span class="hljs-string">'message'</span><span>][</span><span class="hljs-string">'finish_reason'</span><span>] == </span><span class="hljs-string">"stop"</span><span>)):
+</span></span><span><span>    </span><span class="hljs-comment"># Handle tool call</span><span>
+</span></span><span><span>    </span><span class="hljs-built_in">print</span><span>(</span><span class="hljs-string">"Model made a tool call."</span><span>)
+</span></span><span><span>    </span><span class="hljs-comment"># Your code to handle tool calls</span><span>
+</span></span><span>    handle_tool_call(response)
+</span><span>    
+</span><span><span></span><span class="hljs-comment"># Else finish_reason is "stop", in which case the model was just responding directly to the user</span><span>
+</span></span><span><span></span><span class="hljs-keyword">elif</span><span> response[</span><span class="hljs-string">'choices'</span><span>][</span><span class="hljs-number">0</span><span>][</span><span class="hljs-string">'message'</span><span>][</span><span class="hljs-string">'finish_reason'</span><span>] == </span><span class="hljs-string">"stop"</span><span>:
+</span></span><span><span>    </span><span class="hljs-comment"># Handle the normal stop case</span><span>
+</span></span><span><span>    </span><span class="hljs-built_in">print</span><span>(</span><span class="hljs-string">"Model responded directly to the user."</span><span>)
+</span></span><span><span>    </span><span class="hljs-comment"># Your code to handle normal responses</span><span>
+</span></span><span>    handle_normal_response(response)
+</span><span>    
+</span><span><span></span><span class="hljs-comment"># Catch any other case, this is unexpected</span><span>
+</span></span><span><span></span><span class="hljs-keyword">else</span><span>:
+</span></span><span><span>    </span><span class="hljs-built_in">print</span><span>(</span><span class="hljs-string">"Unexpected finish_reason:"</span><span>, response[</span><span class="hljs-string">'choices'</span><span>][</span><span class="hljs-number">0</span><span>][</span><span class="hljs-string">'message'</span><span>][</span><span class="hljs-string">'finish_reason'</span><span>])
+</span></span><span><span>    </span><span class="hljs-comment"># Handle unexpected cases as needed</span><span>
+</span></span><span>    handle_unexpected_case(response)</span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/function-calling-with-structured-outputs"><h2 class="anchor-heading" data-name="function-calling-with-structured-outputs">Function calling with Structured Outputs<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>By default, when you use function calling, the API will offer best-effort matching for your parameters, which means that occasionally the model may miss parameters or get their types wrong when using complicated schemas.</p>
+<p><a href="/docs/guides/structured-outputs">Structured Outputs</a> is a feature that ensures model outputs for function calls will exactly match your supplied schema.</p>
+<p>Structured Outputs for function calling can be enabled with a single parameter, just by supplying <code>strict: true</code>.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option><option value="curl">curl</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span></code><span><span class="hljs-keyword">from</span><span> enum </span><span class="hljs-keyword">import</span><span> Enum
+</span></span><span><span></span><span class="hljs-keyword">from</span><span> typing </span><span class="hljs-keyword">import</span><span> </span><span class="hljs-type">Union</span><span>
+</span></span><span><span></span><span class="hljs-keyword">from</span><span> pydantic </span><span class="hljs-keyword">import</span><span> BaseModel
+</span></span><span><span></span><span class="hljs-keyword">import</span><span> openai
+</span></span><span><span></span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>
+</span><span>client = OpenAI()
+</span><span>
+</span><span><span></span><span class="hljs-class hljs-keyword">class</span><span class="hljs-class"> </span><span class="hljs-class hljs-title">GetDeliveryDate</span><span class="hljs-class">(</span><span class="hljs-class hljs-params">BaseModel</span><span class="hljs-class">):</span><span>
+</span></span><span><span>    order_id: </span><span class="hljs-built_in">str</span><span>
+</span></span><span>
+</span><span>tools = [openai.pydantic_function_tool(GetDeliveryDate)]
+</span><span>
+</span><span>messages = []
+</span><span><span>messages.append({</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"You are a helpful customer support assistant. Use the supplied tools to assist the user."</span><span>})
+</span></span><span><span>messages.append({</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"Hi, can you tell me the delivery date for my order #12345?"</span><span>}) 
+</span></span><span>
+</span><span>response = client.chat.completions.create(
+</span><span><span>    model=</span><span class="hljs-string">'gpt-4o-2024-08-06'</span><span>,
+</span></span><span>    messages=messages,
+</span><span>    tools=tools
+</span><span>)
+</span><span>
+</span><span><span></span><span class="hljs-built_in">print</span><span>(response.choices[</span><span class="hljs-number">0</span><span>].message.tool_calls[</span><span class="hljs-number">0</span><span>].function)</span></span></code></pre></div></div>
+<p>When you enable Structured Outputs by supplying <code>strict: true</code>, the OpenAI API will pre-process your supplied schema on your first request, and then use this artifact to constrain the model to your schema.</p>
+<p>As a result, the model will always follow your exact schema, except in a few circumstances:</p>
+<ul>
+<li>When the model’s response is cut off (either due to <code>max_tokens</code>, <code>stop token</code>s, or maximum context length)</li>
+<li>When a model <a href="/docs/guides/structured-outputs/refusals">refusal</a> happens</li>
+<li>When there is a <code>content_filter</code> finish reason</li>
+</ul>
+<div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p>Note that the first time you send a request with a new schema using Structured Outputs, there will be additional latency as the schema is processed, but subsequent requests should incur no overhead.</p></div></div></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/supported-schemas"><h2 class="anchor-heading" data-name="supported-schemas">Supported schemas<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Function calling with Structured Outputs supports a subset of the JSON Schema language.</p>
+<p>For more information on supported schemas, see the <a href="/docs/guides/structured-outputs/supported-schemas">Structured Outputs guide</a>.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/customizing-function-calling-behavior"><h2 class="anchor-heading" data-name="customizing-function-calling-behavior">Customizing function calling behavior<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Function calling supports a number of advanced features such as ability to force function calls, parallel function calling and more.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/configuring-parallel-function-calling"><h3 class="anchor-heading" data-name="configuring-parallel-function-calling">Configuring parallel function calling<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Any models released on or after Nov 6, 2023 may by default generate multiple function calls in a single response, indicating that they should be called in parallel.</p>
+<p>This is especially useful if executing the given functions takes a long time. For example, the model may call functions to get the weather in 3 different locations at the same time, which will result in a message with 3 function calls in the tool_calls array.</p>
+<p>Example response:</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span><span class="react-syntax-highlighter-line-number">26
+</span><span class="react-syntax-highlighter-line-number">27
+</span><span class="react-syntax-highlighter-line-number">28
+</span><span class="react-syntax-highlighter-line-number">29
+</span><span class="react-syntax-highlighter-line-number">30
+</span><span class="react-syntax-highlighter-line-number">31
+</span><span class="react-syntax-highlighter-line-number">32
+</span><span class="react-syntax-highlighter-line-number">33
+</span><span class="react-syntax-highlighter-line-number">34
+</span><span class="react-syntax-highlighter-line-number">35
+</span><span class="react-syntax-highlighter-line-number">36
+</span></code><span><span>response = Choice(
+</span></span><span><span>    finish_reason=</span><span class="hljs-string">'tool_calls'</span><span>, 
+</span></span><span><span>    index=</span><span class="hljs-number">0</span><span>, 
+</span></span><span><span>    logprobs=</span><span class="hljs-literal">None</span><span>, 
+</span></span><span>    message=chat.completionsMessage(
+</span><span><span>        content=</span><span class="hljs-literal">None</span><span>, 
+</span></span><span><span>        role=</span><span class="hljs-string">'assistant'</span><span>, 
+</span></span><span><span>        function_call=</span><span class="hljs-literal">None</span><span>, 
+</span></span><span>        tool_calls=[
+</span><span>            chat.completionsMessageToolCall(
+</span><span><span>                </span><span class="hljs-built_in">id</span><span>=</span><span class="hljs-string">'call_62136355'</span><span>, 
+</span></span><span>                function=Function(
+</span><span><span>                    arguments=</span><span class="hljs-string">'{"city":"New York"}'</span><span>, 
+</span></span><span><span>                    name=</span><span class="hljs-string">'check_weather'</span><span>), 
+</span></span><span><span>                </span><span class="hljs-built_in">type</span><span>=</span><span class="hljs-string">'function'</span><span>),
+</span></span><span>            chat.completionsMessageToolCall(
+</span><span><span>                </span><span class="hljs-built_in">id</span><span>=</span><span class="hljs-string">'call_62136356'</span><span>, 
+</span></span><span>                function=Function(
+</span><span><span>                    arguments=</span><span class="hljs-string">'{"city":"London"}'</span><span>, 
+</span></span><span><span>                    name=</span><span class="hljs-string">'check_weather'</span><span>), 
+</span></span><span><span>                </span><span class="hljs-built_in">type</span><span>=</span><span class="hljs-string">'function'</span><span>),
+</span></span><span>            chat.completionsMessageToolCall(
+</span><span><span>                </span><span class="hljs-built_in">id</span><span>=</span><span class="hljs-string">'call_62136357'</span><span>, 
+</span></span><span>                function=Function(
+</span><span><span>                    arguments=</span><span class="hljs-string">'{"city":"Tokyo"}'</span><span>, 
+</span></span><span><span>                    name=</span><span class="hljs-string">'check_weather'</span><span>), 
+</span></span><span><span>                </span><span class="hljs-built_in">type</span><span>=</span><span class="hljs-string">'function'</span><span>)
+</span></span><span>        ])
+</span><span>)
+</span><span>
+</span><span><span></span><span class="hljs-comment"># Iterate through tool calls to handle each weather check</span><span>
+</span></span><span><span></span><span class="hljs-keyword">for</span><span> tool_call </span><span class="hljs-keyword">in</span><span> response.message.tool_calls:
+</span></span><span>    arguments = json.loads(tool_call.function.arguments)
+</span><span><span>    city = arguments[</span><span class="hljs-string">'city'</span><span>]
+</span></span><span>    weather_info = check_weather(city)
+</span><span><span>    </span><span class="hljs-built_in">print</span><span>(</span><span class="hljs-string">f"Weather in </span><span class="hljs-string hljs-subst">{city}</span><span class="hljs-string">: </span><span class="hljs-string hljs-subst">{weather_info}</span><span class="hljs-string">"</span><span>)</span></span></code></pre></div></div>
+<p>Each function call in the array has a unique <code>id</code>.</p>
+<p>Once you've executed these function calls in your application, you can provide the result back to the model by adding one new message to the conversation for each function call, each containing the result of one function call, with a <code>tool_call_id</code> referencing the <code>id</code> from <code>tool_calls</code>, for example:</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span><span class="react-syntax-highlighter-line-number">26
+</span><span class="react-syntax-highlighter-line-number">27
+</span><span class="react-syntax-highlighter-line-number">28
+</span><span class="react-syntax-highlighter-line-number">29
+</span><span class="react-syntax-highlighter-line-number">30
+</span><span class="react-syntax-highlighter-line-number">31
+</span><span class="react-syntax-highlighter-line-number">32
+</span><span class="react-syntax-highlighter-line-number">33
+</span><span class="react-syntax-highlighter-line-number">34
+</span><span class="react-syntax-highlighter-line-number">35
+</span><span class="react-syntax-highlighter-line-number">36
+</span><span class="react-syntax-highlighter-line-number">37
+</span><span class="react-syntax-highlighter-line-number">38
+</span><span class="react-syntax-highlighter-line-number">39
+</span><span class="react-syntax-highlighter-line-number">40
+</span><span class="react-syntax-highlighter-line-number">41
+</span><span class="react-syntax-highlighter-line-number">42
+</span><span class="react-syntax-highlighter-line-number">43
+</span><span class="react-syntax-highlighter-line-number">44
+</span><span class="react-syntax-highlighter-line-number">45
+</span><span class="react-syntax-highlighter-line-number">46
+</span><span class="react-syntax-highlighter-line-number">47
+</span><span class="react-syntax-highlighter-line-number">48
+</span><span class="react-syntax-highlighter-line-number">49
+</span><span class="react-syntax-highlighter-line-number">50
+</span><span class="react-syntax-highlighter-line-number">51
+</span><span class="react-syntax-highlighter-line-number">52
+</span></code><span><span class="hljs-comment"># Assume we have fetched the weather data from somewhere</span><span>
+</span></span><span>weather_data = {
+</span><span><span>    </span><span class="hljs-string">"New York"</span><span>: {</span><span class="hljs-string">"temperature"</span><span>: </span><span class="hljs-string">"22°C"</span><span>, </span><span class="hljs-string">"condition"</span><span>: </span><span class="hljs-string">"Sunny"</span><span>},
+</span></span><span><span>    </span><span class="hljs-string">"London"</span><span>: {</span><span class="hljs-string">"temperature"</span><span>: </span><span class="hljs-string">"15°C"</span><span>, </span><span class="hljs-string">"condition"</span><span>: </span><span class="hljs-string">"Cloudy"</span><span>},
+</span></span><span><span>    </span><span class="hljs-string">"Tokyo"</span><span>: {</span><span class="hljs-string">"temperature"</span><span>: </span><span class="hljs-string">"25°C"</span><span>, </span><span class="hljs-string">"condition"</span><span>: </span><span class="hljs-string">"Rainy"</span><span>}
+</span></span><span>}
+</span><span>    
+</span><span><span></span><span class="hljs-comment"># Prepare the chat completion call payload with inline function call result creation</span><span>
+</span></span><span>completion_payload = {
+</span><span><span>    </span><span class="hljs-string">"model"</span><span>: </span><span class="hljs-string">"gpt-4o"</span><span>,
+</span></span><span><span>    </span><span class="hljs-string">"messages"</span><span>: [
+</span></span><span><span>        {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"system"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"You are a helpful assistant providing weather updates."</span><span>},
+</span></span><span><span>        {</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"Can you tell me the weather in New York, London, and Tokyo?"</span><span>},
+</span></span><span><span>        </span><span class="hljs-comment"># Append the original function calls to the conversation</span><span>
+</span></span><span><span>        response[</span><span class="hljs-string">'message'</span><span>],
+</span></span><span><span>        </span><span class="hljs-comment"># Include the result of the function calls</span><span>
+</span></span><span>        {
+</span><span><span>            </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"tool"</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"content"</span><span>: json.dumps({
+</span></span><span><span>                </span><span class="hljs-string">"city"</span><span>: </span><span class="hljs-string">"New York"</span><span>,
+</span></span><span><span>                </span><span class="hljs-string">"weather"</span><span>: weather_data[</span><span class="hljs-string">"New York"</span><span>]
+</span></span><span>            }),
+</span><span><span>            </span><span class="hljs-comment"># Here we specify the tool_call_id that this result corresponds to</span><span>
+</span></span><span><span>            </span><span class="hljs-string">"tool_call_id"</span><span>: response[</span><span class="hljs-string">'message'</span><span>][</span><span class="hljs-string">'tool_calls'</span><span>][</span><span class="hljs-number">0</span><span>][</span><span class="hljs-string">'id'</span><span>]
+</span></span><span>        },
+</span><span>        {
+</span><span><span>            </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"tool"</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"content"</span><span>: json.dumps({
+</span></span><span><span>                </span><span class="hljs-string">"city"</span><span>: </span><span class="hljs-string">"London"</span><span>,
+</span></span><span><span>                </span><span class="hljs-string">"weather"</span><span>: weather_data[</span><span class="hljs-string">"London"</span><span>]
+</span></span><span>            }),
+</span><span><span>            </span><span class="hljs-string">"tool_call_id"</span><span>: response[</span><span class="hljs-string">'message'</span><span>][</span><span class="hljs-string">'tool_calls'</span><span>][</span><span class="hljs-number">1</span><span>][</span><span class="hljs-string">'id'</span><span>]
+</span></span><span>        },
+</span><span>        {
+</span><span><span>            </span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"tool"</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"content"</span><span>: json.dumps({
+</span></span><span><span>                </span><span class="hljs-string">"city"</span><span>: </span><span class="hljs-string">"Tokyo"</span><span>,
+</span></span><span><span>                </span><span class="hljs-string">"weather"</span><span>: weather_data[</span><span class="hljs-string">"Tokyo"</span><span>]
+</span></span><span>            }),
+</span><span><span>            </span><span class="hljs-string">"tool_call_id"</span><span>: response[</span><span class="hljs-string">'message'</span><span>][</span><span class="hljs-string">'tool_calls'</span><span>][</span><span class="hljs-number">2</span><span>][</span><span class="hljs-string">'id'</span><span>]
+</span></span><span>        }
+</span><span>    ]
+</span><span>}
+</span><span>    
+</span><span><span></span><span class="hljs-comment"># Call the OpenAI API's chat completions endpoint to send the tool call result back to the model</span><span>
+</span></span><span>response = openai.chat.completions.create(
+</span><span><span>    model=completion_payload[</span><span class="hljs-string">"model"</span><span>],
+</span></span><span><span>    messages=completion_payload[</span><span class="hljs-string">"messages"</span><span>]
+</span></span><span>)
+</span><span>    
+</span><span><span></span><span class="hljs-comment"># Print the response from the API, which will return something like "In New York the weather is..."</span><span>
+</span></span><span><span></span><span class="hljs-built_in">print</span><span>(response)</span></span></code></pre></div></div>
+<div class="mt-6 mb-6"><div class="notice notice-neutral has-body has-icon"><div class="notice-icon notice-icon-neutral"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path d="M13 12a1 1 0 1 0-2 0v4a1 1 0 1 0 2 0v-4Zm-1-2.5A1.25 1.25 0 1 0 12 7a1.25 1.25 0 0 0 0 2.5Z"></path><path fill-rule="evenodd" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2ZM4 12a8 8 0 1 1 16 0 8 8 0 0 1-16 0Z" clip-rule="evenodd"></path></svg></div><div class="notice-message"><div class="notice-body"><p>You can also disable parallel function calling by setting <code>parallel_tool_calls: false</code>.</p></div></div></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/parallel-function-calling-and-structured-outputs"><h4 class="anchor-heading" data-name="parallel-function-calling-and-structured-outputs">Parallel function calling and Structured Outputs<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h4></a></div>
+<p>When the model outputs multiple function calls via parallel function calling, model outputs may not match strict schemas supplied in tools.</p>
+<p>In order to ensure strict schema adherence, disable parallel function calls by supplying <code>parallel_tool_calls: false</code>.  With this setting, the model will generate one function call at a time.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/configuring-function-calling-behavior-using-the-tool_choice-parameter"><h3 class="anchor-heading" data-name="configuring-function-calling-behavior-using-the-tool_choice-parameter">Configuring function calling behavior using the <code>tool_choice</code> parameter<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>By default, the model is configured to automatically select which functions to call, as determined by the <code>tool_choice: "auto"</code> setting.</p>
+<p>We offer three ways to customize the default behavior:</p>
+<ol>
+<li>To force the model to always call one or more functions, you can set <code>tool_choice: "required"</code>. The model will then always select one or more function(s) to call.
+This is useful for example if you want the model to pick between multiple actions to perform next.</li>
+<li>To force the model to call a specific function, you can set <code>tool_choice: {"type": "function", "function": {"name": "my_function"}}</code>.</li>
+<li>To disable function calling and force the model to only generate a user-facing message, you can either provide no tools, or set <code>tool_choice: "none"</code>.</li>
+</ol>
+<p>Note that if you do either 1 or 2 (i.e. force the model to call a function) then the subsequent <code>finish_reason</code> will be <code>"stop"</code> instead of being <code>"tool_calls"</code>.</p>
+<div class="code-sample dark-mode"><div class="code-sample-header"><div class="code-sample-title body-small"></div><div class="code-sample-select-wrap"><div class="code-sample-select-val">python</div><select class="code-sample-select api-code-lang-select"><option disabled="" value="">Select library</option><option value="python">python</option><option value="node.js">node.js</option></select><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M4.293 8.293a1 1 0 0 1 1.414 0L12 14.586l6.293-6.293a1 1 0 1 1 1.414 1.414l-7 7a1 1 0 0 1-1.414 0l-7-7a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div><div class="code-sample-copy"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button></div></div><div class="code-sample-body code-sample-body-small code-sample-body-with-header"><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-python" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span><span class="react-syntax-highlighter-line-number">17
+</span><span class="react-syntax-highlighter-line-number">18
+</span><span class="react-syntax-highlighter-line-number">19
+</span><span class="react-syntax-highlighter-line-number">20
+</span><span class="react-syntax-highlighter-line-number">21
+</span><span class="react-syntax-highlighter-line-number">22
+</span><span class="react-syntax-highlighter-line-number">23
+</span><span class="react-syntax-highlighter-line-number">24
+</span><span class="react-syntax-highlighter-line-number">25
+</span><span class="react-syntax-highlighter-line-number">26
+</span><span class="react-syntax-highlighter-line-number">27
+</span><span class="react-syntax-highlighter-line-number">28
+</span><span class="react-syntax-highlighter-line-number">29
+</span><span class="react-syntax-highlighter-line-number">30
+</span><span class="react-syntax-highlighter-line-number">31
+</span><span class="react-syntax-highlighter-line-number">32
+</span><span class="react-syntax-highlighter-line-number">33
+</span><span class="react-syntax-highlighter-line-number">34
+</span><span class="react-syntax-highlighter-line-number">35
+</span><span class="react-syntax-highlighter-line-number">36
+</span><span class="react-syntax-highlighter-line-number">37
+</span><span class="react-syntax-highlighter-line-number">38
+</span><span class="react-syntax-highlighter-line-number">39
+</span><span class="react-syntax-highlighter-line-number">40
+</span><span class="react-syntax-highlighter-line-number">41
+</span><span class="react-syntax-highlighter-line-number">42
+</span><span class="react-syntax-highlighter-line-number">43
+</span><span class="react-syntax-highlighter-line-number">44
+</span><span class="react-syntax-highlighter-line-number">45
+</span><span class="react-syntax-highlighter-line-number">46
+</span><span class="react-syntax-highlighter-line-number">47
+</span></code><span><span class="hljs-keyword">from</span><span> openai </span><span class="hljs-keyword">import</span><span> OpenAI
+</span></span><span>
+</span><span>client = OpenAI()
+</span><span>
+</span><span>tools = [
+</span><span>    {
+</span><span><span>        </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"function"</span><span>,
+</span></span><span><span>        </span><span class="hljs-string">"function"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-string">"name"</span><span>: </span><span class="hljs-string">"get_weather"</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"strict"</span><span>: </span><span class="hljs-literal">True</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"parameters"</span><span>: {
+</span></span><span><span>                </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"object"</span><span>,
+</span></span><span><span>                </span><span class="hljs-string">"properties"</span><span>: {
+</span></span><span><span>                    </span><span class="hljs-string">"location"</span><span>: {</span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"string"</span><span>},
+</span></span><span><span>                    </span><span class="hljs-string">"unit"</span><span>: {</span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"string"</span><span>, </span><span class="hljs-string">"enum"</span><span>: [</span><span class="hljs-string">"c"</span><span>, </span><span class="hljs-string">"f"</span><span>]},
+</span></span><span>                },
+</span><span><span>                </span><span class="hljs-string">"required"</span><span>: [</span><span class="hljs-string">"location"</span><span>, </span><span class="hljs-string">"unit"</span><span>],
+</span></span><span><span>                </span><span class="hljs-string">"additionalProperties"</span><span>: </span><span class="hljs-literal">False</span><span>,
+</span></span><span>            },
+</span><span>        },
+</span><span>    },
+</span><span>    {
+</span><span><span>        </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"function"</span><span>,
+</span></span><span><span>        </span><span class="hljs-string">"function"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-string">"name"</span><span>: </span><span class="hljs-string">"get_stock_price"</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"strict"</span><span>: </span><span class="hljs-literal">True</span><span>,
+</span></span><span><span>            </span><span class="hljs-string">"parameters"</span><span>: {
+</span></span><span><span>                </span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"object"</span><span>,
+</span></span><span><span>                </span><span class="hljs-string">"properties"</span><span>: {
+</span></span><span><span>                    </span><span class="hljs-string">"symbol"</span><span>: {</span><span class="hljs-string">"type"</span><span>: </span><span class="hljs-string">"string"</span><span>},
+</span></span><span>                },
+</span><span><span>                </span><span class="hljs-string">"required"</span><span>: [</span><span class="hljs-string">"symbol"</span><span>],
+</span></span><span><span>                </span><span class="hljs-string">"additionalProperties"</span><span>: </span><span class="hljs-literal">False</span><span>,
+</span></span><span>            },
+</span><span>        },
+</span><span>    },
+</span><span>]
+</span><span>
+</span><span><span>messages = [{</span><span class="hljs-string">"role"</span><span>: </span><span class="hljs-string">"user"</span><span>, </span><span class="hljs-string">"content"</span><span>: </span><span class="hljs-string">"What's the weather like in Boston today?"</span><span>}]
+</span></span><span>completion = client.chat.completions.create(
+</span><span><span>    model=</span><span class="hljs-string">"gpt-4o"</span><span>,
+</span></span><span>    messages=messages,
+</span><span>    tools=tools,
+</span><span class="highlighted-row"><span>    tool_choice=</span><span class="hljs-string">"required"</span><span>
+</span></span><span>)
+</span><span>
+</span><span><span></span><span class="hljs-built_in">print</span><span>(completion)</span></span></code></pre></div></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/understanding-token-usage"><h2 class="anchor-heading" data-name="understanding-token-usage">Understanding token usage<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>Under the hood, functions are injected into the system message in a syntax the model has been trained on. This means functions count against the model's context limit and are billed as input tokens. If you run into token limits, we suggest limiting the number of functions or the length of the descriptions you provide for function parameters.</p>
+<p>It is also possible to use fine-tuning to reduce the number of tokens used if you have many functions defined in your tools specification.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/tips-and-best-practices"><h2 class="anchor-heading" data-name="tips-and-best-practices">Tips and best practices<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/turn-on-structured-outputs-by-setting-strict-true"><h3 class="anchor-heading" data-name="turn-on-structured-outputs-by-setting-strict-true">Turn on Structured Outputs by setting <code>strict: "true"</code><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>When Structured Outputs is turned on, the arguments generated by the model for function calls will reliably match the JSON Schema that you provide.</p>
+<p>If you are not using Structured Outputs, then the structure of arguments is not guaranteed to be correct, so we recommend the use of a validation library like Pydantic to first verify the arguments prior to using them.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/name-functions-intuitively-with-detailed-descriptions"><h3 class="anchor-heading" data-name="name-functions-intuitively-with-detailed-descriptions">Name functions intuitively, with detailed descriptions<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>If you find the model does not generate calls to the correct functions, you may need to update your function names and descriptions so the model more clearly understands when it should select each function. Avoid using abbreviations or acronyms to shorten function and argument names.</p>
+<p>You can also include detailed descriptions for when a tool should be called. For complex functions, you should include descriptions for each of the arguments to help the model know what it needs to ask the user to collect that argument.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/name-function-parameters-intuitively-with-detailed-descriptions"><h3 class="anchor-heading" data-name="name-function-parameters-intuitively-with-detailed-descriptions">Name function parameters intuitively, with detailed descriptions<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Use clear and descriptive names for function parameters. For example, specify the expected format for a date parameter (e.g., YYYY-mm-dd or dd/mm/yy) in the description.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/consider-providing-additional-information-about-how-and-when-to-call-functions-in-your-system-message"><h3 class="anchor-heading" data-name="consider-providing-additional-information-about-how-and-when-to-call-functions-in-your-system-message">Consider providing additional information about how and when to call functions in your system message<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Providing clear instructions in your system message can significantly improve the model's function calling accuracy. For example, guide the model with things like, "Use check_order_status when the user inquires about the status of their order, such as 'Where is my order?' or 'Has my order shipped yet?'". Provide context for complex scenarios, like "Before scheduling a meeting with schedule_meeting, check the user's calendar for availability using check_availability to avoid conflicts."</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/use-enums-for-function-arguments-when-possible"><h3 class="anchor-heading" data-name="use-enums-for-function-arguments-when-possible">Use enums for function arguments when possible<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>If your use case allows, you can use enums to constrain the possible values for arguments. This can help reduce hallucinations.</p>
+<p>For example, say you have an AI assistant that helps with ordering a T-shirt. You likely have a fixed set of sizes for the T-shirt, and you might want the model to output in a specific format. If you want the model to output “s”, “m”, “l”, etc for small, medium, and large, then you could provide those values in the enum, for example:</p>
+<div class="code-sample dark-mode"><div class="code-sample-body code-sample-body-large"><button type="button" tabindex="0" class="btn btn-sm btn-minimal btn-neutral code-sample-copy-float" aria-label="Copy"><span class="btn-label-wrap"><span class="btn-node start-node"><svg xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" fill="currentColor" viewBox="0 0 24 24" class="animate-in"><path fill-rule="evenodd" d="M7 5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-2v2a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3h2V5Zm2 2h5a3 3 0 0 1 3 3v5h2a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v2ZM5 9a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1H5Z" clip-rule="evenodd"></path></svg></span></span></button><pre class="hljs syntax-highlighter dark-mode code-sample-pre"><code class="language-json" style="white-space: pre;"><code style="float: left; padding-right: 10px;"><span class="react-syntax-highlighter-line-number">1
+</span><span class="react-syntax-highlighter-line-number">2
+</span><span class="react-syntax-highlighter-line-number">3
+</span><span class="react-syntax-highlighter-line-number">4
+</span><span class="react-syntax-highlighter-line-number">5
+</span><span class="react-syntax-highlighter-line-number">6
+</span><span class="react-syntax-highlighter-line-number">7
+</span><span class="react-syntax-highlighter-line-number">8
+</span><span class="react-syntax-highlighter-line-number">9
+</span><span class="react-syntax-highlighter-line-number">10
+</span><span class="react-syntax-highlighter-line-number">11
+</span><span class="react-syntax-highlighter-line-number">12
+</span><span class="react-syntax-highlighter-line-number">13
+</span><span class="react-syntax-highlighter-line-number">14
+</span><span class="react-syntax-highlighter-line-number">15
+</span><span class="react-syntax-highlighter-line-number">16
+</span></code><span><span>{
+</span></span><span><span>    </span><span class="hljs-attr">"name"</span><span>: </span><span class="hljs-string">"pick_tshirt_size"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"description"</span><span>: </span><span class="hljs-string">"Call this if the user specifies which size t-shirt they want"</span><span>,
+</span></span><span><span>    </span><span class="hljs-attr">"parameters"</span><span>: {
+</span></span><span><span>        </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"object"</span><span>,
+</span></span><span><span>        </span><span class="hljs-attr">"properties"</span><span>: {
+</span></span><span><span>            </span><span class="hljs-attr">"size"</span><span>: {
+</span></span><span><span>                </span><span class="hljs-attr">"type"</span><span>: </span><span class="hljs-string">"string"</span><span>,
+</span></span><span><span>                </span><span class="hljs-attr">"enum"</span><span>: [</span><span class="hljs-string">"s"</span><span>, </span><span class="hljs-string">"m"</span><span>, </span><span class="hljs-string">"l"</span><span>],
+</span></span><span><span>                </span><span class="hljs-attr">"description"</span><span>: </span><span class="hljs-string">"The size of the t-shirt that the user would like to order"</span><span>
+</span></span><span>            }
+</span><span>        },
+</span><span><span>        </span><span class="hljs-attr">"required"</span><span>: [</span><span class="hljs-string">"size"</span><span>],
+</span></span><span><span>        </span><span class="hljs-attr">"additionalProperties"</span><span>: </span><span class="hljs-literal">false</span><span>
+</span></span><span>    }
+</span><span>}</span></code></pre></div></div>
+<p>If you don’t constrain the output, a user may say “large” or “L”, and the model may return either value. Your code may expect a specific structure, so it’s important to limit the number of possible formats the model can choose from.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/keep-the-number-of-functions-low-for-higher-accuracy"><h3 class="anchor-heading" data-name="keep-the-number-of-functions-low-for-higher-accuracy">Keep the number of functions low for higher accuracy<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>We recommend that you use no more than 20 functions in a single tool call. Developers typically see a reduction in the model’s ability to select the correct tool once they have between 10-20 tools.</p>
+<p>If your use case requires the model to be able to pick between a large number of functions, you may want to explore fine-tuning (<a href="https://cookbook.openai.com/examples/fine_tuning_for_function_calling" target="_blank" rel="noopener noreferrer">learn more</a>) or break out the tools and group them logically to create a multi-agent system.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/set-up-evals-to-act-as-an-aid-in-prompt-engineering-your-function-definitions-and-system-messages"><h3 class="anchor-heading" data-name="set-up-evals-to-act-as-an-aid-in-prompt-engineering-your-function-definitions-and-system-messages">Set up evals to act as an aid in prompt engineering your function definitions and system messages<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>We recommend for non-trivial uses of function calling that you set up a suite of evals that allow you to measure how frequently the correct function is called or correct arguments are generated for a wide variety of possible user messages. Learn more about setting up evals on the <a href="https://cookbook.openai.com/examples/evaluation/getting_started_with_openai_evals" target="_blank" rel="noopener noreferrer">OpenAI Cookbook</a>.</p>
+<p>You can then use these to measure whether adjustments to your function definitions and system messages will improve or hurt your integration.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/fine-tuning-may-help-improve-accuracy-for-function-calling"><h3 class="anchor-heading" data-name="fine-tuning-may-help-improve-accuracy-for-function-calling">Fine-tuning may help improve accuracy for function calling<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Fine-tuning a model can improve performance at function calling for your use case, especially if you have a large number of functions, or complex, nuanced or similar functions.</p>
+<p>See our fine-tuning for function calling <a href="https://cookbook.openai.com/examples/fine_tuning_for_function_calling" target="_blank" rel="noopener noreferrer">cookbook</a> for more information.</p>
+<a href="https://cookbook.openai.com/examples/fine_tuning_for_function_calling" target="_blank"><div class="icon-item mt-6"><div class="icon-item-icon"><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V9.236a1 1 0 00-1.447-.894l-4 2a1 1 0 00-.553.894V17zM15.211 6.276a1 1 0 000-1.788l-4.764-2.382a1 1 0 00-.894 0L4.789 4.488a1 1 0 000 1.788l4.764 2.382a1 1 0 00.894 0l4.764-2.382zM4.447 8.342A1 1 0 003 9.236V15a1 1 0 00.553.894l4 2A1 1 0 009 17v-5.764a1 1 0 00-.553-.894l-4-2z"></path></svg></div><div class="icon-item-right"><div class="icon-item-title"><div class="icon-item-title body-large">Fine-tuning for function calling</div><div class="pointer"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9.293 7.293a1 1 0 0 1 1.414 0l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L12.586 12 9.293 8.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div></div><div class="icon-item-desc body-small"><p>Learn how to fine-tune a model for function calling</p></div></div></div></a>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/faq"><h2 class="anchor-heading" data-name="faq">FAQ<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/how-do-functions-differ-from-tools"><h3 class="anchor-heading" data-name="how-do-functions-differ-from-tools">How do functions differ from tools?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>When using function calling with the OpenAI API, you provide them as <code>tools</code>, configure them with <code>tool_choice</code> and monitor for <code>finish_reason: "tool_calls"</code>.</p>
+<p>The parameters named things like <code>functions</code> and <code>function_call</code> etc are now deprecated.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/should-i-include-function-call-instructions-in-the-tool-specification-or-in-the-system-prompt"><h3 class="anchor-heading" data-name="should-i-include-function-call-instructions-in-the-tool-specification-or-in-the-system-prompt">Should I include function call instructions in the tool specification or in the system prompt?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>We recommend including instructions regarding when to call a function in the system prompt, while using the function definition to provide instructions on how to call the function and how to generate the parameters.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/which-models-support-function-calling"><h3 class="anchor-heading" data-name="which-models-support-function-calling">Which models support function calling?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Function calling was introduced with the release of <code>gpt-4-turbo</code> on June 13, 2023. This includes: <code>gpt-4o</code>, <code>gpt-4o-2024-08-06</code>, <code>gpt-4o-2024-05-13</code>, <code>gpt-4o-mini</code>, <code>gpt-4o-mini-2024-07-18</code>, <code>gpt-4-turbo</code>, <code>gpt-4-turbo-2024-04-09</code>, <code>gpt-4-turbo-preview</code>, <code>gpt-4-0125-preview</code>, <code>gpt-4-1106-preview</code>, <code>gpt-4</code>, <code>gpt-4-0613</code>, <code>gpt-3.5-turbo</code>, <code>gpt-3.5-turbo-0125</code>, <code>gpt-3.5-turbo-1106</code>, and <code>gpt-3.5-turbo-0613</code>.</p>
+<p>Legacy models released before this date were not trained to support function calling.</p>
+<p>Parallel function calling is supported on models released on or after Nov 6, 2023.  This includes: <code>gpt-4o</code>, <code>gpt-4o-2024-08-06</code>, <code>gpt-4o-2024-05-13</code>, <code>gpt-4o-mini</code>, <code>gpt-4o-mini-2024-07-18</code>, <code>gpt-4-turbo</code>, <code>gpt-4-turbo-2024-04-09</code>, <code>gpt-4-turbo-preview</code>, <code>gpt-4-0125-preview</code>, <code>gpt-4-1106-preview</code>, <code>gpt-3.5-turbo</code>, <code>gpt-3.5-turbo-0125</code>, and <code>gpt-3.5-turbo-1106</code>.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/what-are-some-example-functions"><h3 class="anchor-heading" data-name="what-are-some-example-functions">What are some example functions?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p><strong>Data Retrieval:</strong></p>
+<ul>
+<li>Scenario: A chatbot needs to fetch the latest customer data from an internal system when a user asks “who are my top customers?”</li>
+<li>Implementation: Define a function<code>get_customers(min_revenue: int, created_before: string, limit: int)</code> that retrieves customer data from your internal API. The model can suggest calling this function with the appropriate parameters based on user input.</li>
+</ul>
+<p><strong>Task Automation:</strong></p>
+<ul>
+<li>Scenario: An assistant bot schedules meetings based on user preferences and calendar availability.</li>
+<li>Implementation: Define a function scheduleMeeting(date: str, time: str, participants: list) that interacts with a calendar API. The model can suggest the best times and dates to call this function.</li>
+</ul>
+<p><strong>Computational Tasks:</strong></p>
+<ul>
+<li>Scenario: A financial application calculates loan payments based on user input.</li>
+<li>Implementation: Define a function calculateLoanPayment(principal: float, interestRate: float, term: int) to perform the necessary calculations. The model can provide the input values for this function.</li>
+</ul>
+<p><strong>Customer Support:</strong></p>
+<ul>
+<li>Scenario: A customer support bot assists users by providing the status of their orders.</li>
+<li>Implementation: Define a function getOrderStatus(orderId: str) that retrieves order status information from a database. The model can suggest calling this function with the appropriate order ID parameter based on user input.</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/can-the-model-execute-functions-itself"><h3 class="anchor-heading" data-name="can-the-model-execute-functions-itself">Can the model execute functions itself?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>No, the model only suggests function calls and generates arguments. Your application handles the execution of the functions based on these suggestions (and returns the results of calling those functions to the model).</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/what-are-structured-outputs"><h3 class="anchor-heading" data-name="what-are-structured-outputs">What are Structured Outputs?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Structured Outputs, introduced in August 2024, is a feature that ensures that the arguments generated by the model exactly match the provided JSON Schema, enhancing reliability and reducing errors. We recommend its use and it can be enabled by setting <code>"strict": true</code>.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/why-might-i-not-want-to-turn-on-structured-outputs"><h3 class="anchor-heading" data-name="why-might-i-not-want-to-turn-on-structured-outputs">Why might I not want to turn on Structured Outputs?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>The main reasons to not use Structured Outputs are:</p>
+<ul>
+<li>If you need to use some feature of JSON Schema that is not yet supported (<a href="/docs/guides/structured-outputs/supported-schemas">learn more</a>), for example recursive schemas.</li>
+<li>If each of your API requests will include a novel schema (i.e. your schemas are not fixed, but are generated on-demand and rarely repeat), since the first request with a novel JSON Schema will have increased latency as the schema is pre-processed and cached for future generations to constrain the output of the model.</li>
+</ul>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/how-do-i-ensure-the-model-calls-the-correct-function"><h3 class="anchor-heading" data-name="how-do-i-ensure-the-model-calls-the-correct-function">How do I ensure the model calls the correct function?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>Use intuitive names and detailed descriptions for functions and parameters. Provide clear guidance in the system message to enhance the model’s ability to pick the correct function.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/what-does-structured-outputs-mean-for-zero-data-retention"><h3 class="anchor-heading" data-name="what-does-structured-outputs-mean-for-zero-data-retention">What does Structured Outputs mean for Zero Data Retention?<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h3></a></div>
+<p>When Structured Outputs is turned on, schemas provided are not eligible for <a href="/docs/models/how-we-use-your-data">zero data retention</a>.</p>
+<div class="anchor-heading-root"><a class="anchor-heading-link" href="/docs/guides/function-calling/resources"><h2 class="anchor-heading" data-name="resources">Resources<svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" class="anchor-heading-icon" height="15px" width="15px" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path></svg></h2></a></div>
+<p>The OpenAI Cookbook has several end-to-end examples to help you implement function calling. In our introductory cookbook <a href="https://cookbook.openai.com/examples/how_to_call_functions_with_chat_models" target="_blank" rel="noopener noreferrer">how to call functions with chat models</a>, we outline two examples of how the models can use function calling. This one is a great resource to follow as you get started:</p>
+<a href="https://cookbook.openai.com/examples/how_to_call_functions_with_chat_models" target="_blank"><div class="icon-item mt-6"><div class="icon-item-icon"><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" aria-hidden="true" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V9.236a1 1 0 00-1.447-.894l-4 2a1 1 0 00-.553.894V17zM15.211 6.276a1 1 0 000-1.788l-4.764-2.382a1 1 0 00-.894 0L4.789 4.488a1 1 0 000 1.788l4.764 2.382a1 1 0 00.894 0l4.764-2.382zM4.447 8.342A1 1 0 003 9.236V15a1 1 0 00.553.894l4 2A1 1 0 009 17v-5.764a1 1 0 00-.553-.894l-4-2z"></path></svg></div><div class="icon-item-right"><div class="icon-item-title"><div class="icon-item-title body-large">Function calling</div><div class="pointer"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9.293 7.293a1 1 0 0 1 1.414 0l4 4a1 1 0 0 1 0 1.414l-4 4a1 1 0 0 1-1.414-1.414L12.586 12 9.293 8.707a1 1 0 0 1 0-1.414Z" clip-rule="evenodd"></path></svg></div></div><div class="icon-item-desc body-small"><p>Learn from more examples demonstrating function calling</p></div></div></div></a>
+<p>You can find more examples to help you get started with function calling in the OpenAI Cookbook.</p>
+<ul>
+<li>How to call functions with chat models <a href="https://cookbook.openai.com/examples/how_to_call_functions_with_chat_models" target="_blank" rel="noopener noreferrer">cookbook</a></li>
+<li>How to use functions with a knowledge base <a href="https://cookbook.openai.com/examples/how_to_call_functions_for_knowledge_retrieval" target="_blank" rel="noopener noreferrer">cookbook</a></li>
+<li>Assistants API overview <a href="https://cookbook.openai.com/examples/assistants_api_overview_python" target="_blank" rel="noopener noreferrer">cookbook</a></li>
+<li>Fine-tuning for function calling <a href="https://cookbook.openai.com/examples/fine_tuning_for_function_calling" target="_blank" rel="noopener noreferrer">cookbook</a></li>
+</ul></div><div class="docs-footer"><div class="docs-feedback">Was this page useful?<button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Helpful" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12.132 2.504a1 1 0 0 1 .992-.496l.454.056a4 4 0 0 1 3.327 5.146L16.354 9h.718c2.638 0 4.553 2.508 3.86 5.053l-1.364 5A4 4 0 0 1 15.708 22H6a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3h2c.26 0 .5-.14.628-.364l3.504-6.132ZM10 20h5.709a2 2 0 0 0 1.93-1.474l1.363-5A2 2 0 0 0 17.072 11H15a1 1 0 0 1-.956-1.294l.95-3.084a2 2 0 0 0-1.462-2.537l-3.168 5.543A2.723 2.723 0 0 1 9 10.81V19a1 1 0 0 0 1 1Zm-3-9v8c0 .35.06.687.17 1H6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h1Z" clip-rule="evenodd"></path></svg></span></span></button><button type="button" tabindex="0" class="btn btn-sm btn-filled btn-neutral docs-feedback-btn" aria-label="Thumbs down" aria-haspopup="true" aria-expanded="false"><span class="btn-label-wrap"><span class="btn-label-inner"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M11.873 21.496a1 1 0 0 1-.992.496l-.454-.056A4 4 0 0 1 7.1 16.79L7.65 15h-.718c-2.637 0-4.553-2.508-3.859-5.052l1.364-5A4 4 0 0 1 8.296 2h9.709a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-2c-.26 0-.5.14-.628.364l-3.504 6.132ZM14.005 4h-5.71a2 2 0 0 0-1.929 1.474l-1.363 5A2 2 0 0 0 6.933 13h2.072a1 1 0 0 1 .955 1.294l-.949 3.084a2 2 0 0 0 1.462 2.537l3.167-5.543a2.723 2.723 0 0 1 1.364-1.182V5a1 1 0 0 0-1-1Zm3 9V5c0-.35-.06-.687-.171-1h1.17a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-1Z" clip-rule="evenodd"></path></svg></span></span></button></div></div></div></div></div></div></div></div></div></div></div></main><div data-testid="compliance-management-wrapper"></div></div><div class="layers-root"></div></div>
+      <script nonce="" nomodule="">!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-polyfill" src="/static/polyfills-legacy-DO_EefdF.js"></script>
+      <script nonce="" nomodule="" crossorigin="" id="vite-legacy-entry" data-src="/static/index-legacy-U3KC6Hpc.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+    
+
+<div class="CRjGu"></div><iframe id="intercom-frame" style="position: absolute !important; opacity: 0 !important; width: 1px !important; height: 1px !important; top: 0 !important; left: 0 !important; border: none !important; display: block !important; z-index: -1 !important; pointer-events: none;" aria-hidden="true" tabindex="-1" title="Intercom"></iframe><div class="intercom-lightweight-app"><style id="intercom-lightweight-app-style" type="text/css">
+  @keyframes intercom-lightweight-app-launcher {
+    from {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes intercom-lightweight-app-gradient {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes intercom-lightweight-app-messenger {
+    0% {
+      opacity: 0;
+      transform: scale(0);
+    }
+    40% {
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .intercom-lightweight-app {
+    position: fixed;
+    z-index: 2147483001;
+    width: 0;
+    height: 0;
+    font-family: intercom-font, "Helvetica Neue", "Apple Color Emoji", Helvetica, Arial, sans-serif;
+  }
+
+  .intercom-lightweight-app-gradient {
+    position: fixed;
+    z-index: 2147483002;
+    width: 500px;
+    height: 500px;
+    bottom: 0;
+    right: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at bottom right,
+      rgba(29, 39, 54, 0.16) 0%,
+      rgba(29, 39, 54, 0) 72%);
+    animation: intercom-lightweight-app-gradient 200ms ease-out;
+  }
+
+  .intercom-lightweight-app-launcher {
+    position: fixed;
+    z-index: 2147483003;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none;
+    bottom: 20px;
+    right: 20px;
+    max-width: 48px;
+    width: 48px;
+    max-height: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #202123;
+    cursor: pointer;
+    box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.06), 0 2px 32px 0 rgba(0, 0, 0, 0.16);
+    transition: transform 167ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    box-sizing: content-box;
+  }
+
+
+  .intercom-lightweight-app-launcher:hover {
+    transition: transform 250ms cubic-bezier(0.33, 0.00, 0.00, 1.00);
+    transform: scale(1.1)
+  }
+
+  .intercom-lightweight-app-launcher:active {
+    transform: scale(0.85);
+    transition: transform 134ms cubic-bezier(0.45, 0, 0.2, 1);
+  }
+
+
+  .intercom-lightweight-app-launcher:focus {
+    outline: none;
+
+    
+  }
+
+  .intercom-lightweight-app-launcher-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 48px;
+    height: 48px;
+    transition: transform 100ms linear, opacity 80ms linear;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-open svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve {
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg {
+    height: 44px;
+  }
+
+  .intercom-lightweight-app-launcher-icon-self-serve svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-launcher-custom-icon-open {
+    max-height: 24px;
+    max-width: 24px;
+
+    
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize {
+    
+        opacity: 0;
+        transform: rotate(-60deg) scale(0);
+      
+  }
+
+  .intercom-lightweight-app-launcher-icon-minimize svg path {
+    fill: rgb(255, 255, 255);
+  }
+
+  .intercom-lightweight-app-messenger {
+    position: fixed;
+    z-index: 2147483003;
+    overflow: hidden;
+    background-color: white;
+    animation: intercom-lightweight-app-messenger 250ms cubic-bezier(0, 1, 1, 1);
+    transform-origin: bottom right;
+
+    
+        width: 400px;
+        height: calc(100% - 40px);
+        max-height: 704px;
+        min-height: 250px;
+        right: 20px;
+        bottom: 20px;
+        box-shadow: 0 5px 40px rgba(0,0,0,0.16);
+      
+
+    border-radius: 16px;
+  }
+
+  .intercom-lightweight-app-messenger-header {
+    height: 64px;
+    border-bottom: none;
+    background: #202123
+
+    
+  }
+
+  .intercom-lightweight-app-messenger-footer{
+    position:absolute;
+    bottom:0;
+    width: 100%;
+    height: 80px;
+    background: #fff;
+    font-size: 14px;
+    line-height: 21px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: 0px 0px 25px rgba(0, 0, 0, 0.05);
+    
+  }
+
+  @media print {
+    .intercom-lightweight-app {
+      display: none;
+    }
+  }
+</style></div></body></html>
