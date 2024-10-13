@@ -3,7 +3,6 @@ package main
 import (
 	"io"
 	"os"
-	"os/exec"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -13,20 +12,13 @@ type AppState struct {
 	Session           *Session
 	AudioOutputFile   string
 	AudioFile         *os.File
-	AudioPipe         io.WriteCloser
-	AudioCmd          *exec.Cmd
+	AudioOutput       io.WriteCloser
 	AudioMutex        sync.Mutex
 	DebugLevel        int
 	DefaultSampleRate int
 	DefaultBitDepth   int
 	DefaultChannels   int
 	ActualSampleRate  int
-	AudioOutput       AudioOutput
-}
-
-type AudioOutput interface {
-	Write(p []byte) (n int, err error)
-	Close() error
 }
 
 type RealtimeClient struct {

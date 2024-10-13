@@ -4,110 +4,155 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
-	"os/exec"
-	"time"
+	"os/signal"
+	"syscall"
+
+	"go.uber.org/zap"
 )
 
 func main() {
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	if err := run(ctx); err != nil {
-		log.Fatal(err)
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context) error {
+func run() error {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Setup signal handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		cancel()
+	}()
+
+	// Parse command-line flags
+	config, err := parseFlags()
+	if err != nil {
+		return fmt.Errorf("error parsing flags: %w", err)
+	}
+
+	// Initialize logger
+	if err := initLogger(config.DebugLevel); err != nil {
+		return fmt.Errorf("error initializing logger: %w", err)
+	}
+	defer logger.Sync()
+
+	// Initialize AppState
 	state := &AppState{
 		DefaultSampleRate: 24000,
 		DefaultBitDepth:   16,
 		DefaultChannels:   1,
+		DebugLevel:        config.DebugLevel,
+		AudioOutputFile:   config.AudioOutputFile,
 	}
-	var apiKey string
-	var audioStream bool
-	var initialVoice string
-	var initialInstructions string
-	var modelName string
 
-	flag.StringVar(&apiKey, "api-key", "", "OpenAI API Key (overrides OPENAI_API_KEY env variable)")
-	flag.StringVar(&state.AudioOutputFile, "audio-output", "", "File to save audio output to")
-	flag.BoolVar(&audioStream, "audio-stream", false, "Stream audio in real-time")
-	flag.IntVar(&state.DebugLevel, "debug", 0, "Debug level (0=off, 1=debug, 2=verbose)")
-	flag.StringVar(&initialVoice, "voice", "", "Initial voice to use")
-	flag.StringVar(&initialInstructions, "instructions", "", "Initial instructions for the AI")
-	flag.StringVar(&modelName, "model", "gpt-4o-realtime-preview-2024-10-01", "Model name to use")
+	// Setup audio output file if specified
+	if state.AudioOutputFile != "" {
+		if err := setupAudioOutputFile(state); err != nil {
+			return fmt.Errorf("error setting up audio output file: %w", err)
+		}
+		defer state.AudioFile.Close()
+	}
+
+	// Setup audio streaming if enabled
+	if config.AudioStream {
+		if err := setupAudioStreaming(ctx, state); err != nil {
+			return fmt.Errorf("error setting up audio streaming: %w", err)
+		}
+		defer state.AudioOutput.Close()
+	}
+
+	// Create and connect the realtime client
+	client, err := setupRealtimeClient(ctx, config, state)
+	if err != nil {
+		return fmt.Errorf("error setting up realtime client: %w", err)
+	}
+	defer client.Disconnect()
+
+	// Apply initial voice and instructions if provided
+	if config.InitialVoice != "" || config.InitialInstructions != "" {
+		inputHandler := NewInputHandler(client, state)
+		if err := inputHandler.updateSession(config.InitialVoice, config.InitialInstructions); err != nil {
+			logError("Failed to set initial voice or instructions", err)
+		}
+	}
+
+	// Start input handling
+	inputHandler := NewInputHandler(client, state)
+	go inputHandler.ReadStdin(ctx)
+
+	// Wait for context cancellation
+	<-ctx.Done()
+	return nil
+}
+
+type Config struct {
+	APIKey              string
+	AudioOutputFile     string
+	AudioStream         bool
+	DebugLevel          int
+	InitialVoice        string
+	InitialInstructions string
+	ModelName           string
+}
+
+func parseFlags() (*Config, error) {
+	config := &Config{}
+
+	flag.StringVar(&config.APIKey, "api-key", "", "OpenAI API Key (overrides OPENAI_API_KEY env variable)")
+	flag.StringVar(&config.AudioOutputFile, "audio-output", "", "File to save audio output to")
+	flag.BoolVar(&config.AudioStream, "audio-stream", false, "Stream audio in real-time")
+	flag.IntVar(&config.DebugLevel, "debug", 0, "Debug level (0=off, 1=debug, 2=verbose)")
+	flag.StringVar(&config.InitialVoice, "voice", "", "Initial voice to use")
+	flag.StringVar(&config.InitialInstructions, "instructions", "", "Initial instructions for the AI")
+	flag.StringVar(&config.ModelName, "model", "gpt-4o-realtime-preview-2024-10-01", "Model name to use")
 	flag.Parse()
 
-	apiKey = os.Getenv("OPENAI_API_KEY")
-	if flag.Lookup("api-key").Value.String() != "" {
-		apiKey = flag.Lookup("api-key").Value.String()
+	if config.APIKey == "" {
+		config.APIKey = os.Getenv("OPENAI_API_KEY")
 	}
 
-	if apiKey == "" {
-		return fmt.Errorf("API key is required. Set OPENAI_API_KEY environment variable or use -api-key flag.")
+	if config.APIKey == "" {
+		return nil, fmt.Errorf("API key is required. Set OPENAI_API_KEY environment variable or use -api-key flag")
 	}
 
-	if state.AudioOutputFile != "" {
-		var err error
-		state.AudioFile, err = os.OpenFile(state.AudioOutputFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		if err != nil {
-			log.Fatalf("Error creating or truncating audio output file: %v", err)
-		}
-		logDebug(state, "Audio output file created: %s", state.AudioOutputFile)
-		defer func() {
-			if err := state.AudioFile.Close(); err != nil {
-				logDebug(state, "Error closing audio file: %v", err)
-			}
-			logDebug(state, "Audio output file closed")
-		}()
-	}
+	return config, nil
+}
 
-	if audioStream {
-		// Check if ffplay is installed
-		_, err := exec.LookPath("ffplay")
-		if err != nil {
-			return fmt.Errorf("ffplay not found. Please install FFmpeg to use audio streaming.")
-		}
-		if err := startFFPlay(ctx, state); err != nil {
-			return fmt.Errorf("Failed to start ffplay: %w", err)
-		}
+func setupAudioOutputFile(state *AppState) error {
+	var err error
+	state.AudioFile, err = os.OpenFile(state.AudioOutputFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("error creating or truncating audio output file: %w", err)
 	}
+	logDebug("Audio output file created", zap.String("file", state.AudioOutputFile))
+	return nil
+}
 
-	client := NewRealtimeClient(apiKey, state, WithDebug(state.DebugLevel > 0), WithDumpFrames(state.DebugLevel > 1))
+func setupAudioStreaming(ctx context.Context, state *AppState) error {
+	player := NewMacOSAudioPlayer(state)
+	if err := player.Start(ctx, state, state.DefaultSampleRate); err != nil {
+		return fmt.Errorf("failed to start audio playback: %w", err)
+	}
+	state.AudioOutput = NewBufferedAudioWriter(player, 8192) // 8KB buffer
+	return nil
+}
+
+func setupRealtimeClient(ctx context.Context, config *Config, state *AppState) (*RealtimeClient, error) {
+	client := NewRealtimeClient(config.APIKey, state, WithDebug(state.DebugLevel > 0), WithDumpFrames(state.DebugLevel > 1))
 
 	client.On("*", func(event Event) {
 		handleEvent(ctx, state, event)
 	})
 
-	if err := client.Connect(ctx, modelName); err != nil {
-		return fmt.Errorf("Error connecting: %w", err)
+	if err := client.Connect(ctx, config.ModelName); err != nil {
+		return nil, fmt.Errorf("error connecting: %w", err)
 	}
 
-	// Apply initial voice and instructions if provided
-	if initialVoice != "" || initialInstructions != "" {
-		updateSession(client, initialVoice, initialInstructions)
-	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	go func() {
-		<-ctx.Done()
-		fmt.Println("\nContext cancelled. Shutting down...")
-		client.Disconnect()
-		if state.AudioCmd != nil && state.AudioCmd.Process != nil {
-			state.AudioCmd.Process.Kill()
-		}
-	}()
-
-	readStdin(ctx, client)
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-time.After(time.Second):
-		return client.Disconnect()
-	}
+	return client, nil
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"go.uber.org/zap"
 )
 
 type RealtimeClientOption func(*RealtimeClient)
@@ -45,7 +46,7 @@ func NewRealtimeClient(apiKey string, state *AppState, options ...RealtimeClient
 func (c *RealtimeClient) Connect(ctx context.Context, model string) error {
 	u, err := url.Parse(c.URL)
 	if err != nil {
-		return NewAppError(err, "Error parsing URL", "URL_PARSE_ERROR")
+		return fmt.Errorf("error parsing URL: %v", err)
 	}
 
 	if model != "" {
@@ -59,8 +60,10 @@ func (c *RealtimeClient) Connect(ctx context.Context, model string) error {
 	headers.Add("OpenAI-Beta", "realtime=v1")
 	headers.Add("User-Agent", "OpenAI-Realtime-Client/1.0")
 
-	c.logf("Connecting to %s", u.String())
-	c.logf("Headers: %v", headers)
+	logDebug("Connecting to WebSocket",
+		zap.String("url", u.String()),
+		zap.Any("headers", headers),
+	)
 
 	dialer := websocket.Dialer{
 		Proxy:            http.ProxyFromEnvironment,
@@ -71,27 +74,25 @@ func (c *RealtimeClient) Connect(ctx context.Context, model string) error {
 	if err != nil {
 		if resp != nil {
 			body, _ := io.ReadAll(resp.Body)
-			return NewAppError(err, fmt.Sprintf("WebSocket handshake failed with status %d: %s\nResponse body: %s", resp.StatusCode, err, string(body)), "WEBSOCKET_HANDSHAKE_ERROR")
+			return fmt.Errorf("websocket handshake failed with status %d: %s\nResponse body: %s", resp.StatusCode, err, string(body))
 		}
-		return NewAppError(err, "Error connecting to websocket", "WEBSOCKET_CONNECTION_ERROR")
+		return fmt.Errorf("error connecting to websocket: %v", err)
 	}
 	c.conn = conn
 
 	if resp != nil {
-		c.logf("Connected with status: %s", resp.Status)
-		c.logf("Response headers: %v", resp.Header)
+		logDebug("Connected to WebSocket",
+			zap.String("status", resp.Status),
+			zap.Any("headers", resp.Header),
+		)
 	}
 
 	if c.dumpFrames {
-		c.logf("WebSocket handshake request headers:")
-		for k, v := range resp.Request.Header {
-			c.logf("%s: %s", k, v)
-		}
-		c.logf("WebSocket handshake response status: %s", resp.Status)
-		c.logf("WebSocket handshake response headers:")
-		for k, v := range resp.Header {
-			c.logf("%s: %s", k, v)
-		}
+		logDebug("WebSocket handshake details",
+			zap.Any("requestHeaders", resp.Request.Header),
+			zap.String("responseStatus", resp.Status),
+			zap.Any("responseHeaders", resp.Header),
+		)
 	}
 
 	go c.readPump()
@@ -108,7 +109,7 @@ func (c *RealtimeClient) Disconnect() error {
 }
 
 func (c *RealtimeClient) Send(event Event) error {
-	c.logf("Sending event: %s", mustMarshal(event))
+	logDebug("Sending event", zap.Any("event", event))
 	return c.conn.WriteJSON(event)
 }
 
@@ -127,22 +128,22 @@ func (c *RealtimeClient) readPump() {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				c.logf("Error reading from websocket: %v", err)
+				logError("Error reading from websocket", err)
 			}
 			break
 		}
 
 		if c.dumpFrames {
-			c.logf("Received raw frame: %s", message)
+			logDebug("Received raw frame", zap.ByteString("message", message))
 		}
 
 		var event Event
 		if err := json.Unmarshal(message, &event); err != nil {
-			c.logf("Error unmarshaling event: %v", err)
+			logError("Error unmarshaling event", err)
 			continue
 		}
 
-		c.logf("Received event: %s", message)
+		logDebug("Received event", zap.Any("event", event))
 		c.handleEvent(event)
 	}
 }
@@ -163,23 +164,23 @@ func (c *RealtimeClient) writePump() {
 			}
 
 			if c.dumpFrames {
-				c.logf("Sending raw frame: %s", message)
+				logDebug("Sending raw frame", zap.ByteString("message", message))
 			}
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				c.logf("Error getting next writer: %v", err)
+				logError("Error getting next writer", err)
 				return
 			}
 			w.Write(message)
 
 			if err := w.Close(); err != nil {
-				c.logf("Error closing writer: %v", err)
+				logError("Error closing writer", err)
 				return
 			}
 		case <-ticker.C:
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				c.logf("Error writing ping message: %v", err)
+				logError("Error writing ping message", err)
 				return
 			}
 		}
@@ -198,11 +199,5 @@ func (c *RealtimeClient) handleEvent(event Event) {
 	allHandlers := c.handlers["*"]
 	for _, handler := range allHandlers {
 		go handler(event)
-	}
-}
-
-func (c *RealtimeClient) logf(format string, v ...interface{}) {
-	if c.debug {
-		logDebug(c.state, format, v...)
 	}
 }

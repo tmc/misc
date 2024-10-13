@@ -6,101 +6,108 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
-func readStdin(ctx context.Context, client *RealtimeClient) {
+type InputHandler struct {
+	client *RealtimeClient
+	state  *AppState
+}
+
+func NewInputHandler(client *RealtimeClient, state *AppState) *InputHandler {
+	return &InputHandler{
+		client: client,
+		state:  state,
+	}
+}
+
+func (h *InputHandler) ReadStdin(ctx context.Context) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		input := scanner.Text()
 
-		if input == "/voice" {
-			if client.state.Session == nil || len(client.state.Session.AvailableVoices) == 0 {
-				fmt.Println("Voice information not available. Please try again later.")
-				continue
-			}
-			fmt.Printf("Enter new voice (available voices: %s):\n", strings.Join(client.state.Session.AvailableVoices, ", "))
-			scanner.Scan()
-			newVoice := scanner.Text()
-			updateVoice(client, newVoice)
-			continue
-		}
-
-		if input == "/instructions" {
-			fmt.Println("Enter new instructions:")
-			scanner.Scan()
-			newInstructions := scanner.Text()
-			updateInstructions(client, newInstructions)
-			continue
-		}
-
-		event := Event{
-			Type:    "conversation.item.create",
-			EventID: generateID("evt_"),
-			Item: map[string]interface{}{
-				"type": "message",
-				"role": "user",
-				"content": []map[string]string{
-					{"type": "input_text", "text": input},
-				},
-			},
-		}
-
-		err := client.Send(event)
-		if err != nil {
-			logDebug(client.state, "Error sending message: %v", err)
-			continue
-		}
-
-		responseEvent := Event{
-			Type:    "response.create",
-			EventID: generateID("evt_"),
-		}
-		err = client.Send(responseEvent)
-		if err != nil {
-			logDebug(client.state, "Error sending response creation message: %v", err)
+		if err := h.handleInput(ctx, input); err != nil {
+			logError("Error handling input", err)
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		logDebug(client.state, "Error reading from stdin: %v", err)
+		logError("Error reading from stdin", err)
 	}
 }
 
-func updateVoice(client *RealtimeClient, newVoice string) {
-	if client.state.Session == nil {
-		logDebug(client.state, "No active session. Cannot update voice.")
-		return
+func (h *InputHandler) handleInput(ctx context.Context, input string) error {
+	switch {
+	case input == "/voice":
+		return h.handleVoiceCommand()
+	case input == "/instructions":
+		return h.handleInstructionsCommand()
+	default:
+		return h.sendUserMessage(input)
+	}
+}
+
+func (h *InputHandler) handleVoiceCommand() error {
+	if h.client.state.Session == nil || len(h.client.state.Session.AvailableVoices) == 0 {
+		logInfo("Voice information not available. Please try again later.")
+		return nil
 	}
 
-	availableVoices := client.state.Session.AvailableVoices
+	availableVoices := strings.Join(h.client.state.Session.AvailableVoices, ", ")
+	fmt.Printf("Enter new voice (available voices: %s):\n", availableVoices)
+
+	scanner := bufio.NewScanner(os.Stdin)
+	if !scanner.Scan() {
+		return fmt.Errorf("failed to read new voice input")
+	}
+	newVoice := scanner.Text()
+
+	return h.updateVoice(newVoice)
+}
+
+func (h *InputHandler) handleInstructionsCommand() error {
+	fmt.Println("Enter new instructions:")
+
+	scanner := bufio.NewScanner(os.Stdin)
+	if !scanner.Scan() {
+		return fmt.Errorf("failed to read new instructions input")
+	}
+	newInstructions := scanner.Text()
+
+	return h.updateInstructions(newInstructions)
+}
+
+func (h *InputHandler) updateVoice(newVoice string) error {
+	if h.client.state.Session == nil {
+		return fmt.Errorf("no active session")
+	}
+
+	availableVoices := h.client.state.Session.AvailableVoices
 	if len(availableVoices) == 0 {
-		logDebug(client.state, "No available voices information. Cannot update voice.")
-		return
+		return fmt.Errorf("no available voices information")
 	}
 
 	for _, v := range availableVoices {
 		if newVoice == v {
-			updateSession(client, newVoice, "")
-			return
+			return h.updateSession(newVoice, "")
 		}
 	}
 
-	logDebug(client.state, "Invalid voice: %s. Supported values are: %s", newVoice, strings.Join(availableVoices, ", "))
+	return fmt.Errorf("invalid voice: %s. Supported values are: %s", newVoice, strings.Join(availableVoices, ", "))
 }
 
-func updateInstructions(client *RealtimeClient, newInstructions string) {
-	if client.state.Session == nil {
-		logDebug(client.state, "No active session. Cannot update instructions.")
-		return
+func (h *InputHandler) updateInstructions(newInstructions string) error {
+	if h.client.state.Session == nil {
+		return fmt.Errorf("no active session")
 	}
 
-	updateSession(client, "", newInstructions)
+	return h.updateSession("", newInstructions)
 }
 
-func updateSession(client *RealtimeClient, voice, instructions string) {
-	if client.state.Session == nil {
-		logDebug(client.state, "No active session. Cannot update session.")
-		return
+func (h *InputHandler) updateSession(voice, instructions string) error {
+	if h.client.state.Session == nil {
+		return fmt.Errorf("no active session")
 	}
 
 	updateEvent := Event{
@@ -109,36 +116,53 @@ func updateSession(client *RealtimeClient, voice, instructions string) {
 		Session: &Session{
 			Voice:                   voice,
 			Instructions:            instructions,
-			Modalities:              client.state.Session.Modalities,
-			InputAudioFormat:        client.state.Session.InputAudioFormat,
-			OutputAudioFormat:       client.state.Session.OutputAudioFormat,
-			InputAudioTranscription: client.state.Session.InputAudioTranscription,
-			TurnDetection:           client.state.Session.TurnDetection,
+			Modalities:              h.client.state.Session.Modalities,
+			InputAudioFormat:        h.client.state.Session.InputAudioFormat,
+			OutputAudioFormat:       h.client.state.Session.OutputAudioFormat,
+			InputAudioTranscription: h.client.state.Session.InputAudioTranscription,
+			TurnDetection:           h.client.state.Session.TurnDetection,
 			Tools:                   []Tool{},
-			ToolChoice:              client.state.Session.ToolChoice,
-			Temperature:             client.state.Session.Temperature,
+			ToolChoice:              h.client.state.Session.ToolChoice,
+			Temperature:             h.client.state.Session.Temperature,
 		},
 	}
 
-	if voice != "" {
-		isValidVoice := false
-		for _, v := range client.state.Session.AvailableVoices {
-			if voice == v {
-				isValidVoice = true
-				break
-			}
-		}
-		if !isValidVoice {
-			logDebug(client.state, "Error: Invalid voice. Supported values are: %s", strings.Join(client.state.Session.AvailableVoices, ", "))
-			return
-		}
+	logDebug("Sending session update event", zap.Any("event", updateEvent))
+	err := h.client.Send(updateEvent)
+	if err != nil {
+		return fmt.Errorf("error sending session update: %w", err)
 	}
 
-	logVerbose(client.state, "Sending session update event: %+v", updateEvent)
-	err := client.Send(updateEvent)
-	if err != nil {
-		logDebug(client.state, "Error sending session update: %v", err)
-	} else {
-		logDebug(client.state, "Sent request to update session")
+	logInfo("Sent request to update session")
+	return nil
+}
+
+func (h *InputHandler) sendUserMessage(input string) error {
+	event := Event{
+		Type:    "conversation.item.create",
+		EventID: generateID("evt_"),
+		Item: map[string]interface{}{
+			"type": "message",
+			"role": "user",
+			"content": []map[string]string{
+				{"type": "input_text", "text": input},
+			},
+		},
 	}
+
+	err := h.client.Send(event)
+	if err != nil {
+		return fmt.Errorf("error sending message: %w", err)
+	}
+
+	responseEvent := Event{
+		Type:    "response.create",
+		EventID: generateID("evt_"),
+	}
+	err = h.client.Send(responseEvent)
+	if err != nil {
+		return fmt.Errorf("error sending response creation message: %w", err)
+	}
+
+	return nil
 }
