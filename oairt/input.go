@@ -2,12 +2,13 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"strings"
 )
 
-func readStdin(client *RealtimeClient) {
+func readStdin(ctx context.Context, client *RealtimeClient) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		input := scanner.Text()
@@ -79,7 +80,7 @@ func updateVoice(client *RealtimeClient, newVoice string) {
 
 	for _, v := range availableVoices {
 		if newVoice == v {
-			updateSession(client, newVoice, "")
+			updateSession(ctx, client, newVoice, "")
 			return
 		}
 	}

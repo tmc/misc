@@ -1,13 +1,14 @@
 package main
-e
+
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 )
 
-func startFFPlay(state *AppState) error {
+func startFFPlay(ctx context.Context, state *AppState) error {
 	logDebug(state, "Starting ffplay...")
 
 	sampleRate := state.ActualSampleRate
@@ -62,7 +63,7 @@ func startFFPlay(state *AppState) error {
 	return nil
 }
 
-func updateAudioParams(state *AppState, newSession *Session) error {
+func updateAudioParams(ctx context.Context, state *AppState, newSession *Session) error {
 	if newSession == nil {
 		logInfo(state, "No session data provided. Skipping audio params update.")
 		return nil
@@ -83,15 +84,15 @@ func updateAudioParams(state *AppState, newSession *Session) error {
 		logDebug(state, "Sample rate changed from %d to %d Hz. Restarting audio playback.", oldSampleRate, state.ActualSampleRate)
 		if state.AudioPipe != nil && state.AudioCmd != nil {
 			state.AudioCmd.Process.Kill()
-			return startFFPlay(state)
+			return startFFPlay(ctx, state)
 		}
 	}
 	return nil
 }
 
-func restartAudioPlayback(state *AppState) {
+func restartAudioPlayback(ctx context.Context, state *AppState) error {
 	if state.AudioCmd != nil && state.AudioCmd.Process != nil {
 		state.AudioCmd.Process.Kill()
 	}
-	startFFPlay(state)
+	return startFFPlay(ctx, state)
 }

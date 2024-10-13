@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -9,7 +10,7 @@ import (
 	"github.com/fatih/color"
 )
 
-func handleEvent(state *AppState, event Event) {
+func handleEvent(ctx context.Context, state *AppState, event Event) {
 	grey := color.New(color.FgHiBlack)
 	switch event.Type {
 	case "session.created", "session.update":
@@ -30,7 +31,7 @@ func handleEvent(state *AppState, event Event) {
 			// Update the AppState with the latest session information
 			state.Session = event.Session
 
-			updateAudioParams(state, event.Session)
+			updateAudioParams(ctx, state, event.Session)
 		} else {
 			logDebug(state, "%s event received, but session data is missing", event.Type)
 		}
@@ -65,7 +66,10 @@ func handleEvent(state *AppState, event Event) {
 			if err != nil {
 				if err == io.ErrClosedPipe {
 					logDebug(state, "Audio pipe is closed. Attempting to restart audio playback.")
-					go restartAudioPlayback(state)
+					err := restartAudioPlayback(ctx, state)
+					if err != nil {
+						logError(state, "Failed to restart audio playback: %v", err)
+					}
 				} else {
 					logDebug(state, "Error writing to audio pipe: %v", err)
 				}

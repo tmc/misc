@@ -1,24 +1,26 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"os/exec"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 )
 
 func main() {
-	if err := run(); err != nil {
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	if err := run(ctx); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run() error {
+func run(ctx context.Context) error {
 	state := &AppState{
 		DefaultSampleRate: 24000,
 		DefaultBitDepth:   16,
@@ -69,7 +71,7 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("ffplay not found. Please install FFmpeg to use audio streaming.")
 		}
-		if err := startFFPlay(state); err != nil {
+		if err := startFFPlay(ctx, state); err != nil {
 			return fmt.Errorf("Failed to start ffplay: %w", err)
 		}
 	}
@@ -77,38 +79,41 @@ func run() error {
 	client := NewRealtimeClient(apiKey, state)
 
 	client.On("*", func(event Event) {
-		handleEvent(state, event)
+		handleEvent(ctx, state, event)
 	})
 
-	if err := client.Connect(modelName); err != nil {
+	if err := client.Connect(ctx, modelName); err != nil {
 		return fmt.Errorf("Error connecting: %w", err)
 	}
 
 	// Apply initial voice and instructions if provided
 	if initialVoice != "" || initialInstructions != "" {
-		updateSession(client, initialVoice, initialInstructions)
+		updateSession(ctx, client, initialVoice, initialInstructions)
 	}
 
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	go func() {
-		<-interrupt
-		fmt.Println("\nReceived interrupt signal. Shutting down...")
+		<-ctx.Done()
+		fmt.Println("\nContext cancelled. Shutting down...")
 		client.Disconnect()
 		if state.AudioCmd != nil && state.AudioCmd.Process != nil {
 			state.AudioCmd.Process.Kill()
 		}
-		os.Exit(0)
 	}()
 
-	readStdin(client)
+	readStdin(ctx, client)
 
-	time.Sleep(time.Second)
-	return client.Disconnect()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(time.Second):
+		return client.Disconnect()
+	}
 }
 
-func updateSession(client *RealtimeClient, voice, instructions string) {
+func updateSession(ctx context.Context, client *RealtimeClient, voice, instructions string) {
 	if client.state.Session == nil {
 		logDebug(client.state, "No active session. Cannot update session.")
 		return

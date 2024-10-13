@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -23,7 +24,7 @@ func NewRealtimeClient(apiKey string, state *AppState) *RealtimeClient {
 	}
 }
 
-func (c *RealtimeClient) Connect(model string) error {
+func (c *RealtimeClient) Connect(ctx context.Context, model string) error {
 	u, err := url.Parse(c.URL)
 	if err != nil {
 		return fmt.Errorf("error parsing URL: %v", err)
