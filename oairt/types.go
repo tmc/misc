@@ -21,6 +21,12 @@ type AppState struct {
 	DefaultBitDepth   int
 	DefaultChannels   int
 	ActualSampleRate  int
+	AudioOutput       AudioOutput
+}
+
+type AudioOutput interface {
+	Write(p []byte) (n int, err error)
+	Close() error
 }
 
 type RealtimeClient struct {

@@ -80,7 +80,7 @@ func updateVoice(client *RealtimeClient, newVoice string) {
 
 	for _, v := range availableVoices {
 		if newVoice == v {
-			updateSession(ctx, client, newVoice, "")
+			updateSession(client, newVoice, "")
 			return
 		}
 	}
@@ -95,4 +95,50 @@ func updateInstructions(client *RealtimeClient, newInstructions string) {
 	}
 
 	updateSession(client, "", newInstructions)
+}
+
+func updateSession(client *RealtimeClient, voice, instructions string) {
+	if client.state.Session == nil {
+		logDebug(client.state, "No active session. Cannot update session.")
+		return
+	}
+
+	updateEvent := Event{
+		Type:    "session.update",
+		EventID: generateID("evt_"),
+		Session: &Session{
+			Voice:                   voice,
+			Instructions:            instructions,
+			Modalities:              client.state.Session.Modalities,
+			InputAudioFormat:        client.state.Session.InputAudioFormat,
+			OutputAudioFormat:       client.state.Session.OutputAudioFormat,
+			InputAudioTranscription: client.state.Session.InputAudioTranscription,
+			TurnDetection:           client.state.Session.TurnDetection,
+			Tools:                   []Tool{},
+			ToolChoice:              client.state.Session.ToolChoice,
+			Temperature:             client.state.Session.Temperature,
+		},
+	}
+
+	if voice != "" {
+		isValidVoice := false
+		for _, v := range client.state.Session.AvailableVoices {
+			if voice == v {
+				isValidVoice = true
+				break
+			}
+		}
+		if !isValidVoice {
+			logDebug(client.state, "Error: Invalid voice. Supported values are: %s", strings.Join(client.state.Session.AvailableVoices, ", "))
+			return
+		}
+	}
+
+	logVerbose(client.state, "Sending session update event: %+v", updateEvent)
+	err := client.Send(updateEvent)
+	if err != nil {
+		logDebug(client.state, "Error sending session update: %v", err)
+	} else {
+		logDebug(client.state, "Sent request to update session")
+	}
 }

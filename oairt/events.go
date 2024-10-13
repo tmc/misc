@@ -52,29 +52,22 @@ func handleEvent(ctx context.Context, state *AppState, event Event) {
 		defer state.AudioMutex.Unlock()
 
 		if state.AudioFile != nil {
-			n, err := state.AudioFile.Write(data)
-			if err != nil {
+			if _, err := state.AudioFile.Write(data); err != nil {
 				logDebug(state, "Error writing to audio file: %v", err)
-			} else {
-				logVerbose(state, "Wrote %d bytes to audio file", n)
 			}
 			state.AudioFile.Sync()
 		}
 
-		if state.AudioPipe != nil {
-			n, err := state.AudioPipe.Write(data)
-			if err != nil {
+		if state.AudioOutput != nil {
+			if _, err := state.AudioOutput.Write(data); err != nil {
 				if err == io.ErrClosedPipe {
 					logDebug(state, "Audio pipe is closed. Attempting to restart audio playback.")
-					err := restartAudioPlayback(ctx, state)
-					if err != nil {
-						logError(state, "Failed to restart audio playback: %v", err)
+					if err := restartAudioPlayback(ctx, state); err != nil {
+						logError(state, err, "Failed to restart audio playback")
 					}
 				} else {
 					logDebug(state, "Error writing to audio pipe: %v", err)
 				}
-			} else {
-				logVerbose(state, "Wrote %d bytes to audio pipe", n)
 			}
 		}
 

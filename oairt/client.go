@@ -12,22 +12,40 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func NewRealtimeClient(apiKey string, state *AppState) *RealtimeClient {
-	return &RealtimeClient{
-		URL:        "wss://api.openai.com/v1/realtime",
-		APIKey:     apiKey,
-		handlers:   make(map[string][]func(Event)),
-		send:       make(chan []byte, 256),
-		debug:      state.DebugLevel > 0,
-		dumpFrames: state.DebugLevel > 1,
-		state:      state,
+type RealtimeClientOption func(*RealtimeClient)
+
+func WithDebug(debug bool) RealtimeClientOption {
+	return func(c *RealtimeClient) {
+		c.debug = debug
 	}
+}
+
+func WithDumpFrames(dumpFrames bool) RealtimeClientOption {
+	return func(c *RealtimeClient) {
+		c.dumpFrames = dumpFrames
+	}
+}
+
+func NewRealtimeClient(apiKey string, state *AppState, options ...RealtimeClientOption) *RealtimeClient {
+	c := &RealtimeClient{
+		URL:      "wss://api.openai.com/v1/realtime",
+		APIKey:   apiKey,
+		handlers: make(map[string][]func(Event)),
+		send:     make(chan []byte, 256),
+		state:    state,
+	}
+
+	for _, option := range options {
+		option(c)
+	}
+
+	return c
 }
 
 func (c *RealtimeClient) Connect(ctx context.Context, model string) error {
 	u, err := url.Parse(c.URL)
 	if err != nil {
-		return fmt.Errorf("error parsing URL: %v", err)
+		return NewAppError(err, "Error parsing URL", "URL_PARSE_ERROR")
 	}
 
 	if model != "" {
@@ -49,13 +67,13 @@ func (c *RealtimeClient) Connect(ctx context.Context, model string) error {
 		HandshakeTimeout: 45 * time.Second,
 	}
 
-	conn, resp, err := dialer.Dial(u.String(), headers)
+	conn, resp, err := dialer.DialContext(ctx, u.String(), headers)
 	if err != nil {
 		if resp != nil {
 			body, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf("websocket handshake failed with status %d: %s\nResponse body: %s", resp.StatusCode, err, string(body))
+			return NewAppError(err, fmt.Sprintf("WebSocket handshake failed with status %d: %s\nResponse body: %s", resp.StatusCode, err, string(body)), "WEBSOCKET_HANDSHAKE_ERROR")
 		}
-		return fmt.Errorf("error connecting to websocket: %v", err)
+		return NewAppError(err, "Error connecting to websocket", "WEBSOCKET_CONNECTION_ERROR")
 	}
 	c.conn = conn
 
