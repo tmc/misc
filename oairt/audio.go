@@ -1,5 +1,5 @@
 package main
-
+e
 import (
 	"fmt"
 	"io"
@@ -7,7 +7,7 @@ import (
 	"os/exec"
 )
 
-func startFFPlay(state *AppState) {
+func startFFPlay(state *AppState) error {
 	logDebug(state, "Starting ffplay...")
 
 	sampleRate := state.ActualSampleRate
@@ -16,19 +16,17 @@ func startFFPlay(state *AppState) {
 	}
 
 	state.AudioCmd = exec.Command("ffplay",
-		"-f", "s16le",
-		"-ar", fmt.Sprintf("%d", sampleRate),
-		"-ac", fmt.Sprintf("%d", state.DefaultChannels),
+		// "-f", "s16le",
+		// "-ar", fmt.Sprintf("%d", sampleRate),
+		// "-ac", fmt.Sprintf("%d", state.DefaultChannels),
 		"-i", "pipe:0",
 		"-nodisp",
-		"-autoexit",
-		"-loglevel", "warning")
+		"-loglevel", "debug")
 
 	var err error
 	state.AudioPipe, err = state.AudioCmd.StdinPipe()
 	if err != nil {
-		logDebug(state, "Failed to create stdin pipe for ffplay: %v", err)
-		return
+		return fmt.Errorf("Failed to create stdin pipe for ffplay: %w", err)
 	}
 
 	if state.DebugLevel > 0 {
@@ -41,9 +39,8 @@ func startFFPlay(state *AppState) {
 
 	err = state.AudioCmd.Start()
 	if err != nil {
-		logDebug(state, "Failed to start ffplay: %v", err)
 		state.AudioPipe = nil
-		return
+		return fmt.Errorf("Failed to start ffplay: %w", err)
 	}
 
 	logDebug(state, "ffplay started successfully with parameters: SampleRate=%d, Channels=%d",
@@ -62,11 +59,13 @@ func startFFPlay(state *AppState) {
 		}
 		state.AudioPipe = nil
 	}()
+	return nil
 }
 
-func updateAudioParams(state *AppState, newSession *Session) {
+func updateAudioParams(state *AppState, newSession *Session) error {
 	if newSession == nil {
-		return
+		logInfo(state, "No session data provided. Skipping audio params update.")
+		return nil
 	}
 
 	state.Session = newSession
@@ -84,9 +83,10 @@ func updateAudioParams(state *AppState, newSession *Session) {
 		logDebug(state, "Sample rate changed from %d to %d Hz. Restarting audio playback.", oldSampleRate, state.ActualSampleRate)
 		if state.AudioPipe != nil && state.AudioCmd != nil {
 			state.AudioCmd.Process.Kill()
-			startFFPlay(state)
+			return startFFPlay(state)
 		}
 	}
+	return nil
 }
 
 func restartAudioPlayback(state *AppState) {

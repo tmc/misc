@@ -13,16 +13,22 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	state := &AppState{
 		DefaultSampleRate: 24000,
 		DefaultBitDepth:   16,
 		DefaultChannels:   1,
 	}
-
 	var apiKey string
 	var audioStream bool
 	var initialVoice string
 	var initialInstructions string
+	var modelName string
 
 	flag.StringVar(&apiKey, "api-key", "", "OpenAI API Key (overrides OPENAI_API_KEY env variable)")
 	flag.StringVar(&state.AudioOutputFile, "audio-output", "", "File to save audio output to")
@@ -30,6 +36,7 @@ func main() {
 	flag.IntVar(&state.DebugLevel, "debug", 0, "Debug level (0=off, 1=debug, 2=verbose)")
 	flag.StringVar(&initialVoice, "voice", "", "Initial voice to use")
 	flag.StringVar(&initialInstructions, "instructions", "", "Initial instructions for the AI")
+	flag.StringVar(&modelName, "model", "gpt-4o-realtime-preview-2024-10-01", "Model name to use")
 	flag.Parse()
 
 	apiKey = os.Getenv("OPENAI_API_KEY")
@@ -38,7 +45,7 @@ func main() {
 	}
 
 	if apiKey == "" {
-		log.Fatal("API key is required. Set OPENAI_API_KEY environment variable or use -api-key flag.")
+		return fmt.Errorf("API key is required. Set OPENAI_API_KEY environment variable or use -api-key flag.")
 	}
 
 	if state.AudioOutputFile != "" {
@@ -60,9 +67,11 @@ func main() {
 		// Check if ffplay is installed
 		_, err := exec.LookPath("ffplay")
 		if err != nil {
-			log.Fatal("ffplay not found. Please install FFmpeg to use audio streaming.")
+			return fmt.Errorf("ffplay not found. Please install FFmpeg to use audio streaming.")
 		}
-		startFFPlay(state)
+		if err := startFFPlay(state); err != nil {
+			return fmt.Errorf("Failed to start ffplay: %w", err)
+		}
 	}
 
 	client := NewRealtimeClient(apiKey, state)
@@ -71,9 +80,8 @@ func main() {
 		handleEvent(state, event)
 	})
 
-	err := client.Connect("gpt-4o-realtime-preview-2024-10-01")
-	if err != nil {
-		log.Fatalf("Error connecting: %v", err)
+	if err := client.Connect(modelName); err != nil {
+		return fmt.Errorf("Error connecting: %w", err)
 	}
 
 	// Apply initial voice and instructions if provided
@@ -97,7 +105,7 @@ func main() {
 	readStdin(client)
 
 	time.Sleep(time.Second)
-	client.Disconnect()
+	return client.Disconnect()
 }
 
 func updateSession(client *RealtimeClient, voice, instructions string) {
