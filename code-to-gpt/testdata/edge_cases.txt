@@ -1,0 +1,23 @@
+# Test empty file
+code-to-gpt .
+stdout '(?s)<root path="~/.*">'
+stdout '(?s)<file path="./empty_file.txt">'
+stdout '(?s)</file>'
+
+# Test file with special characters in name
+code-to-gpt .
+stdout '(?s)<root path="~/.*">'
+stdout '(?s)<file path="./special_\@\#\$\%\^\&\*\(\)_'
+stdout 'File with special characters'
+
+# Test deeply nested structure
+code-to-gpt .
+stdout '(?s)<root path="~/.*">'
+stdout '(?s)<file path="./level1/level2/level3/level4/deep_file.txt">'
+stdout 'Deeply nested file'
+
+-- empty_file.txt --
+-- special_@#$%^&*()_+.txt --
+File with special characters
+-- level1/level2/level3/level4/deep_file.txt --
+Deeply nested file

@@ -1,0 +1,38 @@
+# Setup: Create a git repository and add tracked files
+exec git init
+exec git add tracked1.txt tracked2.txt subdir/tracked3.txt
+exec git commit -m 'Add tracked files including in subdir'
+
+# Test running --tracked-only from the subdir
+exec cd subdir
+code-to-gpt --tracked-only --verbose
+stdout '(?s)<root path="~/.*">'
+stdout '(?s)<file path="./subdir/tracked3.txt">'
+stdout '(?s)<file path="./tracked1.txt">'
+stdout '(?s)<file path="./tracked2.txt">'
+! stdout '(?s)<file path="./untracked1.txt">'
+! stdout '(?s)<file path="./untracked2.txt">'
+! stdout '(?s)<file path="./subdir/untracked3.txt">'
+
+# Test running without --tracked-only from the subdir
+code-to-gpt --verbose
+stdout '(?s)<root path="~/.*">'
+stdout '(?s)<file path="./subdir/tracked3.txt">'
+stdout '(?s)<file path="./tracked1.txt">'
+stdout '(?s)<file path="./tracked2.txt">'
+stdout '(?s)<file path="./subdir/untracked3.txt">'
+stdout '(?s)<file path="./untracked1.txt">'
+stdout '(?s)<file path="./untracked2.txt">'
+
+-- tracked1.txt --
+This is a tracked file in the root
+-- tracked2.txt --
+This is another tracked file in the root
+-- subdir/tracked3.txt --
+This is a tracked file in the subdir
+-- untracked1.txt --
+This is an untracked file in the root
+-- untracked2.txt --
+This is another untracked file in the root
+-- subdir/untracked3.txt --
+This is an untracked file in the subdir

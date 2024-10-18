@@ -1,0 +1,16 @@
+# Test custom ignore file
+code-to-gpt .
+stdout '(?s)<root path="~/.*">'
+stdout '(?s)<file path="./include_me.txt">'
+! stdout '(?s)<file path="./ignore_me.txt">'
+! stdout '(?s)<file path="./also_ignore_me.txt">'
+
+-- .ctx-src-ignore --
+ignore_me.txt
+also_ignore_me.txt
+-- include_me.txt --
+This file should be included
+-- ignore_me.txt --
+This file should be ignored
+-- also_ignore_me.txt --
+This file should also be ignored

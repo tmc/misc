@@ -20,13 +20,18 @@ DEFAULT_EXCLUDES=(
 )
 DIRECTORIES=()
 COUNT_TOKENS=false
-VERBOSE=true
+VERBOSE=false
 USE_XML_TAGS=true
+PATHSPEC=()
+
 INCLUDE_SVG=false
 INCLUDE_XML=false
 WC_LIMIT=10000 # Maximum number of lines to process
 TRACKED_ONLY=false
-PATHSPEC=("${DEFAULT_EXCLUDES[@]}")
+
+# This defines a custom ignore file name that will be used in addition to .gitignore
+ADDITIONAL_IGNORE_FILE_NAME=".ctx-src-ignore"
+
 
 root_path=""
 
@@ -83,11 +88,10 @@ while [[ $# -gt 0 ]]; do
         *)
             if [[ -d "$1" ]]; then
                 DIRECTORIES+=("$1")
-                shift
             else
-                PATHSPEC=("$@")
-                break
+                PATHSPEC+=("$1")
             fi
+            shift
             ;;
     esac
 done
@@ -201,21 +205,22 @@ process_file() {
     fi
 
     if [ "$line_count" -gt "$WC_LIMIT" ]; then
-        if $VERBOSE; then
-            echo "Skipping large file: $relative_path ($line_count lines)" >&2
-        fi
+        v_echo "Skipping large file: $relative_path ($line_count lines)"
         return
     fi
 
-    if $VERBOSE; then
-        echo "Processing file: $relative_path (MIME: $mime_type)" >&2
-    fi
+    v_echo "Processing file: $relative_path (MIME: $mime_type)"
 
     if $USE_XML_TAGS; then
         echo "<file path=\"$relative_path\">"
     fi
 
     if $COUNT_TOKENS; then
+        command -v tokencount &> /dev/null || { 
+            {
+                echo "tokencount is required for token counting" 
+                echo "you can install it with go install github.com/tmc/tokencount@latest"
+            } >&2; exit 1; }
         token_count=$(tokencount "$file")
         echo "$token_count $relative_path"
     else
@@ -232,34 +237,115 @@ if $COUNT_TOKENS; then
     USE_XML_TAGS=false
 fi
 
+# Helper function to check if a directory is a Git repository
 is_git_repository() {
     git -C "$1" rev-parse --is-inside-work-tree >/dev/null 2>&1
 }
 
-# Function to get files respecting Git ignore rules and pathspec
-get_files() {
-    if [ ${#PATHSPEC[@]} -gt 0 ]; then
-        
-        v_echo "Using pathspec: ${PATHSPEC[*]}"
-        if git -C "$DIRECTORY" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-            v_echo "Using git ls-files with pathspec"
-            git -C "$DIRECTORY" ls-files -z --exclude-standard "${PATHSPEC[@]}" | tr '\0' '\n'
-        else
-            v_echo "Using find with pathspec"
-            find "$DIRECTORY" "${PATHSPEC[@]}" -type f
-        fi
-    else
-        if git -C "$DIRECTORY" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-            if $TRACKED_ONLY; then
-                git -C "$DIRECTORY" ls-files -z | tr '\0' '\n'
-            else
-                git -C "$DIRECTORY" ls-files -z --exclude-standard --others | tr '\0' '\n'
+# Helper function to create a temporary Git repository
+create_temp_git_repo() {
+    local temp_dir
+    temp_dir=$(mktemp -d) || { echo "Failed to create temp directory" >&2; return 1; }
+    git init "$temp_dir" >/dev/null 2>&1 || { echo "Failed to initialize temp Git repo" >&2; rm -rf "$temp_dir"; return 1; }
+    echo "$temp_dir"
+}
+
+# Helper function to get the Git directory
+get_git_dir() {
+    local dir="$1"
+    local git_dir
+    git_dir=$(git -C "$dir" rev-parse --git-dir) || { echo "Failed to get Git directory" >&2; return 1; }
+    echo "$git_dir"
+}
+
+IGNORE_FILE_NAME=".ctx-src-ignore"
+
+apply_custom_ignore() {
+    local ignore_file=".ctx-src-ignore"
+    if [ -f "$ignore_file" ]; then
+        while IFS= read -r pattern || [[ -n "$pattern" ]]; do
+            # Ignore empty lines and comments
+            if [[ -n "$pattern" && ! "$pattern" =~ ^# ]]; then
+                git_args+=(":(exclude)$pattern")
             fi
-        else
-            find "$DIRECTORY" -type f
-        fi
+        done < "$ignore_file"
     fi
 }
+
+# Helper function to get files in a directory (DIRECTORY).
+get_files() {
+    local temp_dir=""
+    local git_dir
+
+    if ! git -C "$DIRECTORY" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        temp_dir=$(mktemp -d)
+        git init "$temp_dir" > /dev/null 2>&1
+        git_dir="$temp_dir/.git"
+    else
+        git_dir=$(git -C "$DIRECTORY" rev-parse --git-dir)
+    fi
+
+    (
+        export GIT_DIR="$git_dir" GIT_WORK_TREE="$DIRECTORY"
+
+        local git_args=(-z --exclude-standard)
+        if ! $TRACKED_ONLY; then
+            git_args+=(--cached --others)
+        fi
+
+        apply_custom_ignore
+
+        # Process PATHSPEC
+        local include_patterns=()
+        local exclude_patterns=()
+        for spec in "${PATHSPEC[@]}"; do
+            if [[ $spec == :!* ]]; then
+                exclude_patterns+=("${spec#:!}")
+            else
+                include_patterns+=("$spec")
+            fi
+        done
+
+        # Apply include patterns
+        if [ ${#include_patterns[@]} -gt 0 ]; then
+            git_args+=("${include_patterns[@]}")
+        else
+            git_args+=("*")  # Include all files if no specific include pattern
+        fi
+
+        # Apply exclude patterns
+        for pattern in "${exclude_patterns[@]}"; do
+            git_args+=(":(exclude)$pattern")
+        done
+
+        v_echo "Running: git ls-files ${git_args[*]}"
+        local files
+        files=$(git ls-files "${git_args[@]}" | tr '\0' '\n')
+        v_echo "Found files:"
+
+        if [ -z "$files" ]; then
+            v_echo "No files found matching the criteria."
+            v_echo "Directory contents:"
+            ls -la "$DIRECTORY" >&2
+        else
+            echo "$files"
+        fi
+    )
+
+    # Clean up temp directory if created
+    [ -n "$temp_dir" ] && rm -rf "$temp_dir" || true
+}
+
+# If no specific files or directories were specified by the user,
+# set PATHSPEC to "*" to include all files in the current directory
+if [ ${#PATHSPEC[@]} -eq 0 ]; then
+    PATHSPEC=("*")
+fi
+
+# Append the default exclusion patterns to PATHSPEC
+# This ensures that commonly ignored files (e.g., .git, node_modules)
+# are always excluded from the search, regardless of user input
+PATHSPEC+=("${DEFAULT_EXCLUDES[@]}")
 
 # Main processing logic
 # - Iterate over directories
@@ -277,35 +363,24 @@ if $USE_XML_TAGS; then
         echo "<source-code-roots>"
     fi
 fi
+
+# refactory this into a process_directory function
 for DIRECTORY in "${DIRECTORIES[@]}"; do
     if $USE_XML_TAGS; then
         root_path="$(get_home_relative_dirpath "$DIRECTORY")"
         echo "<root path=\"$root_path\">"
     fi
-    if is_git_repository "$DIRECTORY"; then
-        
-        v_echo "Git repository detected in $DIRECTORY. Using git commands."
-        (
-            cd "$DIRECTORY" || exit 1
-            get_files | while read -r file; do
-                if [ -f "$file" ]; then
-                    process_file "$file"
-                elif $VERBOSE; then
-                    echo "Skipping non-existent file: $file" >&2
-                fi
-            done
-        )
-    else
-        
-        v_echo "Processing directory: $DIRECTORY"
+    (
+        cd "$DIRECTORY" || (echo "Failed to change directory: $DIRECTORY" >&2; exit 1)
         get_files | while read -r file; do
-            if [ -f "$DIRECTORY/$file" ]; then
-                process_file "$DIRECTORY/$file"
+            v_echo "processing file: $file"
+            if [ -f "$file" ]; then
+                process_file "$file"
             elif $VERBOSE; then
-                echo "Skipping non-existent file: $DIRECTORY/$file" >&2
+                echo "Skipping non-existent file: $file" >&2
             fi
         done
-    fi
+    )
     if $USE_XML_TAGS; then
         echo "</root>"
     fi

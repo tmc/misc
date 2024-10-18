@@ -1,8 +1,9 @@
 IDEAS to implement
 
+Output:
+- txtar support
+
 File Selection and Control:
-- consider multi-dir specification
-- accept file/path list on stdin? globbing?
 - support some sort of rc/dotfile/ignore file?
 - add mode/option to be able to generate ignore rules for files over some token threshold? (may be better as a separate program)
 - allow hooking in line with output path to help prevent accidental disclosures.

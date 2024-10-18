@@ -1,0 +1,20 @@
+# Test with specific file types
+code-to-gpt . '*.txt'
+stdout '(?s)<root path="~/.*">'
+stdout '(?s)<file path="./exclude_me/excluded.txt">'
+stdout '(?s)<file path="./file1.txt">'
+stdout '(?s)<file path="./file2.txt">'
+stdout '(?s)<file path="./subdir/subfile.txt">'
+! stdout 'not_a_text_file.bin'
+! stderr .
+
+-- file1.txt --
+Hello, World!
+-- file2.txt --
+This is a test file.
+-- subdir/subfile.txt --
+File in subdirectory
+-- exclude_me/excluded.txt --
+This file should be excluded
+-- not_a_text_file.bin --
+This file should not be included

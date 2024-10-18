@@ -1,0 +1,5 @@
+# Test non-existent directory
+code-to-gpt non_existent_dir
+stdout '(?s)<root path="~/.*">'
+stdout '</root>'
+stderr 'total 0'
