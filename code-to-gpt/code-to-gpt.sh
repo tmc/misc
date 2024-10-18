@@ -135,20 +135,14 @@ realpath() {
 }
 
 get_relative_path() {
-    local file="$1"
-    local root_path="$2"
+    local target="$1"
+    local base="$2"
 
-    # Expand the tilde in root_path if present
-    root_path="${root_path/#\~/$HOME}"
+    # Remove any trailing slashes from the base path
+    base="${base%/}"
 
-    local abs_file=$(realpath "$file")
-    local rel_path="${abs_file#$root_path/}"
-
-    if [ "$rel_path" = "$abs_file" ]; then
-        echo "$abs_file"
-    else
-        echo "./$rel_path"
-    fi
+    # Use Python to calculate the relative path (most reliable cross-platform method)
+    python3 -c "import os.path; print(os.path.relpath('$target', '$base'))"
 }
 
 # Function to check if a file is a text file and should be included
@@ -191,13 +185,16 @@ is_text_file() {
 
 # Function to process a file
 process_file() {
-    local file="$1"
-    local expanded_root_path="${root_path/#\~/$HOME}"
-    local relative_path=$(get_relative_path "$file" "$expanded_root_path")
-    local mime_type=$(file -b --mime-type "$file")
-    local line_count=$(wc -l < "$file")
+    local full_path="$1"
+    local base_dir="$2"
+    echo "Debug: full_path = $full_path" >&2
+    echo "Debug: base_dir = $base_dir" >&2
+    local relative_path=$(get_relative_path "$base_dir" "$full_path")
+    echo "Debug: relative_path = $relative_path" >&2
+    local mime_type=$(file -b --mime-type "$full_path")
+    local line_count=$(wc -l < "$full_path")
 
-    if ! is_text_file "$file"; then
+    if ! is_text_file "$full_path"; then
         if $VERBOSE; then
             echo "Skipping non-text file: $relative_path (MIME: $mime_type)" >&2
         fi
@@ -216,15 +213,15 @@ process_file() {
     fi
 
     if $COUNT_TOKENS; then
-        command -v tokencount &> /dev/null || { 
+        command -v tokencount &> /dev/null || {
             {
-                echo "tokencount is required for token counting" 
+                echo "tokencount is required for token counting"
                 echo "you can install it with go install github.com/tmc/tokencount@latest"
             } >&2; exit 1; }
-        token_count=$(tokencount "$file")
+        token_count=$(tokencount "$full_path")
         echo "$token_count $relative_path"
     else
-        cat "$file" | sed -e 's/^/  /'
+        cat "$full_path" | sed -e 's/^/  /'
     fi
 
     if $USE_XML_TAGS; then
@@ -274,19 +271,20 @@ apply_custom_ignore() {
 
 # Helper function to get files in a directory (DIRECTORY).
 get_files() {
-    local temp_dir=""
+    local target_dir="$1"
     local git_dir
 
-    if ! git -C "$DIRECTORY" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        temp_dir=$(mktemp -d)
-        git init "$temp_dir" > /dev/null 2>&1
-        git_dir="$temp_dir/.git"
-    else
-        git_dir=$(git -C "$DIRECTORY" rev-parse --git-dir)
+    if ! git -C "$target_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        echo "Error: '$target_dir' is not a Git repository." >&2
+        exit 1
     fi
 
+    git_dir=$(git -C "$target_dir" rev-parse --git-dir)
+    local git_root=$(git -C "$target_dir" rev-parse --show-toplevel)
+
     (
-        export GIT_DIR="$git_dir" GIT_WORK_TREE="$DIRECTORY"
+        cd "$git_root"
+        export GIT_DIR="$git_dir"
 
         local git_args=(-z --exclude-standard)
         if ! $TRACKED_ONLY; then
@@ -294,29 +292,6 @@ get_files() {
         fi
 
         apply_custom_ignore
-
-        # Process PATHSPEC
-        local include_patterns=()
-        local exclude_patterns=()
-        for spec in "${PATHSPEC[@]}"; do
-            if [[ $spec == :!* ]]; then
-                exclude_patterns+=("${spec#:!}")
-            else
-                include_patterns+=("$spec")
-            fi
-        done
-
-        # Apply include patterns
-        if [ ${#include_patterns[@]} -gt 0 ]; then
-            git_args+=("${include_patterns[@]}")
-        else
-            git_args+=("*")  # Include all files if no specific include pattern
-        fi
-
-        # Apply exclude patterns
-        for pattern in "${exclude_patterns[@]}"; do
-            git_args+=(":(exclude)$pattern")
-        done
 
         v_echo "Running: git ls-files ${git_args[*]}"
         local files
@@ -326,14 +301,11 @@ get_files() {
         if [ -z "$files" ]; then
             v_echo "No files found matching the criteria."
             v_echo "Directory contents:"
-            ls -la "$DIRECTORY" >&2
+            ls -la >&2
         else
             echo "$files"
         fi
     )
-
-    # Clean up temp directory if created
-    [ -n "$temp_dir" ] && rm -rf "$temp_dir" || true
 }
 
 # If no specific files or directories were specified by the user,
@@ -357,6 +329,16 @@ PATHSPEC+=("${DEFAULT_EXCLUDES[@]}")
 if [ ${#DIRECTORIES[@]} -eq 0 ]; then
     DIRECTORIES=(".")
 fi
+# Convert relative paths to absolute paths
+DIRECTORIES=("${DIRECTORIES[@]/#/$(pwd)/}")
+
+check_directory() {
+    local dir="$1"
+    if [ ! -d "$dir" ]; then
+        echo "Error: Directory '$dir' does not exist or is not accessible." >&2
+        exit 1
+    fi
+}
 # If we wrapping with xml, and have more than one directory, we need to wrap the output in a <source-code-roots> tag
 if $USE_XML_TAGS; then
     if [ ${#DIRECTORIES[@]} -gt 1 ]; then
@@ -364,27 +346,31 @@ if $USE_XML_TAGS; then
     fi
 fi
 
-# refactory this into a process_directory function
 for DIRECTORY in "${DIRECTORIES[@]}"; do
+    check_directory "$DIRECTORY"
+
     if $USE_XML_TAGS; then
         root_path="$(get_home_relative_dirpath "$DIRECTORY")"
         echo "<root path=\"$root_path\">"
     fi
-    (
-        cd "$DIRECTORY" || (echo "Failed to change directory: $DIRECTORY" >&2; exit 1)
-        get_files | while read -r file; do
-            v_echo "processing file: $file"
-            if [ -f "$file" ]; then
-                process_file "$file"
-            elif $VERBOSE; then
-                echo "Skipping non-existent file: $file" >&2
-            fi
-        done
-    )
+
+    git_root=$(git -C "$DIRECTORY" rev-parse --show-toplevel)
+
+    get_files "$DIRECTORY" | while read -r file; do
+        v_echo "processing file: $file"
+        full_path="$git_root/$file"
+        if [ -f "$full_path" ]; then
+            process_file "$full_path" "$DIRECTORY"
+        elif $VERBOSE; then
+            echo "Skipping non-existent file: $full_path" >&2
+        fi
+    done
+
     if $USE_XML_TAGS; then
         echo "</root>"
     fi
 done
+
 if $USE_XML_TAGS; then
     if [ ${#DIRECTORIES[@]} -gt 1 ]; then
         echo "</source-code-roots>"

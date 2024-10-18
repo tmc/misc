@@ -3,14 +3,19 @@ package main
 import (
 	"bytes"
 	"context"
+	"flag"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"rsc.io/script"
 	"rsc.io/script/scripttest"
 )
+
+var debug = flag.Bool("debug", false, "Enable debug mode for tests")
 
 func TestCodeToGPT(t *testing.T) {
 	engine := script.NewEngine()
@@ -23,6 +28,13 @@ func TestCodeToGPT(t *testing.T) {
 		"PATH=" + os.Getenv("PATH"),
 		"HOME=" + filepath.Dir(filepath.Dir(t.TempDir())),
 	}
+
+	if *debug {
+		env = append(env, "SHELLOPTS=xtrace")
+		env = append(env, `PS4='+ $(basename ${BASH_SOURCE[0]}):${LINENO}: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }`)
+		env = append(env, "BASH_VERBOSE=1")
+		env = append(env, "BASH_XTRACEFD=2")
+	}
 	scripttest.Test(t, ctx, engine, env, "testdata/*.txt")
 }
 
@@ -32,7 +44,13 @@ var codeToGPTCmd = script.Command(
 		Args:    "[args...]",
 	}, func(s *script.State, args ...string) (script.WaitFunc, error) {
 		scriptPath, _ := filepath.Abs("./code-to-gpt.sh")
-		cmd := exec.CommandContext(s.Context(), scriptPath, args...)
+		cmd := exec.CommandContext(s.Context(), "bash", "-c")
+		if *debug {
+			cmd.Args = append(cmd.Args, "set -x; "+scriptPath+" "+strings.Join(args, " "))
+		} else {
+			cmd.Args = append(cmd.Args, scriptPath+" "+strings.Join(args, " "))
+		}
+		fmt.Println("args", cmd.Args)
 		cmd.Dir = s.Getwd()
 		cmd.Env = s.Environ()
 		var stdout, stderr bytes.Buffer
