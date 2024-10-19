@@ -1,11 +1,11 @@
 # Test exclude directory (using pathspec)
-code-to-gpt . '!exclude_me'
+code-to-gpt . !exclude_me
 stdout '(?s)<root path="~/.*">'
-! stdout '(?s)<file path="./file1.txt">'
-! stdout '(?s)<file path="./file2.txt">'
-! stdout '(?s)<file path="./subdir/subfile.txt">'
+! stdout '(?s)<file path="file1.txt">'
+! stdout '(?s)<file path="file2.txt">'
+! stdout '(?s)<file path="subdir/subfile.txt">'
 ! stdout 'excluded.txt'
-stderr 'total'
+! stderr .
 
 -- file1.txt --
 Hello, World!

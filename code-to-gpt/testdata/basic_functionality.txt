@@ -1,17 +1,36 @@
-# Test basic functionality
-code-to-gpt .
-stdout '(?s)<root path="~/.*">'
-stdout '(?s)<file path="./file1.txt">'
+# Test basic file output
+code-to-gpt
 stdout 'Hello, World!'
-stdout '(?s)<file path="./file2.txt">'
-stdout 'This is a test file.'
-stdout '(?s)<file path="./subdir/subfile.txt">'
-stdout 'File in subdirectory'
 ! stderr .
 
--- file1.txt --
+# Test basic file output
+code-to-gpt --verbose
+stdout 'Hello, World!'
+
+# Test simple pathspec filtering
+cd subdir1
+code-to-gpt . '*.txt'
+stdout 'Content of file2'
+! stdout 'Content of file1'
+! stdout 'Content of file4'
+! stderr .
+
+# Test behavior in Git-like environment (using temporary Git repo)
+cd ..
+code-to-gpt subdir1
+stdout 'Content of file2'
+stdout 'Content of file3'
+! stdout 'Content of file1'
+! stdout 'Content of file4'
+! stderr .
+
+-- hello.txt --
 Hello, World!
--- file2.txt --
-This is a test file.
--- subdir/subfile.txt --
-File in subdirectory
+-- file1.txt --
+Content of file1
+-- subdir1/file2.txt --
+Content of file2
+-- subdir1/subsubdir/file3.txt --
+Content of file3
+-- subdir2/file4.txt --
+Content of file4

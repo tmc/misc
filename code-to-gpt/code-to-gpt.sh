@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # code-to-gpt.sh
 # Process files for LLM input, respecting .gitignore and custom exclusions.
-# Usage: code-to-gpt.sh [options] <directory1> [<directory2> ...] [<pathspec>...] [-- <pathspec>...]
+# Usage: code-to-gpt.sh [options] [directory] [<pathspec>...] [-- <pathspec>...]
 #
 # For full usage instructions, run: ./code-to-gpt.sh --help
 set -euo pipefail
@@ -11,6 +11,7 @@ DEFAULT_EXCLUDES=(
     ':!node_modules/**'
     ':!venv/**'
     ':!.venv/**'
+    ':!.git/**'
     ':!go.sum'
     ':!go.work.sum'
     ':!yarn.lock'
@@ -18,7 +19,7 @@ DEFAULT_EXCLUDES=(
     ':!package-lock.json'
     ':!uv.lock'
 )
-DIRECTORIES=()
+DIRECTORY="."
 COUNT_TOKENS=false
 VERBOSE=false
 USE_XML_TAGS=true
@@ -28,45 +29,51 @@ INCLUDE_SVG=false
 INCLUDE_XML=false
 WC_LIMIT=10000 # Maximum number of lines to process
 TRACKED_ONLY=false
+SKIP_TEMP_REPO=${SKIP_TEMP_REPO:-false}
 
 # This defines a custom ignore file name that will be used in addition to .gitignore
 ADDITIONAL_IGNORE_FILE_NAME=".ctx-src-ignore"
 
-
-root_path=""
-
 # Function to print usage information
 print_usage() {
-    echo "Usage: $0 [OPTIONS] <directory1> [<directory2> ...] [<pathspec>...] [-- <pathspec>...]"
-    echo "Options:"
-    echo "  --count-tokens: Count tokens instead of outputting file contents"
-    echo "  --verbose: Enable verbose output"
-    echo "  --no-xml-tags: Disable XML tags around content"
-    echo "  --include-svg: Explicitly include SVG files"
-    echo "  --include-xml: Explicitly include XML files"
-    echo "  --tracked-only: Only include tracked files in Git repositories"
-    echo "  <directory>: Specify one or more directories to process"
-    echo "  <pathspec>: One or more pathspec patterns to filter files (overrides default excludes)"
-    echo ""
-    echo "Notes:"
-    echo "  - Options must come before directories and pathspecs."
-    echo "  - All arguments after the last directory are treated as pathspecs."
-    echo "  - Use -- to explicitly mark the beginning of pathspecs, especially for paths starting with -."
-    echo ""
-    echo "Examples:"
-    echo "  $0 --verbose /path/to/dir1 /path/to/dir2"
-    echo "  $0 --verbose /path/to/dir1 /path/to/dir2 '*.js' '*.py'"
-    echo "  $0 --verbose /path/to/dir1 /path/to/dir2 -- -file-with-dash.txt"
-    echo "  $0 /path/to/dir1 /path/to/dir2 '*.txt' '!excluded.txt'"
-    echo "  $0 /path/to/dir -- -file-with-dash.txt normal-file.txt"
+    cat << EOF
+Usage: $(basename "$0") [OPTIONS] [<directory>] [<pathspec>...] [-- <pathspec>...]
+
+Process files in a directory for input to large language models, with flexible file selection.
+
+Options:
+  --count-tokens    Count tokens instead of outputting file contents
+  --verbose         Enable verbose output
+  --no-xml-tags     Disable XML tags around content
+  --include-svg     Explicitly include SVG files
+  --include-xml     Explicitly include XML files
+  --tracked-only    Only include tracked files in Git repositories
+
+Arguments:
+  <directory>       Specify the directory to process (default: current directory)
+  <pathspec>        One or more pathspec patterns to filter files
+
+Notes:
+  - The script processes a single directory, specified explicitly or defaulting to the current directory.
+  - Pathspecs can be used to fine-tune file selection within the specified directory.
+  - Default excludes (e.g., node_modules, .git) are applied unless overridden by pathspecs.
+  - Use -- to explicitly mark the beginning of pathspecs, especially for paths starting with -.
+
+Examples:
+  $(basename "$0") --verbose /path/to/project
+  $(basename "$0") . '*.js' '*.py'
+  $(basename "$0") /path/to/project '**/*.txt' '!**/test/**'
+  $(basename "$0") --tracked-only . -- -file-with-dash.txt
+  $(basename "$0") /path/to/project '*.go' ':(exclude)vendor/**'
+
+For more information, visit: https://github.com/yourusername/code-to-gpt
+EOF
 }
+
 # Parse command-line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --count-tokens|--verbose|--no-xml-tags|--exclude-svg|--exclude-xml|--include-svg|--include-xml|--tracked-only)
-            # Handle boolean options
-            # Option name, converted to uppercase, with dashes replaced by underscores
-            # e.g. --count-tokens -> COUNT_TOKENS
+        --count-tokens|--verbose|--no-xml-tags|--include-svg|--include-xml|--tracked-only)
             opt_name="$(echo "${1#--}" | sed 's/-/_/g' | tr '[:lower:]' '[:upper:]')"
             declare "${opt_name}=true"
             shift
@@ -77,17 +84,17 @@ while [[ $# -gt 0 ]]; do
             ;;
         --)
             shift
-            PATHSPEC=("${DEFAULT_EXCLUDES[@]}" "$@")
+            PATHSPEC+=("$@")
             break
             ;;
         -*)
-            echo "Unknown option: $1" >&2
-            print_usage
+            echo "Error: Unknown option $1" >&2
+            print_usage >&2
             exit 1
             ;;
         *)
-            if [[ -d "$1" ]]; then
-                DIRECTORIES+=("$1")
+            if [[ -z "$DIRECTORY" || "$DIRECTORY" == "." ]] && [[ -d "$1" ]]; then
+                DIRECTORY="$1"
             else
                 PATHSPEC+=("$1")
             fi
@@ -135,14 +142,37 @@ realpath() {
 }
 
 get_relative_path() {
-    local target="$1"
-    local base="$2"
+    local source="$1"
+    local target="$2"
 
-    # Remove any trailing slashes from the base path
-    base="${base%/}"
+    # Normalize paths
+    source="/${source#/}"
+    target="/${target#/}"
 
-    # Use Python to calculate the relative path (most reliable cross-platform method)
-    python3 -c "import os.path; print(os.path.relpath('$target', '$base'))"
+    # Split paths into arrays
+    IFS='/' read -ra source_parts <<< "$source"
+    IFS='/' read -ra target_parts <<< "$target"
+
+    # Find common prefix
+    common_parts=0
+    for ((i=0; i<${#source_parts[@]} && i<${#target_parts[@]}; i++)); do
+        if [[ "${source_parts[i]}" != "${target_parts[i]}" ]]; then
+            break
+        fi
+        ((common_parts++))
+    done
+
+    # Build relative path
+    result=""
+    for ((i=common_parts; i<${#source_parts[@]}; i++)); do
+        result="../$result"
+    done
+    for ((i=common_parts; i<${#target_parts[@]}; i++)); do
+        result="${result}${target_parts[i]}/"
+    done
+
+    # Remove trailing slash and return
+    echo "${result%/}"
 }
 
 # Function to check if a file is a text file and should be included
@@ -187,17 +217,14 @@ is_text_file() {
 process_file() {
     local full_path="$1"
     local base_dir="$2"
-    echo "Debug: full_path = $full_path" >&2
-    echo "Debug: base_dir = $base_dir" >&2
+
     local relative_path=$(get_relative_path "$base_dir" "$full_path")
-    echo "Debug: relative_path = $relative_path" >&2
+
     local mime_type=$(file -b --mime-type "$full_path")
     local line_count=$(wc -l < "$full_path")
 
     if ! is_text_file "$full_path"; then
-        if $VERBOSE; then
-            echo "Skipping non-text file: $relative_path (MIME: $mime_type)" >&2
-        fi
+        v_echo "Skipping non-text file: $relative_path (MIME: $mime_type)"
         return
     fi
 
@@ -209,23 +236,23 @@ process_file() {
     v_echo "Processing file: $relative_path (MIME: $mime_type)"
 
     if $USE_XML_TAGS; then
-        echo "<file path=\"$relative_path\">"
+        echo "  <file path=\"$relative_path\">"
     fi
 
     if $COUNT_TOKENS; then
         command -v tokencount &> /dev/null || {
-            {
-                echo "tokencount is required for token counting"
-                echo "you can install it with go install github.com/tmc/tokencount@latest"
-            } >&2; exit 1; }
+            echo "tokencount is required for token counting" >&2
+            echo "you can install it with go install github.com/tmc/tokencount@latest" >&2
+            exit 1
+        }
         token_count=$(tokencount "$full_path")
-        echo "$token_count $relative_path"
+        echo "    $token_count $relative_path"
     else
-        cat "$full_path" | sed -e 's/^/  /'
+        sed 's/^/    /' "$full_path"
     fi
 
     if $USE_XML_TAGS; then
-        echo "</file>"
+        echo "  </file>"
     fi
 }
 
@@ -258,7 +285,7 @@ get_git_dir() {
 IGNORE_FILE_NAME=".ctx-src-ignore"
 
 apply_custom_ignore() {
-    local ignore_file=".ctx-src-ignore"
+    local ignore_file="$GIT_WORK_TREE/$ADDITIONAL_IGNORE_FILE_NAME"
     if [ -f "$ignore_file" ]; then
         while IFS= read -r pattern || [[ -n "$pattern" ]]; do
             # Ignore empty lines and comments
@@ -272,19 +299,38 @@ apply_custom_ignore() {
 # Helper function to get files in a directory (DIRECTORY).
 get_files() {
     local target_dir="$1"
+    local temp_dir=""
     local git_dir
+    local git_root
 
     if ! git -C "$target_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        echo "Error: '$target_dir' is not a Git repository." >&2
-        exit 1
+        if [ "$SKIP_TEMP_REPO" = "true" ]; then
+            v_echo "Skipping temporary repo creation for non-Git directory"
+            find "$target_dir" -type f -print0 | sed -z "s|^$target_dir/||" | tr '\0' '\n'
+            return
+        fi
+        temp_dir=$(mktemp -d) || { v_echo "Error: Failed to create temp directory"; return 1; }
+        if ! git init "$temp_dir" > /dev/null 2>&1; then
+            v_echo "Error: Failed to initialize temporary Git repository"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+        git_dir="$temp_dir/.git"
+        git_root="$temp_dir"
+    else
+        if ! git_dir=$(git -C "$target_dir" rev-parse --git-dir 2>/dev/null); then
+            v_echo "Error: Failed to get Git directory for $target_dir"
+            return 1
+        fi
+        if ! git_root=$(git -C "$target_dir" rev-parse --show-toplevel 2>/dev/null); then
+            v_echo "Error: Failed to get Git root for $target_dir"
+            return 1
+        fi
     fi
 
-    git_dir=$(git -C "$target_dir" rev-parse --git-dir)
-    local git_root=$(git -C "$target_dir" rev-parse --show-toplevel)
-
     (
-        cd "$git_root"
         export GIT_DIR="$git_dir"
+        export GIT_WORK_TREE="$target_dir"
 
         local git_args=(-z --exclude-standard)
         if ! $TRACKED_ONLY; then
@@ -293,19 +339,16 @@ get_files() {
 
         apply_custom_ignore
 
-        v_echo "Running: git ls-files ${git_args[*]}"
-        local files
-        files=$(git ls-files "${git_args[@]}" | tr '\0' '\n')
-        v_echo "Found files:"
-
-        if [ -z "$files" ]; then
-            v_echo "No files found matching the criteria."
-            v_echo "Directory contents:"
-            ls -la >&2
-        else
-            echo "$files"
-        fi
+        v_echo "PATHSPEC: ${PATHSPEC[*]}"
+        v_echo "Running: git ls-files ${git_args[*]} -- ${PATHSPEC[*]}"
+        git ls-files "${git_args[@]}" -- "${PATHSPEC[@]}" | tr '\0' '\n'
     )
+
+    local exit_status=$?
+    if [ -n "$temp_dir" ]; then
+        rm -rf "$temp_dir" || v_echo "Warning: Failed to remove temporary directory $temp_dir"
+    fi
+    return $exit_status
 }
 
 # If no specific files or directories were specified by the user,
@@ -320,59 +363,20 @@ fi
 PATHSPEC+=("${DEFAULT_EXCLUDES[@]}")
 
 # Main processing logic
-# - Iterate over directories
-# - For each directory, get files and process them
-# - Optionally wrap the output in XML tags
-# - Optionally count tokens instead of outputting file contents
-
-# default to current directory if none are specified
-if [ ${#DIRECTORIES[@]} -eq 0 ]; then
-    DIRECTORIES=(".")
-fi
-# Convert relative paths to absolute paths
-DIRECTORIES=("${DIRECTORIES[@]/#/$(pwd)/}")
-
-check_directory() {
-    local dir="$1"
-    if [ ! -d "$dir" ]; then
-        echo "Error: Directory '$dir' does not exist or is not accessible." >&2
-        exit 1
-    fi
-}
-# If we wrapping with xml, and have more than one directory, we need to wrap the output in a <source-code-roots> tag
 if $USE_XML_TAGS; then
-    if [ ${#DIRECTORIES[@]} -gt 1 ]; then
-        echo "<source-code-roots>"
-    fi
+    root_path="$(get_home_relative_dirpath "$DIRECTORY")"
+    echo "<root path=\"$root_path\">"
 fi
 
-for DIRECTORY in "${DIRECTORIES[@]}"; do
-    check_directory "$DIRECTORY"
-
-    if $USE_XML_TAGS; then
-        root_path="$(get_home_relative_dirpath "$DIRECTORY")"
-        echo "<root path=\"$root_path\">"
-    fi
-
-    git_root=$(git -C "$DIRECTORY" rev-parse --show-toplevel)
-
-    get_files "$DIRECTORY" | while read -r file; do
-        v_echo "processing file: $file"
-        full_path="$git_root/$file"
-        if [ -f "$full_path" ]; then
-            process_file "$full_path" "$DIRECTORY"
-        elif $VERBOSE; then
-            echo "Skipping non-existent file: $full_path" >&2
-        fi
-    done
-
-    if $USE_XML_TAGS; then
-        echo "</root>"
+get_files "$DIRECTORY" | while read -r file; do
+    full_path="$DIRECTORY/$file"
+    if [ -f "$full_path" ]; then
+        process_file "$full_path" "$DIRECTORY"
+    elif $VERBOSE; then
+        echo "Skipping non-existent file: $full_path" >&2
     fi
 done
 
 if $USE_XML_TAGS; then
-    if [ ${#DIRECTORIES[@]} -gt 1 ]; then
-        echo "</source-code-roots>"
-    fi
+    echo "</root>"
 fi

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"flag"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -23,9 +22,14 @@ func TestCodeToGPT(t *testing.T) {
 	engine.Cmds["create-binary-file"] = createBinaryFileCmd
 	engine.Conds["has"] = condHas
 	ctx := context.Background()
+
+	gitBin, err := exec.LookPath("git")
+	if err != nil {
+		t.Log("git not found in PATH")
+	}
 	env := []string{
 		"USER=" + os.Getenv("USER"),
-		"PATH=" + os.Getenv("PATH"),
+		"PATH=" + filepath.Dir(gitBin) + ":" + defaultPATH(),
 		"HOME=" + filepath.Dir(filepath.Dir(t.TempDir())),
 	}
 
@@ -36,6 +40,11 @@ func TestCodeToGPT(t *testing.T) {
 		env = append(env, "BASH_XTRACEFD=2")
 	}
 	scripttest.Test(t, ctx, engine, env, "testdata/*.txt")
+}
+
+// defaultPATH returns the default PATH for the system.
+func defaultPATH() string {
+	return "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 }
 
 var codeToGPTCmd = script.Command(
@@ -50,7 +59,6 @@ var codeToGPTCmd = script.Command(
 		} else {
 			cmd.Args = append(cmd.Args, scriptPath+" "+strings.Join(args, " "))
 		}
-		fmt.Println("args", cmd.Args)
 		cmd.Dir = s.Getwd()
 		cmd.Env = s.Environ()
 		var stdout, stderr bytes.Buffer
@@ -73,7 +81,8 @@ var createBinaryFileCmd = script.Command(
 			return nil, script.ErrUsage
 		}
 		data := []byte{0, 1, 2, 3}
-		err := os.WriteFile(args[0], data, 0644)
+		path := filepath.Join(s.Getwd(), args[0])
+		err := os.WriteFile(path, data, 0644)
 		return nil, err
 	},
 )
