@@ -21,6 +21,12 @@ type AppState struct {
 	ActualSampleRate  int
 }
 
+// AudioWriteCloser extends io.WriteCloser with additional methods
+type AudioWriteCloser interface {
+	io.WriteCloser
+	IsClosed() bool
+}
+
 type RealtimeClient struct {
 	URL        string
 	APIKey     string
@@ -50,17 +56,17 @@ type Session struct {
 	ID                      string              `json:"id,omitempty"`
 	Object                  string              `json:"object,omitempty"`
 	Model                   string              `json:"model,omitempty"`
-	Modalities              []string            `json:"modalities"`
-	Instructions            string              `json:"instructions"`
-	Voice                   string              `json:"voice"`
+	Modalities              []string            `json:"modalities,omitempty"`
+	Instructions            string              `json:"instructions,omitempty"`
+	Voice                   string              `json:"voice,omitempty"`
 	AvailableVoices         []string            `json:"available_voices,omitempty"`
-	InputAudioFormat        string              `json:"input_audio_format"`
-	OutputAudioFormat       string              `json:"output_audio_format"`
-	InputAudioTranscription *AudioTranscription `json:"input_audio_transcription"`
-	TurnDetection           TurnDetection       `json:"turn_detection"`
-	Tools                   []Tool              `json:"tools"`
-	ToolChoice              string              `json:"tool_choice"`
-	Temperature             float64             `json:"temperature"`
+	InputAudioFormat        string              `json:"input_audio_format,omitempty"`
+	OutputAudioFormat       string              `json:"output_audio_format,omitempty"`
+	InputAudioTranscription *AudioTranscription `json:"input_audio_transcription,omitempty"`
+	TurnDetection           TurnDetection       `json:"turn_detection,omitempty"`
+	Tools                   []Tool              `json:"tools,omitempty"`
+	ToolChoice              string              `json:"tool_choice,omitempty"`
+	Temperature             float64             `json:"temperature,omitempty"`
 }
 
 type AudioTranscription struct {

@@ -1,8 +1,27 @@
+/*
+htmldistill is a command-line tool that extracts and distills the main content
+from HTML documents. It processes input from URLs, files, or standard input,
+removing clutter such as navigation, ads, and other non-essential elements.
+
+Usage:
+
+	htmldistill <url1> [url2] [url3] ...
+
+htmldistill accepts one or more URLs as arguments. For each URL, it fetches
+the content, processes it using the go-domdistiller library, and outputs the
+extracted main content as HTML to stdout.
+
+The tool can also process local files or input from stdin by using '-' as an
+argument. When reading from stdin, an optional base URL can be provided to
+resolve relative links.
+
+htmldistill is useful for cleaning up web content for further processing,
+improving readability, or preparing data for natural language processing tasks.
+*/
 package main
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"io"
 	"net/url"
@@ -14,16 +33,16 @@ import (
 	"golang.org/x/net/html"
 )
 
-var (
-	flagInput   = flag.String("input", "-", "Path to the input HTML file, or URL to download")
-	flagBaseURL = flag.String("base-url", "", "Optional base URL for input from stdin")
-)
-
 func main() {
-	flag.Parse()
-	if err := run(*flagInput, *flagBaseURL); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "Usage: htmldistill <url1> [url2] [url3] ...")
 		os.Exit(1)
+	}
+
+	for _, arg := range os.Args[1:] {
+		if err := run(arg, ""); err != nil {
+			fmt.Fprintf(os.Stderr, "Error processing %s: %v\n", arg, err)
+		}
 	}
 }
 
@@ -42,6 +61,7 @@ func urlLike(input string) bool {
 }
 
 func runURL(url string) error {
+	fmt.Fprintf(os.Stderr, "Processing URL: %s\n", url)
 	return handle(distiller.ApplyForURL(url, time.Minute, &distiller.Options{
 		LogFlags: distiller.LogEverything,
 	}))

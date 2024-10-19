@@ -5,8 +5,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -25,10 +27,6 @@ func run() error {
 	// Setup signal handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigChan
-		cancel()
-	}()
 
 	// Parse command-line flags
 	config, err := parseFlags()
@@ -74,20 +72,66 @@ func run() error {
 	}
 	defer client.Disconnect()
 
-	// Apply initial voice and instructions if provided
-	if config.InitialVoice != "" || config.InitialInstructions != "" {
+	// Wait for the initial session to be created and stored
+	if err := waitForInitialSession(ctx, client); err != nil {
+		return err
+	}
+
+	// Apply initial instructions if provided
+	if config.InitialInstructions != "" {
 		inputHandler := NewInputHandler(client, state)
-		if err := inputHandler.updateSession(config.InitialVoice, config.InitialInstructions); err != nil {
-			logError("Failed to set initial voice or instructions", err)
+		if err := inputHandler.updateSession("", config.InitialInstructions); err != nil {
+			logError("Failed to set initial instructions", err)
 		}
 	}
 
 	// Start input handling
 	inputHandler := NewInputHandler(client, state)
-	go inputHandler.ReadStdin(ctx)
+	inputDone := make(chan struct{})
+	go func() {
+		inputHandler.ReadStdin(ctx)
+		close(inputDone)
+	}()
 
-	// Wait for context cancellation
-	<-ctx.Done()
+	// Main event loop
+	done := make(chan struct{})
+	go func() {
+		runEventLoop(ctx, client, state, inputDone)
+		close(done)
+	}()
+
+	// Wait for signal or event loop to finish
+	select {
+	case <-sigChan:
+		logInfo("Received interrupt signal, shutting down")
+		cancel()
+	case <-done:
+		logInfo("Event loop finished, shutting down")
+	}
+
+	// Perform shutdown
+	if err := performShutdown(state); err != nil {
+		logError("Error during shutdown", err)
+	}
+
+	return nil
+}
+
+func performShutdown(state *AppState) error {
+	logDebug("Beginning shutdown process")
+
+	// Add a small delay to allow any remaining audio to be played
+	time.Sleep(500 * time.Millisecond)
+
+	// Ensure audio output is properly closed
+	if state.AudioOutput != nil {
+		logDebug("Closing audio output")
+		if err := state.AudioOutput.Close(); err != nil {
+			logError("Error closing audio output", err)
+		}
+	}
+
+	logInfo("Shutdown complete")
 	return nil
 }
 
@@ -135,11 +179,26 @@ func setupAudioOutputFile(state *AppState) error {
 }
 
 func setupAudioStreaming(ctx context.Context, state *AppState) error {
-	player := NewMacOSAudioPlayer(state)
+	// Check if ffplay is installed
+	if err := checkAudioDependencies(); err != nil {
+		return err
+	}
+
+	player := NewFFplayPlayer(state)
 	if err := player.Start(ctx, state, state.DefaultSampleRate); err != nil {
 		return fmt.Errorf("failed to start audio playback: %w", err)
 	}
 	state.AudioOutput = NewBufferedAudioWriter(player, 8192) // 8KB buffer
+
+	logInfo("Audio streaming setup completed successfully")
+	return nil
+}
+
+func checkAudioDependencies() error {
+	_, err := exec.LookPath("ffplay")
+	if err != nil {
+		return fmt.Errorf("ffplay is not installed or not in PATH. Please install FFmpeg to use audio streaming")
+	}
 	return nil
 }
 

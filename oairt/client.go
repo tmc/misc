@@ -191,6 +191,14 @@ func (c *RealtimeClient) handleEvent(event Event) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// Store session information when received
+	if event.Type == "session.created" || event.Type == "session.update" {
+		if event.Session != nil {
+			c.state.Session = event.Session
+			logDebug("Session updated", zap.Any("session", c.state.Session))
+		}
+	}
+
 	handlers := c.handlers[event.Type]
 	for _, handler := range handlers {
 		go handler(event)
