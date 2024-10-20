@@ -1,7 +1,7 @@
 # Test count tokens
 
 [has:tokencount] code-to-gpt --count-tokens .
-[has:tokencount] stdout '6 file2.txt'
+[has:tokencount] stdout '6 ./file2.txt$'
 
 env PATH=/usr/bin:/usr/local/bin:/bin
 ! code-to-gpt --count-tokens .

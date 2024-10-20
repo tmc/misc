@@ -25,11 +25,13 @@ func TestCodeToGPT(t *testing.T) {
 
 	gitBin, err := exec.LookPath("git")
 	if err != nil {
-		t.Log("git not found in PATH")
+		t.Fatal("git not found in PATH")
 	}
+	goBin := filepath.Join(os.Getenv("HOME"), "go", "bin")
+
 	env := []string{
 		"USER=" + os.Getenv("USER"),
-		"PATH=" + filepath.Dir(gitBin) + ":" + defaultPATH(),
+		"PATH=" + filepath.Dir(gitBin) + ":" + goBin + ":" + defaultPATH(),
 		"HOME=" + filepath.Dir(filepath.Dir(t.TempDir())),
 	}
 

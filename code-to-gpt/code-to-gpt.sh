@@ -246,7 +246,7 @@ process_file() {
             exit 1
         }
         token_count=$(tokencount "$full_path")
-        echo "    $token_count $relative_path"
+        echo "    $token_count"
     else
         sed 's/^/    /' "$full_path"
     fi
