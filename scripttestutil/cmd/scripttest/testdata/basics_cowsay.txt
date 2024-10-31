@@ -1,0 +1,4 @@
+# basics showing scripttest behavior
+scripttest -h
+stdout ''
+scripttest test 'testdata/*'

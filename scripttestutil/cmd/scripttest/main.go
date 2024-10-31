@@ -1,23 +1,26 @@
 package main
 
 import (
-	"bufio"
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
-
-	"github.com/fatih/color"
 )
 
 var (
 	verbose bool
 	stream  bool
+	pattern string
+
+	flagDebug bool
 )
 
 func main() {
@@ -26,6 +29,8 @@ func main() {
 
 	flag.BoolVar(&verbose, "v", false, "verbose output")
 	flag.BoolVar(&stream, "stream", false, "stream CGPT output")
+	flag.BoolVar(&flagDebug, "debug", false, "debug CGPT output")
+	flag.StringVar(&pattern, "p", "testdata/*.txt", "test file pattern")
 	flag.Usage = usage
 	flag.Parse()
 
@@ -34,17 +39,30 @@ func main() {
 	}
 
 	cmd := flag.Arg(0)
-	dir := "."
-	if flag.NArg() > 1 {
-		dir = flag.Arg(1)
-	}
-
 	var err error
+
 	switch cmd {
+	case "test", "run":
+		// If pattern provided as argument, override flag
+		if flag.NArg() > 1 {
+			pattern = flag.Arg(1)
+		}
+		err = runTest(pattern)
+
 	case "scaffold":
+		dir := "."
+		if flag.NArg() > 1 {
+			dir = flag.Arg(1)
+		}
 		err = scaffold(dir)
+
 	case "infer":
+		dir := "."
+		if flag.NArg() > 1 {
+			dir = flag.Arg(1)
+		}
 		err = infer(dir)
+
 	default:
 		log.Fatalf("unknown command: %s", cmd)
 	}
@@ -55,10 +73,24 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "usage: scripttest [-v] <command> [dir]\n")
-	fmt.Fprintf(os.Stderr, "commands:\n")
-	fmt.Fprintf(os.Stderr, "  scaffold    create scripttest scaffold\n")
-	fmt.Fprintf(os.Stderr, "  infer       infer command info\n")
+	fmt.Fprintf(os.Stderr, `usage: scripttest [-v] [-p pattern] <command> [args...]
+
+Commands:
+  test, run    run scripttest files (default pattern: testdata/*.txt)
+               scripttest test                # uses -p or default pattern
+               scripttest test 'custom/*.txt' # overrides pattern
+
+  scaffold     create scripttest scaffold in [dir]
+               scripttest scaffold .
+
+  infer        infer command info in [dir]
+               scripttest infer .
+
+Flags:
+  -v           verbose output
+  -stream      stream CGPT output
+  -p pattern   test file pattern (default: testdata/*.txt)
+`)
 	os.Exit(2)
 }
 
@@ -76,14 +108,17 @@ func scaffold(dir string) error {
 		log.Printf("command info: %s", info)
 	}
 
-	prompt := generateScaffoldPrompt(info)
-	resp, err := queryCGPT(prompt, filepath.Join(dir, ".scripttest_history"))
+	prompt, err := generateScaffoldPrompt(info)
 	if err != nil {
-		return fmt.Errorf("failed to query CGPT: %v", err)
+		return fmt.Errorf("failed to load prompt cgpt: %v", err)
+	}
+	resp, err := queryCgpt(prompt, filepath.Join(dir, ".scripttest_history"), "")
+	if err != nil {
+		return fmt.Errorf("failed to query cgpt: %v", err)
 	}
 
 	if verbose {
-		log.Printf("CGPT response: %s", resp)
+		log.Printf("cgpt response: %s", resp)
 	}
 
 	return applyScaffold(dir, resp)
@@ -135,39 +170,94 @@ func inferCommandInfo(dir string) (string, error) {
 		return "", fmt.Errorf("failed to get codebase content: %v", err)
 	}
 
-	prompt := fmt.Sprintf("Analyze this codebase and identify key commands, binaries, and functions:\n\n%s", content)
-	return queryCGPT(prompt, filepath.Join(dir, ".scripttest_history"))
+	prompt := fmt.Sprintf("Analyze this codebase and identify key binary entrypoints and commnds:\n\n%s\n\n", content)
+	prompt += `output a json representation matching this datatype:
+type Commands = CommandInfo[];
+type CommandInfo = {
+  name: string;    // command name
+  summary: string; // usage summary
+  args: string;    // argument pattern
+}`
+	res, err := queryCgpt(prompt, filepath.Join(dir, ".scripttest_history_infer"), "```json\n[")
+	if err != nil {
+		return "", fmt.Errorf("failed to run cgpt: %w", err)
+	}
+	return res, nil
 }
 
 func getCodebaseContent(dir string) (string, error) {
-	cmd := exec.Command("git", "-C", dir, "ls-files")
-	files, err := cmd.Output()
+	// Check if code-to-gpt.sh exists in PATH
+	scriptPath, err := exec.LookPath("code-to-gpt.sh")
 	if err != nil {
-		return "", fmt.Errorf("failed to list git files: %v", err)
-	}
-
-	var content strings.Builder
-	for _, file := range strings.Fields(string(files)) {
-		data, err := os.ReadFile(filepath.Join(dir, file))
-		if err != nil {
-			return "", fmt.Errorf("failed to read file %s: %v", file, err)
+		gopath := os.Getenv("GOPATH")
+		if gopath == "" {
+			gopath = filepath.Join(os.Getenv("HOME"), "go")
+			if runtime.GOOS == "windows" {
+				gopath = filepath.Join(os.Getenv("USERPROFILE"), "go")
+			}
 		}
-		fmt.Fprintf(&content, "--- %s ---\n%s\n\n", file, string(data))
+
+		binDir := filepath.Join(gopath, "bin")
+		scriptPath = filepath.Join(binDir, "code-to-gpt.sh")
+
+		if err := downloadScript(scriptPath); err != nil {
+			return "", fmt.Errorf("failed to download code-to-gpt.sh: %v", err)
+		}
+
+		// Make executable
+		if err := os.Chmod(scriptPath, 0755); err != nil {
+			return "", fmt.Errorf("failed to make script executable: %v", err)
+		}
 	}
-	return content.String(), nil
+
+	cmd := exec.Command(scriptPath)
+	cmd.Dir = dir
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to run code-to-gpt: %v", err)
+	}
+	return string(output), nil
 }
 
-func generateScaffoldPrompt(info string) string {
-	return fmt.Sprintf("Generate a scripttest scaffold for this command info:\n\n%s", info)
+func downloadScript(destPath string) error {
+	// Create bin directory if it doesn't exist
+	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		return err
+	}
+
+	// Download script from a trusted source
+	resp, err := http.Get("https://raw.githubusercontent.com/tmc/misc/master/code-to-gpt/code-to-gpt.sh")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
 
-func queryCGPT(prompt, historyFile string) (string, error) {
+func queryCgpt(prompt, historyFile string, prefill string) (string, error) {
 	args := []string{
-		"-i", prompt,
 		"-I", historyFile,
 		"-O", historyFile,
-		"--prefill", "```json\n{",
 	}
+
+	if flagDebug {
+		args = append(args, "--debug")
+	}
+
+	if prefill != "" {
+		args = append(args, "--prefill", prefill)
+	} else {
+		args = append(args, "--prefill", "```json\n{")
+	}
+
 	cmd := exec.Command("cgpt", args...)
 
 	var output strings.Builder
@@ -175,6 +265,7 @@ func queryCGPT(prompt, historyFile string) (string, error) {
 	if stream {
 		stderr = os.Stderr
 	}
+	cmd.Stdin = strings.NewReader(prompt)
 
 	cmd.Stdout = io.MultiWriter(&output, stderr)
 	cmd.Stderr = stderr
@@ -182,8 +273,77 @@ func queryCGPT(prompt, historyFile string) (string, error) {
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("cgpt query failed: %v", err)
 	}
-
 	return extractJSON(output.String()), nil
+}
+
+func runTest(pattern string) error {
+	if verbose {
+		log.Printf("running tests matching pattern: %s", pattern)
+	}
+
+	// Get clean work directory
+	dir, err := getWorkDir()
+	if err != nil {
+		return fmt.Errorf("failed to get work directory: %v", err)
+	}
+
+	if verbose {
+		log.Printf("using work directory: %s", dir)
+	}
+
+	// Create testdata directory
+	testdata := filepath.Join(dir, "testdata")
+	if err := os.MkdirAll(testdata, 0755); err != nil {
+		return fmt.Errorf("failed to create testdata directory: %v", err)
+	}
+
+	// Set up test files in work directory
+	if err := setupTestDir(dir); err != nil {
+		return fmt.Errorf("failed to setup test directory: %v", err)
+	}
+
+	// Find matching test files
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return fmt.Errorf("invalid pattern: %v", err)
+	}
+	if len(matches) == 0 {
+		return fmt.Errorf("no files match pattern: %s", pattern)
+	}
+
+	// Create symlinks in testdata directory
+	for _, file := range matches {
+		abs, err := filepath.Abs(file)
+		if err != nil {
+			return fmt.Errorf("failed to get absolute path for %s: %v", file, err)
+		}
+		dst := filepath.Join(testdata, filepath.Base(file))
+		if err := os.Symlink(abs, dst); err != nil {
+			return fmt.Errorf("failed to link test file %s: %v", file, err)
+		}
+	}
+
+	// Initialize go modules
+	if err := initModules(dir); err != nil {
+		return fmt.Errorf("failed to initialize modules: %v", err)
+	}
+
+	buildID := getBuildID()
+	if verbose {
+		log.Printf("build ID: %s", buildID)
+	}
+
+	// Run go test in the directory
+	cmd := exec.Command("go", "test", "-v")
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = os.Environ()
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("tests failed: %v", err)
+	}
+
+	return nil
 }
 
 func applyScaffold(dir string, resp string) error {
@@ -205,23 +365,99 @@ func applyScaffold(dir string, resp string) error {
 	return nil
 }
 
-func streamOutput(r io.Reader, w io.Writer, c *color.Color) {
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if c != nil {
-			c.Fprintln(w, line)
-		} else {
-			fmt.Fprintln(w, line)
+func extractJSON(output string) string {
+	// Try to find JSON between markdown code fences
+	prefix := "```json"
+	suffix := "```"
+	start := strings.Index(output, prefix)
+	if start == -1 {
+		// Try alternate code fence
+		prefix = "~~~json"
+		start = strings.Index(output, prefix)
+	}
+	if start != -1 {
+		start += len(prefix)
+		// Find closing fence after the start position
+		end := strings.Index(output[start:], suffix)
+		if end != -1 {
+			// Trim whitespace and validate JSON
+			jsonStr := strings.TrimSpace(output[start : start+end])
+			if json.Valid([]byte(jsonStr)) {
+				return jsonStr
+			}
 		}
 	}
+	// If no valid JSON found between fences, try to find and validate any JSON in the string
+	if json.Valid([]byte(output)) {
+		return output
+	}
+	return "" // Return empty if no valid JSON found
 }
 
-func extractJSON(output string) string {
-	start := strings.Index(output, "{")
-	end := strings.LastIndex(output, "}\n```")
-	if start != -1 && end != -1 && end > start {
-		return output[start : end+1]
+// getCacheDir returns the scripttest cache directory, creating it if needed
+func getCacheDir() (string, error) {
+	cacheDir := os.Getenv("XDG_CACHE_HOME")
+	if cacheDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("failed to get home directory: %v", err)
+		}
+		cacheDir = filepath.Join(home, ".cache")
 	}
-	return output // Return the whole output if we can't find the JSON boundaries
+
+	scripttestCache := filepath.Join(cacheDir, "scripttest")
+	if err := os.MkdirAll(scripttestCache, 0755); err != nil {
+		return "", fmt.Errorf("failed to create cache directory: %v", err)
+	}
+
+	workDir := filepath.Join(scripttestCache, "workdir")
+	if err := os.MkdirAll(workDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create work directory: %v", err)
+	}
+
+	return workDir, nil
+}
+
+// getWorkDir returns a clean working directory for the test run
+func getWorkDir() (string, error) {
+	cacheDir, err := getCacheDir()
+	if err != nil {
+		return "", err
+	}
+
+	// Clean any existing content
+	entries, err := os.ReadDir(cacheDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to read cache directory: %v", err)
+	}
+	for _, entry := range entries {
+		path := filepath.Join(cacheDir, entry.Name())
+		if err := os.RemoveAll(path); err != nil {
+			return "", fmt.Errorf("failed to clean cache entry %s: %v", entry.Name(), err)
+		}
+	}
+
+	// Create fresh workdir
+	workDir := filepath.Join(cacheDir, "current")
+	if err := os.MkdirAll(workDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create work directory: %v", err)
+	}
+
+	return workDir, nil
+}
+
+func initModules(dir string) error {
+	// Run go mod tidy
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = dir
+	cmd.Env = os.Environ() // Ensure we pass through GO111MODULE, GOPATH etc.
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("go mod tidy failed: %v\n%s", err, stderr.String())
+	}
+
+	return nil
 }

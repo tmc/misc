@@ -1,0 +1,8 @@
+Generate a scripttest scaffold analyzing this codebase.
+Use the scripttest knowledge to create appropriate test files.
+The codebase info is:
+
+%s
+
+Generate a JSON response with test files as keys and content as values.
+Each test should follow the scripttest format and cover core functionality.

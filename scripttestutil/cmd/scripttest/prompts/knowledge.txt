@@ -1,0 +1,90 @@
+<scripttest_knowledge>
+  <overview>
+    Scripttest is a testing framework that uses txtar-formatted text files to define test cases. Each test file contains a sequence of commands followed by input files and expected outputs. The framework supports command execution, file operations, and output verification.
+  </overview>
+
+  <file_structure>
+    <format_rules>
+      1. Commands appear at the top of the file before any -- markers
+      2. File contents follow, each starting with "-- filename --"
+      3. Commands can reference files defined later in the same test
+      4. Empty lines and comments (starting with #) are allowed
+    </format_rules>
+
+    <example_layout>
+      # Test description (optional comment)
+      command1 arg1 arg2
+      command2 arg3
+      stdout 'expected output'
+      ! stderr 'error pattern'
+      
+      -- input.txt --
+      Input file contents
+      
+      -- expected.txt --
+      Expected output contents
+    </example_layout>
+
+    <command_syntax>
+      <prefix_markers>
+        - ! : command must fail
+        - ? : command may fail or succeed
+        - [condition] : guard command with condition
+      </prefix_markers>
+      <background>Commands can run in background with & suffix</background>
+    </command_syntax>
+  </file_structure>
+
+  <test_patterns>
+    <pattern name="basic_command">
+      # Simple command execution and output check
+      echo hello
+      stdout 'hello'
+      ! stderr .  # no stderr output
+    </pattern>
+
+    <pattern name="file_verification">
+      # File content verification
+      cat input.txt
+      cmp stdout expected.txt
+      exists output.txt
+      
+      -- input.txt --
+      test content
+      -- expected.txt --
+      test content
+    </pattern>
+
+    <pattern name="error_handling">
+      # Error case testing
+      ! missing-command arg
+      stderr 'command not found'
+      
+      ? flaky-command  # may succeed or fail
+    </pattern>
+
+    <pattern name="conditional">
+      # Platform-specific test
+      [unix] chmod 755 script.sh
+      [windows] exists script.bat
+    </pattern>
+  </test_patterns>
+
+  <common_commands>
+    <command name="cat">Read and output file contents</command>
+    <command name="cmp">Compare file contents</command>
+    <command name="stdout">Check stdout matches pattern</command>
+    <command name="stderr">Check stderr matches pattern</command>
+    <command name="exists">Verify file exists</command>
+    <command name="exec">Execute a command</command>
+    <command name="grep">Search for patterns</command>
+  </common_commands>
+
+  <test_writing_guidelines>
+    <guideline>Start with basic command verification</guideline>
+    <guideline>Include both success and failure cases</guideline>
+    <guideline>Test platform-specific behavior with conditions</guideline>
+    <guideline>Verify both stdout and stderr when relevant</guideline>
+    <guideline>Clean up resources after tests</guideline>
+  </test_writing_guidelines>
+</scripttest_knowledge>

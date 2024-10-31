@@ -1,0 +1,6 @@
+Analyze this codebase and identify key commands, binaries, and functions:
+
+%s
+
+Focus on testable interfaces, command-line tools, and core functionality.
+Structure findings in a clear, organized format.
