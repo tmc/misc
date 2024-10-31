@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -22,7 +21,7 @@ var (
 )
 
 func main() {
-	log.SetPrefix("scripttestctl: ")
+	log.SetPrefix("scripttest: ")
 	log.SetFlags(0)
 
 	flag.BoolVar(&verbose, "v", false, "verbose output")
@@ -56,7 +55,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "usage: scripttestctl [-v] <command> [dir]\n")
+	fmt.Fprintf(os.Stderr, "usage: scripttest [-v] <command> [dir]\n")
 	fmt.Fprintf(os.Stderr, "commands:\n")
 	fmt.Fprintf(os.Stderr, "  scaffold    create scripttest scaffold\n")
 	fmt.Fprintf(os.Stderr, "  infer       infer command info\n")
@@ -78,7 +77,7 @@ func scaffold(dir string) error {
 	}
 
 	prompt := generateScaffoldPrompt(info)
-	resp, err := queryCGPT(prompt, filepath.Join(dir, ".scripttestctl_history"))
+	resp, err := queryCGPT(prompt, filepath.Join(dir, ".scripttest_history"))
 	if err != nil {
 		return fmt.Errorf("failed to query CGPT: %v", err)
 	}
@@ -100,8 +99,8 @@ func infer(dir string) error {
 		return fmt.Errorf("failed to infer command info: %v", err)
 	}
 
-	file := filepath.Join(dir, ".scripttestctl_info")
-	if err := ioutil.WriteFile(file, []byte(info), 0644); err != nil {
+	file := filepath.Join(dir, ".scripttest_info")
+	if err := os.WriteFile(file, []byte(info), 0644); err != nil {
 		return fmt.Errorf("failed to write command info: %v", err)
 	}
 
@@ -113,8 +112,8 @@ func infer(dir string) error {
 }
 
 func loadOrInferCommandInfo(dir string) (string, error) {
-	file := filepath.Join(dir, ".scripttestctl_info")
-	info, err := ioutil.ReadFile(file)
+	file := filepath.Join(dir, ".scripttest_info")
+	info, err := os.ReadFile(file)
 	if err == nil {
 		if verbose {
 			log.Printf("loaded existing command info from: %s", file)
@@ -137,7 +136,7 @@ func inferCommandInfo(dir string) (string, error) {
 	}
 
 	prompt := fmt.Sprintf("Analyze this codebase and identify key commands, binaries, and functions:\n\n%s", content)
-	return queryCGPT(prompt, filepath.Join(dir, ".scripttestctl_history"))
+	return queryCGPT(prompt, filepath.Join(dir, ".scripttest_history"))
 }
 
 func getCodebaseContent(dir string) (string, error) {
@@ -149,7 +148,7 @@ func getCodebaseContent(dir string) (string, error) {
 
 	var content strings.Builder
 	for _, file := range strings.Fields(string(files)) {
-		data, err := ioutil.ReadFile(filepath.Join(dir, file))
+		data, err := os.ReadFile(filepath.Join(dir, file))
 		if err != nil {
 			return "", fmt.Errorf("failed to read file %s: %v", file, err)
 		}
@@ -172,7 +171,7 @@ func queryCGPT(prompt, historyFile string) (string, error) {
 	cmd := exec.Command("cgpt", args...)
 
 	var output strings.Builder
-	var stderr io.Writer = ioutil.Discard
+	var stderr io.Writer = io.Discard
 	if stream {
 		stderr = os.Stderr
 	}
@@ -190,8 +189,7 @@ func queryCGPT(prompt, historyFile string) (string, error) {
 func applyScaffold(dir string, resp string) error {
 	var files map[string]string
 	if err := json.Unmarshal([]byte(resp), &files); err != nil {
-		// If not valid JSON, treat as a single file content
-		files = map[string]string{"test_cowsay.py": resp}
+		// TODO
 	}
 
 	for path, content := range files {
@@ -199,7 +197,7 @@ func applyScaffold(dir string, resp string) error {
 		if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 			return fmt.Errorf("failed to create directory for %s: %v", path, err)
 		}
-		if err := ioutil.WriteFile(fullPath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
 			return fmt.Errorf("failed to write file %s: %v", path, err)
 		}
 		log.Printf("created %s", path)
