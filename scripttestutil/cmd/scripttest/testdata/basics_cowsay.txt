@@ -1,4 +1,12 @@
 # basics showing scripttest behavior
-scripttest -h
-stdout ''
-scripttest test 'testdata/*'
+? scripttest
+stderr 'usage: scripttest'
+
+scripttest -v test
+
+-- .scripttest_info --
+[{"name":"cowsay"}]
+-- testdata/hello.txt --
+   # nested basics
+   cowsay hi
+   stdout 'hi'

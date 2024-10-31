@@ -134,6 +134,7 @@ func loadCommandInfo() ([]CommandInfo, error) {
 	if err := json.Unmarshal(data, &info); err != nil {
 		return nil, fmt.Errorf("invalid command info format: %v", err)
 	}
+	if testing.Verbose() { fmt.Printf("loaded %d commands from .scripttest_info\n", len(info)) }
 
 	return info, nil
 }

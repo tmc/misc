@@ -210,7 +210,8 @@ func getCodebaseContent(dir string) (string, error) {
 		}
 	}
 
-	cmd := exec.Command(scriptPath)
+	args := []string{"--", ":!.scripttest_history*"}
+	cmd := exec.Command(scriptPath, args...)
 	cmd.Dir = dir
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -261,13 +262,14 @@ func queryCgpt(prompt, historyFile string, prefill string) (string, error) {
 	cmd := exec.Command("cgpt", args...)
 
 	var output strings.Builder
-	var stderr io.Writer = io.Discard
-	if stream {
-		stderr = os.Stderr
-	}
+	var stderr io.Writer = os.Stderr
 	cmd.Stdin = strings.NewReader(prompt)
 
-	cmd.Stdout = io.MultiWriter(&output, stderr)
+	cmd.Stdout = &output
+	if stream {
+		stderr = os.Stderr
+		cmd.Stdout = io.MultiWriter(&output, stderr)
+	}
 	cmd.Stderr = stderr
 
 	if err := cmd.Run(); err != nil {
@@ -323,6 +325,19 @@ func runTest(pattern string) error {
 		}
 	}
 
+	// link in .scripttest_info if it exists:
+	scriptTestInfo := ".scripttest_info"
+	if _, err := os.Stat(scriptTestInfo); err == nil {
+		abs, err := filepath.Abs(scriptTestInfo)
+		if err != nil {
+			return fmt.Errorf("failed to get absolute path for .scripttest_info: %v", err)
+		}
+		dst := filepath.Join(dir, ".scripttest_info")
+		if err := os.Symlink(abs, dst); err != nil {
+			return fmt.Errorf("failed to link .scripttest_info: %v", err)
+		}
+	}
+
 	// Initialize go modules
 	if err := initModules(dir); err != nil {
 		return fmt.Errorf("failed to initialize modules: %v", err)
@@ -334,7 +349,11 @@ func runTest(pattern string) error {
 	}
 
 	// Run go test in the directory
-	cmd := exec.Command("go", "test", "-v")
+	args := []string{"test"}
+	if verbose {
+		args = append(args, "-v")
+	}
+	cmd := exec.Command("go", args...)
 	cmd.Dir = dir
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
