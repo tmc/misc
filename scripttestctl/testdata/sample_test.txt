@@ -1,3 +1,4 @@
 # Sample test
 echo "Hello, World!"
 stdout 'Hello, World!'
+
