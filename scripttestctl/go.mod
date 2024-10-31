@@ -1,5 +1,9 @@
 module github.com/yourusername/scripttestctl
 
-go 1.16
+go 1.21
 
-require rsc.io/script v0.0.0-20231201171528-c3d9c8f5f4a7
+toolchain go1.23.1
+
+require rsc.io/script v0.0.2
+
+require golang.org/x/tools v0.14.0 // indirect
