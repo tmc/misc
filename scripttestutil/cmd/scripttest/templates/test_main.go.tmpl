@@ -1,0 +1,139 @@
+// cmd/scripttest/templates/test_main.go.tmpl
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"rsc.io/script"
+	"rsc.io/script/scripttest"
+)
+
+// Build: {{.BuildID}}
+
+func Test(t *testing.T) {
+	// Start with default commands
+	cmds := scripttest.DefaultCmds()
+
+	// Add any inferred commands
+	extendedCmds, err := addInferredCommands(cmds)
+	if err != nil {
+		t.Logf("warning: failed to load extended commands: %v", err)
+	} else {
+		cmds = extendedCmds
+	}
+
+	engine := &script.Engine{
+		Cmds:  cmds,
+		Conds: scripttest.DefaultConds(),
+		Quiet: !testing.Verbose(),
+	}
+
+	pattern := "testdata/*.txt"
+	if v := os.Getenv("SCRIPTTEST_PATTERN"); v != "" {
+		pattern = v
+	}
+
+	// Start with minimal environment
+	env := []string{
+		"PATH=" + os.Getenv("PATH"),
+		"TMPDIR=" + os.TempDir(),
+		"SCRIPTTEST_PATTERN=" + pattern,
+	}
+
+	// Add bin paths
+	var paths []string
+	if gopath := os.Getenv("GOPATH"); gopath != "" {
+		paths = append(paths, filepath.Join(gopath, "bin"))
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		paths = append(paths, filepath.Join(home, "bin"))
+	}
+	if systemPath := os.Getenv("PATH"); systemPath != "" {
+		paths = append(paths, systemPath)
+	}
+	env[0] = "PATH=" + filepath.Join(paths...)
+
+	t.Log("starting up")
+	scripttest.Test(t, context.Background(), engine, env, pattern)
+}
+
+// CommandInfo describes an inferred command
+type CommandInfo struct {
+	Name    string `json:"name"`    // command name
+	Summary string `json:"summary"` // usage summary
+	Args    string `json:"args"`    // argument pattern
+}
+
+// addInferredCommands adds commands from .scripttest_info to the engine
+func addInferredCommands(cmds map[string]script.Cmd) (map[string]script.Cmd, error) {
+	info, err := loadCommandInfo()
+	if err != nil {
+		if os.IsNotExist(err) {
+			return cmds, nil // no info file is ok
+		}
+		return nil, fmt.Errorf("failed to load command info: %v", err)
+	}
+
+	// Add each command from info
+	for _, cmd := range info {
+		if _, exists := cmds[cmd.Name]; exists {
+			continue // don't override built-in commands
+		}
+
+		// Create a command that runs the program
+		cmds[cmd.Name] = script.Command(
+			script.CmdUsage{
+				Summary: cmd.Summary,
+				Args:    cmd.Args,
+				Async:   true,
+			},
+			makeCommandRunner(cmd.Name),
+		)
+	}
+
+	return cmds, nil
+}
+
+// makeCommandRunner creates the run function for an inferred command
+func makeCommandRunner(name string) func(*script.State, ...string) (script.WaitFunc, error) {
+	return func(s *script.State, args ...string) (script.WaitFunc, error) {
+		cmd := exec.Command(name, args...)
+		cmd.Dir = s.Getwd()
+		
+		var stdout, stderr strings.Builder
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		
+		if err := cmd.Start(); err != nil {
+			return nil, err
+		}
+
+		wait := func(*script.State) (string, string, error) {
+			err := cmd.Wait()
+			return stdout.String(), stderr.String(), err
+		}
+		return wait, nil
+	}
+}
+
+// loadCommandInfo loads the command info from .scripttest_info
+func loadCommandInfo() ([]CommandInfo, error) {
+	data, err := os.ReadFile(".scripttest_info")
+	if err != nil {
+		return nil, err
+	}
+
+	var info []CommandInfo
+	if err := json.Unmarshal(data, &info); err != nil {
+		return nil, fmt.Errorf("invalid command info format: %v", err)
+	}
+
+	return info, nil
+}
