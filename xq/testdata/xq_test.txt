@@ -1,0 +1,41 @@
+# Test basic XML formatting
+xq basic.xml
+stdout '<?xml version="1.0" encoding="UTF-8"?>
+<root>
+  <element>content</element>
+</root>'
+
+# Test HTML formatting
+xq -h basic.xml
+stdout '<html>
+  <body>
+    <p>
+      Hello, World!
+    </p>
+  </body>
+</html>'
+
+# Test XPath query
+xq -x "//book/title" books.xml
+stdout '<title>Book 1</title>
+<title>Book 2</title>'
+
+-- basic.xml --
+<?xml version="1.0" encoding="UTF-8"?>
+<root><element>content</element></root>
+
+-- basic.html --
+<html><body><p>Hello, World!</p></body></html>
+
+-- books.xml --
+<?xml version="1.0" encoding="UTF-8"?>
+<library>
+  <book>
+    <title>Book 1</title>
+    <author>Author 1</author>
+  </book>
+  <book>
+    <title>Book 2</title>
+    <author>Author 2</author>
+  </book>
+</library>
