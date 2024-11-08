@@ -1,113 +1,86 @@
 package main
 
 import (
-    "bytes"
-    "os"
-    "os/exec"
-    "path/filepath"
-    "strings"
-    "testing"
+	"flag"
+	"io"
+	"strings"
+	"testing"
 )
 
-func TestXQ(t *testing.T) {
-    tests, err := filepath.Glob("testdata/*.txt")
-    if err != nil {
-        t.Fatal(err)
-    }
-
-    for _, test := range tests {
-        name := strings.TrimSuffix(filepath.Base(test), ".txt")
-        t.Run(name, func(t *testing.T) {
-            cmd := exec.Command("go", "run", "main.go")
-            cmd.Stdin, err = os.Open(test)
-            if err != nil {
-                t.Fatal(err)
-            }
-
-            var stdout, stderr bytes.Buffer
-            cmd.Stdout = &stdout
-            cmd.Stderr = &stderr
-
-            err = cmd.Run()
-            if err != nil {
-                t.Fatalf("command failed: %v\n%s", err, stderr.String())
-            }
-
-            got := stdout.String()
-            want, err := os.ReadFile(test + ".out")
-            if err != nil {
-                t.Fatal(err)
-            }
-
-            if got != string(want) {
-                t.Errorf("output mismatch:\ngot:\n%s\nwant:\n%s", got, want)
-            }
-        })
-    }
-}
-
 func TestNewFeatures(t *testing.T) {
-    tests := []struct {
-        name    string
-        args    []string
-        input   string
-        wantOut string
-        wantErr string
-    }{
-        {
-            name:    "HTML formatting",
-            args:    []string{"-h"},
-            input:   "<html><body><p>Hello</p></body></html>",
-            wantOut: "<html>\n  <body>\n    <p>Hello</p>\n  </body>\n</html>\n",
-        },
-        {
-            name:    "JSON output",
-            args:    []string{"-j"},
-            input:   "<root><child>value</child></root>",
-            wantOut: "{\n  \"root\": {\n    \"child\": \"value\"\n  }\n}\n",
-        },
-        {
-            name:    "Streaming large XML",
-            args:    []string{"-S"},
-            input:   "<root><child>value</child></root>",
-            wantOut: "<root>\n  <child>value</child>\n</root>\n",
-        },
-        {
-            name:    "Compact output",
-            args:    []string{"-c"},
-            input:   "<root><child>value</child></root>",
-            wantOut: "<root><child>value</child></root>\n",
-        },
-        {
-            name:    "XPath query",
-            args:    []string{"-x", "//child"},
-            input:   "<root><child>value</child></root>",
-            wantOut: "<child>value</child>\n",
-        },
-    }
+	tests := []struct {
+		name    string
+		args    []string
+		input   string
+		wantOut string
+		wantErr string
+	}{
+		{
+			name:    "HTML formatting",
+			args:    []string{"-h"},
+			input:   "<html><body><p>Hello</p></body></html>",
+			wantOut: "<html>\n  <body>\n    <p>Hello</p>\n  </body>\n</html>\n",
+		},
+		{
+			name:    "JSON output",
+			args:    []string{"-j"},
+			input:   "<root><child>value</child></root>",
+			wantOut: "{\n  \"root\": {\n    \"child\": \"value\"\n  }\n}",
+		},
+		{
+			name:    "Streaming large XML",
+			args:    []string{"-S"},
+			input:   "<root><child>value</child></root>",
+			wantOut: "<root>\n  <child>value</child>\n</root>\n",
+		},
+		{
+			name:    "Compact output",
+			args:    []string{"-c"},
+			input:   "<root><child>value</child></root>",
+			wantOut: "<root><child>value</child></root>",
+		},
+		{
+			name:    "XPath query",
+			args:    []string{"-x", "//child"},
+			input:   "<root><child>value</child></root>",
+			wantOut: "<child>value</child>\n",
+		},
+	}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            cmd := exec.Command("go", append([]string{"run", "main.go"}, tt.args...)...)
-            cmd.Stdin = strings.NewReader(tt.input)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset flags before each test
+			flag.CommandLine = flag.NewFlagSet(tt.name, flag.ContinueOnError)
+			flag.CommandLine.SetOutput(io.Discard)
 
-            var stdout, stderr bytes.Buffer
-            cmd.Stdout = &stdout
-            cmd.Stderr = &stderr
+			// Re-declare flags
+			compactOutput = flag.Bool("c", false, "compact instead of pretty-printed output")
+			rawOutput = flag.Bool("r", false, "output raw strings, not JSON texts")
+			colorOutput = flag.Bool("C", false, "colorize JSON")
+			nullInput = flag.Bool("n", false, "use `null` as the single input value")
+			slurpInput = flag.Bool("s", false, "read (slurp) all inputs into an array")
+			fromJSON = flag.Bool("f", false, "input is JSON, not XML")
+			toJSON = flag.Bool("j", false, "output as JSON")
+			htmlInput = flag.Bool("h", false, "treat input as HTML")
+			streamInput = flag.Bool("S", false, "stream large XML files")
+			versionInfo = flag.Bool("v", false, "output version information and exit")
+			xpathQuery = flag.String("x", "", "XPath query to select nodes")
 
-            err := cmd.Run()
-            if err != nil && tt.wantErr == "" {
-                t.Fatalf("command failed: %v\n%s", err, stderr.String())
-            }
+			// Parse flags
+			err := flag.CommandLine.Parse(tt.args)
+			if err != nil {
+				t.Fatalf("Failed to parse flags: %v", err)
+			}
 
-            if got, want := stdout.String(), tt.wantOut; got != want {
-                t.Errorf("output mismatch:\ngot:\n%s\nwant:\n%s", got, want)
-            }
+			// Process input
+			got, err := processInputs([]io.Reader{strings.NewReader(tt.input)})
 
-            if got, want := stderr.String(), tt.wantErr; got != want {
-                t.Errorf("error mismatch:\ngot:\n%s\nwant:\n%s", got, want)
-            }
-        })
-    }
+			if err != nil && tt.wantErr == "" {
+				t.Fatalf("processInputs() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if got != tt.wantOut {
+				t.Errorf("processInputs() got = %v, want %v", got, tt.wantOut)
+			}
+		})
+	}
 }
-

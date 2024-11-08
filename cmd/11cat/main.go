@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -17,8 +18,12 @@ import (
 
 var (
 	ELEVENLABS_API_KEY = os.Getenv("ELEVENLABS_API_KEY")
-	VOICE_ID           = "21m00Tcm4TlvDq8ikWAM"
+	VOICE_ID           string
 )
+
+func init() {
+	flag.StringVar(&VOICE_ID, "voice-id", "21m00Tcm4TlvDq8ikWAM", "The ID of the voice to use")
+}
 
 func main() {
 	if err := run(); err != nil {
@@ -29,6 +34,9 @@ func main() {
 
 func run() error {
 	// Create a new client
+	if ELEVENLABS_API_KEY == "" {
+		return fmt.Errorf("ELEVENLABS_API_KEY environment variable is required")
+	}
 	client := NewElevenlabsClient(ELEVENLABS_API_KEY)
 	if err := client.Dial(); err != nil {
 		return fmt.Errorf("error dialing: %v", err)
