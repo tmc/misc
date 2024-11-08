@@ -5,83 +5,84 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 
 	"github.com/tmc/misc/xq/xml"
-	"golang.org/x/term"
 )
 
-var (
-	compactOutput = flag.Bool("c", false, "compact instead of pretty-printed output")
-	rawOutput     = flag.Bool("r", false, "output raw strings, not JSON texts")
-	colorOutput   = flag.Bool("C", false, "colorize JSON")
-	nullInput     = flag.Bool("n", false, "use `null` as the single input value")
-	slurpInput    = flag.Bool("s", false, "read (slurp) all inputs into an array")
-	fromJSON      = flag.Bool("f", false, "input is JSON, not XML")
-	toJSON        = flag.Bool("j", false, "output as JSON")
-	htmlInput     = flag.Bool("h", false, "treat input as HTML")
-	streamInput   = flag.Bool("S", false, "stream large XML files")
-	versionInfo   = flag.Bool("v", false, "output version information and exit")
-	xpathQuery    = flag.String("x", "", "XPath query to select nodes")
-)
-
-const version = "0.2.0"
+var version = "0.1.0"
 
 func main() {
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: %s [options] [file...]\n\nOptions:\n", os.Args[0])
-		flag.PrintDefaults()
+	os.Exit(run(os.Args, os.Stdin, os.Stdout, os.Stderr))
+}
+
+func run(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	// Parse flags
+	flags := flag.NewFlagSet(args[0], flag.ExitOnError)
+	flags.SetOutput(stderr)
+
+	// Re-declare all flags here
+	compactOutput := flags.Bool("c", false, "compact instead of pretty-printed output")
+	rawOutput := flags.Bool("r", false, "output raw strings, not JSON texts")
+	colorOutput := flags.Bool("C", false, "colorize JSON")
+	nullInput := flags.Bool("n", false, "use `null` as the single input value")
+	slurpInput := flags.Bool("s", false, "read (slurp) all inputs into an array")
+	fromJSON := flags.Bool("f", false, "input is JSON, not XML")
+	toJSON := flags.Bool("j", false, "output as JSON")
+	htmlInput := flags.Bool("h", false, "treat input as HTML")
+	streamInput := flags.Bool("S", false, "stream large XML files")
+	versionInfo := flags.Bool("v", false, "output version information and exit")
+	xpathQuery := flags.String("x", "", "XPath query to select nodes")
+
+	if err := flags.Parse(args[1:]); err != nil {
+		fmt.Fprintf(stderr, "Error parsing flags: %v\n", err)
+		return 1
 	}
-	flag.Parse()
 
 	if *versionInfo {
-		fmt.Printf("xq version %s\n", version)
-		return
+		fmt.Fprintf(stdout, "xq version %s\n", version)
+		return 0
 	}
 
 	var inputs []io.Reader
-	if flag.NArg() == 0 {
-		if term.IsTerminal(int(os.Stdin.Fd())) {
-			flag.Usage()
-			return
-		}
-		inputs = append(inputs, os.Stdin)
+	if flags.NArg() == 0 {
+		inputs = append(inputs, stdin)
 	} else {
-		for _, filename := range flag.Args() {
+		for _, filename := range flags.Args() {
 			file, err := os.Open(filename)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error opening file %s: %v\n", filename, err)
-				os.Exit(1)
+				fmt.Fprintf(stderr, "Error opening file %s: %v\n", filename, err)
+				return 1
 			}
 			defer file.Close()
 			inputs = append(inputs, file)
 		}
 	}
 
-	output, err := processInputs(inputs)
+	output, err := processInputs(inputs, *compactOutput, *rawOutput, *colorOutput, *nullInput, *slurpInput, *fromJSON, *toJSON, *htmlInput, *streamInput, *xpathQuery)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "Error: %v\n", err)
+		return 1
 	}
 
-	fmt.Println(output)
+	fmt.Fprintln(stdout, output)
+	return 0
 }
 
-func processInputs(inputs []io.Reader) (string, error) {
+func processInputs(inputs []io.Reader, compactOutput, rawOutput, colorOutput, nullInput, slurpInput, fromJSON, toJSON, htmlInput, streamInput bool, xpathQuery string) (string, error) {
 	var docs []interface{}
 	for _, input := range inputs {
 		var doc interface{}
 		var err error
 
-		if *nullInput {
+		if nullInput {
 			doc = nil
-		} else if *fromJSON {
+		} else if fromJSON {
 			err = json.NewDecoder(input).Decode(&doc)
-		} else if *streamInput {
+		} else if streamInput {
 			doc, err = xml.Parse(input)
-		} else if *htmlInput {
+		} else if htmlInput {
 			doc, err = xml.ParseHTML(input)
 		} else {
 			doc, err = xml.Parse(input)
@@ -91,10 +92,8 @@ func processInputs(inputs []io.Reader) (string, error) {
 			return "", fmt.Errorf("error parsing input: %v", err)
 		}
 
-		log.Printf("Parsed document: %+v", doc)
-
-		if *xpathQuery != "" {
-			doc, err = xml.XPathQuery(doc, *xpathQuery)
+		if xpathQuery != "" {
+			doc, err = xml.XPathQuery(doc, xpathQuery)
 			if err != nil {
 				return "", fmt.Errorf("error executing XPath query: %v", err)
 			}
@@ -104,7 +103,7 @@ func processInputs(inputs []io.Reader) (string, error) {
 	}
 
 	var result interface{}
-	if *slurpInput {
+	if slurpInput {
 		result = docs
 	} else if len(docs) == 1 {
 		result = docs[0]
@@ -114,11 +113,11 @@ func processInputs(inputs []io.Reader) (string, error) {
 
 	var output string
 	indent := "  "
-	if *compactOutput {
+	if compactOutput {
 		indent = ""
 	}
 
-	if *toJSON {
+	if toJSON {
 		jsonData, err := json.MarshalIndent(xml.ToJSON(result), "", indent)
 		if err != nil {
 			return "", fmt.Errorf("error converting to JSON: %v", err)
@@ -128,14 +127,12 @@ func processInputs(inputs []io.Reader) (string, error) {
 		output = xml.Format(result, indent)
 	}
 
-	log.Printf("Formatted output: %s", output)
-
-	if *rawOutput {
+	if rawOutput {
 		output = strings.Trim(output, "\"")
 		output = strings.ReplaceAll(output, "\\\"", "\"")
 	}
 
-	if *colorOutput {
+	if colorOutput {
 		output = xml.Colorize(output)
 	}
 
