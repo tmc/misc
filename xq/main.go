@@ -5,10 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 
 	"github.com/tmc/misc/xq/xml"
+	"golang.org/x/term"
 )
 
 var (
@@ -41,6 +43,10 @@ func main() {
 
 	var inputs []io.Reader
 	if flag.NArg() == 0 {
+		if term.IsTerminal(int(os.Stdin.Fd())) {
+			flag.Usage()
+			return
+		}
 		inputs = append(inputs, os.Stdin)
 	} else {
 		for _, filename := range flag.Args() {
@@ -74,7 +80,7 @@ func processInputs(inputs []io.Reader) (string, error) {
 		} else if *fromJSON {
 			err = json.NewDecoder(input).Decode(&doc)
 		} else if *streamInput {
-			doc, err = xml.StreamParse(input)
+			doc, err = xml.Parse(input)
 		} else if *htmlInput {
 			doc, err = xml.ParseHTML(input)
 		} else {
@@ -84,6 +90,8 @@ func processInputs(inputs []io.Reader) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("error parsing input: %v", err)
 		}
+
+		log.Printf("Parsed document: %+v", doc)
 
 		if *xpathQuery != "" {
 			doc, err = xml.XPathQuery(doc, *xpathQuery)
@@ -119,6 +127,8 @@ func processInputs(inputs []io.Reader) (string, error) {
 	} else {
 		output = xml.Format(result, indent)
 	}
+
+	log.Printf("Formatted output: %s", output)
 
 	if *rawOutput {
 		output = strings.Trim(output, "\"")

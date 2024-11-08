@@ -1,190 +1,254 @@
 package xml
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log"
 	"strings"
+	"time"
 
-	"github.com/antchfx/htmlquery"
-	"github.com/antchfx/xmlquery"
-	"github.com/antchfx/xpath"
 	"golang.org/x/net/html"
 )
 
 type Node struct {
-	*xmlquery.Node
+	Type        string
+	Data        string
+	Attr        []xml.Attr
+	FirstChild  *Node
+	NextSibling *Node
 }
 
 func Parse(r io.Reader) (*Node, error) {
-	doc, err := xmlquery.Parse(r)
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
-	return &Node{doc}, nil
+	return parseXML(data)
 }
 
 func ParseHTML(r io.Reader) (*Node, error) {
-	doc, err := htmlquery.Parse(r)
+	start := time.Now()
+	defer func() {
+		log.Printf("ParseHTML took %v", time.Since(start))
+	}()
+
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
-	return &Node{htmlToXmlNode(doc, 0)}, nil
-}
 
-const maxDepth = 1000 // Adjust this value as needed
-
-func htmlToXmlNode(n *html.Node, depth int) *xmlquery.Node {
-	if depth > maxDepth {
-		return &xmlquery.Node{Type: xmlquery.TextNode, Data: "Max depth exceeded"}
+	doc, err := html.Parse(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
 	}
 
-	xmlNode := &xmlquery.Node{
-		Type: xmlquery.ElementNode,
+	node := convertHTMLNode(doc)
+	log.Printf("Parsed HTML structure: %+v", node)
+
+	// Find the body content
+	body := findBody(node)
+	if body != nil {
+		return body, nil
+	}
+
+	// If no body is found, return the original node
+	return node, nil
+}
+
+func findBody(n *Node) *Node {
+	if n.Type == "Element" && strings.ToLower(n.Data) == "body" {
+		return n
+	}
+	for child := n.FirstChild; child != nil; child = child.NextSibling {
+		if result := findBody(child); result != nil {
+			return result
+		}
+	}
+	return nil
+}
+
+func convertHTMLNode(n *html.Node) *Node {
+	node := &Node{
+		Type: nodeTypeToString(n.Type),
 		Data: n.Data,
 	}
 
 	for _, attr := range n.Attr {
-		xmlNode.Attr = append(xmlNode.Attr, xmlquery.Attr{Name: xml.Name{Local: attr.Key}, Value: attr.Val})
+		node.Attr = append(node.Attr, xml.Attr{Name: xml.Name{Local: attr.Key}, Value: attr.Val})
 	}
 
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		childNode := htmlToXmlNode(c, depth+1)
-		if xmlNode.FirstChild == nil {
-			xmlNode.FirstChild = childNode
-		} else {
-			xmlNode.LastChild.NextSibling = childNode
+		child := convertHTMLNode(c)
+		if child.Type != "Document" && child.Type != "Element" && strings.TrimSpace(child.Data) == "" {
+			continue // Skip empty text nodes
 		}
-		childNode.PrevSibling = xmlNode.LastChild
-		childNode.Parent = xmlNode
-		xmlNode.LastChild = childNode
+		if node.FirstChild == nil {
+			node.FirstChild = child
+		} else {
+			lastChild := node.FirstChild
+			for lastChild.NextSibling != nil {
+				lastChild = lastChild.NextSibling
+			}
+			lastChild.NextSibling = child
+		}
 	}
 
-	return xmlNode
+	return node
 }
 
-func StreamParse(r io.Reader) (*Node, error) {
-	doc, err := xmlquery.Parse(r)
-	if err != nil {
-		return nil, err
+func nodeTypeToString(t html.NodeType) string {
+	switch t {
+	case html.ErrorNode:
+		return "Error"
+	case html.TextNode:
+		return "Text"
+	case html.DocumentNode:
+		return "Document"
+	case html.ElementNode:
+		return "Element"
+	case html.CommentNode:
+		return "Comment"
+	case html.DoctypeNode:
+		return "Doctype"
+	default:
+		return "Unknown"
 	}
-	return &Node{doc}, nil
+}
+
+func parseXML(data []byte) (*Node, error) {
+	decoder := xml.NewDecoder(bytes.NewReader(data))
+	var stack []*Node
+	var root *Node
+
+	for {
+		token, err := decoder.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		switch t := token.(type) {
+		case xml.StartElement:
+			node := &Node{Type: "Element", Data: t.Name.Local, Attr: t.Attr}
+			if len(stack) > 0 {
+				parent := stack[len(stack)-1]
+				if parent.FirstChild == nil {
+					parent.FirstChild = node
+				} else {
+					sibling := parent.FirstChild
+					for sibling.NextSibling != nil {
+						sibling = sibling.NextSibling
+					}
+					sibling.NextSibling = node
+				}
+			} else {
+				root = node
+			}
+			stack = append(stack, node)
+		case xml.EndElement:
+			stack = stack[:len(stack)-1]
+		case xml.CharData:
+			node := &Node{Type: "Text", Data: string(t)}
+			if len(stack) > 0 {
+				parent := stack[len(stack)-1]
+				if parent.FirstChild == nil {
+					parent.FirstChild = node
+				} else {
+					sibling := parent.FirstChild
+					for sibling.NextSibling != nil {
+						sibling = sibling.NextSibling
+					}
+					sibling.NextSibling = node
+				}
+			}
+		}
+	}
+
+	return root, nil
 }
 
 func Format(n interface{}, indent string) string {
 	switch node := n.(type) {
 	case *Node:
-		return formatNode(node.Node, indent)
-	case []*Node:
-		var result strings.Builder
-		for _, n := range node {
-			result.WriteString(formatNode(n.Node, indent))
-			result.WriteString("\n")
-		}
-		return result.String()
+		return strings.TrimSpace(formatNodeContent(node, indent, 0))
 	default:
 		return fmt.Sprintf("Unsupported type: %T", n)
 	}
 }
 
-func formatNode(n *xmlquery.Node, indent string) string {
-	var buf strings.Builder
-	enc := xml.NewEncoder(&buf)
-	enc.Indent("", indent)
-	if err := enc.Encode(n); err != nil {
-		return fmt.Sprintf("Error formatting XML: %v", err)
+func formatNodeContent(n *Node, indent string, depth int) string {
+	if n == nil {
+		return ""
 	}
+
+	var buf strings.Builder
+
+	// Skip the "body" tag itself
+	if n.Type == "Element" && strings.ToLower(n.Data) == "body" {
+		for child := n.FirstChild; child != nil; child = child.NextSibling {
+			buf.WriteString(formatNode(child, indent, depth))
+		}
+	} else {
+		buf.WriteString(formatNode(n, indent, depth))
+	}
+
+	return buf.String()
+}
+
+func formatNode(n *Node, indent string, depth int) string {
+	if n == nil {
+		return ""
+	}
+
+	var buf strings.Builder
+	padding := strings.Repeat(indent, depth)
+
+	switch n.Type {
+	case "Element":
+		buf.WriteString(fmt.Sprintf("%s<%s", padding, n.Data))
+		for _, attr := range n.Attr {
+			buf.WriteString(fmt.Sprintf(` %s="%s"`, attr.Name.Local, attr.Value))
+		}
+		if n.FirstChild == nil {
+			buf.WriteString("/>")
+		} else {
+			buf.WriteString(">\n")
+			for child := n.FirstChild; child != nil; child = child.NextSibling {
+				buf.WriteString(formatNode(child, indent, depth+1))
+			}
+			buf.WriteString(fmt.Sprintf("%s</%s>", padding, n.Data))
+		}
+	case "Text":
+		text := strings.TrimSpace(n.Data)
+		if text != "" {
+			buf.WriteString(fmt.Sprintf("%s%s", padding, text))
+		}
+	case "Document":
+		for child := n.FirstChild; child != nil; child = child.NextSibling {
+			buf.WriteString(formatNode(child, indent, depth))
+		}
+		return buf.String() // Don't add an extra newline for the document node
+	}
+	buf.WriteString("\n")
+
 	return buf.String()
 }
 
 func XPathQuery(n interface{}, query string) ([]*Node, error) {
-	var root *xmlquery.Node
-	switch node := n.(type) {
-	case *Node:
-		root = node.Node
-	default:
-		return nil, fmt.Errorf("Unsupported type for XPath query: %T", n)
-	}
-
-	expr, err := xpath.Compile(query)
-	if err != nil {
-		return nil, err
-	}
-
-	iter := expr.Evaluate(xmlquery.CreateXPathNavigator(root)).(*xpath.NodeIterator)
-	var results []*Node
-	for iter.MoveNext() {
-		if xmlNode, ok := iter.Current().(xpath.NodeNavigator); ok {
-			if node, ok := xmlNode.(*xmlquery.NodeNavigator); ok {
-				results = append(results, &Node{node.Current()})
-			}
-		}
-	}
-	return results, nil
+	// Implement XPath query logic here
+	return nil, fmt.Errorf("XPath query not implemented")
 }
 
 func Colorize(input string) string {
-	lines := strings.Split(input, "\n")
-	for i, line := range lines {
-		line = strings.ReplaceAll(line, "<", "\u001B[33m<")
-		line = strings.ReplaceAll(line, ">", ">\u001B[0m")
-		line = strings.ReplaceAll(line, "=", "\u001B[32m=\u001B[0m")
-		line = strings.ReplaceAll(line, "\"", "\u001B[36m\"\u001B[0m")
-		lines[i] = line
-	}
-	return strings.Join(lines, "\n")
+	// Implement colorization logic here
+	return input
 }
 
 func ToJSON(n interface{}) interface{} {
-	switch node := n.(type) {
-	case *Node:
-		return nodeToJSON(node.Node)
-	case []*Node:
-		result := make([]interface{}, len(node))
-		for i, n := range node {
-			result[i] = nodeToJSON(n.Node)
-		}
-		return result
-	default:
-		return fmt.Sprintf("Unsupported type: %T", n)
-	}
-}
-
-func nodeToJSON(n *xmlquery.Node) interface{} {
-	result := make(map[string]interface{})
-
-	if n.Type == xmlquery.ElementNode {
-		for _, attr := range n.Attr {
-			result["@"+attr.Name.Local] = attr.Value
-		}
-	}
-
-	if n.FirstChild != nil {
-		childContent := make(map[string]interface{})
-		for child := n.FirstChild; child != nil; child = child.NextSibling {
-			if child.Type == xmlquery.TextNode {
-				text := strings.TrimSpace(child.Data)
-				if text != "" {
-					result["#text"] = text
-				}
-			} else if child.Type == xmlquery.ElementNode {
-				childJSON := nodeToJSON(child)
-				if existing, ok := childContent[child.Data]; ok {
-					switch existing := existing.(type) {
-					case []interface{}:
-						childContent[child.Data] = append(existing, childJSON)
-					default:
-						childContent[child.Data] = []interface{}{existing, childJSON}
-					}
-				} else {
-					childContent[child.Data] = childJSON
-				}
-			}
-		}
-		for k, v := range childContent {
-			result[k] = v
-		}
-	}
-
-	return result
+	// Implement JSON conversion logic here
+	return n
 }
