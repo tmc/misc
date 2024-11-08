@@ -54,6 +54,16 @@ func main() {
 		}
 	}
 
+	output, err := processInputs(inputs)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println(output)
+}
+
+func processInputs(inputs []io.Reader) (string, error) {
 	var docs []interface{}
 	for _, input := range inputs {
 		var doc interface{}
@@ -72,15 +82,13 @@ func main() {
 		}
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error parsing input: %v\n", err)
-			os.Exit(1)
+			return "", fmt.Errorf("error parsing input: %v", err)
 		}
 
 		if *xpathQuery != "" {
 			doc, err = xml.XPathQuery(doc, *xpathQuery)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error executing XPath query: %v\n", err)
-				os.Exit(1)
+				return "", fmt.Errorf("error executing XPath query: %v", err)
 			}
 		}
 
@@ -105,8 +113,7 @@ func main() {
 	if *toJSON {
 		jsonData, err := json.MarshalIndent(xml.ToJSON(result), "", indent)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error converting to JSON: %v\n", err)
-			os.Exit(1)
+			return "", fmt.Errorf("error converting to JSON: %v", err)
 		}
 		output = string(jsonData)
 	} else {
@@ -122,5 +129,5 @@ func main() {
 		output = xml.Colorize(output)
 	}
 
-	fmt.Println(output)
+	return output, nil
 }
