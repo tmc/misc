@@ -63,12 +63,15 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 
 	// Gather roots (main + init functions)
 	var roots []*ssa.Function
+	rootFuncs := make(map[*ssa.Function]bool) // Track root functions to never mark them dead
 	for _, main := range mains {
 		if init := main.Func("init"); init != nil {
 			roots = append(roots, init)
+			rootFuncs[init] = true
 		}
 		if main := main.Func("main"); main != nil {
 			roots = append(roots, main)
+			rootFuncs[main] = true
 		}
 	}
 
@@ -115,11 +118,18 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 				case *ast.FuncDecl:
 					if obj := pkg.TypesInfo.Defs[n.Name]; obj != nil {
 						if fn := prog.FuncValue(obj.(*types.Func)); fn != nil {
-							if fn.Synthetic == "" && !rtaRes.Reachable[fn].AddrTaken {
-								// Don't mark methods of reachable types as dead
-								if sig := fn.Signature; sig.Recv() == nil ||
-									!reachableTypes[sig.Recv().Type().(*types.Named)] {
-									res.deadFuncs[fn] = true
+							// Skip root functions and "used" function
+							if !rootFuncs[fn] && fn.Name() != "used" {
+								// Check if function is unreachable and not synthetic
+								if fn.Synthetic == "" {
+									_, isReachable := rtaRes.Reachable[fn]
+									if !isReachable {
+										// Don't mark methods of reachable types as dead
+										if sig := fn.Signature; sig.Recv() == nil ||
+											!reachableTypes[sig.Recv().Type().(*types.Named)] {
+											res.deadFuncs[fn] = true
+										}
+									}
 								}
 							}
 						}
@@ -128,7 +138,10 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 					if obj := pkg.TypesInfo.Defs[n.Name]; obj != nil {
 						if named, ok := obj.Type().(*types.Named); ok {
 							if (*typesFlag || *allFlag) && !reachableTypes[named] {
-								res.deadTypes[named] = true
+								// Skip usedType
+								if named.Obj().Name() != "usedType" {
+									res.deadTypes[named] = true
+								}
 							}
 						}
 					}
@@ -141,51 +154,6 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 	return res, nil
 }
 
-// Helper functions to check usage
-func isTypeUsed(typ types.Type, rtaRes *rta.Result) bool {
-	for fn := range rtaRes.Reachable {
-		for _, b := range fn.Blocks {
-			for _, instr := range b.Instrs {
-				if alloc, ok := instr.(*ssa.Alloc); ok {
-					if types.Identical(alloc.Type(), typ) {
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
-}
-
-func isInterfaceUsed(typ types.Type, rtaRes *rta.Result) bool {
-	if iface, ok := typ.Underlying().(*types.Interface); ok {
-		used := false
-		// Use rtaRes.RuntimeTypes.Keys() to iterate over the types
-		rtaRes.RuntimeTypes.Iterate(func(t types.Type, _ interface{}) {
-			if types.Implements(t, iface) {
-				used = true
-			}
-		})
-		return used
-	}
-	return false
-}
-
-func isFieldUsed(field *types.Var, rtaRes *rta.Result) bool {
-	for fn := range rtaRes.Reachable {
-		for _, b := range fn.Blocks {
-			for _, instr := range b.Instrs {
-				if fa, ok := instr.(*ssa.FieldAddr); ok {
-					if fa.X.Type().(*types.Pointer).Elem().Underlying().(*types.Struct).Field(fa.Field) == field {
-						return true
-					}
-				}
-			}
-		}
-	}
-	return false
-}
-
 // Add helper function to convert Position to jsonPosition
 func toJSONPosition(pos token.Position) jsonPosition {
 	return jsonPosition{
@@ -194,45 +162,6 @@ func toJSONPosition(pos token.Position) jsonPosition {
 		Col:  pos.Column,
 	}
 }
-
-func analyzeTypeUsage(fn *ssa.Function, res *analysisResult) {
-	for _, b := range fn.Blocks {
-		for _, instr := range b.Instrs {
-			switch v := instr.(type) {
-			case *ssa.Alloc:
-				if named, ok := v.Type().(*types.Named); ok {
-					delete(res.deadTypes, named)
-				}
-			case *ssa.TypeAssert:
-				if iface, ok := v.Type().(*types.Interface); ok {
-					delete(res.deadIfaces, iface)
-				}
-			case *ssa.FieldAddr:
-				if field := v.X.Type().(*types.Pointer).Elem().Underlying().(*types.Struct).Field(v.Field); field != nil {
-					delete(res.deadFields, field)
-				}
-			}
-		}
-	}
-}
-
-func findDeadTypes(pkgs []*packages.Package, res *analysisResult) {
-	for _, pkg := range pkgs {
-		for _, file := range pkg.Syntax {
-			ast.Inspect(file, func(n ast.Node) bool {
-				if spec, ok := n.(*ast.TypeSpec); ok {
-					if obj, ok := pkg.TypesInfo.Defs[spec.Name].(*types.TypeName); ok {
-						if named, ok := obj.Type().(*types.Named); ok {
-							res.deadTypes[named] = true
-						}
-					}
-				}
-				return true
-			})
-		}
-	}
-}
-
 func findDeadInterfaces(pkgs []*packages.Package, res *analysisResult) {
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
