@@ -9,6 +9,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"strings"
 
 	"golang.org/x/tools/go/callgraph/rta"
 	"golang.org/x/tools/go/packages"
@@ -52,7 +53,7 @@ func mainPackages(pkgs []*ssa.Package) ([]*ssa.Package, error) {
 }
 
 // analyzeProgram performs comprehensive dead code analysis
-func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packages.Package, tests bool) (*analysisResult, error) {
+func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packages.Package, _ bool) (*analysisResult, error) {
 	res := newAnalysisResult()
 
 	// Find main packages
@@ -63,7 +64,7 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 
 	// Gather roots (main + init functions)
 	var roots []*ssa.Function
-	rootFuncs := make(map[*ssa.Function]bool) // Track root functions to never mark them dead
+	rootFuncs := make(map[*ssa.Function]bool)
 	for _, main := range mains {
 		if init := main.Func("init"); init != nil {
 			roots = append(roots, init)
@@ -81,36 +82,14 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 	// Track reachable types from RTA results
 	reachableTypes := make(map[*types.Named]bool)
 	for fn := range rtaRes.Reachable {
-		// Check receiver types
-		if sig := fn.Signature; sig.Recv() != nil {
-			if named, ok := sig.Recv().Type().(*types.Named); ok {
+		if recv := fn.Signature.Recv(); recv != nil {
+			if named, ok := recv.Type().(*types.Named); ok {
 				reachableTypes[named] = true
-			}
-		}
-
-		// Check instructions in reachable functions
-		for _, b := range fn.Blocks {
-			for _, instr := range b.Instrs {
-				switch v := instr.(type) {
-				case *ssa.MakeInterface:
-					if named, ok := v.X.Type().(*types.Named); ok {
-						reachableTypes[named] = true
-					}
-				case *ssa.Call:
-					if v.Common().Method != nil {
-						sig := v.Common().Method.Type().(*types.Signature)
-						if recv := sig.Recv(); recv != nil {
-							if named, ok := recv.Type().(*types.Named); ok {
-								reachableTypes[named] = true
-							}
-						}
-					}
-				}
 			}
 		}
 	}
 
-	// Collect dead items
+	// Analyze each package
 	for _, pkg := range initial {
 		for _, file := range pkg.Syntax {
 			ast.Inspect(file, func(n ast.Node) bool {
@@ -118,17 +97,11 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 				case *ast.FuncDecl:
 					if obj := pkg.TypesInfo.Defs[n.Name]; obj != nil {
 						if fn := prog.FuncValue(obj.(*types.Func)); fn != nil {
-							// Skip root functions and "used" function
 							if !rootFuncs[fn] && fn.Name() != "used" {
-								// Check if function is unreachable and not synthetic
 								if fn.Synthetic == "" {
 									_, isReachable := rtaRes.Reachable[fn]
 									if !isReachable {
-										// Don't mark methods of reachable types as dead
-										if sig := fn.Signature; sig.Recv() == nil ||
-											!reachableTypes[sig.Recv().Type().(*types.Named)] {
-											res.deadFuncs[fn] = true
-										}
+										res.deadFuncs[fn] = true
 									}
 								}
 							}
@@ -137,9 +110,8 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 				case *ast.TypeSpec:
 					if obj := pkg.TypesInfo.Defs[n.Name]; obj != nil {
 						if named, ok := obj.Type().(*types.Named); ok {
-							if (*typesFlag || *allFlag) && !reachableTypes[named] {
-								// Skip usedType
-								if named.Obj().Name() != "usedType" {
+							if named.Obj().Name() != "usedType" {
+								if !reachableTypes[named] {
 									res.deadTypes[named] = true
 								}
 							}
@@ -149,6 +121,14 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 				return true
 			})
 		}
+	}
+
+	// Find dead interfaces and fields if requested
+	if *ifacesFlag || *allFlag {
+		findDeadInterfaces(initial, res)
+	}
+	if *fieldsFlag || *allFlag {
+		findDeadFields(initial, res)
 	}
 
 	return res, nil
@@ -162,7 +142,12 @@ func toJSONPosition(pos token.Position) jsonPosition {
 		Col:  pos.Column,
 	}
 }
+
 func findDeadInterfaces(pkgs []*packages.Package, res *analysisResult) {
+	// Track which interfaces are implemented
+	implemented := make(map[*types.Interface]bool)
+
+	// First pass: collect all interfaces
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
 			ast.Inspect(file, func(n ast.Node) bool {
@@ -170,6 +155,7 @@ func findDeadInterfaces(pkgs []*packages.Package, res *analysisResult) {
 					if obj, ok := pkg.TypesInfo.Defs[spec.Name].(*types.TypeName); ok {
 						if iface, ok := obj.Type().Underlying().(*types.Interface); ok {
 							res.deadIfaces[iface] = true
+							res.typeInfo[iface] = obj
 						}
 					}
 				}
@@ -177,17 +163,18 @@ func findDeadInterfaces(pkgs []*packages.Package, res *analysisResult) {
 			})
 		}
 	}
-}
 
-func findDeadFields(pkgs []*packages.Package, res *analysisResult) {
+	// Second pass: find implementations
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Syntax {
 			ast.Inspect(file, func(n ast.Node) bool {
 				if spec, ok := n.(*ast.TypeSpec); ok {
-					if st, ok := spec.Type.(*ast.StructType); ok {
-						for _, field := range st.Fields.List {
-							if obj, ok := pkg.TypesInfo.Defs[field.Names[0]].(*types.Var); ok {
-								res.deadFields[obj] = true
+					if obj, ok := pkg.TypesInfo.Defs[spec.Name].(*types.TypeName); ok {
+						t := obj.Type()
+						for iface := range res.deadIfaces {
+							if types.Implements(t, iface) || types.Implements(types.NewPointer(t), iface) {
+								implemented[iface] = true
+								delete(res.deadIfaces, iface)
 							}
 						}
 					}
@@ -198,7 +185,139 @@ func findDeadFields(pkgs []*packages.Package, res *analysisResult) {
 	}
 }
 
+func findDeadFields(pkgs []*packages.Package, res *analysisResult) {
+	// Track field usage
+	usedFields := make(map[*types.Var]bool)
+
+	// First pass: collect all struct fields
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Syntax {
+			ast.Inspect(file, func(n ast.Node) bool {
+				if spec, ok := n.(*ast.TypeSpec); ok {
+					if st, ok := spec.Type.(*ast.StructType); ok {
+						for _, field := range st.Fields.List {
+							for _, name := range field.Names {
+								if obj, ok := pkg.TypesInfo.Defs[name].(*types.Var); ok {
+									res.deadFields[obj] = true
+								}
+							}
+						}
+					}
+				}
+				return true
+			})
+		}
+	}
+
+	// Second pass: find field usage
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Syntax {
+			ast.Inspect(file, func(n ast.Node) bool {
+				if sel, ok := n.(*ast.SelectorExpr); ok {
+					if obj, ok := pkg.TypesInfo.Selections[sel]; ok {
+						if field, ok := obj.Obj().(*types.Var); ok {
+							usedFields[field] = true
+							delete(res.deadFields, field)
+						}
+					}
+				}
+				return true
+			})
+		}
+	}
+}
+
 func explainLiveness(prog *ssa.Program, res *analysisResult, target string) error {
-	// Implementation of path finding to target function
-	return fmt.Errorf("not implemented")
+	// Find the target function
+	var targetFn *ssa.Function
+	for fn := range res.deadFuncs {
+		if fn.Name() == target {
+			targetFn = fn
+			break
+		}
+	}
+	if targetFn == nil {
+		return fmt.Errorf("function %q not found", target)
+	}
+
+	// Build a reverse call graph
+	reverseEdges := make(map[*ssa.Function][]*ssa.Function)
+	for _, pkg := range prog.AllPackages() {
+		// Get all functions in the package
+		for _, member := range pkg.Members {
+			if fn, ok := member.(*ssa.Function); ok {
+				// Include the function itself
+				analyzeFunctionCalls(fn, reverseEdges)
+
+				// Include anonymous functions and methods
+				for _, anon := range fn.AnonFuncs {
+					analyzeFunctionCalls(anon, reverseEdges)
+				}
+			}
+		}
+	}
+
+	// Find path from main to target using BFS
+	visited := make(map[*ssa.Function]bool)
+	var mainFuncs []*ssa.Function
+
+	// Find all main functions
+	for _, pkg := range prog.AllPackages() {
+		if pkg.Pkg.Name() == "main" {
+			if main := pkg.Func("main"); main != nil {
+				mainFuncs = append(mainFuncs, main)
+			}
+		}
+	}
+
+	if len(mainFuncs) == 0 {
+		return fmt.Errorf("no main function found")
+	}
+
+	// Try to find path from any main function
+	for _, mainFn := range mainFuncs {
+		queue := []*ssa.Function{mainFn}
+		parent := make(map[*ssa.Function]*ssa.Function)
+
+		for len(queue) > 0 {
+			fn := queue[0]
+			queue = queue[1:]
+
+			if fn == targetFn {
+				// Found path, print it
+				path := []string{fn.Name()}
+				for cur := fn; parent[cur] != nil; cur = parent[cur] {
+					path = append([]string{parent[cur].Name()}, path...)
+				}
+				fmt.Printf("Path to %s:\n", target)
+				for i, name := range path {
+					fmt.Printf("%s%s\n", strings.Repeat("  ", i), name)
+				}
+				return nil
+			}
+
+			for _, caller := range reverseEdges[fn] {
+				if !visited[caller] {
+					visited[caller] = true
+					parent[caller] = fn
+					queue = append(queue, caller)
+				}
+			}
+		}
+	}
+
+	return fmt.Errorf("no path found to function %q", target)
+}
+
+// Helper function to analyze function calls and build reverse edges
+func analyzeFunctionCalls(fn *ssa.Function, reverseEdges map[*ssa.Function][]*ssa.Function) {
+	for _, block := range fn.Blocks {
+		for _, instr := range block.Instrs {
+			if call, ok := instr.(*ssa.Call); ok {
+				if callee := call.Common().StaticCallee(); callee != nil {
+					reverseEdges[callee] = append(reverseEdges[callee], fn)
+				}
+			}
+		}
+	}
 }
