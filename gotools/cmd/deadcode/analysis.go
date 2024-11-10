@@ -68,30 +68,66 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 	// Run RTA analysis
 	rtaRes := rta.Analyze(roots, true)
 
-	// Track reachable functions
+	// First mark all functions as potentially dead
+	for _, pkg := range ssaPkgs {
+		for _, mem := range pkg.Members {
+			if fn, ok := mem.(*ssa.Function); ok {
+				res.deadFuncs[fn] = true
+			}
+		}
+	}
+
+	// Remove reachable functions from dead set
 	for fn := range rtaRes.Reachable {
+		delete(res.deadFuncs, fn)
 		if fn.Pos().IsValid() || fn.Name() == "init" {
 			res.reachablePosn[prog.Fset.Position(fn.Pos())] = true
 		}
 	}
 
-	// Analyze type usage through SSA
+	// Find all types and mark them as potentially dead
+	for _, pkg := range initial {
+		for _, file := range pkg.Syntax {
+			ast.Inspect(file, func(n ast.Node) bool {
+				switch n := n.(type) {
+				case *ast.TypeSpec:
+					if obj, ok := pkg.TypesInfo.Defs[n.Name].(*types.TypeName); ok {
+						if named, ok := obj.Type().(*types.Named); ok {
+							res.deadTypes[named] = true
+						}
+						if iface, ok := obj.Type().Underlying().(*types.Interface); ok {
+							res.deadIfaces[iface] = true
+						}
+					}
+				case *ast.StructType:
+					for _, field := range n.Fields.List {
+						for _, name := range field.Names {
+							if obj, ok := pkg.TypesInfo.Defs[name].(*types.Var); ok {
+								res.deadFields[obj] = true
+							}
+						}
+					}
+				}
+				return true
+			})
+		}
+	}
+
+	// Remove types/interfaces/fields that are used
 	for fn := range rtaRes.Reachable {
 		analyzeTypeUsage(fn, res)
 	}
 
-	// Find dead types and interfaces
-	if *typesFlag || *allFlag {
-		findDeadTypes(initial, res)
-	}
-	if *ifacesFlag || *allFlag {
-		findDeadInterfaces(initial, res)
-	}
-	if *fieldsFlag || *allFlag {
-		findDeadFields(initial, res)
-	}
-
 	return res, nil
+}
+
+// Add helper function to convert Position to jsonPosition
+func toJSONPosition(pos token.Position) jsonPosition {
+	return jsonPosition{
+		File: pos.Filename,
+		Line: pos.Line,
+		Col:  pos.Column,
+	}
 }
 
 func analyzeTypeUsage(fn *ssa.Function, res *analysisResult) {
