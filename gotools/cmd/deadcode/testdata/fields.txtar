@@ -1,0 +1,22 @@
+# Test of struct field dead code detection.
+
+deadcode -fields .
+want "Unused"
+!want "Used"
+
+-- go.mod --
+module example.com/deadcode/test
+
+go 1.21
+-- main.go --
+package main
+
+type T struct {
+    Used    string
+    Unused  string
+}
+
+func main() {
+    t := T{}
+    _ = t.Used
+}
