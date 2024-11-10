@@ -1,7 +1,6 @@
 # Test of struct field dead code detection.
 
 deadcode -fields .
-exec deadcode -fields .
 want "Unused"
 !want "Used"
 
