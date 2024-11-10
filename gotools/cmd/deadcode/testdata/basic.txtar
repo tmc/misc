@@ -1,0 +1,49 @@
+# Test of basic dead code detection.
+
+deadcode .
+want "unused"
+want "unusedType"
+!want "used"
+!want "usedType"
+
+deadcode -all .
+want "unused"
+want "unusedType"
+want "unused() method"
+!want "used"
+!want "usedType"
+
+-- go.mod --
+module example.com/deadcode/test
+
+go 1.21
+-- main.go --
+package main
+
+func main() {
+    used()
+}
+
+func used() {
+    // This function is used
+}
+
+func unused() {
+    // This function is dead code
+}
+
+type usedType struct{}
+
+func (u usedType) used() {
+    // This method is used
+}
+
+func (u usedType) unused() {
+    // This method is dead code
+}
+
+type unusedType struct{}
+
+func (u unusedType) method() {
+    // This whole type and its methods are dead code
+}

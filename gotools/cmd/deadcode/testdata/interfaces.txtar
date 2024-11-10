@@ -1,0 +1,29 @@
+# Test of interface dead code detection.
+
+deadcode -ifaces .
+want "UnusedInterface"
+!want "UsedInterface"
+
+-- go.mod --
+module example.com/deadcode/test
+
+go 1.21
+-- main.go --
+package main
+
+type UsedInterface interface {
+    Method()
+}
+
+type Implementation struct{}
+
+func (i Implementation) Method() {}
+
+func main() {
+    var i UsedInterface = Implementation{}
+    i.Method()
+}
+
+type UnusedInterface interface {
+    Method()
+}
