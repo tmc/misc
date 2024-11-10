@@ -55,6 +55,7 @@ type FileProcessor struct {
 var (
 	flagWarnOnlyOnCycles = flag.Bool("warn-only-on-cycles", true, "Only warn on cycles instead of failing")
 	flagMode             = flag.String("mode", "print", "one of print, comment, or remove")
+	flagIncludeTests     = flag.Bool("include-tests", false, "Process test files as well")
 )
 
 func main() {
@@ -85,7 +86,7 @@ func run() error {
 
 func validateArgs() error {
 	if len(flag.Args()) != 1 {
-		return fmt.Errorf("usage: <deadcode_json_file> -mode=print|comment|remove")
+		return fmt.Errorf("usage: <deadcode_json_file> -mode=print|comment|remove [-include-tests]")
 	}
 	mode := *flagMode
 	if mode != "comment" && mode != "remove" && mode != "print" {
@@ -111,10 +112,18 @@ func buildFileMap(packages []Package) map[string][]Function {
 	fileToFuncs := make(map[string][]Function)
 	for _, pkg := range packages {
 		for _, function := range pkg.Funcs {
+			// Skip test files if flagIncludeTests is false
+			if !*flagIncludeTests && isTestFile(function.Position.File) {
+				continue
+			}
 			fileToFuncs[function.Position.File] = append(fileToFuncs[function.Position.File], function)
 		}
 	}
 	return fileToFuncs
+}
+
+func isTestFile(filename string) bool {
+	return strings.HasSuffix(filename, "_test.go")
 }
 
 // Node represents a node in a dependency graph
@@ -333,10 +342,24 @@ func (fp *FileProcessor) processFuncDecl(node *ast.File, fd *ast.FuncDecl) {
 
 func (fp *FileProcessor) matchesFunction(fd *ast.FuncDecl, function Function) bool {
 	funcName := extractFuncName(function.Name)
-	if fd.Name.Name != funcName {
+	declName := fd.Name.Name
+
+	// Handle test function names (Test*, Benchmark*, Example*)
+	if isTestFile(fp.filePath) {
+		if strings.HasPrefix(declName, "Test") ||
+			strings.HasPrefix(declName, "Benchmark") ||
+			strings.HasPrefix(declName, "Example") {
+			if declName != funcName {
+				return false
+			}
+		}
+	}
+
+	if declName != funcName {
 		return false
 	}
 
+	// Rest of the existing code...
 	if fd.Recv != nil && strings.Contains(function.Name, ".") {
 		recvName := getReceiverTypeName(fd.Recv.List[0].Type)
 		if recvName != strings.Split(function.Name, ".")[0] {
