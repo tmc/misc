@@ -22,6 +22,7 @@ type analysisResult struct {
 	deadIfaces    map[*types.Interface]bool
 	deadFields    map[*types.Var]bool
 	reachablePosn map[token.Position]bool
+	typeInfo      map[*types.Interface]*types.TypeName
 }
 
 func newAnalysisResult() *analysisResult {
@@ -31,6 +32,7 @@ func newAnalysisResult() *analysisResult {
 		deadIfaces:    make(map[*types.Interface]bool),
 		deadFields:    make(map[*types.Var]bool),
 		reachablePosn: make(map[token.Position]bool),
+		typeInfo:      make(map[*types.Interface]*types.TypeName),
 	}
 }
 
@@ -62,48 +64,71 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 	// Gather roots (main + init functions)
 	var roots []*ssa.Function
 	for _, main := range mains {
-		roots = append(roots, main.Func("init"), main.Func("main"))
+		if init := main.Func("init"); init != nil {
+			roots = append(roots, init)
+		}
+		if main := main.Func("main"); main != nil {
+			roots = append(roots, main)
+		}
 	}
 
 	// Run RTA analysis
 	rtaRes := rta.Analyze(roots, true)
 
-	// First mark all functions as potentially dead
-	for _, pkg := range ssaPkgs {
-		for _, mem := range pkg.Members {
-			if fn, ok := mem.(*ssa.Function); ok {
-				res.deadFuncs[fn] = true
+	// Track reachable types from RTA results
+	reachableTypes := make(map[*types.Named]bool)
+	for fn := range rtaRes.Reachable {
+		// Check receiver types
+		if sig := fn.Signature; sig.Recv() != nil {
+			if named, ok := sig.Recv().Type().(*types.Named); ok {
+				reachableTypes[named] = true
+			}
+		}
+
+		// Check instructions in reachable functions
+		for _, b := range fn.Blocks {
+			for _, instr := range b.Instrs {
+				switch v := instr.(type) {
+				case *ssa.MakeInterface:
+					if named, ok := v.X.Type().(*types.Named); ok {
+						reachableTypes[named] = true
+					}
+				case *ssa.Call:
+					if v.Common().Method != nil {
+						sig := v.Common().Method.Type().(*types.Signature)
+						if recv := sig.Recv(); recv != nil {
+							if named, ok := recv.Type().(*types.Named); ok {
+								reachableTypes[named] = true
+							}
+						}
+					}
+				}
 			}
 		}
 	}
 
-	// Remove reachable functions from dead set
-	for fn := range rtaRes.Reachable {
-		delete(res.deadFuncs, fn)
-		if fn.Pos().IsValid() || fn.Name() == "init" {
-			res.reachablePosn[prog.Fset.Position(fn.Pos())] = true
-		}
-	}
-
-	// Find all types and mark them as potentially dead
+	// Collect dead items
 	for _, pkg := range initial {
 		for _, file := range pkg.Syntax {
 			ast.Inspect(file, func(n ast.Node) bool {
 				switch n := n.(type) {
-				case *ast.TypeSpec:
-					if obj, ok := pkg.TypesInfo.Defs[n.Name].(*types.TypeName); ok {
-						if named, ok := obj.Type().(*types.Named); ok {
-							res.deadTypes[named] = true
-						}
-						if iface, ok := obj.Type().Underlying().(*types.Interface); ok {
-							res.deadIfaces[iface] = true
+				case *ast.FuncDecl:
+					if obj := pkg.TypesInfo.Defs[n.Name]; obj != nil {
+						if fn := prog.FuncValue(obj.(*types.Func)); fn != nil {
+							if fn.Synthetic == "" && !rtaRes.Reachable[fn].AddrTaken {
+								// Don't mark methods of reachable types as dead
+								if sig := fn.Signature; sig.Recv() == nil ||
+									!reachableTypes[sig.Recv().Type().(*types.Named)] {
+									res.deadFuncs[fn] = true
+								}
+							}
 						}
 					}
-				case *ast.StructType:
-					for _, field := range n.Fields.List {
-						for _, name := range field.Names {
-							if obj, ok := pkg.TypesInfo.Defs[name].(*types.Var); ok {
-								res.deadFields[obj] = true
+				case *ast.TypeSpec:
+					if obj := pkg.TypesInfo.Defs[n.Name]; obj != nil {
+						if named, ok := obj.Type().(*types.Named); ok {
+							if (*typesFlag || *allFlag) && !reachableTypes[named] {
+								res.deadTypes[named] = true
 							}
 						}
 					}
@@ -113,12 +138,52 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 		}
 	}
 
-	// Remove types/interfaces/fields that are used
-	for fn := range rtaRes.Reachable {
-		analyzeTypeUsage(fn, res)
-	}
-
 	return res, nil
+}
+
+// Helper functions to check usage
+func isTypeUsed(typ types.Type, rtaRes *rta.Result) bool {
+	for fn := range rtaRes.Reachable {
+		for _, b := range fn.Blocks {
+			for _, instr := range b.Instrs {
+				if alloc, ok := instr.(*ssa.Alloc); ok {
+					if types.Identical(alloc.Type(), typ) {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+func isInterfaceUsed(typ types.Type, rtaRes *rta.Result) bool {
+	if iface, ok := typ.Underlying().(*types.Interface); ok {
+		used := false
+		// Use rtaRes.RuntimeTypes.Keys() to iterate over the types
+		rtaRes.RuntimeTypes.Iterate(func(t types.Type, _ interface{}) {
+			if types.Implements(t, iface) {
+				used = true
+			}
+		})
+		return used
+	}
+	return false
+}
+
+func isFieldUsed(field *types.Var, rtaRes *rta.Result) bool {
+	for fn := range rtaRes.Reachable {
+		for _, b := range fn.Blocks {
+			for _, instr := range b.Instrs {
+				if fa, ok := instr.(*ssa.FieldAddr); ok {
+					if fa.X.Type().(*types.Pointer).Elem().Underlying().(*types.Struct).Field(fa.Field) == field {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 // Add helper function to convert Position to jsonPosition
