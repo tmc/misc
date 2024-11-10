@@ -54,23 +54,35 @@ func doCallgraph(dir, gopath string, tests bool, args []string) error {
 		cfg.Env = append(os.Environ(), "GOPATH="+gopath)
 	}
 
+	fmt.Fprintf(os.Stderr, "Loading packages from dir %q: %v\n", dir, args)
 	initial, err := packages.Load(cfg, args...)
 	if err != nil {
-		return err
+		return fmt.Errorf("loading packages: %v", err)
 	}
 	if packages.PrintErrors(initial) > 0 {
 		return fmt.Errorf("packages contain errors")
 	}
 
+	fmt.Fprintf(os.Stderr, "Loaded %d packages\n", len(initial))
+
 	// Create and build SSA
 	prog, pkgs := ssautil.AllPackages(initial, ssa.InstantiateGenerics)
 	prog.Build()
 
+	fmt.Fprintf(os.Stderr, "Built SSA for %d packages\n", len(pkgs))
+
 	// Perform analysis
 	res, err := analyzeProgram(prog, pkgs, initial, tests)
 	if err != nil {
-		return err
+		return fmt.Errorf("analysis failed: %v", err)
 	}
+
+	// Print analysis stats
+	fmt.Fprintf(os.Stderr, "Analysis found:\n")
+	fmt.Fprintf(os.Stderr, "  Dead functions: %d\n", len(res.deadFuncs))
+	fmt.Fprintf(os.Stderr, "  Dead types: %d\n", len(res.deadTypes))
+	fmt.Fprintf(os.Stderr, "  Dead interfaces: %d\n", len(res.deadIfaces))
+	fmt.Fprintf(os.Stderr, "  Dead fields: %d\n", len(res.deadFields))
 
 	// Handle -whylive flag
 	if *whyLiveFlag != "" {

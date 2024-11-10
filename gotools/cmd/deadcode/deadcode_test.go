@@ -111,19 +111,33 @@ func Test(t *testing.T) {
 					// Run the command.
 					cmd := exec.Command(exe, tc.args...)
 					cmd.Dir = tmpdir
-					cmd.Env = append(os.Environ(), "GOPROXY=", "GO111MODULE=on")
+					cmd.Env = append(os.Environ(),
+						"GOPROXY=",
+						"GO111MODULE=on",
+						"PWD="+tmpdir, // Add PWD
+					)
 					var stdout, stderr bytes.Buffer
 					cmd.Stdout = &stdout
 					cmd.Stderr = &stderr
+
+					t.Logf("Running in %s: %s %v", tmpdir, exe, tc.args)
 					err := cmd.Run()
+
+					// Log output regardless of error
+					if stdout.Len() > 0 {
+						t.Logf("stdout:\n%s", stdout.String())
+					}
+					if stderr.Len() > 0 {
+						t.Logf("stderr:\n%s", stderr.String())
+					}
 
 					// Check error expectation
 					if err != nil {
 						if !tc.wantErr {
-							t.Fatalf("deadcode failed: %v\nstderr=\n%s", err, &stderr)
+							t.Fatalf("deadcode failed: %v", err)
 						}
 					} else if tc.wantErr {
-						t.Fatalf("deadcode succeeded unexpectedly\nstdout=\n%s", &stdout)
+						t.Fatalf("deadcode succeeded unexpectedly")
 					}
 
 					// Check output expectations
@@ -139,7 +153,6 @@ func Test(t *testing.T) {
 							} else {
 								t.Errorf("unwanted %q in output", pattern)
 							}
-							t.Errorf("got:\n%s", got)
 						}
 					}
 				})
@@ -195,14 +208,23 @@ func parseTxtar(data []byte) (*txtarArchive, error) {
 // buildDeadcode builds the deadcode executable.
 // It returns its path.
 func buildDeadcode(t *testing.T) string {
+	t.Helper()
 	bin := filepath.Join(t.TempDir(), "deadcode")
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
 	}
+
 	cmd := exec.Command("go", "build", "-o", bin)
+	cmd.Dir = "." // Build in the package directory
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Building deadcode: %v\n%s", err, out)
 	}
+
+	// Make sure the binary exists and is executable
+	if _, err := os.Stat(bin); err != nil {
+		t.Fatalf("Built binary not found: %v", err)
+	}
+
 	return bin
 }
 
