@@ -1,0 +1,22 @@
+# A scripttest test showing ctx-exec behavior
+
+# Very basic
+ctx-exec echo hello
+stdout '<exec-output cmd="echo hello">'
+stdout '<stdout>'
+stdout 'hello'
+
+# Show more complex arg(s)
+ctx-exec 'echo hello |head -n2'
+stdout '<exec-output cmd="echo hello'
+stdout '<stdout>'
+stdout 'hello'
+
+# Showing error handline/wrapping
+! ctx-exec 'nonexistent-command'
+stdout '<exec-output cmd="nonexistent-command">'
+stdout '<stderr>'
+stdout '.*command not found.*'
+stdout '</stderr>'
+stdout '<error>.*</error>'
+stdout '</exec-output>'

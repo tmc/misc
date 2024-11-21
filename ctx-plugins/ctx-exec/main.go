@@ -46,8 +46,9 @@ func run() error {
 	return nil
 }
 
+// make this  work so that if somen rungs "ctx-output 'ls |head -n2'" thi sworks:
 func executeCommand(command string) (string, string, error) {
-	cmd := exec.Command("bash", "-c", fmt.Sprintf("set -o pipefail; %s", command))
+	cmd := exec.Command("bash", "-o", "pipefail", "-c", fmt.Sprintf("%s", command))
 	cmd.Env = os.Environ()
 
 	var stdout, stderr bytes.Buffer

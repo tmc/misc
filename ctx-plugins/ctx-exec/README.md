@@ -50,3 +50,14 @@ If an error occurs, it will be printed to stderr, and the program will exit with
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
+
+## Environment Variables
+
+- `CTX_EXEC_ESCAPE`: Set to "true" to enable XML escaping
+- `CTX_EXEC_TAG`: Override the default output tag name (default: "exec-output")
+
+Example:
+```bash
+CTX_EXEC_TAG=custom-output ctx-exec 'echo hello'
+# Output will use <custom-output> tags instead of <exec-output>
+```
