@@ -1,0 +1,8 @@
+# Test tag override functionality
+env CTX_EXEC_TAG=custom-output
+exec ctx-exec 'echo hello'
+stdout '<custom-output cmd='
+stdout '<stdout>'
+stdout 'hello'
+stdout '</stdout>'
+stdout '</custom-output>'
