@@ -2,6 +2,7 @@ IDEAS to implement
 
 Output:
 - txtar support
+- tree support
 
 File Selection and Control:
 - support some sort of rc/dotfile/ignore file?

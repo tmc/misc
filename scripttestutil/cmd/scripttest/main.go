@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	_ "embed"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -14,6 +15,19 @@ import (
 	"runtime"
 	"strings"
 )
+
+func usage() {
+	// Extract the content of the /* ... */ comment in doc.go.
+	_, after, _ := strings.Cut(doc, "/*")
+	doc, _, _ := strings.Cut(after, "*/")
+	io.WriteString(flag.CommandLine.Output(), doc)
+	flag.PrintDefaults()
+
+	os.Exit(2)
+}
+
+//go:embed doc.go
+var doc string
 
 var (
 	verbose bool
@@ -70,28 +84,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-func usage() {
-	fmt.Fprintf(os.Stderr, `usage: scripttest [-v] [-p pattern] <command> [args...]
-
-Commands:
-  test, run    run scripttest files (default pattern: testdata/*.txt)
-               scripttest test                # uses -p or default pattern
-               scripttest test 'custom/*.txt' # overrides pattern
-
-  scaffold     create scripttest scaffold in [dir]
-               scripttest scaffold .
-
-  infer        infer command info in [dir]
-               scripttest infer .
-
-Flags:
-  -v           verbose output
-  -stream      stream CGPT output
-  -p pattern   test file pattern (default: testdata/*.txt)
-`)
-	os.Exit(2)
 }
 
 func scaffold(dir string) error {

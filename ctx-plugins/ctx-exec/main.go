@@ -10,19 +10,26 @@ import (
 	"strings"
 )
 
-var enableEscaping bool
+var (
+	enableEscaping bool
+	outputTagName  string = "exec-output" // default tag name, can bet overridden.
+)
 
-func init() {
+func parseFlags() {
 	flag.BoolVar(&enableEscaping, "escape", false, "Enable escaping of special characters")
 	flag.Parse()
 
-	// Check for environment variable
+	// Check for environment variables
 	if os.Getenv("CTX_EXEC_ESCAPE") == "true" {
 		enableEscaping = true
+	}
+	if tagOverride := os.Getenv("CTX_EXEC_TAG"); tagOverride != "" {
+		outputTagName = tagOverride
 	}
 }
 
 func main() {
+	parseFlags()
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -46,7 +53,6 @@ func run() error {
 	return nil
 }
 
-// make this  work so that if somen rungs "ctx-output 'ls |head -n2'" thi sworks:
 func executeCommand(command string) (string, string, error) {
 	cmd := exec.Command("bash", "-o", "pipefail", "-c", fmt.Sprintf("%s", command))
 	cmd.Env = os.Environ()
@@ -63,7 +69,7 @@ func wrapOutput(command, stdout, stderr string, err error) string {
 	escapedCommand := html.EscapeString(command)
 
 	var outputBuilder strings.Builder
-	outputBuilder.WriteString(fmt.Sprintf("<exec-output cmd=%q>\n", escapedCommand))
+	outputBuilder.WriteString(fmt.Sprintf("<%s cmd=%q>\n", outputTagName, escapedCommand))
 
 	if stdout != "" {
 		if enableEscaping {
@@ -89,6 +95,6 @@ func wrapOutput(command, stdout, stderr string, err error) string {
 		outputBuilder.WriteString(fmt.Sprintf("<error>%s</error>\n", errorMsg))
 	}
 
-	outputBuilder.WriteString("</exec-output>")
+	outputBuilder.WriteString(fmt.Sprintf("</%s>", outputTagName))
 	return outputBuilder.String()
 }
