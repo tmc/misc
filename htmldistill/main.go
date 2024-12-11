@@ -21,7 +21,7 @@ improving readability, or preparing data for natural language processing tasks.
 package main
 
 import (
-	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"net/url"
@@ -33,64 +33,97 @@ import (
 	"golang.org/x/net/html"
 )
 
+var verbose bool
+
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "Usage: htmldistill <url1> [url2] [url3] ...")
+	flag.BoolVar(&verbose, "v", false, "verbose output")
+	flag.Parse()
+
+	if len(flag.Args()) < 1 {
+		fmt.Fprintln(os.Stderr, "Usage: htmldistill [-v] <url1> [url2] [url3] ...")
 		os.Exit(1)
 	}
 
-	for _, arg := range os.Args[1:] {
-		if err := run(arg, ""); err != nil {
+	for _, arg := range flag.Args() {
+		if err := run(arg, "", verbose); err != nil {
 			fmt.Fprintf(os.Stderr, "Error processing %s: %v\n", arg, err)
 		}
 	}
 }
 
-func run(input string, baseURL string) error {
+func run(input string, baseURL string, verbose bool) error {
+	if verbose {
+		fmt.Printf("Processing %s\n", input)
+	}
+
 	if urlLike(input) {
-		return runURL(input)
+		return runURL(input, verbose)
 	}
 	if input == "-" {
-		return runReader(os.Stdin, baseURL)
+		return runReader(os.Stdin, baseURL, verbose)
 	}
-	return runFile(input)
+	return runFile(input, verbose)
 }
 
-func urlLike(input string) bool {
-	return strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://")
+func runURL(url string, verbose bool) error {
+	if verbose {
+		fmt.Printf("Fetching URL: %s\n", url)
+	}
+	logFlags := distiller.LogFlag(0)
+	if verbose {
+		logFlags = distiller.LogFlag(255)
+	}
+	result, err := distiller.ApplyForURL(url, time.Minute, &distiller.Options{
+		LogFlags: logFlags,
+	})
+	return handle(result, err, verbose)
 }
 
-func runURL(url string) error {
-	fmt.Fprintf(os.Stderr, "Processing URL: %s\n", url)
-	return handle(distiller.ApplyForURL(url, time.Minute, &distiller.Options{
-		LogFlags: distiller.LogEverything,
-	}))
-}
-
-func runReader(r io.Reader, baseURL string) error {
+func runReader(r io.Reader, baseURL string, verbose bool) error {
 	u, err := url.Parse(baseURL)
 	if err != nil {
 		return err
 	}
+	logFlags := distiller.LogFlag(0)
+	if verbose {
+		logFlags = distiller.LogFlag(255)
+	}
 	opts := &distiller.Options{
 		OriginalURL: u,
-		LogFlags:    distiller.LogEverything,
+		LogFlags:    logFlags,
 	}
-	return handle(distiller.ApplyForReader(r, opts))
+	result, err := distiller.ApplyForReader(r, opts)
+	return handle(result, err, verbose)
 }
 
-func runFile(path string) error {
-	return handle(distiller.ApplyForFile(path, &distiller.Options{
-		LogFlags: distiller.LogEverything,
-	}))
+func runFile(path string, verbose bool) error {
+	if verbose {
+		fmt.Printf("Reading file: %s\n", path)
+	}
+	logFlags := distiller.LogFlag(0)
+	if verbose {
+		logFlags = distiller.LogFlag(255)
+	}
+	result, err := distiller.ApplyForFile(path, &distiller.Options{
+		LogFlags: logFlags,
+	})
+	return handle(result, err, verbose)
 }
 
-func handle(result *distiller.Result, err error) error {
+func urlLike(s string) bool {
+	u, err := url.Parse(s)
+	return err == nil && (u.Scheme == "http" || u.Scheme == "https")
+}
+
+func handle(result *distiller.Result, err error, verbose bool) error {
 	if err != nil {
 		return fmt.Errorf("failed to distill content: %w", err)
 	}
 	if result == nil || result.Node == nil {
 		return fmt.Errorf("no content extracted")
+	}
+	if verbose {
+		fmt.Println("Rendering HTML output...")
 	}
 	output, err := outerHTML(result.Node)
 	if err != nil {
@@ -100,15 +133,12 @@ func handle(result *distiller.Result, err error) error {
 	return nil
 }
 
-// outerHTML returns an HTML serialization of the element and its descendants.
+// Define the outerHTML function
 func outerHTML(node *html.Node) (string, error) {
-	if node == nil {
-		return "", nil
-	}
-	var buffer bytes.Buffer
-	err := html.Render(&buffer, node)
+	var b strings.Builder
+	err := html.Render(&b, node)
 	if err != nil {
-		return "", fmt.Errorf("failed to render HTML: %w", err)
+		return "", err
 	}
-	return buffer.String(), nil
+	return b.String(), nil
 }
