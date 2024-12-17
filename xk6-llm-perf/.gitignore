@@ -1,0 +1,8 @@
+dist/
+bin/
+outputs/*
+!outputs/.gitkeep
+.DS_Store
+*.out
+*.test
+
