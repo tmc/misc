@@ -31,6 +31,7 @@ import (
 
 	distiller "github.com/markusmobius/go-domdistiller"
 	"golang.org/x/net/html"
+	"golang.org/x/term"
 )
 
 var verbose bool
@@ -39,7 +40,18 @@ func main() {
 	flag.BoolVar(&verbose, "v", false, "verbose output")
 	flag.Parse()
 
-	if len(flag.Args()) < 1 {
+	if len(flag.Args()) == 0 {
+		isTTY := term.IsTerminal(int(os.Stdin.Fd()))
+		if !isTTY {
+			// Stdin is not a TTY (is a pipe), read from stdin
+			if err := run("-", "", verbose); err != nil {
+				fmt.Fprintf(os.Stderr, "Error processing stdin: %v\n", err)
+				os.Exit(1)
+			}
+			return
+		}
+
+		// Stdin is a TTY, show usage
 		fmt.Fprintln(os.Stderr, "Usage: htmldistill [-v] <url1> [url2] [url3] ...")
 		os.Exit(1)
 	}
