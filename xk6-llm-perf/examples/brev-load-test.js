@@ -15,24 +15,24 @@ export const options = {
             ],
         },
     },
+    // change these to all be trends:
     thresholds: {
-        'llm_ttft_stream': ['p95<2000'],
-        'llm_ttft_sync': ['p95<5000'],
-        'llm_token_latency_stream': ['avg<100'],
-        'llm_token_latency_sync': ['avg<200'],
-        'llm_tokens_per_second_stream': ['value>5'],
-        'llm_tokens_per_second_sync': ['value>2'],
-        'http_req_duration': ['p95<10000'],
+        'llm_ttft': ['p(95)<2000'],
+        'llm_token_latency': ['avg<100'],
+        'llm_completion_time': ['p(95)<10000'],
+        'llm_tokens_per_second': ['p(95)>5'],
+        'llm_request_duration': ['p(95)<10000'],
+        'llm_errors': ['count<10'],
     },
 };
 
-const client = new llm.Client({
-    baseURL: __ENV.ENDPOINT_URL || 'https://70b-32uncln8p.brevlab.com/v1',
-    isStreaming: __ENV.STREAM_MODE === 'true',
-    httpTimeout: '30s',
-});
-
 export default function() {
+    const client = new llm.Client({
+        baseURL: __ENV.ENDPOINT_URL || 'https://localhost:9000/v1',
+        isStreaming: __ENV.STREAM_MODE === 'true',
+        httpTimeout: '30s',
+    });
+
     try {
         const response = client.complete({
             model: "meta-llama/Llama-3.3-70B-Instruct",
@@ -57,3 +57,11 @@ export default function() {
         console.error('Request failed:', error);
     }
 }
+
+export function handleSummary(data) {
+    return {
+        'outputs/summary.json': JSON.stringify(data),
+        stdout: textSummary(data, { indent: ' ', enableColors: true }),
+    };
+}
+
