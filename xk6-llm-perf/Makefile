@@ -1,4 +1,4 @@
-.PHONY: all build clean install test lint dev sample sample-vllm sample-openai sample-triton sample-brev
+.PHONY: all build clean install test lint dev example example-vllm example-openai example-triton example-loadtest
 
 # Extension info
 EXTENSION_NAME=xk6-llm-perf
@@ -19,7 +19,7 @@ GOBIN=$(GOBASE)/bin
 VLLM_URL?=http://localhost:8000/v1
 OPENAI_URL?=https://api.openai.com/v1
 TRITON_URL?=http://localhost:8001/v1
-BREV_URL?=https://70b-32uncln8p.brevlab.com/v1
+BREV_URL?=https://70b-32uncln8p.loadtestlab.com/v1
 OPENAI_KEY?=
 
 all: clean build
@@ -36,20 +36,20 @@ build: install-xk6
 		--with github.com/grafana/xk6-dashboard@latest \
 		--output $(BUILD_DIR)/$(BINARY_NAME)
 
-sample-brev: build
-	@echo "Running load test against Brev LLM..."
-	@ENDPOINT_URL=$(BREV_URL) \
+example-loadtest: build
+	@echo "Running load test..."
+	ENDPOINT_URL=$(BREV_URL) \
 	ENDPOINT_TYPE=chat \
 	./$(BUILD_DIR)/$(BINARY_NAME) run \
 		--out dashboard \
-		examples/brev-load-test.js
+		examples/sample-load-test.js -v -w
 
-sample-brev-stream: build
-	@echo "Running streaming load test against Brev LLM..."
-	@ENDPOINT_URL=$(BREV_URL) \
+example-loadtest-stream: build
+	@echo "Running streaming load test..."
+	ENDPOINT_URL=$(BREV_URL) \
 	ENDPOINT_TYPE=chat \
 	STREAM_MODE=true \
 	./$(BUILD_DIR)/$(BINARY_NAME) run \
 		--out dashboard \
-		examples/brev-load-test.js
+		examples/sample-load-test.js -v -w
 
