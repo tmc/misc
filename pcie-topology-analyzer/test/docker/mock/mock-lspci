@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""Mock lspci output with configurable devices"""
+
+import sys
+import json
+import os
+
+def load_mock_data():
+    mock_file = os.getenv('MOCK_PCI_DATA', '/app/test/mock_data/pci_devices.json')
+    try:
+        with open(mock_file) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return DEFAULT_DEVICES
+
+# Default mock devices if no configuration provided
+DEFAULT_DEVICES = {
+    "0000:00:00.0": {
+        "class": "Host bridge",
+        "vendor": "Intel Corporation",
+        "device": "Host Bridge",
+        "numa_node": 0
+    },
+    "0000:00:01.0": {
+        "class": "VGA compatible controller",
+        "vendor": "NVIDIA Corporation",
+        "device": "GeForce RTX 3080",
+        "numa_node": 0,
+        "capabilities": ["MSI-X", "PCIe 4.0"]
+    },
+    "0000:00:02.0": {
+        "class": "Network controller",
+        "vendor": "Intel Corporation",
+        "device": "Ethernet Controller X710",
+        "numa_node": 1,
+        "capabilities": ["SR-IOV", "MSI-X", "PCIe 4.0"]
+    }
+}
+
+def main():
+    devices = load_mock_data()
+    
+    # Handle different lspci options
+    if "-vvv" in sys.argv:
+        # Detailed output
+        for addr, dev in devices.items():
+            print(f"{addr} {dev['class']}: {dev['vendor']} {dev['device']}")
+            print(f"\tCapabilities: {' '.join(dev.get('capabilities', []))}")
+            print(f"\tNUMA node: {dev.get('numa_node', 'not specified')}")
+            print()
+    else:
+        # Basic output
+        for addr, dev in devices.items():
+            print(f"{addr} {dev['class']}: {dev['vendor']} {dev['device']}")
+
+if __name__ == "__main__":
+    main()
+

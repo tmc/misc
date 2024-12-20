@@ -1,0 +1,16 @@
+{
+    "nodes": 2,
+    "node_info": {
+        "0": {
+            "cpus": "0-3",
+            "memory": "32768",
+            "distances": [10, 20]
+        },
+        "1": {
+            "cpus": "4-7",
+            "memory": "32768",
+            "distances": [20, 10]
+        }
+    }
+}
+

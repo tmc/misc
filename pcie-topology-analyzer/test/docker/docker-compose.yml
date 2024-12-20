@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  test:
+    build:
+      context: ../..
+      dockerfile: test/docker/Dockerfile
+    volumes:
+      - ../..:/app
+    environment:
+      - MOCK_PCI_DATA=/app/test/docker/mock_data/pci_devices.json
+      - MOCK_NUMA_DATA=/app/test/docker/mock_data/numa_topology.json
+

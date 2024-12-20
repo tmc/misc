@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+"""Mock numactl output with configurable NUMA topology"""
+
+import sys
+import json
+import os
+
+def load_mock_data():
+    mock_file = os.getenv('MOCK_NUMA_DATA', '/app/test/mock_data/numa_topology.json')
+    try:
+        with open(mock_file) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return DEFAULT_TOPOLOGY
+
+# Default NUMA topology if no configuration provided
+DEFAULT_TOPOLOGY = {
+    "nodes": 2,
+    "node_info": {
+        "0": {
+            "cpus": "0-3",
+            "memory": "32768",
+            "distances": [10, 20]
+        },
+        "1": {
+            "cpus": "4-7",
+            "memory": "32768",
+            "distances": [20, 10]
+        }
+    }
+}
+
+def main():
+    topology = load_mock_data()
+    
+    if "--hardware" in sys.argv:
+        print(f"available: {topology['nodes']} nodes (0-{topology['nodes']-1})")
+        for node, info in topology['node_info'].items():
+            print(f"node {node} cpus: {info['cpus']}")
+            print(f"node {node} size: {info['memory']} MB")
+        
+        print("\nnode distances:")
+        for node, info in topology['node_info'].items():
+            print("node", end="")
+            for dist in info['distances']:
+                print(f" {dist:>3}", end="")
+            print()
+    else:
+        print("Mock numactl: unknown option")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
+
