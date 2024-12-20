@@ -1,0 +1,23 @@
+{
+    "0000:00:00.0": {
+        "class": "Host bridge",
+        "vendor": "Intel Corporation",
+        "device": "Host Bridge",
+        "numa_node": 0
+    },
+    "0000:00:01.0": {
+        "class": "VGA compatible controller",
+        "vendor": "NVIDIA Corporation",
+        "device": "GeForce RTX 3080",
+        "numa_node": 0,
+        "capabilities": ["MSI-X", "PCIe 4.0"]
+    },
+    "0000:00:02.0": {
+        "class": "Network controller",
+        "vendor": "Intel Corporation",
+        "device": "Ethernet Controller X710",
+        "numa_node": 1,
+        "capabilities": ["SR-IOV", "MSI-X", "PCIe 4.0"]
+    }
+}
+

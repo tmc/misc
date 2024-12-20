@@ -1,0 +1,17 @@
+# Shell script linting configuration
+shell=bash
+enable=all
+source-path=SCRIPTDIR
+
+# Disable source following warnings
+disable=SC1090  # Can't follow non-constant source
+disable=SC1091  # Can't follow non-constant source
+
+# Disable specific checks that are too strict for our use case
+disable=SC2034  # Unused variables (we use them for configuration)
+disable=SC2154  # Referenced but not assigned (used for dynamic variables)
+
+# Performance settings
+external-sources=true
+enable=check-unassigned-uppercase
+enable=deprecate-which

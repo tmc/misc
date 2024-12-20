@@ -1,0 +1,37 @@
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+
+# Temporary files
+*.log
+.cgpt-hist-*
+*~
+.DS_Store
+output/
+tmp/
+test/docker/tmp/
+*.tmp
+*.temp
+*.bak
+
+# Test artifacts
+test/coverage/
+test/reports/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependencies
+vendor/
+node_modules/
+
+# Generated files
+docs/_build/
+man/*.1.gz
+
+.*txtar
