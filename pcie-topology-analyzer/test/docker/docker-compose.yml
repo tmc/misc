@@ -9,4 +9,7 @@ services:
     environment:
       - MOCK_PCI_DATA=/app/test/docker/mock_data/pci_devices.json
       - MOCK_NUMA_DATA=/app/test/docker/mock_data/numa_topology.json
+      # Add OpenAI API key if needed
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
 
