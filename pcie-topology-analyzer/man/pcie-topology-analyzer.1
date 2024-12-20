@@ -1,0 +1,49 @@
+.TH PCIE-TOPOLOGY-ANALYZER 1 "January 2024" "Version 1.0.0" "User Commands"
+.SH NAME
+pcie-topology-analyzer \- analyze PCIe topology and generate libvirt XML configurations
+.SH SYNOPSIS
+.B pcie-topology-analyzer
+[\fIOPTIONS\fR]
+[\fIDIRECTORY\fR]
+.SH DESCRIPTION
+.B pcie-topology-analyzer
+analyzes system PCIe topology and generates optimized libvirt XML configurations for VM passthrough.
+.SH OPTIONS
+.TP
+.B \-\-count-tokens
+Count tokens in output
+.TP
+.B \-\-verbose
+Enable verbose logging
+.TP
+.B \-\-debug
+Enable debug mode
+.TP
+.B \-\-validate
+Validate generated XML
+.TP
+.B \-\-output-dir \fIDIR\fR
+Specify output directory
+.TP
+.B \-\-help
+Show help message
+.SH EXAMPLES
+.PP
+Basic analysis:
+.PP
+.B pcie-topology-analyzer
+.PP
+With validation and custom output:
+.PP
+.B pcie-topology-analyzer \-\-validate \-\-output-dir /path/to/output
+.SH AUTHOR
+Written by Travis Cline
+.SH COPYRIGHT
+Copyright \(co 2024 Travis Cline
+.br
+License MIT: MIT License
+.SH SEE ALSO
+.BR lspci (8),
+.BR virsh (1),
+.BR numactl (8)
+
