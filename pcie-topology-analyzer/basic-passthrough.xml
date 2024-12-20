@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<domain type="kvm">
+  <name>basic-passthrough</name>
+  <memory unit="GiB">16</memory>
+  <vcpu placement="static">8</vcpu>
+  <numatune>
+    <memory mode="strict" nodeset="0"/>
+  </numatune>
+  <!-- Additional configuration... -->
+</domain>
+

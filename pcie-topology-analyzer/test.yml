@@ -1,0 +1,16 @@
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pciutils hwloc numactl libvirt-clients shellcheck
+      - name: Run tests
+        run: make test
+

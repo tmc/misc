@@ -1,0 +1,11 @@
+# Default ignore patterns for PCIe topology analyzer
+*.log
+.cgpt-hist-*
+*~
+.DS_Store
+output/
+tmp/
+*.tmp
+*.temp
+*.bak
+

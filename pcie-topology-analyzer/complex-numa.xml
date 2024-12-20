@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<domain type="kvm">
+  <name>complex-numa</name>
+  <memory unit="GiB">32</memory>
+  <vcpu placement="static">16</vcpu>
+  <numatune>
+    <memory mode="strict" nodeset="0-1"/>
+    <memnode cellid="0" mode="strict" nodeset="0"/>
+    <memnode cellid="1" mode="strict" nodeset="1"/>
+  </numatune>
+  <!-- Additional configuration... -->
+</domain>
+
