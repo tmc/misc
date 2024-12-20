@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# pcie-topology-analyzer.sh - PCIe Topology Analysis and Libvirt XML Generator
-#
-# For full usage instructions, run: ./pcie-topology-analyzer.sh --help
+# PCIe Topology Analysis and Libvirt XML Generator
 set -euo pipefail
 
-# Default configuration
+# Configuration
 readonly SCRIPT_VERSION="1.0.0"
-readonly TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 readonly DEFAULT_OUTPUT_DIR="."
+
+# Initialize TIMESTAMP with proper error handling
+readonly TIMESTAMP
+TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+
+# Default excludes
 readonly DEFAULT_EXCLUDES=(
     ':!*.log'
     ':!.cgpt-hist-*'
@@ -16,8 +19,8 @@ readonly DEFAULT_EXCLUDES=(
     ':!*.bak'
 )
 
-# Global variables
-declare output_dir="$DEFAULT_OUTPUT_DIR"
+# Global variables with proper initialization
+declare output_dir="${DEFAULT_OUTPUT_DIR}"
 declare count_tokens=false
 declare verbose=false
 declare debug=false
@@ -30,7 +33,7 @@ log_info() {
 }
 
 log_debug() {
-    if [[ "$debug" == true ]]; then
+    if [[ "${debug}" == true ]]; then
         printf '[DEBUG] %s\n' "$*" >&2
     fi
 }
@@ -42,83 +45,83 @@ log_error() {
 # Function to collect PCIe topology information
 collect_pcie_info() {
     local output_file="$1"
-
+    
     log_debug "Collecting PCIe topology information..."
     {
         echo "=== PCIe Topology ==="
         lspci -tvnn
-
+        
         echo -e "\n=== Detailed PCIe Information ==="
         lspci -vvv
-
+        
         echo -e "\n=== IOMMU Groups ==="
         for group in /sys/kernel/iommu_groups/*; do
-            if [[ -d "$group" ]]; then
+            if [[ -d "${group}" ]]; then
                 echo "IOMMU Group ${group##*/}:"
-                ls -l "$group/devices/"
+                ls -l "${group}/devices/"
             fi
         done
-    } >> "$output_file"
+    } >> "${output_file}"
 }
 
 # Function to collect NUMA information
 collect_numa_info() {
     local output_file="$1"
-
+    
     log_debug "Collecting NUMA information..."
     {
         echo -e "\n=== NUMA Topology ==="
         numactl --hardware
-
+        
         echo -e "\n=== NUMA Statistics ==="
         numastat -m
-
+        
         echo -e "\n=== CPU Topology ==="
         lscpu -e
-    } >> "$output_file"
+    } >> "${output_file}"
 }
 
 # Function to collect hardware topology
 collect_hw_topology() {
     local output_file="$1"
-
+    
     log_debug "Collecting hardware topology..."
     {
         echo -e "\n=== Hardware Topology ==="
         lstopo --of xml
         hwloc-ls --whole-system
-    } >> "$output_file"
+    } >> "${output_file}"
 }
 
 # Function to generate libvirt XML
 generate_libvirt_xml() {
     local topology_file="$1"
     local output_file="$2"
-
+    
     log_debug "Generating libvirt XML configuration..."
-
+    
     # Use cgpt to analyze topology and generate XML
-    cgpt -s "You are an expert system administrator specializing in PCIe topology and virtualization.
+    cgpt -s "You are an expert system administrator specializing in PCIe topology and virtualization. 
     Analyze the following system topology information and generate an optimal libvirt XML configuration.
     Consider NUMA topology, IOMMU groups, and PCIe relationships.
-
+    
     Input format:
-    $(<"$topology_file")
-
+    $(<"${topology_file}")
+    
     Generate a complete and valid libvirt XML configuration that:
     1. Preserves PCIe topology
     2. Maintains NUMA affinity
     3. Implements proper CPU pinning
-    4. Respects IOMMU groups" > "$output_file"
+    4. Respects IOMMU groups" > "${output_file}"
 }
 
 # Function to validate XML
 validate_xml_config() {
     local xml_file="$1"
-
+    
     if command -v virt-xml-validate >/dev/null 2>&1; then
         log_debug "Validating XML configuration..."
-        if ! virt-xml-validate "$xml_file"; then
+        if ! virt-xml-validate "${xml_file}"; then
             log_error "XML validation failed"
             return 1
         fi
@@ -131,28 +134,28 @@ validate_xml_config() {
 # Main function
 main() {
     local temp_dir
-    temp_dir=$(mktemp -d)
-    trap 'rm -rf "$temp_dir"' EXIT
-
-    local topology_file="$temp_dir/topology.txt"
-    local xml_file="$output_dir/vm-config.xml"
-
-    # Create output directory if it doesn't exist
-    mkdir -p "$output_dir"
-
+    temp_dir="$(mktemp -d)"
+    trap 'rm -rf "${temp_dir}"' EXIT
+    
+    local topology_file="${temp_dir}/topology.txt"
+    local xml_file="${output_dir}/vm-config.xml"
+    
+    # Create output directory
+    mkdir -p "${output_dir}"
+    
     # Collect system information
-    collect_pcie_info "$topology_file"
-    collect_numa_info "$topology_file"
-    collect_hw_topology "$topology_file"
-
+    collect_pcie_info "${topology_file}"
+    collect_numa_info "${topology_file}"
+    collect_hw_topology "${topology_file}"
+    
     # Generate and validate XML
-    generate_libvirt_xml "$topology_file" "$xml_file"
-
-    if [[ "$validate_xml" == true ]]; then
-        validate_xml_config "$xml_file"
+    generate_libvirt_xml "${topology_file}" "${xml_file}"
+    
+    if [[ "${validate_xml}" == true ]]; then
+        validate_xml_config "${xml_file}"
     fi
-
-    log_info "Configuration generated: $xml_file"
+    
+    log_info "Configuration generated: ${xml_file}"
 }
 
 # Parse command line arguments
@@ -184,4 +187,3 @@ done
 
 # Run main function
 main
-
