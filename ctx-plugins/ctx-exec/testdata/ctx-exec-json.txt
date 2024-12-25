@@ -1,0 +1,25 @@
+# Test JSON output functionality
+
+# Basic JSON output
+exec ctx-exec -json 'echo hello'
+stdout '{'
+stdout '  "cmd": "echo hello",'
+stdout '  "stdout": "hello\\n"'
+stdout '}'
+
+# JSON output with error
+! exec ctx-exec -json 'nonexistent-command'
+stdout '{'
+stdout '  "cmd": "nonexistent-command",'
+stdout '  "stderr": ".*command not found.*",'
+stdout '  "error": ".*"'
+stdout '}'
+
+# JSON output with environment variable
+env CTX_EXEC_JSON=true
+exec ctx-exec 'echo hello'
+stdout '{'
+stdout '  "cmd": "echo hello",'
+stdout '  "stdout": "hello\\n"'
+stdout '}'
+

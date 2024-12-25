@@ -1,8 +1,20 @@
 # Test tag override functionality
+
+# Test with environment variable
 env CTX_EXEC_TAG=custom-output
 exec ctx-exec 'echo hello'
-stdout '<custom-output cmd='
+stdout '<custom-output cmd="echo hello">'
 stdout '<stdout>'
 stdout 'hello'
 stdout '</stdout>'
 stdout '</custom-output>'
+
+# Test with flag (after unsetting environment variable)
+env CTX_EXEC_TAG=
+exec ctx-exec -tag other-output 'echo hello'
+stdout '<other-output cmd="echo hello">'
+stdout '<stdout>'
+stdout 'hello'
+stdout '</stdout>'
+stdout '</other-output>'
+
