@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html"
@@ -12,11 +13,20 @@ import (
 
 var (
 	enableEscaping bool
-	outputTagName  string = "exec-output" // default tag name, can bet overridden.
+	outputTagName  string = "exec-output" // default tag name, can be overridden
+	jsonOutput     bool
 )
+
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, Usage)
+	}
+}
 
 func parseFlags() {
 	flag.BoolVar(&enableEscaping, "escape", false, "Enable escaping of special characters")
+	flag.BoolVar(&jsonOutput, "json", false, "Output in JSON format")
+	flag.StringVar(&outputTagName, "tag", "exec-output", "Override the output tag name")
 	flag.Parse()
 
 	// Check for environment variables
@@ -25,6 +35,9 @@ func parseFlags() {
 	}
 	if tagOverride := os.Getenv("CTX_EXEC_TAG"); tagOverride != "" {
 		outputTagName = tagOverride
+	}
+	if os.Getenv("CTX_EXEC_JSON") == "true" {
+		jsonOutput = true
 	}
 }
 
@@ -38,14 +51,20 @@ func main() {
 
 func run() error {
 	if flag.NArg() < 1 {
+		flag.Usage()
 		return fmt.Errorf("no command provided")
 	}
 
 	command := strings.Join(flag.Args(), " ")
 	stdout, stderr, err := executeCommand(command)
 
-	wrappedOutput := wrapOutput(command, stdout, stderr, err)
-	fmt.Println(wrappedOutput)
+	var output string
+	if jsonOutput {
+		output = wrapOutputJSON(command, stdout, stderr, err)
+	} else {
+		output = wrapOutput(command, stdout, stderr, err)
+	}
+	fmt.Println(output)
 
 	if err != nil {
 		return fmt.Errorf("command exited with error: %v", err)
@@ -63,6 +82,49 @@ func executeCommand(command string) (string, string, error) {
 
 	err := cmd.Run()
 	return stdout.String(), stderr.String(), err
+}
+
+type ExecOutput struct {
+	Command string `json:"cmd"`
+	Stdout  string `json:"stdout,omitempty"`
+	Stderr  string `json:"stderr,omitempty"`
+	Error   string `json:"error,omitempty"`
+}
+
+func wrapOutputJSON(command, stdout, stderr string, err error) string {
+	output := ExecOutput{
+		Command: command,
+	}
+
+	if stdout != "" {
+		if enableEscaping {
+			output.Stdout = html.EscapeString(stdout)
+		} else {
+			output.Stdout = stdout
+		}
+	}
+
+	if stderr != "" {
+		if enableEscaping {
+			output.Stderr = html.EscapeString(stderr)
+		} else {
+			output.Stderr = stderr
+		}
+	}
+
+	if err != nil {
+		if enableEscaping {
+			output.Error = html.EscapeString(err.Error())
+		} else {
+			output.Error = err.Error()
+		}
+	}
+
+	jsonBytes, err := json.MarshalIndent(output, "", "  ")
+	if err != nil {
+		return fmt.Sprintf(`{"error": "Failed to marshal JSON: %s"}`, err)
+	}
+	return string(jsonBytes)
 }
 
 func wrapOutput(command, stdout, stderr string, err error) string {
@@ -98,3 +160,4 @@ func wrapOutput(command, stdout, stderr string, err error) string {
 	outputBuilder.WriteString(fmt.Sprintf("</%s>", outputTagName))
 	return outputBuilder.String()
 }
+

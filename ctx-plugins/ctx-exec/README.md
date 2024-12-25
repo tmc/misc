@@ -1,6 +1,6 @@
 # ctx-exec
 
-ctx-exec is a command-line tool that executes shell commands and wraps their output in XML-like tags.
+ctx-exec is a command-line tool that executes shell commands and wraps their output in XML-like tags or JSON format.
 
 ## Installation
 
@@ -15,7 +15,7 @@ Replace `yourusername` with your actual GitHub username or the appropriate path 
 ## Usage
 
 ```
-ctx-exec 'your shell command here'
+ctx-exec [options] 'your shell command here'
 ```
 
 Example:
@@ -23,17 +23,31 @@ Example:
 ctx-exec 'echo Hello, World!'
 ```
 
-Output:
+Output (XML format):
 ```
 <exec-output cmd="echo Hello, World!">Hello, World!
 </exec-output>
+```
+
+JSON format:
+```
+ctx-exec -json 'echo Hello, World!'
+```
+
+Output:
+```json
+{
+  "cmd": "echo Hello, World!",
+  "stdout": "Hello, World!\n"
+}
 ```
 
 ## Features
 
 - Executes shell commands in the current environment
 - Captures both stdout and stderr
-- Wraps the output in XML-like tags
+- Wraps the output in XML-like tags or JSON format
+- Supports escaping of special characters
 
 ## Error Handling
 
@@ -46,18 +60,18 @@ The program handles various error cases, including:
 
 If an error occurs, it will be printed to stderr, and the program will exit with a non-zero status code.
 
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-
 ## Environment Variables
 
 - `CTX_EXEC_ESCAPE`: Set to "true" to enable XML escaping
 - `CTX_EXEC_TAG`: Override the default output tag name (default: "exec-output")
+- `CTX_EXEC_JSON`: Set to "true" to enable JSON output format
 
 Example:
 ```bash
 CTX_EXEC_TAG=custom-output ctx-exec 'echo hello'
 # Output will use <custom-output> tags instead of <exec-output>
+
+CTX_EXEC_JSON=true ctx-exec 'echo hello'
+# Output will be in JSON format
 ```
+
