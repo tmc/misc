@@ -22,17 +22,3 @@ stdout '(?s)<file path="nested/nested_exclude.txt">'
 ! stdout '(?s)<file path="include1.txt">'
 ! stdout '(?s)<file path="not_nested.txt">'
 
--- include1.txt --
-Include this file
--- include2.txt --
-Also include this file
--- excluded.txt --
-This should be excluded
--- not_included.md --
-This markdown file should not be included
--- nested/nested_include.txt --
-This nested file should be included
--- nested/nested_exclude.txt --
-This nested file should be excluded
--- not_nested.txt --
-This file is not nested

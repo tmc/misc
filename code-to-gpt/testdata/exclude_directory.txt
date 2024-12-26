@@ -7,11 +7,3 @@ stdout '(?s)<root path="~/.*">'
 ! stdout 'excluded.txt'
 ! stderr .
 
--- file1.txt --
-Hello, World!
--- file2.txt --
-This is a test file.
--- subdir/subfile.txt --
-File in subdirectory
--- exclude_me/excluded.txt --
-This file should be excluded

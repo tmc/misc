@@ -1,14 +1,15 @@
 package recorder
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"regexp"
 	"strings"
 	"sync"
+	"text/template"
 	"time"
 
 	"github.com/chromedp/cdproto/har"
@@ -16,7 +17,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Recorder captures and manages network traffic for HAR generation.
+// FilterOption configures entry filtering
+type FilterOption struct {
+	JQExpr   string
+	Template string
+}
+
 type Recorder struct {
 	sync.Mutex
 	requests        map[network.RequestID]*network.Request
@@ -31,12 +37,26 @@ type Recorder struct {
 	urlFilter       *regexp.Regexp
 	blockFilter     *regexp.Regexp
 	omitFilter      *regexp.Regexp
+	streaming       bool
+	filter          *FilterOption
 }
 
-// Option configures a Recorder.
+func (r *Recorder) logf(format string, args ...interface{}) {
+	if r.verbose {
+		log.Printf(format, args...)
+	}
+}
+
+func truncateURL(url string) string {
+	const maxLength = 80
+	if len(url) <= maxLength {
+		return url
+	}
+	return url[:maxLength/2] + "..." + url[len(url)-maxLength/2:]
+}
+
 type Option func(*Recorder) error
 
-// WithVerbose enables verbose logging.
 func WithVerbose(verbose bool) Option {
 	return func(r *Recorder) error {
 		r.verbose = verbose
@@ -44,7 +64,38 @@ func WithVerbose(verbose bool) Option {
 	}
 }
 
-// WithCookiePattern sets a regexp pattern for filtering cookies.
+func WithStreaming(stream bool) Option {
+	return func(r *Recorder) error {
+		r.streaming = stream
+		return nil
+	}
+}
+
+func WithFilter(expr string) Option {
+	return func(r *Recorder) error {
+		if expr == "" {
+			return nil
+		}
+		r.filter = &FilterOption{JQExpr: expr}
+		return nil
+	}
+}
+
+func WithTemplate(tmpl string) Option {
+	return func(r *Recorder) error {
+		if tmpl == "" {
+			return nil
+		}
+		// Validate template
+		_, err := template.New("har").Parse(tmpl)
+		if err != nil {
+			return fmt.Errorf("invalid template: %w", err)
+		}
+		r.filter = &FilterOption{Template: tmpl}
+		return nil
+	}
+}
+
 func WithCookiePattern(pattern string) Option {
 	return func(r *Recorder) error {
 		if pattern == "" {
@@ -59,7 +110,6 @@ func WithCookiePattern(pattern string) Option {
 	}
 }
 
-// WithURLPattern sets a regexp pattern for filtering URLs.
 func WithURLPattern(pattern string) Option {
 	return func(r *Recorder) error {
 		if pattern == "" {
@@ -74,7 +124,6 @@ func WithURLPattern(pattern string) Option {
 	}
 }
 
-// WithBlockPattern sets a regexp pattern for blocking URLs.
 func WithBlockPattern(pattern string) Option {
 	return func(r *Recorder) error {
 		if pattern == "" {
@@ -89,7 +138,6 @@ func WithBlockPattern(pattern string) Option {
 	}
 }
 
-// WithOmitPattern sets a regexp pattern for omitting URLs from HAR output.
 func WithOmitPattern(pattern string) Option {
 	return func(r *Recorder) error {
 		if pattern == "" {
@@ -104,7 +152,6 @@ func WithOmitPattern(pattern string) Option {
 	}
 }
 
-// New creates a new Recorder with the given options.
 func New(opts ...Option) (*Recorder, error) {
 	r := &Recorder{
 		requests:  make(map[network.RequestID]*network.Request),
@@ -121,13 +168,6 @@ func New(opts ...Option) (*Recorder, error) {
 	return r, nil
 }
 
-func (r *Recorder) logf(format string, args ...interface{}) {
-	if r.verbose {
-		log.Printf(format, args...)
-	}
-}
-
-// SetCookies updates the recorder's cookies.
 func (r *Recorder) SetCookies(cookies []*network.Cookie) {
 	r.Lock()
 	defer r.Unlock()
@@ -135,7 +175,67 @@ func (r *Recorder) SetCookies(cookies []*network.Cookie) {
 	r.logf("Loaded %d cookies from profile", len(cookies))
 }
 
-// HandleNetworkEvent processes Chrome DevTools Protocol network events.
+func (r *Recorder) createHAREntry(reqID network.RequestID) *har.Entry {
+	req := r.requests[reqID]
+	if req == nil {
+		return nil
+	}
+
+	resp := r.responses[reqID]
+	if resp == nil {
+		return nil
+	}
+
+	timing := r.timings[reqID]
+	if timing == nil {
+		return nil
+	}
+
+	if r.omitFilter != nil && r.omitFilter.MatchString(req.URL) {
+		return nil
+	}
+
+	waitTime := float64(0)
+	if timing.Timestamp != nil {
+		elapsed := timing.Timestamp.Time().Sub(r.navigationStart)
+		waitTime = float64(elapsed.Milliseconds())
+	}
+
+	entry := &har.Entry{
+		StartedDateTime: r.navigationStart.Format(time.RFC3339),
+		Request: &har.Request{
+			Method:      req.Method,
+			URL:         req.URL,
+			HTTPVersion: "HTTP/1.1",
+			Headers:     convertHeaders(req.Headers),
+			Cookies:     convertNetworkCookies(req.Headers["Cookie"]),
+		},
+		Response: &har.Response{
+			Status:      int64(resp.Status),
+			StatusText:  resp.StatusText,
+			HTTPVersion: resp.Protocol,
+			Headers:     convertHeaders(resp.Headers),
+			Cookies:     convertNetworkCookies(resp.Headers["Set-Cookie"]),
+			Content: &har.Content{
+				Size:     int64(resp.EncodedDataLength),
+				MimeType: resp.MimeType,
+			},
+		},
+		Cache: &har.Cache{},
+		Timings: &har.Timings{
+			Send:    0,
+			Wait:    waitTime,
+			Receive: 0,
+		},
+	}
+
+	if body, ok := r.bodies[reqID]; ok {
+		entry.Response.Content.Text = string(body)
+	}
+
+	return entry
+}
+
 func (r *Recorder) HandleNetworkEvent(ctx context.Context) func(interface{}) {
 	return func(ev interface{}) {
 		r.Lock()
@@ -166,7 +266,6 @@ func (r *Recorder) HandleNetworkEvent(ctx context.Context) func(interface{}) {
 
 		case *network.EventLoadingFinished:
 			r.timings[e.RequestID] = e
-			// Fetch response body in a separate goroutine
 			go func(requestID network.RequestID) {
 				body, err := network.GetResponseBody(requestID).Do(ctx)
 				if err != nil {
@@ -175,13 +274,36 @@ func (r *Recorder) HandleNetworkEvent(ctx context.Context) func(interface{}) {
 				}
 				r.Lock()
 				r.bodies[requestID] = body
+				if r.streaming {
+					if entry := r.createHAREntry(requestID); entry != nil {
+						if r.filter != nil {
+							var err error
+							if r.filter.JQExpr != "" {
+								entry, err = r.applyJQFilter(entry)
+							} else if r.filter.Template != "" {
+								entry, err = r.applyTemplate(entry)
+							}
+							if err != nil {
+								r.logf("Error applying filter: %v", err)
+								return
+							}
+						}
+						if entry != nil {
+							entryJSON, err := json.Marshal(entry)
+							if err != nil {
+								r.logf("Error marshalling HAR entry: %v", err)
+								return
+							}
+							fmt.Println(string(entryJSON))
+						}
+					}
+				}
 				r.Unlock()
 			}(e.RequestID)
 		}
 	}
 }
 
-// WriteHAR writes the recorded network traffic to a HAR file.
 func (r *Recorder) WriteHAR(filename string) error {
 	r.Lock()
 	defer r.Unlock()
@@ -201,7 +323,6 @@ func (r *Recorder) WriteHAR(filename string) error {
 		},
 	}
 
-	// Add profile cookies as a separate page entry
 	if len(r.cookies) > 0 {
 		r.logf("Adding %d profile cookies", len(r.cookies))
 		cookiePage := &har.Page{
@@ -231,94 +352,45 @@ func (r *Recorder) WriteHAR(filename string) error {
 	}
 
 	processedRequests := 0
-	for reqID, req := range r.requests {
-		// Skip if URL matches omit pattern
-		if r.omitFilter != nil && r.omitFilter.MatchString(req.URL) {
-			r.logf("Omitting request from HAR: %s", truncateURL(req.URL))
-			continue
+	for reqID := range r.requests {
+		if entry := r.createHAREntry(reqID); entry != nil {
+			h.Log.Entries = append(h.Log.Entries, entry)
+			processedRequests++
 		}
-
-		resp := r.responses[reqID]
-		if resp == nil {
-			r.logf("Skipping request %s: no response", reqID)
-			continue
-		}
-
-		timing := r.timings[reqID]
-		if timing == nil {
-			r.logf("Skipping request %s: no timing", reqID)
-			continue
-		}
-
-		// Convert MonotonicTime to milliseconds since navigation start
-		waitTime := float64(0)
-		if timing.Timestamp != nil {
-			elapsed := timing.Timestamp.Time().Sub(r.navigationStart)
-			waitTime = float64(elapsed.Milliseconds())
-		}
-
-		entry := &har.Entry{
-			StartedDateTime: r.navigationStart.Format(time.RFC3339),
-			Request: &har.Request{
-				Method:      req.Method,
-				URL:         req.URL,
-				HTTPVersion: "HTTP/1.1",
-				Headers:     convertHeaders(req.Headers),
-				Cookies:     convertNetworkCookies(req.Headers["Cookie"]),
-			},
-			Response: &har.Response{
-				Status:      int64(resp.Status),
-				StatusText:  resp.StatusText,
-				HTTPVersion: resp.Protocol,
-				Headers:     convertHeaders(resp.Headers),
-				Cookies:     convertNetworkCookies(resp.Headers["Set-Cookie"]),
-				Content: &har.Content{
-					Size:     int64(resp.EncodedDataLength),
-					MimeType: resp.MimeType,
-				},
-			},
-			Cache: &har.Cache{},
-			Timings: &har.Timings{
-				Send:    0,
-				Wait:    waitTime,
-				Receive: 0,
-			},
-		}
-
-		if body, ok := r.bodies[reqID]; ok {
-			entry.Response.Content.Text = string(body)
-		}
-
-		h.Log.Entries = append(h.Log.Entries, entry)
-		processedRequests++
 	}
 
 	r.logf("Successfully processed %d/%d requests", processedRequests, len(r.requests))
 
-	f, err := os.Create(filename)
+	jsonBytes, err := json.MarshalIndent(h, "", "  ")
 	if err != nil {
-		return errors.Wrap(err, "creating output file")
-	}
-	defer f.Close()
-
-	enc := json.NewEncoder(f)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(h); err != nil {
-		return errors.Wrap(err, "encoding HAR")
+		return errors.Wrap(err, "marshalling HAR to JSON")
 	}
 
+	fmt.Println(string(jsonBytes))
 	r.logf("Successfully wrote HAR file to: %s", filename)
 	return nil
 }
 
-// Helper functions
-
-func truncateURL(url string) string {
-	const maxLength = 80
-	if len(url) <= maxLength {
-		return url
+func (r *Recorder) applyTemplate(entry *har.Entry) (*har.Entry, error) {
+	tmpl, err := template.New("har").Parse(r.filter.Template)
+	if err != nil {
+		return nil, err
 	}
-	return url[:maxLength/2] + "..." + url[len(url)-maxLength/2:]
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, entry); err != nil {
+		return nil, err
+	}
+
+	// Convert template output to a new entry
+	result := &har.Entry{
+		Response: &har.Response{
+			Content: &har.Content{
+				Text: buf.String(),
+			},
+		},
+	}
+	return result, nil
 }
 
 func convertHeaders(headers map[string]interface{}) []*har.NameValuePair {
@@ -360,3 +432,4 @@ func convertNetworkCookies(cookieHeader interface{}) []*har.Cookie {
 
 	return cookies
 }
+
