@@ -150,10 +150,10 @@ func TestCreateHAREntry(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:     "missing_request",
-			req:      nil,
-			resp:     nil,
-			timing:   nil,
+			name:    "missing_request",
+			req:     nil,
+			resp:    nil,
+			timing:  nil,
 			wantURL: "",
 			wantErr: true,
 		},
@@ -195,4 +195,3 @@ func TestCreateHAREntry(t *testing.T) {
 		})
 	}
 }
-

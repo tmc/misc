@@ -2,7 +2,6 @@ package recorder
 
 import (
 	"testing"
-	"time"
 
 	"github.com/chromedp/cdproto/har"
 )
@@ -95,4 +94,3 @@ func TestJQFilter(t *testing.T) {
 		})
 	}
 }
-

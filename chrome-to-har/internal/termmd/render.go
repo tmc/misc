@@ -223,4 +223,3 @@ func (r *TermRenderer) getRenderer(kind ast.NodeKind) (renderer.NodeRendererFunc
 		return nil, false
 	}
 }
-

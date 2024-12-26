@@ -5,12 +5,14 @@
 ## Basic Usage
 
 ```bash
-chrome-to-har -profile=/path/to/chrome/profile -output=output.har [-url=https://example.com] [-verbose] [-cookies=regexp] [-urls=regexp] [-stream] [-filter='jq expr']
+chrome-to-har [-profile=/path/to/chrome/profile] [-output=output.har] [-url=https://example.com] [-verbose] [-stream]
 ```
+
+If no profile is specified, the first available Chrome profile will be automatically selected. Use `-verbose` to see which profile was selected.
 
 ## Options
 
-- `-profile`: Chrome profile directory to use
+- `-profile`: Chrome profile directory to use (defaults to first available profile)
 - `-output`: Output HAR file (default: output.har)
 - `-diff`: Enable differential HAR capture
 - `-verbose`: Enable verbose logging
@@ -24,6 +26,23 @@ chrome-to-har -profile=/path/to/chrome/profile -output=output.har [-url=https://
 - `-omit`: Regular expression of URLs to omit from HAR output
 - `-cookie-domains`: Comma-separated list of domains to include cookies from
 - `-headless`: Run Chrome in headless mode
+
+## Examples
+
+Basic usage with auto-selected profile:
+```bash
+chrome-to-har -verbose
+```
+
+Specify a profile explicitly:
+```bash
+chrome-to-har -profile="Profile 1"
+```
+
+Stream with auto-selected profile:
+```bash
+chrome-to-har -verbose -stream
+```
 
 ## Streaming Mode
 
@@ -87,7 +106,7 @@ chrome-to-har -template='{{.request.method}},{{.request.url}},{{.response.status
 
 1. Authentication debugging:
    ```bash
-   chrome-to-har -profile=auth_profile -urls='auth|login' -cookies='session|token'
+   chrome-to-har -urls='auth|login' -cookies='session|token'
    ```
 
 2. Performance monitoring:
@@ -151,3 +170,4 @@ chrome-to-har -output=baseline.har -url=https://example.com
 chrome-to-har -diff -output=diff.har -url=https://example.com
 ```
 
+Would you like me to continue with the remaining files?

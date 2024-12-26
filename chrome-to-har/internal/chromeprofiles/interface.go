@@ -8,4 +8,3 @@ type ProfileManager interface {
 	CopyProfile(name string, cookieDomains []string) error
 	WorkDir() string
 }
-
