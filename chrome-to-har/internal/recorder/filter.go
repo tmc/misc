@@ -51,4 +51,3 @@ func (r *Recorder) applyJQFilter(entry *har.Entry) (*har.Entry, error) {
 
 	return &filtered, nil
 }
-

@@ -9,7 +9,10 @@ Package chrome-to-har provides a tool for capturing network activity from Chrome
 
 Launch Chrome and capture network activity:
 
-	chrome-to-har -profile=/path/to/chrome/profile -output=output.har
+	chrome-to-har [-profile=/path/to/chrome/profile] [-output=output.har]
+
+If no profile is specified, the first available Chrome profile will be automatically selected.
+Use -verbose to see which profile was selected.
 
 For more detailed usage information, see the embedded documentation below.
 */
@@ -27,4 +30,3 @@ const Version = "1.0.0"
 func GetUsageDoc() string {
 	return usageDoc
 }
-

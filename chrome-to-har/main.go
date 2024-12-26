@@ -2,21 +2,23 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"text/tabwriter"
-	"time"
 
-	"github.com/chromedp/cdproto/har"
+	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/chromedp"
+	"github.com/pkg/errors"
 	"github.com/tmc/misc/chrome-to-har/internal/chromeprofiles"
+	"github.com/tmc/misc/chrome-to-har/internal/recorder"
 	"github.com/tmc/misc/chrome-to-har/internal/termmd"
 )
 
-// options configures the chrome-to-har tool
 type options struct {
 	profileDir     string
 	outputFile     string
@@ -36,12 +38,10 @@ type options struct {
 	template       string
 }
 
-// Runner handles the main application logic
 type Runner struct {
 	pm chromeprofiles.ProfileManager
 }
 
-// NewRunner creates a new runner with the given profile manager
 func NewRunner(pm chromeprofiles.ProfileManager) *Runner {
 	return &Runner{pm: pm}
 }
@@ -56,14 +56,14 @@ func init() {
 		fmt.Fprintf(w, "Usage:\n")
 		fmt.Fprintf(w, "  chrome-to-har [options]\n\n")
 		fmt.Fprintf(w, "Options:\n")
-		
+
 		lines := make([]string, 0)
 		flag.VisitAll(func(f *flag.Flag) {
 			def := f.DefValue
 			if def != "" {
 				def = fmt.Sprintf(" (default: %s)", def)
 			}
-			
+
 			typ := ""
 			switch f.Value.String() {
 			case "false", "true":
@@ -73,20 +73,20 @@ func init() {
 			default:
 				typ = "string"
 			}
-			
+
 			lines = append(lines, fmt.Sprintf("  -%s\t%s\t%s%s\n", f.Name, typ, f.Usage, def))
 		})
-		
+
 		for _, line := range lines {
 			fmt.Fprint(w, line)
 		}
-		
+
 		doc, err := termmd.RenderMarkdown(GetUsageDoc())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error rendering documentation: %v\n", err)
 			return
 		}
-		
+
 		fmt.Fprintf(os.Stderr, "\nDetailed Documentation:\n\n%s\n", doc)
 	}
 }
@@ -121,7 +121,14 @@ func main() {
 	}
 
 	ctx := context.Background()
-	if err := run(ctx, opts); err != nil {
+	pm, err := chromeprofiles.NewProfileManager(
+		chromeprofiles.WithVerbose(opts.verbose),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := run(ctx, pm, opts); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -146,16 +153,36 @@ func listAvailableProfiles(verbose bool) error {
 	return nil
 }
 
-func run(ctx context.Context, opts options) error {
+func run(ctx context.Context, pm chromeprofiles.ProfileManager, opts options) error {
+	// Validate profile
 	if opts.profileDir == "" {
-		return fmt.Errorf("profile directory is required")
+		profiles, err := pm.ListProfiles()
+		if err != nil {
+			return errors.Wrap(err, "listing profiles")
+		}
+		if len(profiles) == 0 {
+			return errors.New("no Chrome profiles found")
+		}
+		opts.profileDir = profiles[0]
+		if opts.verbose {
+			log.Printf("Auto-selected profile: %s", opts.profileDir)
+		}
 	}
 
-	pm, err := chromeprofiles.NewProfileManager(
-		chromeprofiles.WithVerbose(opts.verbose),
-	)
+	// Verify profile exists
+	profiles, err := pm.ListProfiles()
 	if err != nil {
-		return fmt.Errorf("creating profile manager: %w", err)
+		return errors.Wrap(err, "listing profiles")
+	}
+	profileExists := false
+	for _, p := range profiles {
+		if p == opts.profileDir {
+			profileExists = true
+			break
+		}
+	}
+	if !profileExists {
+		return errors.Errorf("profile not found: %s", opts.profileDir)
 	}
 
 	runner := NewRunner(pm)
@@ -164,7 +191,7 @@ func run(ctx context.Context, opts options) error {
 
 func (r *Runner) Run(ctx context.Context, opts options) error {
 	if err := r.pm.SetupWorkdir(); err != nil {
-		return fmt.Errorf("setting up working directory: %w", err)
+		return errors.Wrap(err, "setting up working directory")
 	}
 	defer r.pm.Cleanup()
 
@@ -174,96 +201,100 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 	}
 
 	if err := r.pm.CopyProfile(opts.profileDir, cookieDomains); err != nil {
-		return fmt.Errorf("copying profile: %w", err)
+		return errors.Wrap(err, "copying profile")
 	}
 
-	// TODO: Implement Chrome launch and HAR capture
-	log.Printf("Starting Chrome with profile %s", opts.profileDir)
+	// Chrome launch options
+	copts := []chromedp.ExecAllocatorOption{
+		chromedp.NoFirstRun,
+		chromedp.NoDefaultBrowserCheck,
+		chromedp.UserDataDir(r.pm.WorkDir()),
+	}
+
+	if opts.headless {
+		copts = append(copts, chromedp.Headless)
+	}
+
+	// Create Chrome instance
+	allocCtx, cancel := chromedp.NewExecAllocator(ctx, copts...)
+	defer cancel()
+
+	taskCtx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+
+	// Create recorder
+	rec, err := recorder.New(
+		recorder.WithVerbose(opts.verbose),
+		recorder.WithStreaming(opts.streaming),
+		recorder.WithFilter(opts.filter),
+		recorder.WithTemplate(opts.template),
+	)
+	if err != nil {
+		return errors.Wrap(err, "creating recorder")
+	}
+
+	// Enable network events
+	if err := chromedp.Run(taskCtx,
+		network.Enable(),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			chromedp.ListenTarget(ctx, rec.HandleNetworkEvent(ctx))
+			return nil
+		}),
+	); err != nil {
+		return errors.Wrap(err, "enabling network monitoring")
+	}
+
+	// Navigate if URL specified
 	if opts.startURL != "" {
-		log.Printf("Navigating to %s", opts.startURL)
+		if err := chromedp.Run(taskCtx, chromedp.Navigate(opts.startURL)); err != nil {
+			return errors.Wrap(err, "navigating to URL")
+		}
 	}
 
-	if opts.streaming {
-		// Simulate some HAR entries for testing
-		entries := r.generateTestHAREntries()
-		for _, entry := range entries {
-			if err := r.processStreamingEntry(entry, opts); err != nil {
-				return fmt.Errorf("processing streaming entry: %w", err)
+	// Set up signal handling
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	// Create a channel for Ctrl+D (EOF) detection
+	eofChan := make(chan bool)
+	go func() {
+		buf := make([]byte, 1)
+		for {
+			_, err := os.Stdin.Read(buf)
+			if err != nil {
+				eofChan <- true
+				return
 			}
 		}
+	}()
+
+	if opts.verbose {
+		log.Println("Recording network activity. Press Ctrl+D to stop...")
+	}
+
+	// Wait for either signal or EOF
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-sigChan:
+		if opts.verbose {
+			log.Println("Received interrupt signal")
+		}
+	case <-eofChan:
+		if opts.verbose {
+			log.Println("Received EOF (Ctrl+D)")
+		}
+	}
+
+	if !opts.streaming {
+		if err := rec.WriteHAR(opts.outputFile); err != nil {
+			return errors.Wrap(err, "writing HAR file")
+		}
 	}
 
 	return nil
 }
 
-func (r *Runner) generateTestHAREntries() []*har.Entry {
-	now := time.Now()
-	return []*har.Entry{
-		{
-			StartedDateTime: now.Format(time.RFC3339),
-			Request: &har.Request{
-				Method: "GET",
-				URL:    "https://example.com",
-			},
-			Response: &har.Response{
-				Status: 200,
-			},
-		},
-		{
-			StartedDateTime: now.Add(time.Second).Format(time.RFC3339),
-			Request: &har.Request{
-				Method: "POST",
-				URL:    "https://api.example.com/data",
-			},
-			Response: &har.Response{
-				Status: 404,
-			},
-		},
-		{
-			StartedDateTime: now.Add(2 * time.Second).Format(time.RFC3339),
-			Request: &har.Request{
-				Method: "GET",
-				URL:    "https://example.com/error",
-			},
-			Response: &har.Response{
-				Status: 500,
-			},
-		},
-	}
-}
-
-func (r *Runner) processStreamingEntry(entry *har.Entry, opts options) error {
-	if opts.filter != "" {
-		// Apply JQ filter if specified
-		filtered, err := applyJQFilter(entry, opts.filter)
-		if err != nil {
-			return fmt.Errorf("applying filter: %w", err)
-		}
-		if filtered == nil {
-			return nil // Entry filtered out
-		}
-		entry = filtered
-	}
-
-	if opts.template != "" {
-		// Apply template if specified
-		templated, err := applyTemplate(entry, opts.template)
-		if err != nil {
-			return fmt.Errorf("applying template: %w", err)
-		}
-		entry = templated
-	}
-
-	// Output the entry as JSON
-	jsonBytes, err := json.Marshal(entry)
-	if err != nil {
-		return fmt.Errorf("marshaling entry: %w", err)
-	}
-	fmt.Println(string(jsonBytes))
-	return nil
-}
-
-// splitAndTrim splits a string by separator and trims spaces from parts
 func splitAndTrim(s, sep string) []string {
 	if s == "" {
 		return nil
@@ -276,21 +307,3 @@ func splitAndTrim(s, sep string) []string {
 	}
 	return parts
 }
-
-// applyJQFilter applies a JQ filter to a HAR entry
-func applyJQFilter(entry *har.Entry, filter string) (*har.Entry, error) {
-	// TODO: Implement JQ filtering
-	// For testing, just pass through entries with status >= 400 if filter contains that condition
-	if strings.Contains(filter, "status >= 400") && entry.Response.Status < 400 {
-		return nil, nil
-	}
-	return entry, nil
-}
-
-// applyTemplate applies a Go template to a HAR entry
-func applyTemplate(entry *har.Entry, tmpl string) (*har.Entry, error) {
-	// TODO: Implement template transformation
-	// For testing, just return the original entry
-	return entry, nil
-}
-

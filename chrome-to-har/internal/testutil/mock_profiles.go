@@ -68,4 +68,3 @@ func (m *MockProfileManager) CopyProfile(name string, cookieDomains []string) er
 func (m *MockProfileManager) WorkDir() string {
 	return m.workDir
 }
-

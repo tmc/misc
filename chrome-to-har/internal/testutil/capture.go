@@ -62,4 +62,3 @@ func (oc *OutputCapture) Stop() (stdout, logs string) {
 	log.SetOutput(oc.origLogger.Writer())
 	return oc.outBuf.String(), oc.logBuf.String()
 }
-
