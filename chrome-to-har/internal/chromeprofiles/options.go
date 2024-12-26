@@ -9,4 +9,3 @@ func WithVerbose(verbose bool) Option {
 		pm.verbose = verbose
 	}
 }
-

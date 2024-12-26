@@ -9,9 +9,3 @@ env PATH=/usr/bin:/usr/local/bin:/bin
 stderr 'tokencount is required for token counting'
 stderr 'you can install it with go install github.com/tmc/tokencount@latest'
 
--- file1.txt --
-Hello, World!
--- file2.txt --
-This is a test file.
--- subdir/subfile.txt --
-File in subdirectory

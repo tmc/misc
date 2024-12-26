@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"rsc.io/script"
@@ -54,13 +53,15 @@ var codeToGPTCmd = script.Command(
 		Summary: "Run code-to-gpt.sh script",
 		Args:    "[args...]",
 	}, func(s *script.State, args ...string) (script.WaitFunc, error) {
-		scriptPath, _ := filepath.Abs("./code-to-gpt.sh")
-		cmd := exec.CommandContext(s.Context(), "bash", "-c")
-		if *debug {
-			cmd.Args = append(cmd.Args, "set -x; "+scriptPath+" "+strings.Join(args, " "))
-		} else {
-			cmd.Args = append(cmd.Args, scriptPath+" "+strings.Join(args, " "))
+		// Find the script relative to the working directory
+		scriptPath := filepath.Join(".", "code-to-gpt.sh")
+		scriptPath, err := filepath.Abs(scriptPath)
+		if err != nil {
+			return nil, err
 		}
+
+		cmd := exec.CommandContext(s.Context(), "bash", scriptPath)
+		cmd.Args = append(cmd.Args, args...)
 		cmd.Dir = s.Getwd()
 		cmd.Env = s.Environ()
 		var stdout, stderr bytes.Buffer
@@ -88,6 +89,7 @@ var createBinaryFileCmd = script.Command(
 		return nil, err
 	},
 )
+
 var condHas = script.PrefixCondition("has", func(s *script.State, arg string) (bool, error) {
 	p := s.ExpandEnv("$PATH", false)
 	for _, dir := range filepath.SplitList(p) {
@@ -98,3 +100,4 @@ var condHas = script.PrefixCondition("has", func(s *script.State, arg string) (b
 	}
 	return false, nil
 })
+

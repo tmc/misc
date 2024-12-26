@@ -4,5 +4,3 @@ stdout '(?s)<root path="~/.*">'
 stdout '</root>'
 ! stdout '(?s)<file path=".*">'
 
--- file1.txt --
-This file should not be processed

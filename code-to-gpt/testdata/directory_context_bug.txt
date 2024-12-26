@@ -34,42 +34,40 @@ stdout '(?s)<root path="~/.*subdir1">'
 stdout '(?s)<file path="tracked_subdir1.txt">'
 stdout '(?s)<file path="untracked_subdir1.txt">'
 ! stdout '(?s)<file path="../tracked_root.txt">'
-! stdout '(?s)<file path="../untracked_root.txt">'
-! stdout '(?s)<file path="../subdir2/tracked_subdir2.txt">'
-! stdout '(?s)<file path="../subdir2/untracked_subdir2.txt">'
+! stdout '(?s><file path="../untracked_root.txt">'
+! stdout '(?s><file path="../subdir2/tracked_subdir2.txt">'
+! stdout '(?s><file path="../subdir2/untracked_subdir2.txt">'
 
 # Test from subdir1 with --tracked-only
 code-to-gpt --tracked-only
 stdout '(?s)<root path="~/.*subdir1">'
-! stdout '(?s)<file path="tracked_subdir1.txt">'
-! stdout '(?s)<file path="untracked_subdir1.txt">'
-! stdout '(?s)<file path="../tracked_root.txt">'
-! stdout '(?s)<file path="../untracked_root.txt">'
-! stdout '(?s)<file path="../subdir2/tracked_subdir2.txt">'
-! stdout '(?s)<file path="../subdir2/untracked_subdir2.txt">'
-
+stdout '(?s)<file path="tracked_subdir1.txt">'
+! stdout '(?s><file path="untracked_subdir1.txt">'
+! stdout '(?s><file path="../tracked_root.txt">'
+! stdout '(?s><file path="../untracked_root.txt">'
+! stdout '(?s><file path="../subdir2/tracked_subdir2.txt">'
+! stdout '(?s><file path="../subdir2/untracked_subdir2.txt">'
 
 # Test from subdir2 without --tracked-only
 cd ../subdir2
 code-to-gpt
 stdout '(?s)<root path="~/.*subdir2">'
 stdout '(?s)<file path="tracked_subdir2.txt">'
-stdout '(?s)<file path="untracked_subdir2.txt">'
-! stdout '(?s)<file path="../tracked_root.txt">'
-! stdout '(?s)<file path="../untracked_root.txt">'
-! stdout '(?s)<file path="../subdir1/tracked_subdir1.txt">'
-! stdout '(?s)<file path="../subdir1/untracked_subdir1.txt">'
+stdout '(?s><file path="untracked_subdir2.txt">'
+! stdout '(?s><file path="../tracked_root.txt">'
+! stdout '(?s><file path="../untracked_root.txt">'
+! stdout '(?s><file path="../subdir1/tracked_subdir1.txt">'
+! stdout '(?s><file path="../subdir1/untracked_subdir1.txt">'
 
 # Test from subdir2 with --tracked-only
 code-to-gpt --tracked-only
 stdout '(?s)<root path="~/.*subdir2">'
-# TODO: address thisstdout '(?s)<file path="tracked_subdir2.txt">'
-! stdout '(?s)<file path="untracked_subdir2.txt">'
-! stdout '(?s)<file path="../tracked_root.txt">'
-! stdout '(?s)<file path="../untracked_root.txt">'
-! stdout '(?s)<file path="../subdir1/tracked_subdir1.txt">'
-! stdout '(?s)<file path="../subdir1/untracked_subdir1.txt">'
-
+stdout '(?s><file path="tracked_subdir2.txt">'
+! stdout '(?s><file path="untracked_subdir2.txt">'
+! stdout '(?s><file path="../tracked_root.txt">'
+! stdout '(?s><file path="../untracked_root.txt">'
+! stdout '(?s><file path="../subdir1/tracked_subdir1.txt">'
+! stdout '(?s><file path="../subdir1/untracked_subdir1.txt">'
 
 -- tracked_root.txt --
 This is a tracked file in the root directory
