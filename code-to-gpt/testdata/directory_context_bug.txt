@@ -4,8 +4,6 @@ exec git config user.email "test@example.com"
 exec git config user.name "Test User"
 exec git add tracked_root.txt subdir1/tracked_subdir1.txt subdir2/tracked_subdir2.txt
 exec git commit -m 'Add tracked files'
-exec ls -a
-exec tree
 
 # Test from root directory with --tracked-only
 code-to-gpt --tracked-only
@@ -53,21 +51,21 @@ cd ../subdir2
 code-to-gpt
 stdout '(?s)<root path="~/.*subdir2">'
 stdout '(?s)<file path="tracked_subdir2.txt">'
-stdout '(?s><file path="untracked_subdir2.txt">'
-! stdout '(?s><file path="../tracked_root.txt">'
-! stdout '(?s><file path="../untracked_root.txt">'
-! stdout '(?s><file path="../subdir1/tracked_subdir1.txt">'
-! stdout '(?s><file path="../subdir1/untracked_subdir1.txt">'
+stdout '(?s)<file path="untracked_subdir2.txt">'
+! stdout '(?s)<file path="../tracked_root.txt">'
+! stdout '(?s)<file path="../untracked_root.txt">'
+! stdout '(?s)<file path="../subdir1/tracked_subdir1.txt">'
+! stdout '(?s)<file path="../subdir1/untracked_subdir1.txt">'
 
 # Test from subdir2 with --tracked-only
 code-to-gpt --tracked-only
 stdout '(?s)<root path="~/.*subdir2">'
-stdout '(?s><file path="tracked_subdir2.txt">'
-! stdout '(?s><file path="untracked_subdir2.txt">'
-! stdout '(?s><file path="../tracked_root.txt">'
-! stdout '(?s><file path="../untracked_root.txt">'
-! stdout '(?s><file path="../subdir1/tracked_subdir1.txt">'
-! stdout '(?s><file path="../subdir1/untracked_subdir1.txt">'
+stdout '(?s)<file path="tracked_subdir2.txt">'
+! stdout '(?s)<file path="untracked_subdir2.txt">'
+! stdout '(?s)<file path="../tracked_root.txt">'
+! stdout '(?s)<file path="../untracked_root.txt">'
+! stdout '(?s)<file path="../subdir1/tracked_subdir1.txt">'
+! stdout '(?s)<file path="../subdir1/untracked_subdir1.txt">'
 
 -- tracked_root.txt --
 This is a tracked file in the root directory

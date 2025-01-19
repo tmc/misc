@@ -100,4 +100,3 @@ var condHas = script.PrefixCondition("has", func(s *script.State, arg string) (b
 	}
 	return false, nil
 })
-

@@ -1,3 +1,18 @@
+-- include1.txt --
+Content of include1.txt
+
+-- include2.txt --
+Content of include2.txt
+
+-- excluded.txt --
+Content of excluded.txt
+
+-- not_included.md --
+Content of not_included.md
+
+-- nested/nested_include.txt --
+Content of nested include file
+
 # Test simple pathspec
 code-to-gpt . '*.txt'
 stdout '(?s)<root path="~/.*">'
