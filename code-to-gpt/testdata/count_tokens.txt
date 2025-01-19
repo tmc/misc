@@ -1,5 +1,4 @@
 # Test count tokens
-
 [has:tokencount] code-to-gpt --count-tokens .
 [has:tokencount] stdout '6 ./file2.txt$'
 
@@ -8,4 +7,9 @@ env PATH=/usr/bin:/usr/local/bin:/bin
 ! stdout .
 stderr 'tokencount is required for token counting'
 stderr 'you can install it with go install github.com/tmc/tokencount@latest'
+
+-- file1.txt --
+Hello
+-- file2.txt --
+This is a test file.
 

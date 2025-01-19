@@ -5,3 +5,6 @@ stdout '(?s)<root path="~/.*">'
 ! stdout '(?s)<file path="./binary_file.bin">'
 stdout '(?s)<file path="text_file.txt">'
 
+-- text_file.txt --
+This is a text file
+

@@ -8,16 +8,13 @@ set -euo pipefail
 
 # Default exclude patterns
 DEFAULT_EXCLUDES=(
-    ':!node_modules/**'
-    ':!venv/**'
-    ':!.venv/**'
-    ':!.git/**'
-    ':!go.sum'
-    ':!go.work.sum'
-    ':!yarn.lock'
-    ':!yarn.error.log'
-    ':!package-lock.json'
-    ':!uv.lock'
+    # Editor files
+    ':!*.swp'
+    ':!.DS_Store'
+    
+    # Temporary files
+    ':!tmp/**'
+    ':!*.log'
 )
 DIRECTORY="."
 COUNT_TOKENS=false
@@ -113,12 +110,20 @@ v_echo() {
 # Function to get relative path to a directory from home directory with tilde
 get_home_relative_dirpath() {
     local dir="$1"
-    local abs_path=$(cd "$dir" && pwd)
-    local home_path=$HOME
+    local abs_path
+    local home_path="$HOME"
+
+    # Ensure we have an absolute path
+    if ! abs_path=$(cd "$dir" && pwd); then
+        v_echo "Error: Failed to resolve absolute path for directory: $dir"
+        return 1
+    fi
+
     if [[ "$abs_path" == "$home_path" ]]; then
         echo "~"
     elif [[ "$abs_path" == "$home_path"/* ]]; then
-        echo "~/${abs_path#$home_path/}"
+        # shellcheck disable=SC2088  # We want literal ~ for display
+        printf "~/%s" "${abs_path#"$home_path"/}"
     else
         echo "$abs_path"
     fi
@@ -126,61 +131,85 @@ get_home_relative_dirpath() {
 
 get_home_relative_filepath() {
     local file="$1"
-    local abs_path=$(realpath "$file")
-    local home_path=$HOME
+    local abs_path
+    local home_path="$HOME"
+    local dir
+    local base
+
+    # Split into directory and base name
+    dir=$(dirname "$file")
+    base=$(basename "$file")
+
+    # Get absolute path of directory
+    if ! dir=$(cd "$dir" 2>/dev/null && pwd); then
+        v_echo "Error: Failed to resolve directory for file: $file"
+        echo "$file"  # Return original path on error
+        return 0
+    fi
+
+    abs_path="$dir/$base"
+
     if [[ "$abs_path" == "$home_path" ]]; then
         echo "~"
     elif [[ "$abs_path" == "$home_path"/* ]]; then
-        echo "~/${abs_path#$home_path/}"
+        # shellcheck disable=SC2088  # We want literal ~ for display
+        printf "~/%s" "${abs_path#"$home_path"/}"
     else
         echo "$abs_path"
     fi
 }
 
 realpath() {
-    [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+    local path="$1"
+    local dir
+    local base
+
+    # Handle absolute paths
+    if [[ "$path" = /* ]]; then
+        echo "$path"
+        return
+    fi
+
+    # Split into directory and base name
+    dir=$(dirname "$path")
+    base=$(basename "$path")
+
+    # Get absolute path of directory
+    if ! dir=$(cd "$dir" 2>/dev/null && pwd); then
+        echo "$PWD/${path#./}"
+        return
+    fi
+
+    echo "$dir/$base"
 }
 
 get_relative_path() {
-    local source="$1"
-    local target="$2"
-
-    # Normalize paths
-    source="/${source#/}"
-    target="/${target#/}"
-
-    # Split paths into arrays
-    IFS='/' read -ra source_parts <<< "$source"
-    IFS='/' read -ra target_parts <<< "$target"
-
-    # Find common prefix
-    common_parts=0
-    for ((i=0; i<${#source_parts[@]} && i<${#target_parts[@]}; i++)); do
-        if [[ "${source_parts[i]}" != "${target_parts[i]}" ]]; then
-            break
-        fi
-        ((common_parts++))
-    done
-
-    # Build relative path
-    result=""
-    for ((i=common_parts; i<${#source_parts[@]}; i++)); do
-        result="../$result"
-    done
-    for ((i=common_parts; i<${#target_parts[@]}; i++)); do
-        result="${result}${target_parts[i]}/"
-    done
-
-    # Remove trailing slash and return
-    echo "${result%/}"
+    local file="$1"
+    local base
+    base=$(basename "$file")
+    local dir
+    dir=$(dirname "$file")
+    
+    # If the path starts with ./, strip it
+    dir="${dir#./}"
+    
+    # If we're in the current directory, just return the basename
+    if [[ "$dir" == "." ]]; then
+        echo "$base"
+        return
+    fi
+    
+    # Otherwise return the full relative path
+    echo "${dir}/${base}"
 }
 
 # Function to check if a file is a text file and should be included
 is_text_file() {
     local file="$1"
-    local mime_type=$(file -b --mime-type "$file")
-    local extension="${file##*.}"
-    local file_type=$(file -b "$file")
+    local mime_type
+    local file_type
+    mime_type=$(file -b --mime-type "$file")
+    file_type=$(file -b "$file")
     # Check for text files without extensions
     if [[ "$mime_type" == text/* ]] || [[ "$file_type" == *"text"* ]]; then
         return 0
@@ -215,18 +244,22 @@ is_text_file() {
 
 # Function to process a file
 process_file() {
-    local full_path="$1"
-    local base_dir="$2"
-
-    local relative_path=$(get_relative_path "$base_dir" "$full_path")
-
-    local mime_type=$(file -b --mime-type "$full_path")
-    local line_count=$(wc -l < "$full_path")
-
-    if ! is_text_file "$full_path"; then
-        v_echo "Skipping non-text file: $relative_path (MIME: $mime_type)"
+    local file="$1"
+    local relative_path
+    relative_path=$(get_relative_path "$file")
+    relative_path=${relative_path#./}  # Strip ./ prefix if present
+    
+    # Skip if not a text file
+    if ! is_text_file "$file"; then
+        v_echo "Skipping non-text file: $file"
         return
     fi
+
+    local mime_type
+    local line_count
+
+    mime_type=$(file -b --mime-type "$file")
+    line_count=$(wc -l < "$file")
 
     if [ "$line_count" -gt "$WC_LIMIT" ]; then
         v_echo "Skipping large file: $relative_path ($line_count lines)"
@@ -245,10 +278,10 @@ process_file() {
             echo "you can install it with go install github.com/tmc/tokencount@latest" >&2
             exit 1
         }
-        token_count=$(tokencount "$full_path")
+        token_count=$(tokencount "$file")
         echo "    $token_count"
     else
-        sed 's/^/    /' "$full_path"
+        sed 's/^/    /' "$file"
     fi
 
     if $USE_XML_TAGS; then
@@ -282,17 +315,20 @@ get_git_dir() {
     echo "$git_dir"
 }
 
-IGNORE_FILE_NAME=".ctx-src-ignore"
-
 apply_custom_ignore() {
-    local ignore_file="$GIT_WORK_TREE/$ADDITIONAL_IGNORE_FILE_NAME"
-    if [ -f "$ignore_file" ]; then
-        while IFS= read -r pattern || [[ -n "$pattern" ]]; do
+    local ignore_file="$1"
+    local patterns=()
+    if [[ -f "$ignore_file" ]]; then
+        while IFS= read -r pattern; do
             # Ignore empty lines and comments
             if [[ -n "$pattern" && ! "$pattern" =~ ^# ]]; then
-                git_args+=(":(exclude)$pattern")
+                patterns+=(":(exclude)$pattern")
             fi
         done < "$ignore_file"
+        # Only echo if we have patterns
+        if [ ${#patterns[@]} -gt 0 ]; then
+            printf "%s " "${patterns[@]}"
+        fi
     fi
 }
 
@@ -302,6 +338,12 @@ get_files() {
     local temp_dir=""
     local git_dir
     local git_root
+
+    # Ensure target_dir is absolute
+    target_dir=$(cd "$target_dir" && pwd) || {
+        v_echo "Error: Failed to resolve absolute path for $target_dir"
+        return 1
+    }
 
     if ! git -C "$target_dir" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         if [ "$SKIP_TEMP_REPO" = "true" ]; then
@@ -316,7 +358,7 @@ get_files() {
             return 1
         fi
         git_dir="$temp_dir/.git"
-        git_root="$temp_dir"
+        git_root="$target_dir"
     else
         if ! git_dir=$(git -C "$target_dir" rev-parse --git-dir 2>/dev/null); then
             v_echo "Error: Failed to get Git directory for $target_dir"
@@ -328,23 +370,35 @@ get_files() {
         fi
     fi
 
+    local exit_status
     (
         export GIT_DIR="$git_dir"
-        export GIT_WORK_TREE="$target_dir"
+        export GIT_WORK_TREE="$git_root"
+        cd "$target_dir" || { v_echo "Error: Failed to change to target directory"; return 1; }
 
         local git_args=(-z --exclude-standard)
         if ! $TRACKED_ONLY; then
             git_args+=(--cached --others)
         fi
 
-        apply_custom_ignore
+        # Apply custom ignore patterns
+        local custom_patterns
+        custom_patterns=$(apply_custom_ignore "$GIT_WORK_TREE/$ADDITIONAL_IGNORE_FILE_NAME")
+        if [ -n "$custom_patterns" ]; then
+            # Split custom_patterns into array
+            read -ra pattern_array <<< "$custom_patterns"
+            git_args+=("${pattern_array[@]}")
+        fi
 
         v_echo "PATHSPEC: ${PATHSPEC[*]}"
         v_echo "Running: git ls-files ${git_args[*]} -- ${PATHSPEC[*]}"
-        git ls-files "${git_args[@]}" -- "${PATHSPEC[@]}" | tr '\0' '\n'
+        if ! git ls-files "${git_args[@]}" -- "${PATHSPEC[@]}" 2>/dev/null | tr '\0' '\n'; then
+            v_echo "Warning: git ls-files failed, falling back to find"
+            find "$target_dir" -type f -print0 | sed -z "s|^$target_dir/||" | tr '\0' '\n'
+        fi
     )
+    exit_status=$?
 
-    local exit_status=$?
     if [ -n "$temp_dir" ]; then
         rm -rf "$temp_dir" || v_echo "Warning: Failed to remove temporary directory $temp_dir"
     fi
@@ -371,7 +425,7 @@ fi
 get_files "$DIRECTORY" | while read -r file; do
     full_path="$DIRECTORY/$file"
     if [ -f "$full_path" ]; then
-        process_file "$full_path" "$DIRECTORY"
+        process_file "$full_path"
     elif $VERBOSE; then
         echo "Skipping non-existent file: $full_path" >&2
     fi
