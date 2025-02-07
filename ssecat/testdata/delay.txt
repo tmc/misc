@@ -1,0 +1,10 @@
+# Test delay between chunks
+ssecat -delay=100ms -f=input
+cmp stdout want
+! stderr .
+
+-- input --
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"a"}}
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"b"}}
+-- want --
+ab

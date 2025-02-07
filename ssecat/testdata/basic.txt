@@ -1,0 +1,9 @@
+# Test basic message
+ssecat -f=input
+cmp stdout want
+! stderr .
+
+-- input --
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hello"}}
+-- want --
+hello
