@@ -1,8 +1,19 @@
 ssecat reads in sse streams and prints them to stdout
 
+By default, it assumes the following structure:
+
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"ssecat extracts "}}
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"these types "}}
+data: {"type":"content_block_delta","index":2,"delta":{"type":"text_delta","text":"of chunks"}}
 
 
-specifically it assembles text from:
+Usage:
 
-data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"these types "}}
-data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"of chunks"}}
+$ ssecat -h
+Usage of ssecat:
+  -delay duration
+    	delay between chunks (e.g. 100ms)
+  -f string
+    	input file (- for stdin) (default "-")
+  -path string
+    	path to text field (e.g. type=foo,text or a.b.type=foo,a.b.text) (default "type=content_block_delta,delta.type=text_delta,delta.text")
