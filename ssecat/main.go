@@ -13,24 +13,16 @@ import (
 	"time"
 )
 
-// message represents an SSE JSON content block.
-type message struct {
-	Type  string
-	Index int
-	Delta struct {
-		Type string
-		Text string
-	}
-}
-
 var (
-	delay  time.Duration
-	inFile string
+	delay    time.Duration
+	inFile   string
+	jsonPath string
 )
 
 func init() {
 	flag.DurationVar(&delay, "delay", 0, "delay between chunks (e.g. 100ms)")
 	flag.StringVar(&inFile, "f", "-", "input file (- for stdin)")
+	flag.StringVar(&jsonPath, "path", "type=content_block_delta,delta.type=text_delta,delta.text", "path to text field (e.g. type=foo,text or a.b.type=foo,a.b.text)")
 }
 
 func main() {
@@ -63,14 +55,15 @@ func run(r io.Reader, w io.Writer) error {
 			continue
 		}
 
-		var m message
+		var m map[string]interface{}
 		if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &m); err != nil {
 			return fmt.Errorf("json unmarshal: %w", err)
 		}
 
-		if m.Type == "content_block_delta" && m.Delta.Type == "text_delta" {
+		text, ok := getText(m, jsonPath)
+		if ok {
 			hasOutput = true
-			if _, err := fmt.Fprint(w, m.Delta.Text); err != nil {
+			if _, err := fmt.Fprint(w, text); err != nil {
 				return fmt.Errorf("write: %w", err)
 			}
 		}
@@ -88,4 +81,60 @@ func run(r io.Reader, w io.Writer) error {
 		}
 	}
 	return nil
+}
+
+// get follows a dot-separated path in a nested map and returns the value.
+func get(m map[string]interface{}, path string) (interface{}, bool) {
+	parts := strings.Split(path, ".")
+	curr := m
+	for i, p := range parts {
+		if i == len(parts)-1 {
+			v, ok := curr[p]
+			return v, ok
+		}
+		next, ok := curr[p]
+		if !ok {
+			return nil, false
+		}
+		curr, ok = next.(map[string]interface{})
+		if !ok {
+			return nil, false
+		}
+	}
+	return nil, false
+}
+
+// getText extracts text from a JSON object using a path pattern.
+// The path is a comma-separated list of paths, where all but the last must be key=value pairs,
+// and the last path contains the text to extract.
+func getText(m map[string]interface{}, pattern string) (string, bool) {
+	parts := strings.Split(pattern, ",")
+	if len(parts) < 2 {
+		return "", false
+	}
+
+	// Check all key=value pairs except the last one
+	for i := 0; i < len(parts)-1; i++ {
+		kv := strings.Split(parts[i], "=")
+		if len(kv) != 2 {
+			return "", false
+		}
+
+		// Check if the key matches the value
+		got, ok := get(m, kv[0])
+		if !ok {
+			return "", false
+		}
+		if s, ok := got.(string); !ok || s != kv[1] {
+			return "", false
+		}
+	}
+
+	// Get the text value
+	text, ok := get(m, parts[len(parts)-1])
+	if !ok {
+		return "", false
+	}
+	s, ok := text.(string)
+	return s, ok
 }
