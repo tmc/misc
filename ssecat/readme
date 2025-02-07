@@ -1,0 +1,8 @@
+ssecat reads in sse streams and prints them to stdout
+
+
+
+specifically it assembles text from:
+
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"these types "}}
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"of chunks"}}
