@@ -1,0 +1,5 @@
+mcp-in {"method":"GET","path":"/users"}
+mcp-out {"status":200,"data":{"users":["alice"]}}
+mcp-in {"method":"GET","path":"/groups"}
+mcp-out {"status":200,"data":{"groups":["admins"]}}
+

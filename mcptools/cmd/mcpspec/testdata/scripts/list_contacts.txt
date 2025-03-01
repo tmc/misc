@@ -1,0 +1,11 @@
+# Test basic list_contacts functionality
+mcp-in {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"name":"test-client","version":"1.0.0"}}
+mcp-out {"jsonrpc":"2.0","id":1,"result":{"name":"test-server","version":"1.0.0","protocolVersion":"2024-11-05"}}
+mcp-in {"jsonrpc":"2.0","id":2,"method":"listTools"}
+mcp-out {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"list_contacts","description":"Lists all contacts"}]}}
+mcp-in {"jsonrpc":"2.0","id":3,"method":"callTool","params":{"name":"list_contacts"}}
+mcp-out {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"Alice <alice@example.com>"}]}}
+
+# Test empty contacts list
+mcp-in {"jsonrpc":"2.0","id":4,"method":"callTool","params":{"name":"list_contacts"}}
+mcp-out {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"No contacts found"}]}} 

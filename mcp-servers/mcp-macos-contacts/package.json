@@ -1,0 +1,14 @@
+{
+  "name": "mcp-macos-contacts",
+  "version": "1.0.0",
+  "description": "MCP server for macOS contacts",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node index.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/mcp": "^0.1.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.0.4"
+  }
+}

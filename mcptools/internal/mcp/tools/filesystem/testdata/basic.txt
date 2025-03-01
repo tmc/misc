@@ -1,0 +1,59 @@
+# Test basic filesystem operations
+mcp-in {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"name":"test-client","version":"1.0.0"}}
+mcp-out {"jsonrpc":"2.0","id":1,"result":{"name":"filesystem-server","version":"1.0.0","protocolVersion":"2024-01-16"}}
+
+# List tools
+mcp-in {"jsonrpc":"2.0","id":2,"method":"listTools"}
+mcp-out {"jsonrpc":"2.0","id":2,"result":{"tools":[{"name":"read_file","description":"Read the complete contents of a file from the file system. Handles various text encodings and provides detailed error messages if the file cannot be read."},{"name":"write_file","description":"Create a new file or completely overwrite an existing file with new content. Use with caution as it will overwrite existing files without warning. Handles text content with proper encoding."},{"name":"list_directory","description":"Get a detailed listing of all files and directories in a specified path. Results clearly distinguish between files and directories with [FILE] and [DIR] prefixes."},{"name":"search_files","description":"Recursively search for files and directories matching a pattern. Searches through all subdirectories from the starting path. The search is case-insensitive and matches partial names."},{"name":"get_file_info","description":"Retrieve detailed metadata about a file or directory. Returns comprehensive information including size, creation time, last modified time, permissions, and type."},{"name":"list_allowed_directories","description":"Returns the list of directories that this server is allowed to access."},{"name":"copy_file","description":"Copy a file or directory to a new location. Preserves file mode and timestamps. For directories, performs a recursive copy."},{"name":"delete_file","description":"Delete a file or directory. For directories, performs a recursive delete. Use with caution as this operation cannot be undone."},{"name":"move_file","description":"Move a file or directory to a new location. Performs an atomic move when possible (same filesystem). Falls back to copy+delete when necessary (cross-device)."}]}}
+
+# Write a file
+mcp-in {"jsonrpc":"2.0","id":3,"method":"write_file","params":{"path":"testdata/test.txt","content":"hello\nworld\n"}}
+mcp-out {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"wrote 12 bytes to testdata/test.txt"}]}}
+
+# Read the file
+mcp-in {"jsonrpc":"2.0","id":4,"method":"read_file","params":{"path":"testdata/test.txt"}}
+mcp-out {"jsonrpc":"2.0","id":4,"result":{"content":[{"type":"text","text":"hello\nworld\n"}]}}
+
+# List directory
+mcp-in {"jsonrpc":"2.0","id":5,"method":"list_directory","params":{"path":"testdata"}}
+mcp-out {"jsonrpc":"2.0","id":5,"result":{"content":[{"type":"text","text":"[FILE] test.txt"}]}}
+
+# Get file info
+mcp-in {"jsonrpc":"2.0","id":6,"method":"get_file_info","params":{"path":"testdata/test.txt"}}
+mcp-out {"jsonrpc":"2.0","id":6,"result":{"content":[{"type":"text","text":"Name: test.txt\nSize: 12 bytes\nMode: -rw-r--r--\nModTime: 2024-01-16T15:04:05Z\nIsDir: false"}]}}
+
+# Search files
+mcp-in {"jsonrpc":"2.0","id":7,"method":"search_files","params":{"path":"testdata","pattern":".txt"}}
+mcp-out {"jsonrpc":"2.0","id":7,"result":{"content":[{"type":"text","text":"test.txt"}]}}
+
+# Copy the file
+mcp-in {"jsonrpc":"2.0","id":8,"method":"copy_file","params":{"source":"testdata/test.txt","destination":"testdata/copy.txt"}}
+mcp-out {"jsonrpc":"2.0","id":8,"result":{"content":[{"type":"text","text":"copied testdata/test.txt to testdata/copy.txt"}]}}
+
+# Verify the copy
+mcp-in {"jsonrpc":"2.0","id":9,"method":"read_file","params":{"path":"testdata/copy.txt"}}
+mcp-out {"jsonrpc":"2.0","id":9,"result":{"content":[{"type":"text","text":"hello\nworld\n"}]}}
+
+# Move the copy
+mcp-in {"jsonrpc":"2.0","id":10,"method":"move_file","params":{"source":"testdata/copy.txt","destination":"testdata/moved.txt"}}
+mcp-out {"jsonrpc":"2.0","id":10,"result":{"content":[{"type":"text","text":"moved testdata/copy.txt to testdata/moved.txt"}]}}
+
+# Verify the move
+mcp-in {"jsonrpc":"2.0","id":11,"method":"read_file","params":{"path":"testdata/moved.txt"}}
+mcp-out {"jsonrpc":"2.0","id":11,"result":{"content":[{"type":"text","text":"hello\nworld\n"}]}}
+
+# Check that source is gone
+mcp-in {"jsonrpc":"2.0","id":12,"method":"list_directory","params":{"path":"testdata"}}
+mcp-out {"jsonrpc":"2.0","id":12,"result":{"content":[{"type":"text","text":"[FILE] moved.txt\n[FILE] test.txt"}]}}
+
+# Delete the moved file
+mcp-in {"jsonrpc":"2.0","id":13,"method":"delete_file","params":{"path":"testdata/moved.txt"}}
+mcp-out {"jsonrpc":"2.0","id":13,"result":{"content":[{"type":"text","text":"deleted testdata/moved.txt"}]}}
+
+# Verify final state
+mcp-in {"jsonrpc":"2.0","id":14,"method":"list_directory","params":{"path":"testdata"}}
+mcp-out {"jsonrpc":"2.0","id":14,"result":{"content":[{"type":"text","text":"[FILE] test.txt"}]}}
+
+# List allowed directories
+mcp-in {"jsonrpc":"2.0","id":15,"method":"list_allowed_directories"}
+mcp-out {"jsonrpc":"2.0","id":15,"result":{"content":[{"type":"text","text":"testdata"}]}} 

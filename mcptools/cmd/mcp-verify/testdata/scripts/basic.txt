@@ -1,0 +1,4 @@
+# Test basic functionality\n'
+mcp-verify --help\n'
+stdout 'Usage: mcp-verify [options] recording\n'
+'\n'

@@ -1,0 +1,15 @@
+# Test basic read_file functionality
+mcp-in {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"name":"test-client","version":"1.0.0"}}
+mcp-out {"jsonrpc":"2.0","id":1,"result":{"name":"filesystem-server","version":"1.0.0","protocolVersion":"2024-11-05"}}
+
+# Test reading a valid file
+mcp-in {"jsonrpc":"2.0","id":2,"method":"read_file","params":{"path":"testdata/sample.txt"}}
+mcp-out {"jsonrpc":"2.0","id":2,"result":{"content":[{"type":"text","text":"Hello, World!\n"}]}}
+
+# Test reading a non-existent file
+mcp-in {"jsonrpc":"2.0","id":3,"method":"read_file","params":{"path":"nonexistent.txt"}}
+mcp-out {"jsonrpc":"2.0","id":3,"error":{"code":-32000,"message":"file not found: nonexistent.txt"}}
+
+# Test reading outside allowed directory
+mcp-in {"jsonrpc":"2.0","id":4,"method":"read_file","params":{"path":"../../../secret.txt"}}
+mcp-out {"jsonrpc":"2.0","id":4,"error":{"code":-32000,"message":"path not allowed"}} 

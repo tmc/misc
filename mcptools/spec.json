@@ -1,0 +1,6 @@
+[
+  {
+    "name": "read_file",
+    "description": "Read the complete contents of a file from the file system. Handles various text encodings and provides detailed error messages if the file cannot be read."
+  }
+]

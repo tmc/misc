@@ -1,0 +1,3 @@
+# Test basic functionality
+mcp-spy -h
+stdout 'Usage:'

@@ -1,0 +1,4 @@
+# Test basic functionality\n'
+mcp-test --help\n'
+stdout 'Usage: mcp-test [options]\n'
+'\n'

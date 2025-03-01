@@ -1,0 +1,4 @@
+# Test basic functionality\n'
+mcp-replay --help\n'
+stdout 'Usage: mcp-replay [options] recording\n'
+'\n'

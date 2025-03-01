@@ -1,0 +1,17 @@
+# Test basic request replay
+cp recording.mcp .
+mcp-mock-client recording.mcp
+stdout '{"method":"GET","path":"/users"}
+{"method":"GET","path":"/groups"}'
+
+# Test dry run mode
+mcp-mock-client -n recording.mcp
+stdout 'would send: {"method":"GET","path":"/users"}
+would send: {"method":"GET","path":"/groups"}'
+
+    -- recording.mcp --
+    mcp-in {"method":"GET","path":"/users"}
+    mcp-out {"status":200,"data":{"users":["alice"]}}
+    mcp-in {"method":"GET","path":"/groups"}
+    mcp-out {"status":200,"data":{"groups":["admins"]}}
+
