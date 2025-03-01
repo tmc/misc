@@ -1,0 +1,48 @@
+#!/usr/bin/env node
+
+const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+const os = require('os');
+
+// Map platform and architecture to binary name
+function getBinaryName() {
+  const platform = os.platform();
+  const arch = os.arch();
+  
+  // TODO: Add proper platform/arch mapping
+  let binName = '{{ .Name }}';
+  
+  if (platform === 'win32') {
+    binName += '.exe';
+  }
+  
+  return binName;
+}
+
+// Get path to the binary
+const binaryPath = path.join(__dirname, 'bin', getBinaryName());
+
+// Make sure the binary is executable
+try {
+  fs.chmodSync(binaryPath, 0o755);
+} catch (err) {
+  console.error('Error making binary executable:', err);
+  process.exit(1);
+}
+
+// Execute the binary with the same arguments
+const proc = spawn(binaryPath, process.argv.slice(2), {
+  stdio: 'inherit'
+});
+
+// Handle process exit
+proc.on('exit', (code) => {
+  process.exit(code || 0);
+});
+
+// Handle errors
+proc.on('error', (err) => {
+  console.error('Error executing {{ .Name }}:', err);
+  process.exit(1);
+});

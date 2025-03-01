@@ -1,0 +1,30 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="{{ .Name }}",
+    version="{{ .Version }}",
+    description="{{ .Description }}",
+    author="{{ .Author }}",
+    author_email="{{ .AuthorEmail }}",
+    url="{{ .URL }}",
+    packages=find_packages(),
+    include_package_data=True,
+    package_data={
+        "{{ .Name }}": ["bin/*"],
+    },
+    entry_points={
+        "console_scripts": [
+            "{{ .Name }}={{ .Name }}:main",
+        ],
+    },
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+    ],
+)

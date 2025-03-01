@@ -1,0 +1,23 @@
+{
+  "name": "{{ .Name }}",
+  "version": "{{ .Version }}",
+  "description": "{{ .Description }}",
+  "main": "index.js",
+  "bin": {
+    "{{ .Name }}": "index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "{{ .Author }} <{{ .Email }}>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "{{ .URL }}"
+  },
+  "os": [{{range $i, $platform := .Platforms}}{{if $i}}, {{end}}"{{$platform}}"{{end}}],
+  "files": [
+    "bin/*",
+    "index.js"
+  ]
+}
