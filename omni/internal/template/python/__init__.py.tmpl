@@ -1,0 +1,21 @@
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+def main():
+    # Find the binary for the current platform
+    bin_dir = Path(__file__).parent / "bin"
+    
+    # TODO: Platform-specific binary selection
+    binary = str(bin_dir / "{{ .Name }}")
+    
+    # Make sure the binary is executable
+    os.chmod(binary, 0o755)
+    
+    # Execute the binary with the same arguments
+    result = subprocess.run([binary] + sys.argv[1:])
+    sys.exit(result.returncode)
+
+if __name__ == "__main__":
+    main()
