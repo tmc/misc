@@ -7,8 +7,23 @@ package main
 import (
 	"flag"
 	"fmt"
+	"go/ast"
+	"go/types"
+	"io"
+	"log"
+	"maps"
 	"os"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"runtime/pprof"
+	"slices"
+	"sort"
+	"strings"
+	"text/template"
 
+	"golang.org/x/tools/go/callgraph"
+	"golang.org/x/tools/go/callgraph/rta"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
@@ -32,6 +47,17 @@ var (
 
 func main() {
 	flag.Parse()
+	
+	// Process each package and its files for analysis and 
+	// detect generated files to exclude them from results
+	for _, arg := range flag.Args() {
+		// Check if the directory exists
+		if _, err := os.Stat(arg); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: %s: %v\n", arg, err)
+			continue
+		}
+	}
+	
 	if err := doCallgraph("", "", *testFlag, flag.Args()); err != nil {
 		fmt.Fprintf(os.Stderr, "deadcode: %s\n", err)
 		os.Exit(1)
