@@ -1,0 +1,27 @@
+# Test of interface method dead code detection.
+
+deadcode -ifacemethods .
+want "Unused"
+!want "Used"
+
+-- go.mod --
+module example.com/deadcode/test
+
+go 1.21
+-- main.go --
+package main
+
+type CombinedInterface interface {
+    Used()
+    Unused()
+}
+
+type Implementation struct{}
+
+func (i Implementation) Used() {}
+func (i Implementation) Unused() {} // This method exists but is never called
+
+func main() {
+    var i CombinedInterface = Implementation{}
+    i.Used() // Only call the Used method
+}
