@@ -18,22 +18,36 @@ import (
 
 // analysisResult tracks all forms of dead code
 type analysisResult struct {
-	deadFuncs     map[*ssa.Function]bool
-	deadTypes     map[*types.Named]bool
-	deadIfaces    map[*types.Interface]bool
-	deadFields    map[*types.Var]bool
-	reachablePosn map[token.Position]bool
-	typeInfo      map[*types.Interface]*types.TypeName
+	deadFuncs        map[*ssa.Function]bool
+	deadTypes        map[*types.Named]bool
+	deadIfaces       map[*types.Interface]bool
+	deadFields       map[*types.Var]bool
+	deadIfaceMethods map[*types.Func]bool
+	deadConstants    map[*types.Const]bool
+	deadVariables    map[*types.Var]bool
+	deadTypeAliases  map[*types.TypeName]bool
+	deadExported     map[types.Object]string // Object to kind mapping
+	reachablePosn    map[token.Position]bool
+	typeInfo         map[*types.Interface]*types.TypeName
+	methodInfo       map[*types.Func]*types.Interface  // Method to interface mapping
+	liveFuncs        map[string]bool                   // Function name to bool mapping for live functions
 }
 
 func newAnalysisResult() *analysisResult {
 	return &analysisResult{
-		deadFuncs:     make(map[*ssa.Function]bool),
-		deadTypes:     make(map[*types.Named]bool),
-		deadIfaces:    make(map[*types.Interface]bool),
-		deadFields:    make(map[*types.Var]bool),
-		reachablePosn: make(map[token.Position]bool),
-		typeInfo:      make(map[*types.Interface]*types.TypeName),
+		deadFuncs:        make(map[*ssa.Function]bool),
+		deadTypes:        make(map[*types.Named]bool),
+		deadIfaces:       make(map[*types.Interface]bool),
+		deadFields:       make(map[*types.Var]bool),
+		deadIfaceMethods: make(map[*types.Func]bool),
+		deadConstants:    make(map[*types.Const]bool),
+		deadVariables:    make(map[*types.Var]bool),
+		deadTypeAliases:  make(map[*types.TypeName]bool),
+		deadExported:     make(map[types.Object]string),
+		reachablePosn:    make(map[token.Position]bool),
+		typeInfo:         make(map[*types.Interface]*types.TypeName),
+		methodInfo:       make(map[*types.Func]*types.Interface),
+		liveFuncs:        make(map[string]bool),
 	}
 }
 
@@ -82,6 +96,11 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 	// Track reachable types from RTA results
 	reachableTypes := make(map[*types.Named]bool)
 	for fn := range rtaRes.Reachable {
+		// Store live function names for cgo analysis
+		if *cgoFlag {
+			res.liveFuncs[fn.String()] = true
+		}
+		
 		if recv := fn.Signature.Recv(); recv != nil {
 			if named, ok := recv.Type().(*types.Named); ok {
 				reachableTypes[named] = true
@@ -129,6 +148,21 @@ func analyzeProgram(prog *ssa.Program, ssaPkgs []*ssa.Package, initial []*packag
 	}
 	if *fieldsFlag || *allFlag {
 		findDeadFields(initial, res)
+	}
+	if *ifaceMethodFlag || *allFlag {
+		findDeadInterfaceMethods(initial, res)
+	}
+	if *constantsFlag || *allFlag {
+		findDeadConstants(initial, res)
+	}
+	if *variablesFlag || *allFlag {
+		findDeadVariables(initial, res)
+	}
+	if *typeAliasesFlag || *allFlag {
+		findDeadTypeAliases(initial, res)
+	}
+	if *exportedFlag || *allFlag {
+		findUnusedExportedSymbols(initial, res)
 	}
 
 	return res, nil
