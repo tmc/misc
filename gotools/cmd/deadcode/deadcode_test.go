@@ -216,6 +216,10 @@ func buildDeadcode(t *testing.T) string {
 
 	cmd := exec.Command("go", "build", "-o", bin)
 	cmd.Dir = "." // Build in the package directory
+	cmd.Env = append(os.Environ(),
+		"GOCACHE=/tmp/gocache",
+		"HOME=/tmp", // Ensure HOME is defined
+	)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Building deadcode: %v\n%s", err, out)
 	}
