@@ -1,0 +1,31 @@
+# Test of exported symbol dead code detection.
+
+deadcode -exported .
+want "UnusedExported"
+!want "UsedExported"
+
+-- go.mod --
+module example.com/deadcode/test
+
+go 1.21
+-- main.go --
+package main
+
+import (
+    "example.com/deadcode/test/lib"
+)
+
+func main() {
+    lib.UsedExported()
+}
+
+// Exported but not used by any other package
+func UnusedExported() {}
+-- lib/lib.go --
+package lib
+
+// Exported and used by main package
+func UsedExported() {}
+
+// Exported but not used by any other package
+func UnusedExported() {}

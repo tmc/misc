@@ -1,0 +1,22 @@
+# Test of type alias dead code detection.
+
+deadcode -typealiases .
+want "UnusedAlias"
+!want "UsedAlias"
+
+-- go.mod --
+module example.com/deadcode/test
+
+go 1.21
+-- main.go --
+package main
+
+type MyType struct{}
+
+type UsedAlias = MyType
+type UnusedAlias = MyType
+
+func main() {
+    var x UsedAlias
+    println(x)
+}

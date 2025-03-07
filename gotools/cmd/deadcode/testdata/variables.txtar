@@ -1,0 +1,21 @@
+# Test of package-level variable dead code detection.
+
+deadcode -variables .
+want "unusedVar"
+!want "usedVar"
+
+-- go.mod --
+module example.com/deadcode/test
+
+go 1.21
+-- main.go --
+package main
+
+var (
+    usedVar   = "used"
+    unusedVar = "unused"
+)
+
+func main() {
+    println(usedVar)
+}
