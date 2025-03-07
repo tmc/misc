@@ -1,0 +1,124 @@
+# Test of all dead code detection features combined.
+
+deadcode -all .
+want "unusedFunc"
+want "UnusedType"
+want "UnusedInterface"
+want "unusedField"
+want "Unused"
+want "UnusedConst"
+want "unusedVar"
+want "UnusedAlias"
+want "UnusedExported"
+!want "usedFunc"
+!want "UsedType"
+!want "UsedInterface"
+!want "usedField"
+!want "Used"
+!want "UsedConst"
+!want "usedVar" 
+!want "UsedAlias"
+!want "UsedExported"
+
+-- go.mod --
+module example.com/deadcode/test
+
+go 1.21
+-- main.go --
+package main
+
+import (
+    "example.com/deadcode/test/lib"
+)
+
+// Constants
+const (
+    UsedConst   = "used"
+    UnusedConst = "unused"
+)
+
+// Package variables
+var (
+    usedVar   = "used"
+    unusedVar = "unused"
+)
+
+// Interfaces
+type UsedInterface interface {
+    Used()
+}
+
+type UnusedInterface interface {
+    Method()
+}
+
+type CombinedInterface interface {
+    Used()
+    Unused() // Method that exists but is never called
+}
+
+// Type aliases
+type MyType struct{}
+
+type UsedAlias = MyType
+type UnusedAlias = MyType
+
+// Struct with fields
+type TestStruct struct {
+    usedField    string
+    unusedField  string
+}
+
+// Type implementations
+type UsedType struct{}
+type UnusedType struct{}
+
+func (u UsedType) Used() {}
+func (u UnusedType) Method() {}
+
+type Implementation struct{}
+
+func (i Implementation) Used() {}
+func (i Implementation) Unused() {}
+
+// Functions
+func usedFunc() string {
+    return UsedConst
+}
+
+func unusedFunc() string {
+    return UnusedConst
+}
+
+// Exported function
+func UnusedExported() {}
+
+func main() {
+    // Use various elements
+    println(UsedConst)
+    println(usedVar)
+    
+    var x UsedAlias
+    println(x)
+    
+    t := TestStruct{}
+    println(t.usedField)
+    
+    usedFunc()
+    
+    var i CombinedInterface = Implementation{}
+    i.Used() // Only call the Used method
+    
+    var u UsedInterface = UsedType{}
+    u.Used()
+    
+    lib.UsedExported()
+}
+-- lib/lib.go --
+package lib
+
+// Exported and used by main package
+func UsedExported() {}
+
+// Exported but not used by any other package
+func UnusedExported() {}

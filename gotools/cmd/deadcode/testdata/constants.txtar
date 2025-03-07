@@ -1,0 +1,21 @@
+# Test of constant dead code detection.
+
+deadcode -constants .
+want "UnusedConst"
+!want "UsedConst"
+
+-- go.mod --
+module example.com/deadcode/test
+
+go 1.21
+-- main.go --
+package main
+
+const (
+    UsedConst   = "used"
+    UnusedConst = "unused"
+)
+
+func main() {
+    println(UsedConst)
+}
