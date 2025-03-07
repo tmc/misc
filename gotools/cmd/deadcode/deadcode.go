@@ -23,6 +23,7 @@ var (
 	generatedFlag = flag.Bool("generated", false, "include generated code")
 	whyLiveFlag   = flag.String("whylive", "", "explain why function is live")
 	debugFlag     = flag.Bool("debug", false, "enable debug output")
+	cgoFlag       = flag.Bool("cgo", false, "enable cgo support for analyzing C bindings")
 
 	// New flags for additional analysis
 	typesFlag       = flag.Bool("types", false, "report unreferenced types")
@@ -70,6 +71,9 @@ func doCallgraph(dir, gopath string, tests bool, args []string) error {
 	if gopath != "" {
 		cfg.Env = append(os.Environ(), "GOPATH="+gopath)
 	}
+	
+	// Apply cgo-specific configuration if needed
+	cfg = setupCgoOptions(cfg)
 
 	fmt.Fprintf(os.Stderr, "Loading packages from dir %q: %v\n", dir, args)
 	initial, err := packages.Load(cfg, args...)
@@ -93,6 +97,9 @@ func doCallgraph(dir, gopath string, tests bool, args []string) error {
 	if err != nil {
 		return fmt.Errorf("analysis failed: %v", err)
 	}
+	
+	// Analyze cgo references if enabled
+	analyzeCgoRefs(res)
 
 	// Print analysis stats
 	fmt.Fprintf(os.Stderr, "Analysis found:\n")
