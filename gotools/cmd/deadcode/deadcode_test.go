@@ -32,6 +32,22 @@ func Test(t *testing.T) {
 		t.Skipf("the dependencies are not available on android")
 	}
 
+	// Create shared home and cache directories for all tests
+	sharedHomeDir := filepath.Join(t.TempDir(), "home")
+	sharedCacheDir := filepath.Join(t.TempDir(), "gocache")
+	
+	// Ensure the directories exist
+	if err := os.MkdirAll(sharedHomeDir, 0777); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(sharedCacheDir, 0777); err != nil {
+		t.Fatal(err)
+	}
+
+	// Set environment variables for the testing process
+	os.Setenv("HOME", sharedHomeDir)
+	os.Setenv("GOCACHE", sharedCacheDir)
+
 	exe := buildDeadcode(t)
 
 	matches, err := filepath.Glob("testdata/*.txtar")
@@ -111,10 +127,14 @@ func Test(t *testing.T) {
 					// Run the command.
 					cmd := exec.Command(exe, tc.args...)
 					cmd.Dir = tmpdir
+					
+					// Use the shared HOME and GOCACHE directories
 					cmd.Env = append(os.Environ(),
 						"GOPROXY=",
 						"GO111MODULE=on",
-						"PWD="+tmpdir, // Add PWD
+						"HOME="+sharedHomeDir,
+						"GOCACHE="+sharedCacheDir,
+						"PWD="+tmpdir,
 					)
 					var stdout, stderr bytes.Buffer
 					cmd.Stdout = &stdout
@@ -214,11 +234,20 @@ func buildDeadcode(t *testing.T) string {
 		bin += ".exe"
 	}
 
+	// Get current environment variables
+	homeDir := os.Getenv("HOME")
+	cacheDir := os.Getenv("GOCACHE")
+
+	// Verify they exist
+	if homeDir == "" || cacheDir == "" {
+		t.Fatalf("HOME or GOCACHE environment variables are not set")
+	}
+
 	cmd := exec.Command("go", "build", "-o", bin)
 	cmd.Dir = "." // Build in the package directory
 	cmd.Env = append(os.Environ(),
-		"GOCACHE=/tmp/gocache",
-		"HOME=/tmp", // Ensure HOME is defined
+		"GOCACHE="+cacheDir,
+		"HOME="+homeDir,
 	)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Building deadcode: %v\n%s", err, out)

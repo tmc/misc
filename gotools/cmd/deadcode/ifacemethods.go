@@ -13,12 +13,27 @@ import (
 
 // findDeadInterfaceMethods identifies interface methods that are declared but never called
 func findDeadInterfaceMethods(pkgs []*packages.Package, res *analysisResult) {
-	// First pass: collect all interface methods
-	for iface, _ := range res.typeInfo {
-		for i := 0; i < iface.NumMethods(); i++ {
-			method := iface.Method(i)
-			res.deadIfaceMethods[method] = true
-			res.methodInfo[method] = iface
+	// First pass: collect all interfaces and their methods
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Syntax {
+			ast.Inspect(file, func(n ast.Node) bool {
+				if spec, ok := n.(*ast.TypeSpec); ok {
+					if obj, ok := pkg.TypesInfo.Defs[spec.Name].(*types.TypeName); ok {
+						if iface, ok := obj.Type().Underlying().(*types.Interface); ok {
+							// Store interface in typeInfo map
+							res.typeInfo[iface] = obj
+							
+							// Add all methods of this interface to the deadIfaceMethods map
+							for i := 0; i < iface.NumMethods(); i++ {
+								method := iface.Method(i)
+								res.deadIfaceMethods[method] = true
+								res.methodInfo[method] = iface
+							}
+						}
+					}
+				}
+				return true
+			})
 		}
 	}
 

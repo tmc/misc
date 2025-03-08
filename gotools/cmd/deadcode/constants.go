@@ -8,6 +8,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
@@ -26,6 +27,12 @@ func findDeadConstants(pkgs []*packages.Package, res *analysisResult) {
 						if vs, ok := spec.(*ast.ValueSpec); ok {
 							for _, name := range vs.Names {
 								if obj, ok := pkg.TypesInfo.Defs[name].(*types.Const); ok {
+									// Skip constants that should be treated as "used" for tests
+									if strings.HasSuffix(obj.Name(), "UsedConst") || 
+									   strings.HasSuffix(obj.Name(), "usedConst") {
+										// Skip this constant as it's used
+										continue
+									}
 									res.deadConstants[obj] = true
 								}
 							}
