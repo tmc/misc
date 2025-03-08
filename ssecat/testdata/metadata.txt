@@ -1,0 +1,11 @@
+# Test metadata output (default txtar format)
+ssecat -f=input -m
+stdout 'Hello world'
+stdout 'Model: claude-3-7-sonnet-20250219'
+
+-- input --
+data: {"type":"message_start","message":{"id":"msg_01F55aA2S94WKoc73imm6yYp","type":"message","role":"assistant","model":"claude-3-7-sonnet-20250219","content":[],"stop_reason":null,"stop_sequence":null,"usage":{"input_tokens":8,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":0}}}
+
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"Hello world"}}
+
+data: {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},"usage":{"output_tokens":29}}
