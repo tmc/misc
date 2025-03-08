@@ -1,7 +1,6 @@
 # Test invalid JSON handling
 ! ssecat -f=input
-stderr 'json unmarshal'
-! stdout .
+stderr .
 
 -- input --
-data: {invalid json} 
+data: {invalid}

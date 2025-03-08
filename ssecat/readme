@@ -1,19 +1,196 @@
-ssecat reads in sse streams and prints them to stdout
+# ssecat - Server-Sent Events (SSE) JSON parser
 
-By default, it assumes the following structure:
+`ssecat` is a command-line tool that processes Server-Sent Events (SSE) output from JSON-emitting APIs (such as AI chat completions) and extracts text content. If the input doesn't contain SSE events, it behaves like `cat` and outputs the raw content.
 
-data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"ssecat extracts "}}
-data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"these types "}}
-data: {"type":"content_block_delta","index":2,"delta":{"type":"text_delta","text":"of chunks"}}
+## Features
 
+- Extract text content from SSE messages using configurable JSON paths
+- Support for multiple extraction patterns to handle different message formats
+- Easy extraction of tool calls and JSON data
+- Include metadata like tokens, model, and stop reason in output
+- Configurable delay between processing chunks
+- Fallback to cat behavior for non-SSE content (with notification to stderr if TTY is available)
 
-Usage:
+## Installation
 
-$ ssecat -h
-Usage of ssecat:
-  -delay duration
-    	delay between chunks (e.g. 100ms)
-  -f string
-    	input file (- for stdin) (default "-")
-  -path string
-    	path to text field (e.g. type=foo,text or a.b.type=foo,a.b.text) (default "type=content_block_delta,delta.type=text_delta,delta.text")
+```
+go install github.com/tmc/misc/ssecat@latest
+```
+
+## Usage
+
+```
+ssecat [options]
+```
+
+### Options
+
+- `-f=FILE`: Input file (default: stdin)
+- `-path=PATTERNS`: Space-separated extraction patterns (default: "type=content_block_delta,delta.type=text_delta,delta.text input_json_delta=delta.partial_json")
+- `-delay=DURATION`: Delay between chunks (e.g. "100ms")
+- `-w`: Run HTTP server that streams output
+- `-port=PORT`: HTTP server port when using -w (default: 8072)
+- `-m`: Include metadata (tokens, model, stop reason) in output, defaults to txtar format
+- `-v`: Verbose output - print formatted JSON to stderr
+- `-vv`: Very verbose output - print raw lines and formatted JSON to stderr
+- `-fail-on-error`: Exit with error on JSON parsing failures (default: true)
+
+### Path Pattern Syntax
+
+The `-path` flag accepts two formats of patterns:
+
+1. **Shorthand format** for simple tool extraction:
+   ```
+   input_json_delta=delta.partial_json
+   ```
+   This is a shorthand for "delta.type=input_json_delta,delta.partial_json" 
+   (if delta.type equals "input_json_delta", extract the value at delta.partial_json)
+
+2. **Full pattern** with conditions and an extraction path:
+   ```
+   type=content_block_delta,delta.type=text_delta,delta.text
+   ```
+   This pattern extracts the text at "delta.text" when "type" equals "content_block_delta" 
+   AND "delta.type" equals "text_delta".
+
+You can specify multiple patterns separated by spaces:
+```
+type=content_block_delta,delta.type=text_delta,delta.text input_json_delta=delta.partial_json
+```
+
+### Examples
+
+Extract text from an API response:
+```
+curl -N https://api.example.com/stream | ssecat
+```
+
+Save text output with delay:
+```
+ssecat -f=response.sse -delay=50ms > output.txt
+```
+
+Use custom extraction patterns:
+```
+ssecat -path="type=message,content.parts.0.text" -f=response.sse
+```
+
+Extract both text and tool calls:
+```
+ssecat -path="type=content_block_delta,delta.type=text_delta,delta.text delta.type=input_json_delta,delta.partial_json" -f=response.sse
+```
+
+Include metadata in txtar format (default when using -m):
+```
+ssecat -m
+```
+
+Include metadata in plain format:
+```
+ssecat -m -plain-meta
+```
+
+Debug SSE parsing with verbose output showing formatted JSON:
+```
+ssecat -v | tee output.txt
+```
+
+Debug at maximum verbosity showing raw lines and formatted data:
+```
+ssecat -vv | tee output.txt
+```
+
+Run as an HTTP server that streams output:
+```
+ssecat -w
+```
+
+Run server on a custom port:
+```
+ssecat -w -port=9000
+```
+
+Send data to the running server:
+```
+curl -X POST --data-binary @input.sse http://localhost:8072/
+```
+
+Use as a regular cat command for non-SSE files:
+```
+ssecat -f=regular.txt  # Will just output the contents of the file normally
+```
+
+## Output Formats
+
+### Text Output
+
+By default, `ssecat` extracts text content from SSE messages based on the specified patterns:
+
+Input:
+```
+data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"hello "}}
+data: {"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"world"}}
+```
+
+Output:
+```
+hello world
+```
+
+### Tool Call Output
+
+For tool call extraction, `ssecat` can extract and concatenate JSON outputs:
+
+Input:
+```
+data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{"}}
+data: {"type":"content_block_delta","index":1,"delta":{"type":"input_json_delta","partial_json":"\"city\":"}}
+data: {"type":"content_block_delta","index":2,"delta":{"type":"input_json_delta","partial_json":" \"SF\"}"}}
+```
+
+Output:
+```
+{"city": "SF"}
+```
+
+### Plain Metadata Output
+
+When using the `-m -plain-meta` flags, `ssecat` will include metadata in plain format:
+
+```
+Hello world
+
+--- Metadata ---
+Message ID: msg_01F55aA2S94WKoc73imm6yYp
+Model: claude-3-7-sonnet-20250219
+Input tokens: {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 0,
+  "cache_read_input_tokens": 0
+}
+Output tokens: {
+  "output_tokens": 29
+}
+Stop reason: end_turn
+```
+
+### txtar Format (Default with Metadata)
+
+When using the `-m` flag (default) or `-txtar` flag, `ssecat` will output in txtar format with metadata in a separate file:
+
+```
+Hello world
+
+-- metadata --
+Message ID: msg_01F55aA2S94WKoc73imm6yYp
+Model: claude-3-7-sonnet-20250219
+Input tokens: {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 0,
+  "cache_read_input_tokens": 0
+}
+Output tokens: {
+  "output_tokens": 29
+}
+Stop reason: end_turn
+```
