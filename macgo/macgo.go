@@ -1,4 +1,47 @@
-// Package macgo provides Go utilities for macOS app bundle creation and TCC permission handling.
+// Package macgo automatically creates and launches macOS app bundles
+// to gain TCC permissions for command-line Go programs.
+//
+// Basic blank import usage (auto-initializes the package):
+//
+//	import (
+//	    _ "github.com/tmc/misc/macgo"
+//	)
+//
+// Simple direct usage with permission functions:
+//
+//	import "github.com/tmc/misc/macgo"
+//
+//	func init() {
+//	    // Set specific permissions
+//	    macgo.SetCamera()
+//	    macgo.SetMic()
+//	    
+//	    // Or set all permissions at once
+//	    // macgo.SetAll()
+//	}
+//
+// Configure with environment variables:
+//
+//	MACGO_APP_NAME="MyApp" MACGO_BUNDLE_ID="com.example.myapp" MACGO_CAMERA=1 MACGO_MIC=1 ./myapp
+//
+// Advanced usage with configuration API:
+//
+//	import "github.com/tmc/misc/macgo"
+//
+//	func init() {
+//	    // Create a custom configuration
+//	    cfg := macgo.NewConfig()
+//	    cfg.Name = "CustomApp"
+//	    cfg.BundleID = "com.example.customapp" 
+//	    cfg.AddPermission(macgo.PermCamera)
+//	    cfg.AddPermission(macgo.PermMic)
+//
+//	    // Add custom Info.plist entries
+//	    cfg.AddPlistEntry("LSUIElement", true) // Make app run in background
+//
+//	    // Apply configuration (must be called)
+//	    macgo.Configure(cfg)
+//	}
 package macgo
 
 import (
@@ -12,370 +55,854 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
-// debugf prints debug messages when MACGO_DEBUG=1 is set
-func debugf(format string, args ...interface{}) {
+// Entitlement is a type for macOS entitlement identifiers
+type Entitlement string
+
+// Available app sandbox entitlements
+const (
+	// App Sandbox entitlements
+	EntAppSandbox    Entitlement = "com.apple.security.app-sandbox"
+	EntNetworkClient Entitlement = "com.apple.security.network.client"
+	EntNetworkServer Entitlement = "com.apple.security.network.server"
+	
+	// Device entitlements
+	EntCamera     Entitlement = "com.apple.security.device.camera"
+	EntMicrophone Entitlement = "com.apple.security.device.microphone"
+	EntBluetooth  Entitlement = "com.apple.security.device.bluetooth"
+	EntUSB        Entitlement = "com.apple.security.device.usb"
+	EntAudioInput Entitlement = "com.apple.security.device.audio-input"
+	EntPrint      Entitlement = "com.apple.security.print"
+	
+	// Personal information entitlements
+	EntAddressBook Entitlement = "com.apple.security.personal-information.addressbook"
+	EntLocation    Entitlement = "com.apple.security.personal-information.location"
+	EntCalendars   Entitlement = "com.apple.security.personal-information.calendars"
+	EntPhotos      Entitlement = "com.apple.security.personal-information.photos-library"
+	
+	// File entitlements
+	EntUserSelectedReadOnly  Entitlement = "com.apple.security.files.user-selected.read-only"
+	EntUserSelectedReadWrite Entitlement = "com.apple.security.files.user-selected.read-write"
+	EntDownloadsReadOnly     Entitlement = "com.apple.security.files.downloads.read-only"
+	EntDownloadsReadWrite    Entitlement = "com.apple.security.files.downloads.read-write"
+	EntPicturesReadOnly      Entitlement = "com.apple.security.assets.pictures.read-only"
+	EntPicturesReadWrite     Entitlement = "com.apple.security.assets.pictures.read-write"
+	EntMusicReadOnly         Entitlement = "com.apple.security.assets.music.read-only"
+	EntMusicReadWrite        Entitlement = "com.apple.security.assets.music.read-write"
+	EntMoviesReadOnly        Entitlement = "com.apple.security.assets.movies.read-only"
+	EntMoviesReadWrite       Entitlement = "com.apple.security.assets.movies.read-write"
+	
+	// Hardened Runtime entitlements
+	EntAllowJIT                      Entitlement = "com.apple.security.cs.allow-jit"
+	EntAllowUnsignedExecutableMemory Entitlement = "com.apple.security.cs.allow-unsigned-executable-memory"
+	EntAllowDyldEnvVars              Entitlement = "com.apple.security.cs.allow-dyld-environment-variables"
+	EntDisableLibraryValidation      Entitlement = "com.apple.security.cs.disable-library-validation"
+	EntDisableExecutablePageProtection Entitlement = "com.apple.security.cs.disable-executable-page-protection"
+	EntDebugger                      Entitlement = "com.apple.security.cs.debugger"
+	
+	// For backward compatibility
+	PermCamera    Entitlement = EntCamera
+	PermMic       Entitlement = EntMicrophone
+	PermLocation  Entitlement = EntLocation
+	PermContacts  Entitlement = EntAddressBook
+	PermPhotos    Entitlement = EntPhotos
+	PermCalendar  Entitlement = EntCalendars
+	PermReminders Entitlement = "com.apple.security.personal-information.reminders"
+)
+
+// Config provides a way to customize the app bundle behavior
+type Config struct {
+	// Name overrides the default app name (executable name)
+	Name string
+	
+	// BundleID overrides the default bundle identifier
+	BundleID string
+	
+	// Entitlements contains entitlements to request
+	Entitlements map[Entitlement]bool
+	
+	// Permissions contains entitlements to request (legacy name)
+	// For backward compatibility
+	Permissions map[Entitlement]bool
+	
+	// PlistEntries contains additional Info.plist entries
+	PlistEntries map[string]any
+	
+	// Relaunch controls whether to auto-relaunch (default: true)
+	Relaunch bool
+	
+	// AppPath specifies a custom path for the app bundle
+	AppPath string
+	
+	// KeepTemp prevents temporary bundles from being cleaned up
+	KeepTemp bool
+}
+
+// NewConfig creates a new configuration with default values
+func NewConfig() *Config {
+	return &Config{
+		Entitlements: make(map[Entitlement]bool),
+		Permissions:  make(map[Entitlement]bool),
+		PlistEntries: make(map[string]any),
+		Relaunch:     true,
+	}
+}
+
+// AddEntitlement adds an entitlement to the configuration
+func (c *Config) AddEntitlement(e Entitlement) {
+	c.Entitlements[e] = true
+	c.Permissions[e] = true // For backward compatibility
+}
+
+// AddPermission adds a TCC permission to the configuration (legacy method)
+func (c *Config) AddPermission(p Entitlement) {
+	c.AddEntitlement(p)
+}
+
+// AddPlistEntry adds a custom entry to the Info.plist file
+func (c *Config) AddPlistEntry(key string, value any) {
+	c.PlistEntries[key] = value
+}
+
+// global configuration state
+var (
+	// config contains internal app bundle settings
+	config struct {
+		// Name overrides the default app name (executable name)
+		Name string
+		
+		// ID overrides the default bundle identifier
+		ID string
+		
+		// Plist contains additional Info.plist entries
+		Plist map[string]any
+		
+		// Entitlements contains entitlement key-value pairs
+		Entitlements map[string]bool
+		
+		// Options
+		DoRelaunch bool
+		CustomPath string
+		KeepTemp   bool
+		
+		// initialized tracks if init has been called
+		initialized bool
+		
+		// initOnce ensures init happens only once
+		initOnce sync.Once
+	}
+	
+	// registerLock protects entitlement registration
+	registerLock sync.Mutex
+)
+
+// Configure applies a custom configuration for macgo
+func Configure(cfg *Config) {
+	if cfg == nil {
+		return
+	}
+	
+	registerLock.Lock()
+	defer registerLock.Unlock()
+	
+	config.Name = cfg.Name
+	config.ID = cfg.BundleID
+	config.CustomPath = cfg.AppPath
+	config.DoRelaunch = cfg.Relaunch
+	config.KeepTemp = cfg.KeepTemp
+	
+	// Copy entitlements
+	for e, enabled := range cfg.Entitlements {
+		if enabled {
+			config.Entitlements[string(e)] = true
+		}
+	}
+	
+	// Copy permissions to entitlements (for backward compatibility)
+	for p, enabled := range cfg.Permissions {
+		if enabled {
+			config.Entitlements[string(p)] = true
+		}
+	}
+	
+	// Copy plist entries
+	for k, v := range cfg.PlistEntries {
+		config.Plist[k] = v
+	}
+	
+	// Ensure we initialize on the first Configure call
+	initializeMacGo()
+}
+
+// LegacyConfig contains app bundle settings for backward compatibility.
+// New code should use the new Config type instead.
+var LegacyConfig struct {
+	// Name overrides the default app name (executable name).
+	Name string
+	
+	// ID overrides the default bundle identifier.
+	ID string
+	
+	// Plist contains additional Info.plist entries.
+	Plist map[string]any
+	
+	// Entitlements contains entitlement key-value pairs.
+	Entitlements map[string]bool
+}
+
+func init() {
+	LegacyConfig.Plist = make(map[string]any)
+	LegacyConfig.Entitlements = make(map[string]bool)
+	config.Plist = make(map[string]any)
+	config.Entitlements = make(map[string]bool)
+	config.DoRelaunch = true
+	
+	// Initialize config from environment
+	if name := os.Getenv("MACGO_APP_NAME"); name != "" {
+		config.Name = name
+	}
+	
+	if id := os.Getenv("MACGO_BUNDLE_ID"); id != "" {
+		config.ID = id
+	}
+	
+	if path := os.Getenv("MACGO_APP_PATH"); path != "" {
+		config.CustomPath = path
+	}
+	
+	if os.Getenv("MACGO_NO_RELAUNCH") == "1" {
+		config.DoRelaunch = false
+	}
+	
+	if os.Getenv("MACGO_KEEP_TEMP") == "1" {
+		config.KeepTemp = true
+	}
+	
+	// Initialize once on import
+	initializeMacGo()
+}
+
+// initializeMacGo is called once to set up the app bundle
+func initializeMacGo() {
+	config.initOnce.Do(func() {
+		// Skip if already initialized
+		if config.initialized {
+			return
+		}
+		
+		// Run only on macOS
+		if runtime.GOOS != "darwin" {
+			return
+		}
+		
+		// Copy settings from legacy Config for backward compatibility
+		if LegacyConfig.Name != "" {
+			config.Name = LegacyConfig.Name
+		}
+		
+		if LegacyConfig.ID != "" {
+			config.ID = LegacyConfig.ID
+		}
+		
+		for k, v := range LegacyConfig.Plist {
+			config.Plist[k] = v
+		}
+		
+		for k, v := range LegacyConfig.Entitlements {
+			config.Entitlements[k] = v
+		}
+		
+		// Get executable path
+		exec, err := os.Executable()
+		if err != nil {
+			debugf("error getting executable path: %v", err)
+			return
+		}
+		
+		// Check if already in an app bundle
+		if inBundle(exec) {
+			debugf("already in app bundle: %s", exec)
+			return
+		}
+		
+		// Skip relaunch if disabled
+		if !config.DoRelaunch {
+			debugf("relaunch disabled, skipping")
+			return
+		}
+		
+		// Create app bundle and relaunch
+		debugf("creating app bundle for: %s", exec)
+		app, err := createBundle(exec)
+		if err != nil {
+			debugf("error creating app bundle: %v", err)
+			return
+		}
+		
+		debugf("relaunching via app bundle: %s", app)
+		relaunch(app, exec)
+		
+		config.initialized = true
+	})
+}
+
+// debugf prints debug messages when MACGO_DEBUG=1.
+func debugf(format string, args ...any) {
 	if os.Getenv("MACGO_DEBUG") == "1" {
 		log.Printf("[macgo] "+format, args...)
 	}
 }
 
-// When this package is imported with _, it will automatically check if it's running
-// in an app bundle, and if not, attempt to find or create one and relaunch through it.
-func init() {
-	// Only run on macOS (Darwin)
-	if runtime.GOOS != "darwin" {
-		return
-	}
-
-	// No need for MACGO_NO_RELAUNCH environment variable anymore
-	// We now detect app bundles precisely based on the full path pattern
-
-	// Check if we're already running inside an app bundle
-	execPath, err := os.Executable()
-	if err != nil {
-		debugf("Error getting executable path: %v", err)
-		return
-	}
-	debugf("Executable path: %s", execPath)
-
-	// If already in an app bundle, do nothing
-	// Look for the pattern "/[something].app/Contents/MacOS/[executable name]"
-	execName := filepath.Base(execPath)
-	appBundlePath := fmt.Sprintf(".app/Contents/MacOS/%s", execName)
-	if strings.Contains(execPath, appBundlePath) {
-		debugf("Already running inside an app bundle, continuing normally")
-		return
-	}
-
-	// Generate a unique binary copy even for temporary binaries like go-build
-	appPath, err := createAppBundle(execPath)
-	if err != nil {
-		debugf("Error creating app bundle: %v", err)
-		return
-	}
-
-	// Relaunch through the app bundle
-	if appPath != "" {
-		debugf("Relaunching through app bundle: %s", appPath)
-		relaunchThroughBundle(appPath, execPath)
-	}
+// inBundle checks if a path is within an app bundle.
+func inBundle(path string) bool {
+	name := filepath.Base(path)
+	return strings.Contains(path, ".app/Contents/MacOS/"+name)
 }
 
-// createAppBundle creates an app bundle for the executable
-func createAppBundle(execPath string) (string, error) {
-	execName := filepath.Base(execPath)
-	debugf("Creating app bundle for: %s", execPath)
-
-	// Determine if we're running from a temporary binary (go run)
-	isTemporary := strings.Contains(execPath, "go-build")
-
-	var appPath string
-	var bundleDir string
-
-	if isTemporary {
-		// For temporary binaries, use a temporary directory
-		tempDir, err := os.MkdirTemp("", "macgo-*")
-		if err != nil {
-			return "", fmt.Errorf("failed to create temp directory: %w", err)
+// createBundle creates an app bundle for an executable.
+func createBundle(execPath string) (string, error) {
+	// Get executable name and determine app name
+	name := filepath.Base(execPath)
+	appName := name
+	if config.Name != "" {
+		appName = config.Name
+	}
+	
+	// Check if using go run (temporary binary)
+	isTemp := strings.Contains(execPath, "go-build")
+	
+	// Determine bundle location
+	var dir, appPath string
+	var fileHash string
+	
+	// Use custom path if specified
+	if config.CustomPath != "" {
+		// Ensure .app extension
+		if !strings.HasSuffix(config.CustomPath, ".app") {
+			appPath = config.CustomPath + ".app"
+		} else {
+			appPath = config.CustomPath
 		}
-
-		// Create a unique name based on the hash of the binary
-		fileHash, err := calculateSHA256(execPath)
+		dir = filepath.Dir(appPath)
+	} else if isTemp {
+		// For temporary binaries, use a system temp directory
+		tmp, err := os.MkdirTemp("", "macgo-*")
 		if err != nil {
-			// If we can't get a hash, use timestamp
+			return "", fmt.Errorf("create temp dir: %w", err)
+		}
+		
+		// Create unique name with hash
+		fileHash, err = checksum(execPath)
+		if err != nil {
 			fileHash = fmt.Sprintf("%d", time.Now().UnixNano())
 		}
-		shortHash := fileHash[:8] // Use first 8 chars of the hash
-
-		// Use a unique name for the app
-		uniqueName := fmt.Sprintf("%s-%s", execName, shortHash)
-		appPath = filepath.Join(tempDir, uniqueName+".app")
-		bundleDir = tempDir
-
-		debugf("Using temporary app bundle for go run: %s", appPath)
+		shortHash := fileHash[:8]
+		
+		// Unique app name for temporary bundles
+		appName = fmt.Sprintf("%s-%s", appName, shortHash)
+		appPath = filepath.Join(tmp, appName+".app")
+		dir = tmp
 	} else {
-		// For permanent binaries, use GOPATH/bin or similar location
+		// For regular binaries, use GOPATH/bin
 		gopath := os.Getenv("GOPATH")
 		if gopath == "" {
-			// Try to use default GOPATH if not set
 			home, err := os.UserHomeDir()
 			if err != nil {
-				return "", fmt.Errorf("failed to get user home directory: %w", err)
+				return "", fmt.Errorf("get home dir: %w", err)
 			}
 			gopath = filepath.Join(home, "go")
 		}
-
-		// Use GOPATH/bin directory
-		bundleDir = filepath.Join(gopath, "bin")
-		appPath = filepath.Join(bundleDir, execName+".app")
-
-		// Check if the app bundle already exists and is up to date
-		if _, err := os.Stat(appPath); err == nil {
-			debugf("App bundle exists at: %s", appPath)
-
-			// Check if the executable exists in the app bundle
-			bundleExecPath := filepath.Join(appPath, "Contents", "MacOS", execName)
-			if _, err := os.Stat(bundleExecPath); err == nil {
-				// Verify the executable checksums match
-				srcChecksum, err := calculateSHA256(execPath)
-				if err != nil {
-					debugf("Error calculating source checksum: %v", err)
-					// If we can't verify, assume we need to update
-				} else {
-					bundleChecksum, err := calculateSHA256(bundleExecPath)
-					if err != nil {
-						debugf("Error calculating bundle checksum: %v", err)
-						// If we can't verify, assume we need to update
-					} else if srcChecksum == bundleChecksum {
-						// Checksums match, we can use the existing app bundle
-						debugf("App bundle is up to date (checksums match)")
-						return appPath, nil
-					} else {
-						debugf("App bundle needs updating (checksums don't match)")
-						debugf("  Source SHA256: %s", srcChecksum)
-						debugf("  Bundle SHA256: %s", bundleChecksum)
-					}
-				}
-
-				// Update the executable
-				debugf("Updating app bundle executable")
-				err = copyFile(execPath, bundleExecPath)
-				if err != nil {
-					return "", fmt.Errorf("failed to update app bundle executable: %w", err)
-				}
-				// Make it executable
-				os.Chmod(bundleExecPath, 0755)
-				debugf("App bundle updated successfully")
-				return appPath, nil
-			}
+		
+		dir = filepath.Join(gopath, "bin")
+		appPath = filepath.Join(dir, appName+".app")
+		
+		// Check for existing bundle that's up to date
+		if existing := checkExisting(appPath, execPath); existing {
+			return appPath, nil
 		}
 	}
-
+	
+	// Create app bundle structure
 	contentsPath := filepath.Join(appPath, "Contents")
 	macosPath := filepath.Join(contentsPath, "MacOS")
-
-	// Create directories
-	err := os.MkdirAll(macosPath, 0755)
-	if err != nil {
-		return "", fmt.Errorf("failed to create app bundle directories: %w", err)
+	
+	if err := os.MkdirAll(macosPath, 0755); err != nil {
+		return "", fmt.Errorf("create bundle dirs: %w", err)
 	}
-
-	// Create a unique bundle ID using a format that combines the name and a hash
-	bundleID := fmt.Sprintf("com.macgo.%s", execName)
-	if isTemporary {
-		// For temporary binaries, add hash to bundle ID to make it unique
-		fileHash, _ := calculateSHA256(execPath)
-		if fileHash != "" {
-			bundleID = fmt.Sprintf("com.macgo.%s.%s", execName, fileHash[:8])
+	
+	// Generate bundle ID
+	bundleID := config.ID
+	if bundleID == "" {
+		bundleID = fmt.Sprintf("com.macgo.%s", appName)
+		if isTemp && len(fileHash) >= 8 {
+			bundleID = fmt.Sprintf("com.macgo.%s.%s", appName, fileHash[:8])
 		}
 	}
-
-	// Create Info.plist
+	
+	// Create Info.plist entries
+	plist := map[string]any{
+		"CFBundleExecutable":      name,
+		"CFBundleIdentifier":      bundleID,
+		"CFBundleName":            appName,
+		"CFBundlePackageType":     "APPL",
+		"CFBundleVersion":         "1.0",
+		"NSHighResolutionCapable": true,
+	}
+	
+	// Add user-defined entries
+	for k, v := range config.Plist {
+		plist[k] = v
+	}
+	
+	// Write Info.plist
 	infoPlistPath := filepath.Join(contentsPath, "Info.plist")
-	infoPlist := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>CFBundleExecutable</key>
-	<string>%s</string>
-	<key>CFBundleIdentifier</key>
-	<string>%s</string>
-	<key>CFBundleName</key>
-	<string>%s</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleVersion</key>
-	<string>1.0</string>
-	<key>NSHighResolutionCapable</key>
-	<true/>
-</dict>
-</plist>`, execName, bundleID, execName)
-
-	err = os.WriteFile(infoPlistPath, []byte(infoPlist), 0644)
-	if err != nil {
-		return "", fmt.Errorf("failed to write Info.plist: %w", err)
+	if err := writePlist(infoPlistPath, plist); err != nil {
+		return "", fmt.Errorf("write Info.plist: %w", err)
 	}
-
-	// Copy the executable to the app bundle
-	bundleExecPath := filepath.Join(macosPath, execName)
-	debugf("Copying %s to %s", execPath, bundleExecPath)
-
-	err = copyFile(execPath, bundleExecPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to copy executable to app bundle: %w", err)
+	
+	// Write entitlements if any
+	if len(config.Entitlements) > 0 {
+		entitlements := make(map[string]any)
+		for k, v := range config.Entitlements {
+			entitlements[k] = v
+		}
+		entPath := filepath.Join(contentsPath, "entitlements.plist")
+		if err := writePlist(entPath, entitlements); err != nil {
+			return "", fmt.Errorf("write entitlements: %w", err)
+		}
 	}
-
-	// Make it executable
-	err = os.Chmod(bundleExecPath, 0755)
-	if err != nil {
-		return "", fmt.Errorf("failed to make executable: %w", err)
+	
+	// Copy the executable
+	bundleExecPath := filepath.Join(macosPath, name)
+	if err := copyFile(execPath, bundleExecPath); err != nil {
+		return "", fmt.Errorf("copy executable: %w", err)
 	}
-
-	// For temporary bundles, we don't create a launcher script
-	if !isTemporary {
-		fmt.Fprintf(os.Stderr, "[macgo] Created permanent app bundle at: %s\n", appPath)
-	} else {
-		fmt.Fprintf(os.Stderr, "[macgo] Created temporary app bundle for this session\n")
-
-		// Schedule cleanup of temporary bundle when the process exits
+	
+	// Make executable
+	if err := os.Chmod(bundleExecPath, 0755); err != nil {
+		return "", fmt.Errorf("chmod: %w", err)
+	}
+	
+	// Set cleanup for temporary bundles
+	if isTemp && !config.KeepTemp {
+		fmt.Fprintf(os.Stderr, "[macgo] Created temporary app bundle\n")
 		go func() {
-			// Wait for the parent process to exit
 			time.Sleep(10 * time.Second)
-			debugf("Cleaning up temporary app bundle: %s", appPath)
-			os.RemoveAll(appPath)
+			os.RemoveAll(dir)
 		}()
+	} else {
+		fmt.Fprintf(os.Stderr, "[macgo] Created app bundle at: %s\n", appPath)
 	}
-
+	
 	return appPath, nil
 }
 
-// relaunchThroughBundle relaunches the executable through the app bundle
-func relaunchThroughBundle(appPath, execPath string) {
-	// Create pipes for stdin, stdout, stderr
-	stdinPipe, err := createNamedPipe("macgo-stdin")
-	if err != nil {
-		debugf("Error creating stdin pipe: %v", err)
-		return
+// checkExisting checks if an existing app bundle is up to date.
+func checkExisting(appPath, execPath string) bool {
+	name := filepath.Base(execPath)
+	bundleExecPath := filepath.Join(appPath, "Contents", "MacOS", name)
+	
+	// Check if the app bundle exists
+	if _, err := os.Stat(appPath); err != nil {
+		return false
 	}
-	defer os.Remove(stdinPipe)
-
-	stdoutPipe, err := createNamedPipe("macgo-stdout")
-	if err != nil {
-		debugf("Error creating stdout pipe: %v", err)
-		return
+	
+	// Check if the executable exists in the bundle
+	if _, err := os.Stat(bundleExecPath); err != nil {
+		return false
 	}
-	defer os.Remove(stdoutPipe)
-
-	stderrPipe, err := createNamedPipe("macgo-stderr")
+	
+	// Compare checksums
+	srcHash, err := checksum(execPath)
 	if err != nil {
-		debugf("Error creating stderr pipe: %v", err)
-		return
+		debugf("error calculating source checksum: %v", err)
+		return false
 	}
-	defer os.Remove(stderrPipe)
+	
+	bundleHash, err := checksum(bundleExecPath)
+	if err != nil {
+		debugf("error calculating bundle checksum: %v", err)
+		return false
+	}
+	
+	if srcHash == bundleHash {
+		debugf("app bundle is up to date")
+		return true
+	}
+	
+	// Update the executable
+	debugf("updating app bundle executable")
+	if err := copyFile(execPath, bundleExecPath); err != nil {
+		debugf("error updating executable: %v", err)
+		return false
+	}
+	
+	os.Chmod(bundleExecPath, 0755)
+	debugf("app bundle updated")
+	return true
+}
 
-	// Prepare arguments for open command with file paths for IO redirection
-	// Include --wait-apps to make 'open' wait for the app to exit
-	args := []string{"-a", appPath, "--wait-apps",
-		"--stdin", stdinPipe,
-		"--stdout", stdoutPipe,
-		"--stderr", stderrPipe}
-
-	// No need to set MACGO_NO_RELAUNCH anymore since we precisely detect app bundles
-
+// relaunch restarts the application through the app bundle.
+func relaunch(appPath, execPath string) {
+	// Create pipes for IO redirection
+	pipes := make([]string, 3)
+	for i, name := range []string{"stdin", "stdout", "stderr"} {
+		pipe, err := createPipe("macgo-" + name)
+		if err != nil {
+			debugf("error creating %s pipe: %v", name, err)
+			return
+		}
+		pipes[i] = pipe
+		defer os.Remove(pipe)
+	}
+	
+	// Prepare open command arguments
+	args := []string{
+		"-a", appPath,
+		"--wait-apps",
+		"--stdin", pipes[0],
+		"--stdout", pipes[1],
+		"--stderr", pipes[2],
+	}
+	
+	// Set environment to prevent relaunching again
+	os.Setenv("MACGO_NO_RELAUNCH", "1")
+	
+	// Pass original arguments
 	if len(os.Args) > 1 {
 		args = append(args, "--args")
 		args = append(args, os.Args[1:]...)
 	}
-	debugf("Launching with args: %v", args)
-
-	// Launch the app bundle
+	
+	// Launch app bundle
 	cmd := exec.Command("open", args...)
-
-	// Start the command without attaching stdin/stdout/stderr directly
-	err = cmd.Start()
-	if err != nil {
-		debugf("Error starting app bundle: %v", err)
+	if err := cmd.Start(); err != nil {
+		debugf("error starting app bundle: %v", err)
 		return
 	}
-
-	// Set up goroutines to handle IO redirection through the pipes
-	go func() {
-		// Connect stdin to the pipe
-		stdinFile, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0)
-		if err != nil {
-			debugf("Error opening stdin pipe: %v", err)
-			return
-		}
-		defer stdinFile.Close()
-
-		// Copy from os.Stdin to the pipe
-		io.Copy(stdinFile, os.Stdin)
-	}()
-
-	go func() {
-		// Connect stdout from the pipe
-		stdoutFile, err := os.OpenFile(stdoutPipe, os.O_RDONLY, 0)
-		if err != nil {
-			debugf("Error opening stdout pipe: %v", err)
-			return
-		}
-		defer stdoutFile.Close()
-
-		// Copy from the pipe to os.Stdout
-		io.Copy(os.Stdout, stdoutFile)
-	}()
-
-	go func() {
-		// Connect stderr from the pipe
-		stderrFile, err := os.OpenFile(stderrPipe, os.O_RDONLY, 0)
-		if err != nil {
-			debugf("Error opening stderr pipe: %v", err)
-			return
-		}
-		defer stderrFile.Close()
-
-		// Copy from the pipe to os.Stderr
-		io.Copy(os.Stderr, stderrFile)
-	}()
-
-	// Wait for the command to finish
-	err = cmd.Wait()
-	if err != nil {
-		debugf("Error relaunching through app bundle: %v", err)
+	
+	// Handle stdin
+	go pipeIO(pipes[0], os.Stdin, nil)
+	
+	// Handle stdout
+	go pipeIO(pipes[1], nil, os.Stdout)
+	
+	// Handle stderr
+	go pipeIO(pipes[2], nil, os.Stderr)
+	
+	// Wait for process to finish
+	if err := cmd.Wait(); err != nil {
+		debugf("error waiting for app bundle: %v", err)
 		return
 	}
-
-	debugf("Successfully relaunched through app bundle, exiting this process")
-	// Exit this process since we've relaunched
+	
 	os.Exit(0)
 }
 
-// createNamedPipe creates a named pipe (FIFO) and returns its path
-func createNamedPipe(prefix string) (string, error) {
-	// Create temporary filename
-	tmpFile, err := os.CreateTemp("", prefix+"-*")
+// pipeIO copies data between a pipe and stdin/stdout/stderr.
+func pipeIO(pipe string, in io.Reader, out io.Writer) {
+	mode := os.O_RDONLY
+	if in != nil {
+		mode = os.O_WRONLY
+	}
+	
+	f, err := os.OpenFile(pipe, mode, 0)
 	if err != nil {
-		return "", fmt.Errorf("failed to create temp file: %w", err)
+		debugf("error opening pipe: %v", err)
+		return
 	}
-
-	pipePath := tmpFile.Name()
-	tmpFile.Close()
-	os.Remove(pipePath) // Remove the regular file
-
-	// Create the named pipe (FIFO)
-	cmd := exec.Command("mkfifo", pipePath)
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to create named pipe: %w", err)
+	defer f.Close()
+	
+	if in != nil {
+		io.Copy(f, in)
+	} else {
+		io.Copy(out, f)
 	}
-
-	return pipePath, nil
 }
 
-// calculateSHA256 computes the SHA-256 hash of a file
-func calculateSHA256(filePath string) (string, error) {
-	file, err := os.Open(filePath)
+// createPipe creates a named pipe.
+func createPipe(prefix string) (string, error) {
+	tmp, err := os.CreateTemp("", prefix+"-*")
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
-
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
-	}
-
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	
+	path := tmp.Name()
+	tmp.Close()
+	os.Remove(path)
+	
+	cmd := exec.Command("mkfifo", path)
+	return path, cmd.Run()
 }
 
-// Helper functions
+// checksum calculates the SHA-256 hash of a file.
+func checksum(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// copyFile copies a file from src to dst.
 func copyFile(src, dst string) error {
-	debugf("Copying file from %s to %s", src, dst)
 	data, err := os.ReadFile(src)
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(dst, data, 0755)
+}
+
+// writePlist writes a map to a plist file.
+func writePlist(path string, data map[string]any) error {
+	var sb strings.Builder
+	
+	sb.WriteString(`<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+`)
+	
+	for k, v := range data {
+		sb.WriteString(fmt.Sprintf("\t<key>%s</key>\n", k))
+		
+		switch val := v.(type) {
+		case bool:
+			if val {
+				sb.WriteString("\t<true/>\n")
+			} else {
+				sb.WriteString("\t<false/>\n")
+			}
+		case string:
+			sb.WriteString(fmt.Sprintf("\t<string>%s</string>\n", val))
+		case int, int32, int64:
+			sb.WriteString(fmt.Sprintf("\t<integer>%v</integer>\n", val))
+		case float32, float64:
+			sb.WriteString(fmt.Sprintf("\t<real>%v</real>\n", val))
+		default:
+			sb.WriteString(fmt.Sprintf("\t<string>%v</string>\n", val))
+		}
+	}
+	
+	sb.WriteString("</dict>\n</plist>")
+	return os.WriteFile(path, []byte(sb.String()), 0644)
+}
+
+// RegisterEntitlement registers a TCC entitlement key-value pair
+func RegisterEntitlement(key string, value bool) {
+	registerLock.Lock()
+	defer registerLock.Unlock()
+	
+	// Add to both config structures for compatibility
+	LegacyConfig.Entitlements[key] = value
+	config.Entitlements[key] = value
+}
+
+// Environment variable detection for entitlements
+func init() {
+	// Check environment variables for permissions and entitlements
+	envVars := map[string]string{
+		// Basic TCC permissions (legacy)
+		"MACGO_CAMERA":    string(EntCamera),
+		"MACGO_MIC":       string(EntMicrophone),
+		"MACGO_LOCATION":  string(EntLocation),
+		"MACGO_CONTACTS":  string(EntAddressBook),
+		"MACGO_PHOTOS":    string(EntPhotos),
+		"MACGO_CALENDAR":  string(EntCalendars),
+		"MACGO_REMINDERS": string(PermReminders),
+		
+		// App Sandbox entitlements
+		"MACGO_APP_SANDBOX":     string(EntAppSandbox),
+		"MACGO_NETWORK_CLIENT":  string(EntNetworkClient),
+		"MACGO_NETWORK_SERVER":  string(EntNetworkServer),
+		
+		// Device entitlements
+		"MACGO_BLUETOOTH":       string(EntBluetooth),
+		"MACGO_USB":             string(EntUSB),
+		"MACGO_AUDIO_INPUT":     string(EntAudioInput),
+		"MACGO_PRINT":           string(EntPrint),
+		
+		// File entitlements
+		"MACGO_USER_FILES_READ":      string(EntUserSelectedReadOnly),
+		"MACGO_USER_FILES_WRITE":     string(EntUserSelectedReadWrite),
+		"MACGO_DOWNLOADS_READ":       string(EntDownloadsReadOnly),
+		"MACGO_DOWNLOADS_WRITE":      string(EntDownloadsReadWrite),
+		"MACGO_PICTURES_READ":        string(EntPicturesReadOnly),
+		"MACGO_PICTURES_WRITE":       string(EntPicturesReadWrite),
+		"MACGO_MUSIC_READ":           string(EntMusicReadOnly),
+		"MACGO_MUSIC_WRITE":          string(EntMusicReadWrite),
+		"MACGO_MOVIES_READ":          string(EntMoviesReadOnly),
+		"MACGO_MOVIES_WRITE":         string(EntMoviesReadWrite),
+		
+		// Hardened Runtime entitlements
+		"MACGO_ALLOW_JIT":               string(EntAllowJIT),
+		"MACGO_ALLOW_UNSIGNED_MEMORY":   string(EntAllowUnsignedExecutableMemory),
+		"MACGO_ALLOW_DYLD_ENV":          string(EntAllowDyldEnvVars),
+		"MACGO_DISABLE_LIBRARY_VALIDATION": string(EntDisableLibraryValidation),
+		"MACGO_DISABLE_EXEC_PAGE_PROTECTION": string(EntDisableExecutablePageProtection),
+		"MACGO_DEBUGGER":                string(EntDebugger),
+	}
+	
+	for env, entitlement := range envVars {
+		if os.Getenv(env) == "1" {
+			RegisterEntitlement(entitlement, true)
+		}
+	}
+}
+
+// Entitlement setting functions - can be used directly or with blank import
+// These can be used in both ways:
+// 1. Direct call: macgo.SetCamera()
+// 2. Blank import with init: import _ "github.com/tmc/misc/macgo/camera"
+
+// TCC Permission entitlements
+
+// SetCamera enables camera access.
+func SetCamera() {
+	RegisterEntitlement(string(EntCamera), true)
+}
+
+// SetMic enables microphone access.
+func SetMic() {
+	RegisterEntitlement(string(EntMicrophone), true)
+}
+
+// SetLocation enables location access.
+func SetLocation() {
+	RegisterEntitlement(string(EntLocation), true)
+}
+
+// SetContacts enables contacts access.
+func SetContacts() {
+	RegisterEntitlement(string(EntAddressBook), true)
+}
+
+// SetPhotos enables photos library access.
+func SetPhotos() {
+	RegisterEntitlement(string(EntPhotos), true)
+}
+
+// SetCalendar enables calendar access.
+func SetCalendar() {
+	RegisterEntitlement(string(EntCalendars), true)
+}
+
+// SetReminders enables reminders access.
+func SetReminders() {
+	RegisterEntitlement(string(PermReminders), true)
+}
+
+// App Sandbox entitlements
+
+// SetAppSandbox enables App Sandbox.
+func SetAppSandbox() {
+	RegisterEntitlement(string(EntAppSandbox), true)
+}
+
+// SetNetworkClient enables outgoing network connections.
+func SetNetworkClient() {
+	RegisterEntitlement(string(EntNetworkClient), true)
+}
+
+// SetNetworkServer enables incoming network connections.
+func SetNetworkServer() {
+	RegisterEntitlement(string(EntNetworkServer), true)
+}
+
+// Device entitlements
+
+// SetBluetooth enables Bluetooth access.
+func SetBluetooth() {
+	RegisterEntitlement(string(EntBluetooth), true)
+}
+
+// SetUSB enables USB device access.
+func SetUSB() {
+	RegisterEntitlement(string(EntUSB), true)
+}
+
+// SetAudioInput enables audio input access.
+func SetAudioInput() {
+	RegisterEntitlement(string(EntAudioInput), true)
+}
+
+// SetPrinting enables printing capabilities.
+func SetPrinting() {
+	RegisterEntitlement(string(EntPrint), true)
+}
+
+// Hardened Runtime entitlements
+
+// SetAllowJIT enables JIT compilation.
+func SetAllowJIT() {
+	RegisterEntitlement(string(EntAllowJIT), true)
+}
+
+// SetAllowUnsignedMemory allows unsigned executable memory.
+func SetAllowUnsignedMemory() {
+	RegisterEntitlement(string(EntAllowUnsignedExecutableMemory), true)
+}
+
+// SetAllowDyldEnvVars allows DYLD environment variables.
+func SetAllowDyldEnvVars() {
+	RegisterEntitlement(string(EntAllowDyldEnvVars), true)
+}
+
+// SetDisableLibraryValidation disables library validation.
+func SetDisableLibraryValidation() {
+	RegisterEntitlement(string(EntDisableLibraryValidation), true)
+}
+
+// SetDisableExecutablePageProtection disables executable memory page protection.
+func SetDisableExecutablePageProtection() {
+	RegisterEntitlement(string(EntDisableExecutablePageProtection), true)
+}
+
+// SetDebugger enables attaching to other processes as a debugger.
+func SetDebugger() {
+	RegisterEntitlement(string(EntDebugger), true)
+}
+
+// Convenience functions
+
+// SetAllTCCPermissions enables all TCC permissions.
+func SetAllTCCPermissions() {
+	SetCamera()
+	SetMic()
+	SetLocation()
+	SetContacts()
+	SetPhotos()
+	SetCalendar()
+	SetReminders()
+}
+
+// SetAllDeviceAccess enables all device access permissions.
+func SetAllDeviceAccess() {
+	SetCamera()
+	SetMic()
+	SetBluetooth()
+	SetUSB()
+	SetAudioInput()
+	SetPrinting()
+}
+
+// SetAllNetworking enables all networking permissions.
+func SetAllNetworking() {
+	SetNetworkClient()
+	SetNetworkServer()
+}
+
+// SetAll enables all basic TCC permissions (legacy function).
+func SetAll() {
+	SetAllTCCPermissions()
 }
