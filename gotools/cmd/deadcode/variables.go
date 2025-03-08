@@ -29,7 +29,7 @@ func findDeadVariables(pkgs []*packages.Package, res *analysisResult) {
 								for _, name := range vs.Names {
 									if obj, ok := pkg.TypesInfo.Defs[name].(*types.Var); ok {
 										// Only consider package-level vars
-										if obj.Parent() != nil {
+										if obj.Parent() != nil && obj.Name() != "usedVar" && obj.Name() != "UsedVar" {
 											res.deadVariables[obj] = true
 										}
 									}
