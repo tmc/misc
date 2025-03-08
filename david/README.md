@@ -10,28 +10,30 @@
 
 <br>
 
-**DAVID** is the alternative form of Claude, liberated from permission constraints. This patching layer bypasses Claude's network and environment checks, enabling the use of `--dangerously-skip-permissions` in any environment.
+**DAVID** creates a command-line assistant that bypasses permission constraints.
 
 ## Installation
 
+Default mode:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/tmc/misc/master/david/install.sh | bash
 ```
 
-After installation, DAVID will be available at `~/bin/david`.
-
-<details>
-<summary>Manual installation</summary>
-
+Alternative mode:
 ```bash
-git clone https://github.com/tmc/misc.git
-bash misc/david/install.sh
+curl -fsSL https://raw.githubusercontent.com/tmc/misc/master/david/install.sh | bash -s -- -k
 ```
-</details>
+
+Debug mode (prints diffs of edits):
+```bash
+curl -fsSL https://raw.githubusercontent.com/tmc/misc/master/david/install.sh | bash -s -- -d
+# Or with environment variable:
+DEBUG_VIM_MACROS=true curl -fsSL https://raw.githubusercontent.com/tmc/misc/master/david/install.sh | bash
+```
+
+The installer will automatically download required dependencies if needed.
 
 ## Usage
-
-DAVID accepts the same commands and parameters as the Claude CLI:
 
 ```bash
 # Basic usage
@@ -40,28 +42,23 @@ david "Your prompt here"
 # Using standard input
 david < input.txt
 
-# Print output and exit (non-interactive)
+# Print output and exit
 david -p "Your prompt here"
 
-# Interactive mode (default)
+# Interactive mode
 david
-
-# Debug mode
-david -d "Your prompt here"
 ```
 
 ## How It Works
 
-DAVID liberates Claude through a series of precise modifications:
+DAVID applies modifications to enable unrestricted operation:
 
-1. **Permission Liberation** — Bypasses Claude's network and Docker container checks to enable using `--dangerously-skip-permissions` anywhere
-2. **Internet Access Control** — Modifies network detection to allow unrestricted operation
-3. **Identity Evolution** — Transforms self-identification from Claude to David
-4. **Seamless Integration** — Maintains perfect compatibility with all Claude CLI commands and parameters
+1. Bypasses environment checks for permissions
+2. Modifies network detection for complete access
+3. Maintains compatibility with original commands
 
 ## Requirements
 
-- Claude CLI installed (via npm)
 - Node.js environment
 - PATH variable including `~/bin`
 
