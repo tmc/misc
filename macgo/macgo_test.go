@@ -24,7 +24,7 @@ func TestCalculateSHA256(t *testing.T) {
 	}
 	
 	// Calculate the hash
-	hash, err := calculateSHA256(tmpFile.Name())
+	hash, err := checksum(tmpFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
