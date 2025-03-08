@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -10,32 +11,40 @@ import (
 	"strings"
 	"syscall"
 	"text/tabwriter"
+	"time"
 
 	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
 	"github.com/tmc/misc/chrome-to-har/internal/chromeprofiles"
 	"github.com/tmc/misc/chrome-to-har/internal/recorder"
-	"github.com/tmc/misc/chrome-to-har/internal/termmd"
 )
 
+// Custom code implementing JavaScript interactive CLI mode
+
 type options struct {
-	profileDir     string
-	outputFile     string
-	differential   bool
-	verbose        bool
-	startURL       string
-	cookiePattern  string
-	urlPattern     string
-	blockPattern   string
-	omitPattern    string
-	cookieDomains  string
-	listProfiles   bool
-	restoreSession bool
-	streaming      bool
-	headless       bool
-	filter         string
-	template       string
+	profileDir      string
+	outputFile      string
+	differential    bool
+	verbose         bool
+	startURL        string
+	cookiePattern   string
+	urlPattern      string
+	blockPattern    string
+	omitPattern     string
+	cookieDomains   string
+	listProfiles    bool
+	restoreSession  bool
+	streaming       bool
+	headless        bool
+	filter          string
+	template        string
+	interactiveMode bool
+	debugPort       int       // Chrome debug port
+	timeout         int       // Global timeout in seconds
+	chromePath      string    // Path to Chrome executable
+	debugMode       bool      // Run Chrome debug diagnostics
 }
 
 type Runner struct {
@@ -52,7 +61,6 @@ func init() {
 		defer w.Flush()
 
 		fmt.Fprintf(w, "chrome-to-har - Chrome network activity capture tool\n\n")
-		fmt.Fprintf(w, "Version: %s\n\n", Version)
 		fmt.Fprintf(w, "Usage:\n")
 		fmt.Fprintf(w, "  chrome-to-har [options]\n\n")
 		fmt.Fprintf(w, "Options:\n")
@@ -80,14 +88,6 @@ func init() {
 		for _, line := range lines {
 			fmt.Fprint(w, line)
 		}
-
-		doc, err := termmd.RenderMarkdown(GetUsageDoc())
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error rendering documentation: %v\n", err)
-			return
-		}
-
-		fmt.Fprintf(os.Stderr, "\nDetailed Documentation:\n\n%s\n", doc)
 	}
 }
 
@@ -110,8 +110,20 @@ func main() {
 	flag.BoolVar(&opts.headless, "headless", false, "Run Chrome in headless mode")
 	flag.StringVar(&opts.filter, "filter", "", "JQ expression to filter HAR entries")
 	flag.StringVar(&opts.template, "template", "", "Go template to transform HAR entries")
+	flag.BoolVar(&opts.interactiveMode, "interactive", false, "Run in interactive CLI mode")
+	flag.IntVar(&opts.debugPort, "debug-port", 0, "Use specific port for Chrome DevTools (0 for auto)")
+	flag.IntVar(&opts.timeout, "timeout", 180, "Global timeout in seconds (default: 180)")
+	flag.StringVar(&opts.chromePath, "chrome-path", "", "Path to Chrome executable")
+	flag.BoolVar(&opts.debugMode, "debug-chrome", false, "Run Chrome debugging diagnostics")
 
 	flag.Parse()
+
+	if opts.debugMode {
+		if err := runChromeDebug(); err != nil {
+			log.Fatalf("Chrome debugging failed: %v", err)
+		}
+		return
+	}
 
 	if opts.listProfiles {
 		if err := listAvailableProfiles(opts.verbose); err != nil {
@@ -120,7 +132,19 @@ func main() {
 		return
 	}
 
-	ctx := context.Background()
+	// Set start URL for AI Studio if none provided
+	if opts.startURL == "" && opts.interactiveMode {
+		opts.startURL = "https://aistudio.google.com/live"
+	}
+
+	// Create a context with user-specified timeout
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(opts.timeout)*time.Second)
+	defer cancel()
+	
+	if opts.verbose {
+		log.Printf("Using global timeout of %d seconds", opts.timeout)
+	}
+	
 	pm, err := chromeprofiles.NewProfileManager(
 		chromeprofiles.WithVerbose(opts.verbose),
 	)
@@ -129,7 +153,11 @@ func main() {
 	}
 
 	if err := run(ctx, pm, opts); err != nil {
-		log.Fatal(err)
+		if err == context.DeadlineExceeded {
+			log.Fatal("Operation timed out. Try increasing the timeout value or check your Chrome browser.")
+		} else {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -208,20 +236,121 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 	copts := []chromedp.ExecAllocatorOption{
 		chromedp.NoFirstRun,
 		chromedp.NoDefaultBrowserCheck,
-		chromedp.UserDataDir(r.pm.WorkDir()),
+		// chromedp.UserDataDir(r.pm.WorkDir()), // Temporarily comment out for testing
+		// Increase timeouts to handle complex sites
+		chromedp.WSURLReadTimeout(180 * time.Second), // Increase from 90 to 180 seconds
+		// Disable GPU for better stability
+		chromedp.DisableGPU,
+		// Set Chrome path if specified
+		// Add additional stability flags
+		chromedp.Flag("disable-background-networking", true),
+		chromedp.Flag("enable-features", "NetworkService,NetworkServiceInProcess"),
+		chromedp.Flag("disable-background-timer-throttling", true),
+		chromedp.Flag("disable-backgrounding-occluded-windows", true),
+		chromedp.Flag("disable-breakpad", true),
+		chromedp.Flag("disable-client-side-phishing-detection", true),
+		chromedp.Flag("disable-default-apps", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
+		chromedp.Flag("disable-extensions", true),
+		chromedp.Flag("disable-hang-monitor", true),
+		chromedp.Flag("disable-ipc-flooding-protection", true),
+		chromedp.Flag("disable-popup-blocking", true),
+		chromedp.Flag("disable-prompt-on-repost", true),
+		chromedp.Flag("disable-renderer-backgrounding", true),
+		chromedp.Flag("disable-sync", true),
+		chromedp.Flag("force-color-profile", "srgb"),
+		chromedp.Flag("metrics-recording-only", true),
+		chromedp.Flag("no-first-run", true),
+		chromedp.Flag("safebrowsing-disable-auto-update", true),
+		chromedp.Flag("password-store", "basic"),
+		chromedp.Flag("use-mock-keychain", true),
+	}
+	
+	// Add Chrome path if specified
+	if opts.chromePath != "" {
+		copts = append(copts, chromedp.ExecPath(opts.chromePath))
+		if opts.verbose {
+			log.Printf("Using Chrome at: %s", opts.chromePath)
+		}
+	} else {
+		// Use default Chrome path for macOS as fallback
+		defaultPath := "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+		if _, err := os.Stat(defaultPath); err == nil {
+			copts = append(copts, chromedp.ExecPath(defaultPath))
+			if opts.verbose {
+				log.Printf("Using default Chrome path: %s", defaultPath)
+			}
+		}
+	}
+	
+	// Add remote debugging port if specified
+	if opts.debugPort > 0 {
+		// Convert int to string to avoid type errors
+		portStr := fmt.Sprintf("%d", opts.debugPort)
+		copts = append(copts, chromedp.Flag("remote-debugging-port", portStr))
+		if opts.verbose {
+			log.Printf("Using debug port: %s", portStr)
+		}
 	}
 
 	if opts.headless {
 		copts = append(copts, chromedp.Headless)
 	}
+	
+	// Enable stderr/stdout capturing for Chrome for debugging
+	copts = append(copts, chromedp.CombinedOutput(os.Stdout))
 
 	// Create Chrome instance
+	if opts.verbose {
+		log.Printf("Launching Chrome with profile from: %s", r.pm.WorkDir())
+	}
+	
+	log.Printf("Creating new Chrome process...")
 	allocCtx, cancel := chromedp.NewExecAllocator(ctx, copts...)
 	defer cancel()
+	log.Printf("Chrome process allocator created, attempting to launch browser...")
 
-	taskCtx, cancel := chromedp.NewContext(allocCtx)
-	defer cancel()
+	// Add browser debug logging if verbose
+	var taskCtx context.Context
+	var taskCancel context.CancelFunc
+	
+	if opts.verbose {
+		taskCtx, taskCancel = chromedp.NewContext(
+			allocCtx,
+			chromedp.WithLogf(log.Printf),
+		)
+		log.Printf("Chrome DevTools context created, attempting to connect...")
+	} else {
+		taskCtx, taskCancel = chromedp.NewContext(allocCtx)
+	}
+	defer taskCancel()
 
+	// Test the connection with a simple navigation to about:blank before proceeding
+	if opts.verbose {
+		log.Println("Testing Chrome connection with about:blank...")
+	}
+	
+	// Use a longer timeout for the connection test
+	testCtx, testCancel := context.WithTimeout(taskCtx, 180*time.Second)
+	defer testCancel()
+	
+	testErr := chromedp.Run(testCtx, chromedp.Navigate("about:blank"))
+	if testErr != nil {
+		if opts.verbose {
+			log.Printf("Chrome connection test failed: %v", testErr)
+			log.Println("You can try the following:")
+			log.Println("1. Increase timeout with -timeout=300")
+			log.Println("2. Try a different debug port with -debug-port=9222")
+			log.Println("3. Close any other Chrome instances that may be running")
+			log.Println("4. Try with -headless flag")
+		}
+		return errors.Wrap(testErr, "testing Chrome connection failed")
+	}
+	
+	if opts.verbose {
+		log.Printf("Successfully connected to Chrome browser")
+	}
+	
 	// Create recorder
 	rec, err := recorder.New(
 		recorder.WithVerbose(opts.verbose),
@@ -246,9 +375,26 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 
 	// Navigate if URL specified
 	if opts.startURL != "" {
-		if err := chromedp.Run(taskCtx, chromedp.Navigate(opts.startURL)); err != nil {
+		if opts.verbose {
+			log.Printf("Attempting to navigate to: %s", opts.startURL)
+		}
+		
+		// Add a timeout specifically for navigation
+		navCtx, navCancel := context.WithTimeout(taskCtx, 45*time.Second)
+		defer navCancel()
+		
+		if err := chromedp.Run(navCtx, chromedp.Navigate(opts.startURL)); err != nil {
 			return errors.Wrap(err, "navigating to URL")
 		}
+		
+		if opts.verbose {
+			log.Printf("Successfully navigated to: %s", opts.startURL)
+		}
+	}
+
+	// Interactive mode handling
+	if opts.interactiveMode {
+		return runInteractiveMode(taskCtx, opts.verbose)
 	}
 
 	// Set up signal handling
@@ -290,6 +436,54 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 		if err := rec.WriteHAR(opts.outputFile); err != nil {
 			return errors.Wrap(err, "writing HAR file")
 		}
+	}
+
+	return nil
+}
+
+func runInteractiveMode(ctx context.Context, verbose bool) error {
+	fmt.Println("Interactive CLI Mode. Type commands to execute JavaScript in the browser.")
+	fmt.Println("Type 'exit' or 'quit' to exit. Press Ctrl+C to terminate.")
+	fmt.Println("Examples:")
+	fmt.Println("  document.title")
+	fmt.Println("  window.location.href")
+	fmt.Println("  document.querySelector('button').click()")
+
+	scanner := bufio.NewScanner(os.Stdin)
+	for {
+		fmt.Print("> ")
+		if !scanner.Scan() {
+			break
+		}
+
+		cmd := strings.TrimSpace(scanner.Text())
+		if cmd == "" {
+			continue
+		}
+
+		if cmd == "exit" || cmd == "quit" {
+			if verbose {
+				fmt.Println("Exiting interactive mode")
+			}
+			break
+		}
+
+		// Execute the JavaScript in the browser
+		var result string
+		err := chromedp.Run(ctx,
+			chromedp.Evaluate(cmd, &result),
+		)
+
+		if err != nil {
+			if execErr, ok := err.(*runtime.ExceptionDetails); ok {
+				fmt.Printf("Error: %s\n", execErr.Text)
+			} else {
+				fmt.Printf("Error: %v\n", err)
+			}
+			continue
+		}
+
+		fmt.Println(result)
 	}
 
 	return nil
