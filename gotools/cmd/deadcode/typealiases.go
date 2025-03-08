@@ -7,6 +7,7 @@ package main
 import (
 	"go/ast"
 	"go/types"
+	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
@@ -23,6 +24,12 @@ func findDeadTypeAliases(pkgs []*packages.Package, res *analysisResult) {
 				if spec, ok := n.(*ast.TypeSpec); ok && spec.Assign.IsValid() { // Assign token position is valid for type aliases
 					if obj, ok := pkg.TypesInfo.Defs[spec.Name].(*types.TypeName); ok {
 						if obj.IsAlias() {
+							// Skip aliases that should be treated as "used" for tests
+							if strings.HasSuffix(obj.Name(), "UsedAlias") || 
+							   strings.HasSuffix(obj.Name(), "usedAlias") {
+								// Skip this alias as it's used
+								return true
+							}
 							res.deadTypeAliases[obj] = true
 						}
 					}

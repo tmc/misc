@@ -68,9 +68,26 @@ func doCallgraph(dir, gopath string, tests bool, args []string) error {
 		Tests: tests,
 		Dir:   dir,
 	}
+	
+	// Explicitly set environment variables
+	home := os.Getenv("HOME")
+	cache := os.Getenv("GOCACHE")
+	env := os.Environ()
+	
+	// Debug output for environment variables
+	fmt.Fprintf(os.Stderr, "HOME=%s, GOCACHE=%s\n", home, cache)
+	
 	if gopath != "" {
-		cfg.Env = append(os.Environ(), "GOPATH="+gopath)
+		env = append(env, "GOPATH="+gopath)
 	}
+	if home != "" {
+		env = append(env, "HOME="+home)
+	}
+	if cache != "" {
+		env = append(env, "GOCACHE="+cache)
+	}
+	
+	cfg.Env = env
 	
 	// Apply cgo-specific configuration if needed
 	cfg = setupCgoOptions(cfg)
