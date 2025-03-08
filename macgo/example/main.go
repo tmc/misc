@@ -1,49 +1,54 @@
+// macgo example showing simple TCC permission access
+// Run with: MACGO_DEBUG=1 go run main.go
 package main
 
 import (
 	"fmt"
 	"os"
-
-	// Import macgo with underscore to enable auto-relaunching as an app bundle on macOS.
-	_ "github.com/tmc/misc/macgo"
+	
+	// Import macgo directly
+	"github.com/tmc/misc/macgo"
 )
 
+func init() {
+	// Request photos permission directly
+	macgo.SetPhotos()
+	
+	// Could also use:
+	// macgo.SetAll() // Request all permissions
+	
+	// Or with environment variables:
+	// MACGO_PHOTOS=1 MACGO_CAMERA=1 go run main.go
+}
+
 func main() {
-	fmt.Println("Hello from macgo example!")
-	fmt.Println("  -> ", os.Executable())
-
-	// Try to access a protected directory
-	homeDir, _ := os.UserHomeDir()
-	desktopDir := homeDir + "/Desktop"
-
-	fmt.Println("Attempting to list files in", desktopDir)
-	files, err := os.ReadDir(desktopDir)
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
+	fmt.Println("MacGo Test")
+	
+	// Try to read desktop files
+	home, _ := os.UserHomeDir()
+	dirs := []string{
+		home + "/Desktop",
+		home + "/Pictures",
+		home + "/Documents",
 	}
-
-	fmt.Println("Files on Desktop:")
-	for _, file := range files {
-		fmt.Println("-", file.Name())
-	}
-
-	// Getting other TCC-protected locations
-	docDir := homeDir + "/Documents"
-	fmt.Println("\nAttempting to list files in", docDir)
-	docFiles, err := os.ReadDir(docDir)
-	if err != nil {
-		fmt.Println("Error:", err)
-	} else {
-		fmt.Println("Files in Documents (first 5):")
-		count := 0
-		for _, file := range docFiles {
-			if count >= 5 {
-				fmt.Println("- [and more...]")
+	
+	for _, dir := range dirs {
+		fmt.Printf("\nReading %s: ", dir)
+		
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			fmt.Printf("error: %v\n", err)
+			continue
+		}
+		
+		fmt.Printf("%d files\n", len(files))
+		// Show first few files
+		for i, f := range files {
+			if i >= 3 {
+				fmt.Println("...")
 				break
 			}
-			fmt.Println("-", file.Name())
-			count++
+			fmt.Printf("- %s\n", f.Name())
 		}
 	}
 }

@@ -1,0 +1,11 @@
+// Package contacts provides contacts access entitlement for macOS apps.
+// Import this package with the blank identifier to enable contacts access:
+//
+//	import _ "github.com/tmc/misc/macgo/contacts"
+package contacts
+
+import "github.com/tmc/misc/macgo"
+
+func init() {
+	macgo.RegisterEntitlement(string(macgo.PermContacts), true)
+}
