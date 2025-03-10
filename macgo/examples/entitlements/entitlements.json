@@ -1,11 +1,10 @@
 {
   "com.apple.security.app-sandbox": true,
   "com.apple.security.network.client": true,
+  "com.apple.security.network.server": true,
   "com.apple.security.device.camera": true,
   "com.apple.security.device.microphone": true,
   "com.apple.security.personal-information.location": true,
-  "com.apple.security.personal-information.addressbook": true,
-  "com.apple.security.personal-information.calendars": true,
   "com.apple.security.personal-information.photos-library": true,
-  "com.apple.security.automation.apple-events": true
+  "com.apple.security.virtualization": true
 }

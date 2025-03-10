@@ -1,4 +1,4 @@
-# macgo
+# macgo - Simplified macOS App Bundle API
 
 Enables macOS App Sandbox and Hardened Runtime entitlements for Go command-line tools by auto-creating and launching app bundles.
 
@@ -10,17 +10,42 @@ macOS requires applications to be packaged as `.app` bundles to access protected
 2. If not, creates an app bundle with the requested entitlements and relaunches itself through it
 3. Handles all I/O redirection using named pipes
 
+## How It Works
+
+```mermaid
+flowchart TD
+    A[Go Program] --> B{Already in\n.app bundle?}
+    B -->|Yes| C[Continue execution\nwith TCC permissions]
+    B -->|No| D[Create .app bundle\nwith entitlements]
+    D --> E[Relaunch inside bundle]
+    E --> F[Copy stdin/stdout/stderr\nvia named pipes]
+    F --> C
+    
+    subgraph "Original Process"
+    A
+    B
+    D
+    end
+    
+    subgraph ".app Bundle"
+    E
+    F
+    C
+    end
+```
+
 ## Usage
 
-### Simplest Usage (Blank Import)
+macgo offers multiple approaches to configure your app bundle, from simplest to most advanced:
 
-The simplest way to use macgo is with a blank import:
+### 1. Simplest: Blank Import + Environment Variables
+
+For quick scripts and tools, using a blank import with environment variables is the simplest option:
 
 ```go
 package main
 
 import (
-    "fmt"
     "os"
     
     // Just import with blank identifier
@@ -31,53 +56,118 @@ import (
 // MACGO_CAMERA=1 MACGO_MIC=1 go run main.go
 
 func main() {
-    // Your code here will have access to protected resources
-    files, err := os.ReadDir("~/Desktop")
+    // Your code will automatically run in an app bundle with
+    // permissions specified by environment variables
+    files, _ := os.ReadDir("~/Desktop")
     // ...
 }
 ```
 
-### Direct Function Calls
+**Pros:** Minimal code, easy for quick scripts
+**Cons:** Configuration is outside Go code
 
-For more control, import directly and use entitlement functions:
+### 2. Recommended: With* Functions API
+
+For most applications, using the `With*` functions provides the best balance of simplicity and explicitness:
 
 ```go
 package main
 
 import (
-    "fmt"
     "os"
     "github.com/tmc/misc/macgo"
 )
 
 func init() {
-    // Request specific TCC permissions
-    macgo.SetCamera()
-    macgo.SetMic()
+    // Request specific entitlements with a clean, readable API
+    macgo.WithEntitlements(
+        macgo.EntCamera,
+        macgo.EntMicrophone,
+        macgo.EntAppSandbox,
+    )
     
-    // Set up App Sandbox with network access
-    macgo.SetAppSandbox()
-    macgo.SetNetworkClient()
-    
-    // Configure Hardened Runtime settings
-    macgo.SetAllowJIT()
-    macgo.SetDisableLibraryValidation()
-    
-    // Or request all TCC permissions at once
-    // macgo.SetAllTCCPermissions()
-    
-    // Or set up all device access
-    // macgo.SetAllDeviceAccess()
+    // Configure app details
+    macgo.WithAppName("MyApp")
+    macgo.WithBundleID("com.example.myapp")
 }
 
 func main() {
-    // Now your app has all the requested entitlements
+    // Your code will run with the specified entitlements
+    files, _ := os.ReadDir("~/Desktop")
+    // ...
 }
 ```
 
-### Advanced Configuration API
+**Pros:** Clear, explicit, readable API with configuration in Go code
+**Cons:** Slightly more verbose than blank import
 
-For complete control, use the configuration API:
+### 3. Alternative: Entitlements Package 
+
+The entitlements package provides specialized functionality:
+
+```go
+package main
+
+import (
+    "os"
+    
+    // Import the entitlements package directly or
+    // import specific entitlements with blank identifier
+    _ "github.com/tmc/misc/macgo/entitlements/camera"
+    _ "github.com/tmc/misc/macgo/entitlements/mic"
+    "github.com/tmc/misc/macgo/entitlements"
+)
+
+func init() {
+    // Use the entitlements package functions if needed
+    entitlements.SetPhotos()
+    
+    // Use WithEntitlementList for multiple entitlements
+    entitlements.WithEntitlementList(
+        entitlements.EntAppSandbox,
+        entitlements.EntNetworkClient
+    )
+}
+
+func main() {
+    // Your code will have the specified entitlements
+    files, _ := os.ReadDir("~/Desktop")
+    // ...
+}
+```
+
+**Pros:** Modular organization by permission type
+**Cons:** Less direct than the main package's WithEntitlements API
+
+### 4. Legacy: Direct Set* Functions
+
+This approach is maintained for backward compatibility but not recommended for new code:
+
+```go
+package main
+
+import (
+    "os"
+    "github.com/tmc/misc/macgo"
+)
+
+func init() {
+    // These functions still work but WithEntitlements is preferred
+    macgo.SetCamera()
+    macgo.SetMic()
+    macgo.SetAppSandbox()
+}
+
+func main() {
+    // Your code will have the specified entitlements
+    files, _ := os.ReadDir("~/Desktop")
+    // ...
+}
+```
+
+### 5. Advanced: Configuration API
+
+For complex scenarios requiring maximum control:
 
 ```go
 package main
@@ -91,7 +181,7 @@ func init() {
     cfg := macgo.NewConfig()
     
     // Set application details
-    cfg.Name = "CustomApp"
+    cfg.ApplicationName = "CustomApp"
     cfg.BundleID = "com.example.customapp" 
     
     // Request entitlements using the new API
@@ -99,22 +189,26 @@ func init() {
     cfg.AddEntitlement(macgo.EntMicrophone)
     cfg.AddEntitlement(macgo.EntAppSandbox)
     cfg.AddEntitlement(macgo.EntNetworkClient)
-    cfg.AddEntitlement(macgo.EntAllowJIT)
-    
-    // For backward compatibility, this also works:
-    // cfg.AddPermission(macgo.PermCamera)
     
     // Add custom Info.plist entries
     cfg.AddPlistEntry("LSUIElement", true) // Make app run in background
     
     // Control app bundle behavior
     cfg.Relaunch = true    // Auto-relaunch (default)
-    cfg.AppPath = "/custom/path/MyApp" // Custom bundle path
+    cfg.CustomDestinationAppPath = "/custom/path/MyApp.app" // Custom bundle path
     
     // Apply configuration (must be called)
     macgo.Configure(cfg)
 }
+
+func main() {
+    // Your code will have maximum customization
+    // ...
+}
 ```
+
+**Pros:** Maximum flexibility and control
+**Cons:** Most verbose API, steeper learning curve
 
 ### Environment Variables
 
@@ -298,6 +392,24 @@ See the examples directory for complete examples:
 - [Simple Example](examples/simple/main.go): Using direct function calls
 - [Blank Import Example](examples/blank/main.go): Using environment variables  
 - [Advanced Example](examples/advanced/main.go): Using the configuration API
+
+## Package Organization
+
+The library is organized as follows:
+
+- **Main Package**: `github.com/tmc/misc/macgo` - Core functionality for app bundle creation
+- **Entitlements Package**: `github.com/tmc/misc/macgo/entitlements` - Central package for entitlement management
+  - Individual TCC Permission Packages:
+    - `github.com/tmc/misc/macgo/entitlements/camera`
+    - `github.com/tmc/misc/macgo/entitlements/mic`
+    - `github.com/tmc/misc/macgo/entitlements/location`
+    - `github.com/tmc/misc/macgo/entitlements/contacts`
+    - `github.com/tmc/misc/macgo/entitlements/photos`
+    - `github.com/tmc/misc/macgo/entitlements/calendar`
+    - `github.com/tmc/misc/macgo/entitlements/reminders`
+  - Complete Package: `github.com/tmc/misc/macgo/entitlements/all`
+
+For backward compatibility, the original package structure is still supported, but new code should use the entitlements package.
 
 ## Design
 
