@@ -13,7 +13,7 @@ func TestCalculateSHA256(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(tmpFile.Name())
-	
+
 	// Write some content
 	content := "test content for SHA256"
 	if _, err := tmpFile.Write([]byte(content)); err != nil {
@@ -22,13 +22,13 @@ func TestCalculateSHA256(t *testing.T) {
 	if err := tmpFile.Close(); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Calculate the hash
 	hash, err := checksum(tmpFile.Name())
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// The hash should be 64 characters long (SHA-256 is 32 bytes, hex-encoded)
 	if len(hash) != 64 {
 		t.Errorf("Expected SHA-256 hash to be 64 characters, got %d", len(hash))
@@ -42,7 +42,7 @@ func TestCopyFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(srcFile.Name())
-	
+
 	// Write content
 	content := "test content for copy file"
 	if _, err := srcFile.Write([]byte(content)); err != nil {
@@ -51,7 +51,7 @@ func TestCopyFile(t *testing.T) {
 	if err := srcFile.Close(); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Create a destination path
 	dstFile, err := os.CreateTemp("", "macgo-test-dst-*")
 	if err != nil {
@@ -61,18 +61,18 @@ func TestCopyFile(t *testing.T) {
 	dstFile.Close()
 	os.Remove(dstPath) // Remove it so copyFile can create it
 	defer os.Remove(dstPath)
-	
+
 	// Copy the file
 	if err := copyFile(srcFile.Name(), dstPath); err != nil {
 		t.Fatal(err)
 	}
-	
+
 	// Verify the content
 	dstContent, err := os.ReadFile(dstPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	
+
 	if string(dstContent) != content {
 		t.Errorf("Expected content %q, got %q", content, string(dstContent))
 	}
@@ -85,7 +85,7 @@ func TestAppBundleCreation(t *testing.T) {
 	if err != nil {
 		t.Skip("Could not determine executable path")
 	}
-	
+
 	// Skip this test - it's more of a functionality test
 	// We can't properly test this without actually creating an app bundle
 	// and that might interfere with the user's environment

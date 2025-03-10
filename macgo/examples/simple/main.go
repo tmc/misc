@@ -1,29 +1,30 @@
-// Simple example with direct function calls
+// Simple example using direct entitlements API (recommended approach)
 package main
 
 import (
 	"fmt"
 	"os"
 
-	// Import the package directly
+	// Import macgo package directly
 	"github.com/tmc/misc/macgo"
 )
 
 func init() {
-	// Request permissions with direct function calls
-	macgo.SetCamera()
-	macgo.SetMic()
+	// Request permissions using the With* style API functions
+	macgo.WithEntitlements(
+		macgo.EntCamera,
+		macgo.EntMicrophone
+	)
 	
-	// You can also use SetAll() to request all permissions
-	// macgo.SetAll()
-	
-	// Optional: customize app bundle
-	macgo.LegacyConfig.Name = "MacGoSimple"
+	// Optional: customize app name and bundle ID
+	macgo.WithAppName("MacGoSimple")
+	macgo.WithBundleID("com.example.macgo.simple")
 }
 
 func main() {
 	fmt.Println("MacGo Simple Example")
-	fmt.Println("This app has camera and microphone permissions via direct function calls")
+	fmt.Println("This app demonstrates the recommended API with WithEntitlements function")
+	fmt.Println("Camera and microphone access is enabled")
 	fmt.Println()
 	
 	// Show some protected directories
