@@ -1,4 +1,4 @@
-// Simplified API for macgo
+// Package macgo provides a simplified API for creating macOS app bundles with entitlements.
 package macgo
 
 import (
@@ -8,61 +8,95 @@ import (
 	"os"
 )
 
-// WithEntitlements adds multiple entitlements at once
-// All entitlements will be enabled (set to true)
+// RequestEntitlements adds multiple entitlements at once.
+// All entitlements will be enabled (set to true).
 //
 // Example:
 //
-//	macgo.WithEntitlements(
+//	macgo.RequestEntitlements(
 //	    macgo.EntCamera,
 //	    macgo.EntMicrophone,
 //	    macgo.EntAppSandbox,
 //	    "com.apple.security.virtualization",
 //	)
-func WithEntitlements(entitlements ...string) {
-	DefaultConfig.WithEntitlements(entitlements...)
+//
+// This is the preferred method for requesting entitlements.
+func RequestEntitlements(entitlements ...interface{}) {
+	for _, ent := range entitlements {
+		var entStr string
+		switch e := ent.(type) {
+		case string:
+			entStr = e
+		case Entitlement:
+			entStr = string(e)
+		default:
+			continue
+		}
+		if DefaultConfig.Entitlements == nil {
+			DefaultConfig.Entitlements = make(map[Entitlement]bool)
+		}
+		DefaultConfig.Entitlements[Entitlement(entStr)] = true
+	}
 }
 
-// WithEntitlement adds a single entitlement
-// The entitlement will be enabled (set to true)
+// RequestEntitlement adds a single entitlement.
+// The entitlement will be enabled (set to true).
 //
 // Example:
 //
-//	macgo.WithEntitlement(macgo.EntCamera)
-//
-func WithEntitlement(entitlement string) {
+//	macgo.RequestEntitlement(macgo.EntCamera)
+func RequestEntitlement(entitlement interface{}) {
+	var entStr string
+	switch e := entitlement.(type) {
+	case string:
+		entStr = e
+	case Entitlement:
+		entStr = string(e)
+	default:
+		return
+	}
+
 	if DefaultConfig.Entitlements == nil {
 		DefaultConfig.Entitlements = make(map[Entitlement]bool)
 	}
-	DefaultConfig.Entitlements[Entitlement(entitlement)] = true
+	DefaultConfig.Entitlements[Entitlement(entStr)] = true
 }
 
-// WithAppName sets the app name
-func WithAppName(name string) {
+// EnableDockIcon enables showing the application in the dock and app switcher
+// By default, macgo applications run as background applications (LSUIElement=true)
+func EnableDockIcon() {
+	if DefaultConfig.PlistEntries == nil {
+		DefaultConfig.PlistEntries = make(map[string]any)
+	}
+	DefaultConfig.PlistEntries["LSUIElement"] = false
+}
+
+// SetAppName sets the app name
+func SetAppName(name string) {
 	DefaultConfig.ApplicationName = name
 }
 
-// WithBundleID sets the bundle identifier
-func WithBundleID(bundleID string) {
+// SetBundleID sets the bundle identifier
+func SetBundleID(bundleID string) {
 	DefaultConfig.BundleID = bundleID
 }
 
-// WithKeepTemp enables keeping temporary app bundles
-func WithKeepTemp() {
+// EnableKeepTemp enables keeping temporary app bundles
+func EnableKeepTemp() {
 	DefaultConfig.KeepTemp = true
 }
 
-// WithNoRelaunch disables auto-relaunching
-func WithNoRelaunch() {
+// DisableRelaunch disables auto-relaunching
+func DisableRelaunch() {
 	DefaultConfig.Relaunch = false
 }
 
-// WithDebug enables debug output
-func WithDebug() {
+// EnableDebug enables debug output
+func EnableDebug() {
 	os.Setenv("MACGO_DEBUG", "1")
 }
 
-// WithCustomAppBundle sets a custom app bundle template from embedded filesystem
+// SetCustomAppBundle sets a custom app bundle template from embedded filesystem
 //
 // Example with go:embed:
 //
@@ -70,23 +104,23 @@ func WithDebug() {
 //	var appTemplate embed.FS
 //
 //	func init() {
-//	    macgo.WithCustomAppBundle(appTemplate)
+//	    macgo.SetCustomAppBundle(appTemplate)
 //	}
-func WithCustomAppBundle(template fs.FS) {
+func SetCustomAppBundle(template fs.FS) {
 	DefaultConfig.AppTemplate = template
 }
 
-// WithSigning enables app bundle signing with an optional identity
-// If identity is empty, the default identity will be used
-func WithSigning(identity string) {
+// EnableSigning enables app bundle signing with an optional identity.
+// If identity is empty, ad-hoc signing ("-") will be used.
+func EnableSigning(identity string) {
 	DefaultConfig.AutoSign = true
 	if identity != "" {
 		DefaultConfig.SigningIdentity = identity
 	}
 }
 
-// WithEntitlementsFromJSON registers entitlements from JSON data
-// This is useful with go:embed for embedding entitlements configuration
+// LoadEntitlementsFromJSON registers entitlements from JSON data.
+// This is useful with go:embed for embedding entitlements configuration.
 //
 // Example:
 //
@@ -94,9 +128,12 @@ func WithSigning(identity string) {
 //	var entitlementsData []byte
 //
 //	func init() {
-//	    macgo.WithEntitlementsFromJSON(entitlementsData)
+//	    err := macgo.LoadEntitlementsFromJSON(entitlementsData)
+//	    if err != nil {
+//	        log.Printf("Failed to load entitlements: %v", err)
+//	    }
 //	}
-func WithEntitlementsFromJSON(data []byte) error {
+func LoadEntitlementsFromJSON(data []byte) error {
 	var entitlements map[string]bool
 	if err := json.Unmarshal(data, &entitlements); err != nil {
 		return fmt.Errorf("macgo: parse entitlements JSON: %w", err)
@@ -109,26 +146,33 @@ func WithEntitlementsFromJSON(data []byte) error {
 	return nil
 }
 
-// WithPlistEntry adds a custom entry to the Info.plist file
-func WithPlistEntry(key string, value any) {
-	DefaultConfig.WithPlistEntry(key, value)
+// AddPlistEntry adds a custom entry to the Info.plist file
+func AddPlistEntry(key string, value any) {
+	DefaultConfig.AddPlistEntry(key, value)
 }
 
-// WithPlistEntries adds multiple custom entries to the Info.plist file
-func (c *Config) WithPlistEntry(key string, value any) {
-	if c.PlistEntries == nil {
-		c.PlistEntries = make(map[string]any)
-	}
-	c.PlistEntries[key] = value
+// SetIconFile sets a custom icon file for the app bundle
+// If not set, it defaults to "/System/./Library/CoreServices/CoreTypes.bundle/Contents/Resources/ExecutableBinaryIcon.icns"
+func SetIconFile(iconPath string) {
+	DefaultConfig.AddPlistEntry("CFBundleIconFile", iconPath)
 }
 
-// WithEntitlements adds multiple entitlements at once
-func (c *Config) WithEntitlements(entitlements ...string) {
+// RequestEntitlements adds multiple entitlements at once to a Config
+func (c *Config) RequestEntitlements(entitlements ...interface{}) {
 	if c.Entitlements == nil {
 		c.Entitlements = make(map[Entitlement]bool)
 	}
 
 	for _, ent := range entitlements {
-		c.Entitlements[Entitlement(ent)] = true
+		var entStr string
+		switch e := ent.(type) {
+		case string:
+			entStr = e
+		case Entitlement:
+			entStr = string(e)
+		default:
+			continue
+		}
+		c.Entitlements[Entitlement(entStr)] = true
 	}
 }

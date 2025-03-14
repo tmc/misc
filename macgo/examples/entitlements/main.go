@@ -1,4 +1,4 @@
-// Using go:embed with the WithEntitlementsFromJSON API
+// Using go:embed with the LoadEntitlementsFromJSON API
 // Run with: MACGO_DEBUG=1 go run main.go
 package main
 
@@ -13,26 +13,28 @@ import (
 )
 
 // Define custom entitlements in a JSON file and embed it
+//
 //go:embed entitlements.json
 var entitlementsData []byte
 
 // Embed using the embed.FS type for multiple files
+//
 //go:embed *.json
 var entitlementsFS embed.FS
 
 func init() {
 	// This example focuses on using go:embed with entitlements configuration
-	
-	// Use the WithEntitlementsFromJSON API to load the embedded data
+
+	// Use the LoadEntitlementsFromJSON API to load the embedded data
 	fmt.Println("Loading entitlements from embedded JSON data")
-	if err := macgo.WithEntitlementsFromJSON(entitlementsData); err != nil {
+	if err := macgo.LoadEntitlementsFromJSON(entitlementsData); err != nil {
 		log.Fatalf("Failed to load entitlements: %v", err)
 	}
-	
+
 	// Additional configuration
-	macgo.WithAppName("MacGoEmbed")
-	macgo.WithBundleID("com.example.macgo.embed")
-	macgo.WithDebug() // Enable debug output
+	macgo.SetAppName("MacGoEmbed")
+	macgo.SetBundleID("com.example.macgo.embed")
+	macgo.EnableDebug() // Enable debug output
 }
 
 func main() {
@@ -44,7 +46,7 @@ func main() {
 	fmt.Println("- No code changes needed to update entitlements")
 	fmt.Println("- Configuration can be selected at build time")
 	fmt.Println()
-	
+
 	// Show what permissions are likely configured
 	fmt.Println("Entitlements from JSON typically include:")
 	fmt.Println("- App Sandbox")
@@ -52,7 +54,7 @@ func main() {
 	fmt.Println("- Camera and microphone access")
 	fmt.Println("- Location and photos access")
 	fmt.Println()
-	
+
 	// Try to read some directories
 	home, _ := os.UserHomeDir()
 	dirs := []string{
@@ -60,16 +62,16 @@ func main() {
 		home + "/Pictures",
 		home + "/Documents",
 	}
-	
+
 	for _, dir := range dirs {
 		fmt.Printf("Reading %s: ", dir)
-		
+
 		files, err := os.ReadDir(dir)
 		if err != nil {
 			fmt.Printf("error: %v\n", err)
 			continue
 		}
-		
+
 		fmt.Printf("%d files\n", len(files))
 		// Show first few files
 		for i, f := range files {
@@ -81,5 +83,4 @@ func main() {
 		}
 		fmt.Println()
 	}
-}
 }
