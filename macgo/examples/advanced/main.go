@@ -1,75 +1,109 @@
-// Advanced configuration example using the Config API
+// Advanced configuration example using the Config API and improved signal handling
 package main
 
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
-	// Import with direct reference for advanced configuration
 	"github.com/tmc/misc/macgo"
 )
 
 func init() {
+	// No need to disable auto-initialization as it's disabled by default
+
 	// Create a custom configuration
 	cfg := macgo.NewConfig()
 
 	// Set application details
-	cfg.ApplicationName = "MacGoAdvanced"
+	cfg.ApplicationName = "AdvancedExampleApp"
 	cfg.BundleID = "com.example.macgo.advanced"
 
-	// Add entitlements directly to the config
-	cfg.Entitlements = macgo.Entitlements{
-		macgo.EntCamera:     true,
-		macgo.EntMicrophone: true,
-		macgo.EntPhotos:     true,
-		macgo.EntAppSandbox: true, // Enable app sandbox
-	}
+	// Add entitlements individually
+	cfg.AddEntitlement(macgo.EntCamera)
+	cfg.AddEntitlement(macgo.EntMicrophone)
 
-	// Add custom Info.plist entries
-	cfg.AddPlistEntry("LSUIElement", false) // Show in Dock
-	cfg.AddPlistEntry("CFBundleDisplayName", "MacGo Advanced Example")
+	// Request multiple entitlements at once
+	cfg.RequestEntitlements(
+		macgo.EntLocation,
+	)
+
+	// Access to user-selected files (already enabled by default)
+	cfg.AddEntitlement(macgo.EntUserSelectedReadOnly)
+
+	// Make this a proper GUI application to control dock behavior
+	cfg.AddPlistEntry("LSUIElement", false) // Show in dock
+
+	// Add NSHighResolutionCapable for proper Retina support
+	cfg.AddPlistEntry("NSHighResolutionCapable", true)
+
+	// Override app name in dock
+	cfg.AddPlistEntry("CFBundleDisplayName", "Advanced macgo Example")
 
 	// Control app bundle behavior
 	cfg.Relaunch = true  // Auto-relaunch (default)
-	cfg.KeepTemp = false // Cleanup temp bundles (default)
-	// cfg.CustomDestinationAppPath = "/custom/path/MyApp"  // Custom bundle path
+	cfg.AutoSign = true  // Auto-sign the bundle (default)
+	cfg.KeepTemp = false // Don't keep temporary bundles
 
-	// Enable code signing
-	cfg.AutoSign = true
-	// cfg.SigningIdentity = "Developer ID Application: Your Name (XXXXXXXXXX)"
-
-	// Apply the configuration (required)
+	// Apply configuration (must be called)
 	macgo.Configure(cfg)
+
+	// Enable debug logging (optional)
+	macgo.EnableDebug()
+	// Start the application
+	macgo.Start()
 }
 
 func main() {
-	fmt.Println("MacGo Advanced Configuration Example")
-	fmt.Println("This app has camera, microphone, and photos permissions via explicit configuration")
+	fmt.Println("macgo Advanced Configuration Example with Signal Handling")
+	fmt.Println("-------------------------------------------------------")
+	fmt.Println("This example showcases the Config API and improved signal handling.")
+	fmt.Println("Try pressing Ctrl+C to see proper signal handling in action.")
 	fmt.Println()
 
-	// Try accessing protected resources
+	// Set up signal handling for demonstration
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+
+	// Print which entitlements are likely enabled
+	fmt.Println("Enabled entitlements:")
+	fmt.Println("- Camera access")
+	fmt.Println("- Microphone access")
+	fmt.Println("- User-selected files (read-only)")
+	fmt.Println()
+
+	// Show that we can access the Desktop (through user-selected files)
 	homeDir, _ := os.UserHomeDir()
-	dirs := []string{
-		homeDir + "/Pictures",
-		homeDir + "/Documents",
+	fmt.Printf("Reading Desktop directory: %s/Desktop\n", homeDir)
+
+	files, err := os.ReadDir(homeDir + "/Desktop")
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
 	}
 
-	for _, dir := range dirs {
-		fmt.Printf("Reading %s: ", dir)
-		files, err := os.ReadDir(dir)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			continue
+	fmt.Printf("Found %d files\n", len(files))
+	for i, file := range files {
+		if i >= 5 {
+			fmt.Println("...")
+			break
 		}
-
-		fmt.Printf("%d files/directories\n", len(files))
-		for i, file := range files {
-			if i >= 3 {
-				fmt.Println("...")
-				break
-			}
-			fmt.Printf("- %s\n", file.Name())
-		}
-		fmt.Println()
+		fmt.Printf("- %s\n", file.Name())
 	}
+
+	// Runtime information
+	fmt.Println("\nRuntime information:")
+	fmt.Println("- This process is either:")
+	fmt.Println("  1. The first run: Setting up the app bundle")
+	fmt.Println("  2. Running inside the bundle: UI settings are active")
+
+	fmt.Printf("- Currently running in app bundle: %v\n", macgo.IsInAppBundle())
+	fmt.Println("- If in bundle: App will show in dock with NO bouncing")
+	fmt.Println("  (Using Objective-C to control dock behavior)")
+
+	// Wait for user input
+	fmt.Println("\nPress Enter to exit")
+	var input string
+	fmt.Scanln(&input)
 }

@@ -1,0 +1,67 @@
+// Advanced configuration example with improved signal handling
+package main
+
+import (
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/tmc/misc/macgo"
+	_ "github.com/tmc/misc/macgo/auto/sandbox/signalhandler" // Enable improved signal handling
+)
+
+func init() {
+	// Create a custom configuration
+	cfg := macgo.NewConfig()
+
+	// Set application details
+	cfg.ApplicationName = "SignalHandlerExampleApp"
+	cfg.BundleID = "com.example.macgo.signalhandler"
+
+	// Add entitlements
+	cfg.RequestEntitlements(
+		macgo.EntCamera,
+		macgo.EntMicrophone,
+		macgo.EntUserSelectedReadOnly,
+	)
+
+	// Make this a proper GUI application
+	cfg.AddPlistEntry("LSUIElement", false) // Show in dock
+	cfg.AddPlistEntry("NSHighResolutionCapable", true)
+	cfg.AddPlistEntry("CFBundleDisplayName", "Signal Handling Example")
+
+	// Apply configuration
+	macgo.Configure(cfg)
+	macgo.EnableDebug()
+	macgo.Start()
+}
+
+func main() {
+	fmt.Println("macgo Signal Handling Example")
+	fmt.Println("-----------------------------")
+	fmt.Println("This example demonstrates improved signal handling with macgo.")
+	fmt.Println("Try pressing Ctrl+C to see proper signal handling in action.")
+	fmt.Println()
+
+	// Set up signal handling for demonstration
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGTERM)
+	
+	// Runtime information
+	fmt.Println("Runtime information:")
+	fmt.Printf("- Currently running in app bundle: %v\n", macgo.IsInAppBundle())
+	fmt.Println("- Using improved signal handling for proper Ctrl+C handling")
+	
+	// Wait for a signal or timeout
+	fmt.Println("\nWaiting for 30 seconds or Ctrl+C...")
+	select {
+	case sig := <-c:
+		fmt.Printf("\nReceived signal: %v\n", sig)
+	case <-time.After(30 * time.Second):
+		fmt.Println("\nTimeout reached, exiting")
+	}
+	
+	fmt.Println("Exiting gracefully")
+}

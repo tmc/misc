@@ -1,6 +1,6 @@
-# macgo - Simplified macOS App Bundle API
+# macgo - macOS App Bundle API for Go
 
-Enables macOS App Sandbox and Hardened Runtime entitlements for Go command-line tools by auto-creating and launching app bundles.
+A clean, simple API to enable macOS App Sandbox, Hardened Runtime entitlements, and TCC permissions for Go command-line applications.
 
 ## Overview
 
@@ -9,6 +9,11 @@ macOS requires applications to be packaged as `.app` bundles to access protected
 1. Detects if your command is already running in an app bundle
 2. If not, creates an app bundle with the requested entitlements and relaunches itself through it
 3. Handles all I/O redirection using named pipes
+
+**Default Behavior:**
+- App Sandbox enabled (`com.apple.security.app-sandbox`)
+- User-selected read-only file access enabled (`com.apple.security.files.user-selected.read-only`)
+- Invisible in dock and app switcher (runs as a background app via `LSUIElement=true`)
 
 ## How It Works
 
@@ -34,13 +39,17 @@ flowchart TD
     end
 ```
 
+## Installation
+
+```bash
+go get github.com/tmc/misc/macgo
+```
+
 ## Usage
 
 macgo offers multiple approaches to configure your app bundle, from simplest to most advanced:
 
-### 1. Simplest: Blank Import + Environment Variables
-
-For quick scripts and tools, using a blank import with environment variables is the simplest option:
+### 1. Simplest: Blank Import of Auto Package
 
 ```go
 package main
@@ -48,27 +57,25 @@ package main
 import (
     "os"
     
-    // Just import with blank identifier
-    _ "github.com/tmc/misc/macgo"
+    // Just import the auto package with blank identifier
+    _ "github.com/tmc/misc/macgo/auto"
 )
 
-// Configure with environment variables:
-// MACGO_CAMERA=1 MACGO_MIC=1 go run main.go
+// Or use pre-configured packages:
+// _ "github.com/tmc/misc/macgo/auto/sandbox"         // App sandbox only
+// _ "github.com/tmc/misc/macgo/auto/sandbox/readonly" // App sandbox with read-only file access
 
 func main() {
-    // Your code will automatically run in an app bundle with
-    // permissions specified by environment variables
+    // Your code will automatically run in an app bundle
     files, _ := os.ReadDir("~/Desktop")
     // ...
 }
 ```
 
-**Pros:** Minimal code, easy for quick scripts
-**Cons:** Configuration is outside Go code
+**Pros:** Minimal code, easy for quick scripts  
+**Cons:** Less control over initialization timing
 
-### 2. Recommended: With* Functions API
-
-For most applications, using the `With*` functions provides the best balance of simplicity and explicitness:
+### 2. Recommended: Direct API
 
 ```go
 package main
@@ -79,31 +86,35 @@ import (
 )
 
 func init() {
-    // Request specific entitlements with a clean, readable API
-    macgo.WithEntitlements(
+    // Request specific entitlements
+    macgo.RequestEntitlements(
         macgo.EntCamera,
         macgo.EntMicrophone,
         macgo.EntAppSandbox,
     )
     
     // Configure app details
-    macgo.WithAppName("MyApp")
-    macgo.WithBundleID("com.example.myapp")
+    macgo.SetAppName("MyApp")
+    macgo.SetBundleID("com.example.myapp")
+    
+    // Optionally show in dock (hidden by default)
+    // macgo.EnableDockIcon()
 }
 
 func main() {
+    // Start macgo - this creates the app bundle and relaunches if needed
+    macgo.Start()
+    
     // Your code will run with the specified entitlements
     files, _ := os.ReadDir("~/Desktop")
     // ...
 }
 ```
 
-**Pros:** Clear, explicit, readable API with configuration in Go code
+**Pros:** Clear, explicit, readable API with configuration in Go code  
 **Cons:** Slightly more verbose than blank import
 
-### 3. Alternative: Entitlements Package 
-
-The entitlements package provides specialized functionality:
+### 3. Specialized: Entitlements Package
 
 ```go
 package main
@@ -122,8 +133,8 @@ func init() {
     // Use the entitlements package functions if needed
     entitlements.SetPhotos()
     
-    // Use WithEntitlementList for multiple entitlements
-    entitlements.WithEntitlementList(
+    // Request multiple entitlements at once
+    entitlements.RequestEntitlements(
         entitlements.EntAppSandbox,
         entitlements.EntNetworkClient
     )
@@ -136,38 +147,10 @@ func main() {
 }
 ```
 
-**Pros:** Modular organization by permission type
-**Cons:** Less direct than the main package's WithEntitlements API
+**Pros:** Modular organization by permission type  
+**Cons:** Less direct than the main package's API
 
-### 4. Legacy: Direct Set* Functions
-
-This approach is maintained for backward compatibility but not recommended for new code:
-
-```go
-package main
-
-import (
-    "os"
-    "github.com/tmc/misc/macgo"
-)
-
-func init() {
-    // These functions still work but WithEntitlements is preferred
-    macgo.SetCamera()
-    macgo.SetMic()
-    macgo.SetAppSandbox()
-}
-
-func main() {
-    // Your code will have the specified entitlements
-    files, _ := os.ReadDir("~/Desktop")
-    // ...
-}
-```
-
-### 5. Advanced: Configuration API
-
-For complex scenarios requiring maximum control:
+### 4. Advanced: Configuration API
 
 ```go
 package main
@@ -177,6 +160,9 @@ import (
 )
 
 func init() {
+    // Disable auto-initialization to allow complete customization
+    macgo.DisableAutoInit()
+    
     // Create a custom configuration
     cfg := macgo.NewConfig()
     
@@ -184,21 +170,32 @@ func init() {
     cfg.ApplicationName = "CustomApp"
     cfg.BundleID = "com.example.customapp" 
     
-    // Request entitlements using the new API
+    // Add entitlements
     cfg.AddEntitlement(macgo.EntCamera)
     cfg.AddEntitlement(macgo.EntMicrophone)
-    cfg.AddEntitlement(macgo.EntAppSandbox)
-    cfg.AddEntitlement(macgo.EntNetworkClient)
+    
+    // Request multiple entitlements at once
+    cfg.RequestEntitlements(
+        macgo.EntAppSandbox,
+        macgo.EntNetworkClient
+    )
     
     // Add custom Info.plist entries
-    cfg.AddPlistEntry("LSUIElement", true) // Make app run in background
+    cfg.AddPlistEntry("LSUIElement", false) // Show in dock
     
     // Control app bundle behavior
     cfg.Relaunch = true    // Auto-relaunch (default)
-    cfg.CustomDestinationAppPath = "/custom/path/MyApp.app" // Custom bundle path
+    cfg.AutoSign = true    // Auto-sign the bundle
+    cfg.KeepTemp = false   // Clean up temporary bundles
+    
+    // Set custom destination path (optional)
+    // cfg.CustomDestinationAppPath = "/Applications/CustomApp.app"
     
     // Apply configuration (must be called)
     macgo.Configure(cfg)
+    
+    // Explicitly initialize macgo now that configuration is complete
+    macgo.Initialize()
 }
 
 func main() {
@@ -207,10 +204,12 @@ func main() {
 }
 ```
 
-**Pros:** Maximum flexibility and control
+**Pros:** Maximum flexibility and control  
 **Cons:** Most verbose API, steeper learning curve
 
-### Environment Variables
+> **Note:** When using `go run`, macgo first runs your program normally, sets up the app bundle, then relaunches it inside the bundle. Settings like `LSUIElement` (dock visibility) only take effect during this second run in the bundle.
+
+### 5. Environment Variables
 
 Configure macgo with environment variables:
 
@@ -224,57 +223,11 @@ MACGO_CAMERA=1 MACGO_MIC=1 MACGO_PHOTOS=1 ./myapp
 # Customize app bundle location and behavior
 MACGO_APP_PATH="/Applications/MyApp" MACGO_KEEP_TEMP=1 ./myapp
 
-# Enable debugging
-MACGO_DEBUG=1 ./myapp
+# Enable debugging and show in dock
+MACGO_DEBUG=1 MACGO_SHOW_DOCK_ICON=1 ./myapp
 ```
 
 ## Available Entitlements
-
-Entitlements can be requested in three ways:
-
-1. **Direct Function Calls**:
-   ```go
-   // TCC Permissions
-   macgo.SetCamera()
-   macgo.SetMic()
-   
-   // App Sandbox
-   macgo.SetAppSandbox()
-   macgo.SetNetworkClient()
-   
-   // Hardened Runtime
-   macgo.SetAllowJIT()
-   macgo.SetDisableLibraryValidation()
-   
-   // Convenience functions
-   macgo.SetAllTCCPermissions()  // Set all TCC permissions
-   macgo.SetAllDeviceAccess()    // Set all device permissions
-   macgo.SetAllNetworking()      // Set all networking permissions
-   ```
-
-2. **Config API**:
-   ```go
-   cfg := macgo.NewConfig()
-   
-   // Using new API
-   cfg.AddEntitlement(macgo.EntCamera)
-   cfg.AddEntitlement(macgo.EntAppSandbox)
-   
-   // Legacy API (still works)
-   cfg.AddPermission(macgo.PermCamera)
-   ```
-
-3. **Environment Variables**:
-   ```bash
-   # TCC permissions
-   MACGO_CAMERA=1 MACGO_MIC=1 ./myapp
-   
-   # App Sandbox
-   MACGO_APP_SANDBOX=1 MACGO_NETWORK_CLIENT=1 ./myapp
-   
-   # Hardened Runtime
-   MACGO_ALLOW_JIT=1 MACGO_DISABLE_LIBRARY_VALIDATION=1 ./myapp
-   ```
 
 ### TCC Permissions
 
@@ -286,15 +239,17 @@ Entitlements can be requested in three ways:
 | Contacts   | `SetContacts()` | `EntAddressBook` | `MACGO_CONTACTS=1` |
 | Photos     | `SetPhotos()`   | `EntPhotos`   | `MACGO_PHOTOS=1` |
 | Calendar   | `SetCalendar()` | `EntCalendars` | `MACGO_CALENDAR=1` |
-| Reminders  | `SetReminders()`| `PermReminders`| `MACGO_REMINDERS=1` |
+| Reminders  | `SetReminders()`| `EntReminders`| `MACGO_REMINDERS=1` |
 
 ### App Sandbox Entitlements
 
 | Entitlement | Function | Constant | Environment Var |
 |------------|----------|----------|----------------|
 | App Sandbox | `SetAppSandbox()` | `EntAppSandbox` | `MACGO_APP_SANDBOX=1` |
-| Outgoing Network | `SetNetworkClient()` | `EntNetworkClient` | `MACGO_NETWORK_CLIENT=1` |
-| Incoming Network | `SetNetworkServer()` | `EntNetworkServer` | `MACGO_NETWORK_SERVER=1` |
+| Outgoing Network* | `SetNetworkClient()` | `EntNetworkClient` | `MACGO_NETWORK_CLIENT=1` |
+| Incoming Network* | `SetNetworkServer()` | `EntNetworkServer` | `MACGO_NETWORK_SERVER=1` |
+
+> *NOTE: The network entitlements only affect Objective-C/Swift network APIs. Go's standard networking (net/http, etc.) bypasses these restrictions and will work regardless of these entitlements being present or not. To properly restrict network access in Go applications, additional measures are required.
 | Bluetooth | `SetBluetooth()` | `EntBluetooth` | `MACGO_BLUETOOTH=1` |
 | USB | `SetUSB()` | `EntUSB` | `MACGO_USB=1` |
 | Audio Input | `SetAudioInput()` | `EntAudioInput` | `MACGO_AUDIO_INPUT=1` |
@@ -326,9 +281,54 @@ Entitlements can be requested in three ways:
 | Disable Exec Page Protection | `SetDisableExecutablePageProtection()` | `EntDisableExecutablePageProtection` | `MACGO_DISABLE_EXEC_PAGE_PROTECTION=1` |
 | Debugger | `SetDebugger()` | `EntDebugger` | `MACGO_DEBUGGER=1` |
 
+## API Reference
+
+### Core Functions
+
+```go
+// Request entitlements
+macgo.RequestEntitlements(macgo.EntCamera, macgo.EntMicrophone)
+macgo.RequestEntitlement(macgo.EntAppSandbox)
+
+// Configure app details
+macgo.SetAppName("MyApp") 
+macgo.SetBundleID("com.example.myapp")
+
+// UI behavior (by default, applications are hidden from dock)
+macgo.EnableDockIcon()  // Show app in dock (not recommended)
+// or for manual control:
+macgo.AddPlistEntry("LSUIElement", true)    // Hide from dock (default in macgo)
+// macgo.AddPlistEntry("LSUIElement", false) // Show in dock (causes bouncing icon)
+
+// App bundle behavior
+macgo.EnableKeepTemp()  // Keep temporary bundles
+macgo.DisableRelaunch() // Disable auto-relaunch
+macgo.EnableDebug()     // Enable debug output
+macgo.EnableSigning()   // Enable code signing
+
+// Configuration from embedded resources
+macgo.LoadEntitlementsFromJSON(jsonData)
+macgo.SetCustomAppBundle(templateFS)
+
+// Custom Info.plist entries
+macgo.AddPlistEntry("LSMinimumSystemVersion", "10.15")
+macgo.AddPlistEntry("NSHighResolutionCapable", true)   // Retina support
+```
+
+### Convenience Functions
+
+```go
+// Set groups of permissions at once
+macgo.SetAllTCCPermissions()  // Set all TCC permissions
+macgo.SetAllDeviceAccess()    // Set all device permissions
+macgo.SetAllNetworking()      // Set all networking permissions
+```
+
 ## Features
 
 - Works with both compiled binaries and `go run`
+- Sandboxed by default with user-selected file read access
+- No dock icon or menu bar entry by default (runs as a background app)
 - Intelligent handling of temporary vs permanent app bundles
 - SHA256 verification to update only when needed
 - I/O redirection with named pipes
@@ -346,52 +346,21 @@ Entitlements can be requested in three ways:
 - `MACGO_NO_RELAUNCH=1`: Disable automatic relaunching
 - `MACGO_KEEP_TEMP=1`: Keep temporary bundles (don't clean up)
 - `MACGO_DEBUG=1`: Enable debug logging
+- `MACGO_SHOW_DOCK_ICON=1`: Show app in dock and app switcher (default: hidden)
 
-### TCC Permission Variables
-- `MACGO_CAMERA=1`: Enable camera access
-- `MACGO_MIC=1`: Enable microphone access
-- `MACGO_LOCATION=1`: Enable location services
-- `MACGO_CONTACTS=1`: Enable contacts access
-- `MACGO_PHOTOS=1`: Enable photos library access
-- `MACGO_CALENDAR=1`: Enable calendar access
-- `MACGO_REMINDERS=1`: Enable reminders access
-
-### App Sandbox Variables
-- `MACGO_APP_SANDBOX=1`: Enable App Sandbox
-- `MACGO_NETWORK_CLIENT=1`: Enable outgoing network connections
-- `MACGO_NETWORK_SERVER=1`: Enable incoming network connections
-- `MACGO_BLUETOOTH=1`: Enable Bluetooth access
-- `MACGO_USB=1`: Enable USB device access
-- `MACGO_AUDIO_INPUT=1`: Enable audio input access
-- `MACGO_PRINT=1`: Enable printing capabilities
-
-### File Access Variables
-- `MACGO_USER_FILES_READ=1`: Enable read access to user-selected files
-- `MACGO_USER_FILES_WRITE=1`: Enable write access to user-selected files
-- `MACGO_DOWNLOADS_READ=1`: Enable read access to Downloads folder
-- `MACGO_DOWNLOADS_WRITE=1`: Enable write access to Downloads folder
-- `MACGO_PICTURES_READ=1`: Enable read access to Pictures folder
-- `MACGO_PICTURES_WRITE=1`: Enable write access to Pictures folder
-- `MACGO_MUSIC_READ=1`: Enable read access to Music folder
-- `MACGO_MUSIC_WRITE=1`: Enable write access to Music folder
-- `MACGO_MOVIES_READ=1`: Enable read access to Movies folder
-- `MACGO_MOVIES_WRITE=1`: Enable write access to Movies folder
-
-### Hardened Runtime Variables
-- `MACGO_ALLOW_JIT=1`: Enable JIT compilation
-- `MACGO_ALLOW_UNSIGNED_MEMORY=1`: Allow unsigned executable memory
-- `MACGO_ALLOW_DYLD_ENV=1`: Allow DYLD environment variables
-- `MACGO_DISABLE_LIBRARY_VALIDATION=1`: Disable library validation
-- `MACGO_DISABLE_EXEC_PAGE_PROTECTION=1`: Disable executable page protection
-- `MACGO_DEBUGGER=1`: Enable debugger capabilities
+### Permission Variables
+See the tables above for all available permission variables.
 
 ## Examples
 
 See the examples directory for complete examples:
 
-- [Simple Example](examples/simple/main.go): Using direct function calls
-- [Blank Import Example](examples/blank/main.go): Using environment variables  
-- [Advanced Example](examples/advanced/main.go): Using the configuration API
+- [Simple Example](examples/simple/main.go): Using direct API functions
+- [Minimal Example](examples/minimal/main.go): Blank import with environment variables
+- [Advanced Example](examples/advanced/main.go): Using the Config API for full customization
+- [Custom Template Example](examples/custom-template/main.go): Using a custom app template with embedded files
+- [Entitlements Example](examples/entitlements/main.go): Loading entitlements from JSON
+- [Customization Example](examples/customization/main.go): Custom app behaviors
 
 ## Package Organization
 
@@ -403,13 +372,8 @@ The library is organized as follows:
     - `github.com/tmc/misc/macgo/entitlements/camera`
     - `github.com/tmc/misc/macgo/entitlements/mic`
     - `github.com/tmc/misc/macgo/entitlements/location`
-    - `github.com/tmc/misc/macgo/entitlements/contacts`
-    - `github.com/tmc/misc/macgo/entitlements/photos`
-    - `github.com/tmc/misc/macgo/entitlements/calendar`
-    - `github.com/tmc/misc/macgo/entitlements/reminders`
+    - And more...
   - Complete Package: `github.com/tmc/misc/macgo/entitlements/all`
-
-For backward compatibility, the original package structure is still supported, but new code should use the entitlements package.
 
 ## Design
 
@@ -421,6 +385,7 @@ For backward compatibility, the original package structure is still supported, b
 
 ## Limitations
 
-- macOS only (silently does nothing on other platforms)
+- macOS only (does nothing on other platforms)
 - macOS permission prompts will appear for each protected resource
 - For permanent binaries, `GOPATH/bin` must be writable
+- Go's standard library networking bypasses App Sandbox network restrictions. The network entitlements (`EntNetworkClient`, `EntNetworkServer`) only affect Objective-C/Swift network APIs, not Go's standard networking libraries.

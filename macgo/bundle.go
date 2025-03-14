@@ -10,10 +10,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 )
 
 // createBundle creates an app bundle for an executable.
+// It returns the path to the created or existing app bundle.
+// If an error occurs during creation, it returns the error.
 func createBundle(execPath string) (string, error) {
 	// Get executable name and determine app name
 	name := filepath.Base(execPath)
@@ -37,12 +40,14 @@ func createBundle(execPath string) (string, error) {
 		// For temporary binaries, use a system temp directory
 		tmp, err := os.MkdirTemp("", "macgo-*")
 		if err != nil {
-			return "", fmt.Errorf("create temp dir: %w", err)
+			return "", fmt.Errorf("create temp dir for app bundle: %w", err)
 		}
 
 		// Create unique name with hash
 		fileHash, err = checksum(execPath)
 		if err != nil {
+			debugf("Failed to calculate executable checksum: %v", err)
+			// Fallback to timestamp if checksum fails
 			fileHash = fmt.Sprintf("%d", time.Now().UnixNano())
 		}
 		shortHash := fileHash[:8]
@@ -57,7 +62,7 @@ func createBundle(execPath string) (string, error) {
 		if gopath == "" {
 			home, err := os.UserHomeDir()
 			if err != nil {
-				return "", fmt.Errorf("get home dir: %w", err)
+				return "", fmt.Errorf("get home directory for app bundle: %w", err)
 			}
 			gopath = filepath.Join(home, "go")
 		}
@@ -67,6 +72,7 @@ func createBundle(execPath string) (string, error) {
 
 		// Check for existing bundle that's up to date
 		if existing := checkExisting(appPath, execPath); existing {
+			debugf("Using existing app bundle at: %s", appPath)
 			return appPath, nil
 		}
 	}
@@ -76,7 +82,7 @@ func createBundle(execPath string) (string, error) {
 	macosPath := filepath.Join(contentsPath, "MacOS")
 
 	if err := os.MkdirAll(macosPath, 0755); err != nil {
-		return "", fmt.Errorf("create bundle dirs: %w", err)
+		return "", fmt.Errorf("create bundle directory structure: %w", err)
 	}
 
 	// Generate bundle ID
@@ -94,6 +100,7 @@ func createBundle(execPath string) (string, error) {
 		"CFBundleExecutable":      name,
 		"CFBundleIdentifier":      bundleID,
 		"CFBundleName":            appName,
+		"CFBundleIconFile":        "ExecutableBinaryIcon",
 		"CFBundlePackageType":     "APPL",
 		"CFBundleVersion":         "1.0",
 		"NSHighResolutionCapable": true,
@@ -111,7 +118,7 @@ func createBundle(execPath string) (string, error) {
 	// Write Info.plist
 	infoPlistPath := filepath.Join(contentsPath, "Info.plist")
 	if err := writePlist(infoPlistPath, plist); err != nil {
-		return "", fmt.Errorf("write Info.plist: %w", err)
+		return "", fmt.Errorf("write Info.plist file: %w", err)
 	}
 
 	// Write entitlements if any
@@ -122,19 +129,31 @@ func createBundle(execPath string) (string, error) {
 		}
 		entPath := filepath.Join(contentsPath, "entitlements.plist")
 		if err := writePlist(entPath, entitlements); err != nil {
-			return "", fmt.Errorf("write entitlements: %w", err)
+			return "", fmt.Errorf("write entitlements.plist file: %w", err)
 		}
 	}
 
 	// Copy the executable
 	bundleExecPath := filepath.Join(macosPath, name)
 	if err := copyFile(execPath, bundleExecPath); err != nil {
-		return "", fmt.Errorf("copy executable: %w", err)
+		return "", fmt.Errorf("copy executable to app bundle: %w", err)
+	}
+
+	// Attempt to copy in "ExecutableBinaryIcon.icns" if it exists:
+	defaultPath := "/System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/ExecutableBinaryIcon.icns"
+	if _, err := os.Stat(defaultPath); err == nil {
+		iconPath := filepath.Join(contentsPath, "Resources", "ExecutableBinaryIcon.icns")
+		if err := os.MkdirAll(filepath.Dir(iconPath), 0755); err != nil {
+			debugf("Failed to create Resources directory: %v", err)
+		}
+		if err := copyFile(defaultPath, iconPath); err != nil {
+			debugf("Failed to copy default icon: %v", err)
+		}
 	}
 
 	// Make executable
 	if err := os.Chmod(bundleExecPath, 0755); err != nil {
-		return "", fmt.Errorf("chmod: %w", err)
+		return "", fmt.Errorf("set executable permissions: %w", err)
 	}
 
 	// Set cleanup for temporary bundles
@@ -142,7 +161,10 @@ func createBundle(execPath string) (string, error) {
 		debugf("Created temporary app bundle at: %s", appPath)
 		go func() {
 			time.Sleep(30 * time.Second) // Increased to allow for app launch
-			os.RemoveAll(dir)
+			err := os.RemoveAll(dir)
+			if err != nil {
+				debugf("Failed to clean up temporary bundle at %s: %v", dir, err)
+			}
 		}()
 	} else {
 		debugf("Created app bundle at: %s", appPath)
@@ -151,8 +173,8 @@ func createBundle(execPath string) (string, error) {
 	// Auto-sign the bundle if requested
 	if DefaultConfig.AutoSign {
 		if err := signBundle(appPath); err != nil {
-			debugf("Error signing bundle: %v", err)
-			// Continue even if signing fails
+			// Log the error but continue - signing is optional for functionality
+			debugf("Warning: Error signing bundle: %v", err)
 		}
 	}
 
@@ -160,48 +182,49 @@ func createBundle(execPath string) (string, error) {
 }
 
 // checkExisting checks if an existing app bundle is up to date.
+// Returns true if the bundle exists and is up to date.
+// Returns false if the bundle doesn't exist or if the binary has changed, so a new bundle should be created.
 func checkExisting(appPath, execPath string) bool {
 	name := filepath.Base(execPath)
 	bundleExecPath := filepath.Join(appPath, "Contents", "MacOS", name)
 
 	// Check if the app bundle exists
 	if _, err := os.Stat(appPath); err != nil {
+		debugf("App bundle does not exist at: %s", appPath)
 		return false
 	}
 
 	// Check if the executable exists in the bundle
 	if _, err := os.Stat(bundleExecPath); err != nil {
+		debugf("Executable does not exist in app bundle: %s", bundleExecPath)
 		return false
 	}
 
 	// Compare checksums
 	srcHash, err := checksum(execPath)
 	if err != nil {
-		debugf("error calculating source checksum: %v", err)
+		debugf("Error calculating source checksum: %v", err)
 		return false
 	}
 
 	bundleHash, err := checksum(bundleExecPath)
 	if err != nil {
-		debugf("error calculating bundle checksum: %v", err)
+		debugf("Error calculating bundle checksum: %v", err)
 		return false
 	}
 
 	if srcHash == bundleHash {
-		debugf("app bundle is up to date")
+		debugf("App bundle is up to date")
 		return true
 	}
 
-	// Update the executable
-	debugf("updating app bundle executable")
-	if err := copyFile(execPath, bundleExecPath); err != nil {
-		debugf("error updating executable: %v", err)
-		return false
+	debugf("Binary changed - will create new app bundle with potentially updated entitlements")
+	// Remove the old bundle entirely to ensure all contents are updated
+	if err := os.RemoveAll(appPath); err != nil {
+		debugf("Error removing old app bundle: %v", err)
 	}
 
-	os.Chmod(bundleExecPath, 0755)
-	debugf("app bundle updated")
-	return true
+	return false
 }
 
 // relaunch restarts the application through the app bundle.
@@ -238,10 +261,21 @@ func relaunch(appPath, execPath string) {
 
 	// Launch app bundle
 	cmd := exec.Command("open", args...)
+
+	// Set process group ID to match the parent process
+	// This ensures proper signal handling between parent and child
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true,
+		Pgid:    0, // Use the parent's process group
+	}
+
 	if err := cmd.Start(); err != nil {
 		debugf("error starting app bundle: %v", err)
 		return
 	}
+
+	// Set up signal forwarding from parent to child process group
+	forwardSignals(cmd.Process.Pid)
 
 	// Handle stdin
 	go pipeIO(pipes[0], os.Stdin, nil)
@@ -252,10 +286,14 @@ func relaunch(appPath, execPath string) {
 	// Handle stderr
 	go pipeIO(pipes[2], nil, os.Stderr)
 
-	// Wait for process to finish
-	if err := cmd.Wait(); err != nil {
+	// Wait for process to finish and exit with its status code
+	err := cmd.Wait()
+	if err != nil {
 		debugf("error waiting for app bundle: %v", err)
-		return
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			os.Exit(exitErr.ExitCode())
+		}
+		os.Exit(1)
 	}
 
 	os.Exit(0)
@@ -544,9 +582,20 @@ func createFromTemplate(template fs.FS, appPath, execPath, appName string) (stri
 	return appPath, nil
 }
 
-// signBundle codesigns the app bundle using the system's codesign tool
+// signBundle codesigns the app bundle using the system's codesign tool.
+// It returns an error if codesigning fails, which can happen if:
+// - The codesign tool is not available
+// - No valid signing identity is present
+// - The app bundle is malformed
+// This is considered a non-critical error and macgo will still work without signed bundles,
+// but signed bundles are required for certain entitlements to function properly.
 func signBundle(appPath string) error {
 	identity := DefaultConfig.SigningIdentity
+
+	// Check if codesign is available
+	if _, err := exec.LookPath("codesign"); err != nil {
+		return fmt.Errorf("codesign tool not found: %w", err)
+	}
 
 	// Build the codesign command
 	args := []string{"--force", "--deep"}
@@ -554,12 +603,20 @@ func signBundle(appPath string) error {
 	// Add entitlements if available
 	entitlementsPath := filepath.Join(appPath, "Contents", "entitlements.plist")
 	if _, err := os.Stat(entitlementsPath); err == nil {
+		debugf("Using entitlements file: %s", entitlementsPath)
 		args = append(args, "--entitlements", entitlementsPath)
+	} else {
+		debugf("No entitlements file found at: %s", entitlementsPath)
 	}
 
-	// Add signing identity if specified
+	// Add signing identity
 	if identity != "" {
+		debugf("Using specified signing identity: %s", identity)
 		args = append(args, "--sign", identity)
+	} else {
+		// Use ad-hoc signing with "-s -"
+		debugf("Using ad-hoc signing with -s -")
+		args = append(args, "--sign", "-")
 	}
 
 	// Add the app path
@@ -572,12 +629,16 @@ func signBundle(appPath string) error {
 		return fmt.Errorf("codesign failed: %w, output: %s", err, output)
 	}
 
-	debugf("Codesigned app bundle: %s", appPath)
+	debugf("Successfully codesigned app bundle: %s", appPath)
 	return nil
 }
 
+// debugf prints debug messages to stderr if MACGO_DEBUG=1 is set in the environment.
+// It prefixes all messages with "macgo:" and adds a timestamp to help with troubleshooting.
 func debugf(format string, args ...any) {
 	if os.Getenv("MACGO_DEBUG") == "1" {
-		fmt.Fprintf(os.Stderr, format+"\n", args...)
+		timestamp := time.Now().Format("15:04:05.000")
+		prefix := fmt.Sprintf("[macgo:%s] ", timestamp)
+		fmt.Fprintf(os.Stderr, prefix+format+"\n", args...)
 	}
 }

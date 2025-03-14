@@ -16,18 +16,18 @@ var appTemplate embed.FS
 
 func init() {
 	// Method 1: Using the simplified API for the custom template
-	macgo.WithCustomAppBundle(appTemplate)
+	macgo.SetCustomAppBundle(appTemplate)
 
 	// Set application details
-	macgo.WithAppName("CustomTemplateApp")
-	macgo.WithBundleID("com.example.macgo.custom-template")
+	macgo.SetAppName("CustomTemplateApp")
+	macgo.SetBundleID("com.example.macgo.custom-template")
 
 	// Enable auto-signing (commented out for example purposes)
-	// macgo.WithSigning("") // Use default identity
-	// macgo.WithSigning("Developer ID Application: Your Name (XXXXXXXXXX)") // Specific identity
+	// macgo.EnableSigning("") // Use default identity
+	// macgo.EnableSigning("Developer ID Application: Your Name (XXXXXXXXXX)") // Specific identity
 
 	// Add entitlements
-	macgo.WithEntitlements(
+	macgo.RequestEntitlements(
 		macgo.EntCamera,
 		macgo.EntMicrophone,
 		"com.apple.security.automation.apple-events",

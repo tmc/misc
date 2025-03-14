@@ -4,7 +4,7 @@
 // Basic blank import usage (auto-initializes the package):
 //
 //	import (
-//	    _ "github.com/tmc/misc/macgo"
+//	    _ "github.com/tmc/misc/macgo/auto"
 //	)
 //
 // Simple direct usage with permission functions:
@@ -13,41 +13,19 @@
 //
 //	func init() {
 //	    // Set specific permissions
-//	    macgo.SetCamera()
-//	    macgo.SetMic()
-//
-//	    // Or set all permissions at once
-//	    // macgo.SetAll()
+//	    macgo.RequestEntitlements(macgo.EntAppSandbox, macgo.EntCamera)
 //	}
 //
 // Configure with environment variables:
 //
 //	MACGO_APP_NAME="MyApp" MACGO_BUNDLE_ID="com.example.myapp" MACGO_CAMERA=1 MACGO_MIC=1 ./myapp
-//
-// Advanced usage with configuration API:
-//
-//	import "github.com/tmc/misc/macgo"
-//
-//	func init() {
-//	    // Create a custom configuration
-//	    cfg := macgo.NewConfig()
-//	    cfg.Name = "CustomApp"
-//	    cfg.BundleID = "com.example.customapp"
-//	    cfg.AddPermission(macgo.PermCamera)
-//	    cfg.AddPermission(macgo.PermMic)
-//
-//	    // Add custom Info.plist entries
-//	    cfg.AddPlistEntry("LSUIElement", true) // Make app run in background
-//
-//	    // Apply configuration (must be called)
-//	    macgo.Configure(cfg)
-//	}
 package macgo
 
 import (
 	"io/fs"
 	"os"
 	"strings"
+	"sync"
 )
 
 // Entitlement is a type for macOS entitlement identifiers
@@ -59,7 +37,13 @@ type Entitlements map[Entitlement]bool
 // Available app sandbox entitlements
 const (
 	// App Sandbox entitlements
-	EntAppSandbox    Entitlement = "com.apple.security.app-sandbox"
+	EntAppSandbox Entitlement = "com.apple.security.app-sandbox"
+
+	// Network entitlements
+	// NOTE: These network entitlements only affect Objective-C/Swift network APIs.
+	// Go's standard networking (net/http, etc.) bypasses these restrictions and will
+	// work regardless of these entitlements being present or not. To properly restrict
+	// network access in Go applications, additional measures are required.
 	EntNetworkClient Entitlement = "com.apple.security.network.client"
 	EntNetworkServer Entitlement = "com.apple.security.network.server"
 
@@ -109,8 +93,12 @@ const (
 var DefaultConfig = &Config{
 	AutoSign:     true,
 	Relaunch:     true, // Enable auto-relaunching by default
-	Entitlements: make(map[Entitlement]bool),
-	PlistEntries: make(map[string]any),
+	Entitlements: map[Entitlement]bool{
+		// EntUserSelectedReadWrite: true, // Enable user-selected file access by default
+	},
+	PlistEntries: map[string]any{
+		"LSUIElement": false, // Hide dock icon and app menu by default
+	},
 }
 
 // Config provides a way to customize the app bundle behavior
@@ -145,17 +133,20 @@ type Config struct {
 	AppTemplate fs.FS
 
 	// AutoSign enables automatic codesigning of the app bundle
-	// This requires the developer to have appropriate certificates
-	// installed and will use the default signing identity if not specified
+	// When true, the app bundle will be code signed to enable proper functionality
+	// of entitlements
 	AutoSign bool
 
 	// SigningIdentity specifies the identity to use for codesigning
-	// If empty, the default identity will be used when AutoSign is true
+	// If empty, ad-hoc signing ("-") will be used when AutoSign is true
 	SigningIdentity string
 }
 
 // AddEntitlement adds an entitlement to the configuration
 func (c *Config) AddEntitlement(e Entitlement) {
+	if c.Entitlements == nil {
+		c.Entitlements = make(map[Entitlement]bool)
+	}
 	c.Entitlements[e] = true
 }
 
@@ -166,14 +157,20 @@ func (c *Config) AddPermission(p Entitlement) {
 
 // AddPlistEntry adds a custom entry to the Info.plist file
 func (c *Config) AddPlistEntry(key string, value any) {
+	if c.PlistEntries == nil {
+		c.PlistEntries = make(map[string]any)
+	}
 	c.PlistEntries[key] = value
 }
 
-// init is the default initialization function, called on import
-// It sets up the default configuration and initializes the app bundle.
-// It also reads environment variables to configure the app bundle.
-// This function is called only once when the package is imported.
+var initOnce sync.Once
+
+// init sets up the default configuration only
+// It does not create the app bundle or relaunch the application
+// For automatic initialization, import "github.com/tmc/misc/macgo/auto"
 func init() {
+	// Using debugf for visibility of initialization steps
+	debugf("macgo: setting up configuration from environment...")
 
 	// Initialize config from environment
 	if name := os.Getenv("MACGO_APP_NAME"); name != "" {
@@ -192,8 +189,56 @@ func init() {
 		DefaultConfig.KeepTemp = true
 	}
 
-	// Initialize once on import
-	initializeMacGo()
+	// Check if dock icon should be shown
+	if os.Getenv("MACGO_SHOW_DOCK_ICON") == "1" {
+		if DefaultConfig.PlistEntries == nil {
+			DefaultConfig.PlistEntries = make(map[string]any)
+		}
+		DefaultConfig.PlistEntries["LSUIElement"] = true
+	}
+}
+
+// Start initializes macgo and creates the app bundle if needed.
+// This should be called explicitly in your main() function after any configuration.
+// It's safe to call multiple times; only the first call will take effect.
+//
+// Example:
+//
+//	func main() {
+//	    // Configure macgo (optional)
+//	    macgo.RequestEntitlements(macgo.EntCamera, macgo.EntMicrophone)
+//
+//	    // Start macgo - this creates the app bundle and relaunches if needed
+//	    macgo.Start()
+//
+//	    // Rest of your program
+//	    // ...
+//	}
+func Start() {
+	initOnce.Do(func() {
+		debugf("macgo: initializing app bundle...")
+		initializeMacGo()
+	})
+}
+
+// Initialize is an alias for Start() for backward compatibility
+// For new code, use Start() instead
+func Initialize() {
+	Start()
+}
+
+// DisableAutoInit is deprecated and no longer does anything.
+// Auto-initialization is disabled by default, and you must call Start() manually.
+//
+// Example:
+//
+//	func init() {
+//	    macgo.RequestEntitlements(macgo.EntCamera)
+//	    // ...configure all your settings...
+//	    macgo.Start() // explicitly initialize when ready
+//	}
+func DisableAutoInit() {
+	// No-op for backward compatibility
 }
 
 // initializeMacGo is called once to set up the app bundle
@@ -210,11 +255,8 @@ func initializeMacGo() {
 		return
 	}
 
-	// Skip if no entitlements are requested
-	if DefaultConfig.Entitlements == nil || len(DefaultConfig.Entitlements) == 0 {
-		debugf("No entitlements requested, skipping app bundle creation")
-		return
-	}
+	// By default, we always have app sandbox and user-selected file access
+	// No need to skip anymore, because DefaultConfig initializes with entitlements
 
 	// Get current executable path
 	execPath, err := os.Executable()
@@ -232,7 +274,26 @@ func initializeMacGo() {
 
 	// Only relaunch if enabled and not running in a test
 	if DefaultConfig.Relaunch && !isTestMode() {
-		relaunch(appPath, execPath)
+		// Determine which relaunch method to use
+		if customReLaunchFunction != nil {
+			// Prepare open command arguments
+			args := []string{
+				"-a", appPath,
+				"--wait-apps",
+			}
+
+			// Pass original arguments
+			if len(os.Args) > 1 {
+				args = append(args, "--args")
+				args = append(args, os.Args[1:]...)
+			}
+
+			// Use the custom relaunch function if available
+			customReLaunchFunction(appPath, execPath, args)
+		} else {
+			// Use the default relaunch implementation
+			relaunch(appPath, execPath)
+		}
 	}
 }
 
@@ -246,6 +307,36 @@ func isRunningInBundle() bool {
 
 	// Check for .app/Contents/MacOS/ in the path
 	return strings.Contains(execPath, ".app/Contents/MacOS/")
+}
+
+// IsInAppBundle returns true if the current process is running
+// inside a macOS application bundle.
+func IsInAppBundle() bool {
+	return isRunningInBundle()
+}
+
+// Debug prints debug messages to stderr if MACGO_DEBUG=1 is set in the environment.
+// This is a public version of debugf that can be used by extension modules.
+func Debug(format string, args ...any) {
+	debugf(format, args...)
+}
+
+// ReLaunchFunction is a function type for custom app relaunching
+type ReLaunchFunction func(appPath, execPath string, args []string)
+
+// Custom relaunch function that can be set by extension modules
+var customReLaunchFunction ReLaunchFunction
+
+// SetReLaunchFunction allows setting a custom relaunch function
+// This is used by extension modules to provide custom functionality
+func SetReLaunchFunction(fn ReLaunchFunction) {
+	customReLaunchFunction = fn
+}
+
+// IsAutoInit is deprecated and always returns false.
+// This function is kept for backward compatibility.
+func IsAutoInit() bool {
+	return false
 }
 
 // isTestMode checks if the process is running in a Go test
@@ -274,9 +365,11 @@ func isTestMode() bool {
 func NewConfig() *Config {
 	return &Config{
 		Relaunch:     true,
-		Entitlements: make(map[Entitlement]bool),
-		PlistEntries: make(map[string]any),
-		AutoSign:     true,
+		Entitlements: map[Entitlement]bool{},
+		PlistEntries: map[string]any{
+			"LSUIElement": true, // Hide dock icon and app menu by default
+		},
+		AutoSign: true,
 	}
 }
 

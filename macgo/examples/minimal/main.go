@@ -6,7 +6,7 @@ import (
 	"os"
 
 	// Core functionality with blank import (uses environment variables for configuration)
-	_ "github.com/tmc/misc/macgo"
+	_ "github.com/tmc/misc/macgo/auto"
 )
 
 // Run with:
@@ -34,4 +34,8 @@ func main() {
 		}
 		fmt.Printf("- %s\n", file.Name())
 	}
+	// wait for user input:
+	fmt.Println("Press enter to exit")
+	var input string
+	fmt.Scanln(&input)
 }

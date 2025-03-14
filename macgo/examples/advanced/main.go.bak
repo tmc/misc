@@ -1,0 +1,101 @@
+// Advanced configuration example using the Config API
+package main
+
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/tmc/misc/macgo"
+)
+
+func init() {
+	// Create a custom configuration
+	cfg := macgo.NewConfig()
+	
+	// Set application details
+	cfg.ApplicationName = "AdvancedExampleApp"
+	cfg.BundleID = "com.example.macgo.advanced" 
+	
+	// Add entitlements individually
+	cfg.AddEntitlement(macgo.EntCamera)
+	cfg.AddEntitlement(macgo.EntMicrophone)
+	
+	// Request multiple entitlements at once
+	cfg.RequestEntitlements(
+		macgo.EntAppSandbox,
+		macgo.EntNetworkClient,
+		macgo.EntNetworkServer,
+	)
+	
+	// Access to user-selected files (already enabled by default)
+	cfg.AddEntitlement(macgo.EntUserSelectedReadOnly)
+	
+	// Add custom Info.plist entries
+	cfg.AddPlistEntry("LSMinimumSystemVersion", "10.15")
+	
+	// Show icon in dock (by default it's hidden)
+	// Note: This only takes effect when running in the app bundle
+	// When directly running with 'go run', this won't show in dock
+	cfg.AddPlistEntry("LSUIElement", false)
+	
+	// Control app bundle behavior
+	cfg.Relaunch = true                                       // Auto-relaunch (default)
+	cfg.AutoSign = true                                       // Auto-sign the bundle (default)
+	//cfg.SigningIdentity = "Developer ID Application: Your Name" // Custom signing identity
+	cfg.KeepTemp = false                                      // Don't keep temporary bundles
+	
+	// Custom destination path (uncomment to use)
+	//cfg.CustomDestinationAppPath = "/Applications/AdvancedExampleApp.app"
+	
+	// Apply configuration (must be called)
+	macgo.Configure(cfg)
+	
+	// Enable debug logging (optional)
+	macgo.EnableDebug()
+}
+
+func main() {
+	fmt.Println("macgo Advanced Configuration Example")
+	fmt.Println("------------------------------------")
+	fmt.Println("This example showcases the Config API for maximum customization.")
+	fmt.Println()
+
+	// Print which entitlements are likely enabled
+	fmt.Println("Enabled entitlements:")
+	fmt.Println("- App Sandbox")
+	fmt.Println("- Camera access")
+	fmt.Println("- Microphone access")
+	fmt.Println("- Network client/server")
+	fmt.Println("- User-selected files (read-only)")
+	fmt.Println()
+	
+	// Show that we can access the Desktop (through user-selected files)
+	homeDir, _ := os.UserHomeDir()
+	fmt.Printf("Reading Desktop directory: %s/Desktop\n", homeDir)
+	
+	files, err := os.ReadDir(homeDir + "/Desktop")
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	
+	fmt.Printf("Found %d files\n", len(files))
+	for i, file := range files {
+		if i >= 5 {
+			fmt.Println("...")
+			break
+		}
+		fmt.Printf("- %s\n", file.Name())
+	}
+	
+	// Runtime information
+	fmt.Println("\nRuntime information:")
+	fmt.Println("- Running in application bundle (should be true when packaged)")
+	// Note: macgo automatically detects if it's running in a bundle internally
+	
+	// Wait for user input (to give user time to see the dock icon if LSUIElement is false)
+	fmt.Println("\nPress Enter to exit")
+	var input string
+	fmt.Scanln(&input)
+}
