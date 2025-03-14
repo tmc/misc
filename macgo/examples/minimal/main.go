@@ -6,7 +6,7 @@ import (
 	"os"
 
 	// Core functionality with blank import (uses environment variables for configuration)
-	_ "github.com/tmc/misc/macgo/auto"
+	_ "github.com/tmc/misc/macgo/auto" // --
 )
 
 // Run with:

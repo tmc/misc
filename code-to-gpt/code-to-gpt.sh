@@ -8,13 +8,16 @@ set -euo pipefail
 
 # Default exclude patterns
 DEFAULT_EXCLUDES=(
-    # Editor files
-    ':!*.swp'
-    ':!.DS_Store'
-    
-    # Temporary files
-    ':!tmp/**'
-    ':!*.log'
+    ':!node_modules/**'
+    ':!venv/**'
+    ':!.venv/**'
+    ':!.git/**'
+    ':!go.sum'
+    ':!go.work.sum'
+    ':!yarn.lock'
+    ':!yarn.error.log'
+    ':!package-lock.json'
+    ':!uv.lock'
 )
 DIRECTORY="."
 COUNT_TOKENS=false

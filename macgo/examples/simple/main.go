@@ -5,7 +5,7 @@ import (
 	"os"
 
 	// Import macgo package directly
-	_ "github.com/tmc/misc/macgo/auto"
+	_ "github.com/tmc/misc/macgo/auto" // --
 )
 
 func main() {
