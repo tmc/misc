@@ -85,7 +85,7 @@ type ChatResponse struct {
 }
 
 // SendMessage sends a message to the Gemini API chat endpoint.
-func (c *Client) SendMessage(ctx context.Context, req interface{}) (*ChatResponse, error) {
+func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{}, error) {
 	// Type assertion to convert the interface{} to ChatRequest
 	chatReq, ok := req.(ChatRequest)
 	if !ok {
@@ -104,7 +104,7 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (*ChatRespons
 	}
 
 	// Convert the response to interface{}
-	return resp, nil
+	return interface{}(resp), nil
 }
 
 func (c *Client) String() string {

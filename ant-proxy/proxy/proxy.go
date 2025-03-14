@@ -13,7 +13,7 @@
 //   - Request transformation: Adapts incoming requests to the format expected by the backend provider.
 //   - Provider dispatch: Sends the transformed request to the selected backend provider.
 //   - Response handling: Receives responses from the backend provider.
-//   - Response transformation: Adapts backend responses back to the format expected by the original client (if necessary).
+//   - Response transformation: Adapts backend responses back to the client.
 //
 // Example usage (conceptual - requires further implementation):
 //
@@ -152,7 +152,7 @@ func (p *Proxy) HandleRequest(ctx context.Context, request interface{}) (interfa
 		}
 
 		// Type assert the response from interface{} to anthropic.MessageResponse
-		resp, ok := anthropicResp.(*anthropic.MessageResponse)
+		resp, ok := anthropicResp.(interface{})
 		if !ok {
 			return nil, fmt.Errorf("unexpected response type from anthropic: %T", anthropicResp)
 		}
@@ -172,14 +172,14 @@ func (p *Proxy) HandleRequest(ctx context.Context, request interface{}) (interfa
 		}
 
 		// Type assert the response from interface{} to gemini.ChatResponse
-		resp, ok := geminiResp.(*gemini.ChatResponse)
+		resp, ok := geminiResp.(interface{})
 		if !ok {
 			return nil, fmt.Errorf("unexpected response type from gemini: %T", geminiResp)
 		}
 
 		// Transform Gemini response back to Anthropic response
-		anthropicResponse := transformGeminiToAnthropic(resp)
-		return anthropicResponse, nil
+		//anthropicResponse := transformGeminiToAnthropic(resp)
+		return resp, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", providerName)

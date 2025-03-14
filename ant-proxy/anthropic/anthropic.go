@@ -87,7 +87,7 @@ type MessageResponse struct {
 }
 
 // SendMessage sends a message to the Anthropic API /v1/messages endpoint.
-func (c *Client) SendMessage(ctx context.Context, req interface{}) (*MessageResponse, error) {
+func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{}, error) {
 	// Type assertion to convert the interface{} to MessageRequest
 	messageReq, ok := req.(MessageRequest)
 	if !ok {
@@ -106,7 +106,7 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (*MessageResp
 	}
 
 	// Convert the response to interface{}
-	return resp, nil
+	return interface{}(resp), nil
 }
 
 func (c *Client) String() string {
