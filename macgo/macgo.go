@@ -291,8 +291,9 @@ func initializeMacGo() {
 			// Use the custom relaunch function if available
 			customReLaunchFunction(appPath, execPath, args)
 		} else {
-			// Use the default relaunch implementation
-			relaunch(appPath, execPath)
+			// Use robust signal handling by default
+			debugf("Using robust signal handling (default)")
+			relaunchWithIORedirection(appPath, execPath)
 		}
 	}
 }
