@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	// Blank import of macgo for environment variable configuration
-	_ "github.com/tmc/misc/macgo"
+	// Blank import of macgo auto for environment variable configuration
+	_ "github.com/tmc/misc/macgo/auto" // --
 )
 
 // This example doesn't need init() as everything is configured
