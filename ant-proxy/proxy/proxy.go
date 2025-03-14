@@ -107,8 +107,6 @@ func transformGeminiToAnthropic(geminiResp *gemini.ChatResponse) *anthropic.Mess
 }
 
 // HandleRequest processes an incoming request.
-// This is a placeholder and needs to be implemented to handle actual request routing,
-// transformation, and dispatching to providers.
 func (p *Proxy) HandleRequest(ctx context.Context, request interface{}) (interface{}, error) {
 	// TODO: Implement request routing logic to select a provider.
 	// TODO: Implement request transformation if needed.

@@ -37,9 +37,11 @@
 package gemini
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 )
@@ -84,6 +86,36 @@ type ChatResponse struct {
 	// Add other relevant fields from the Gemini API response as needed
 }
 
+// Gemini API request structure
+type GeminiRequest struct {
+	Contents      []Content `json:"contents"`
+	SafetySettings []SafetySetting `json:"safetySettings"`
+	GenerationConfig GenerationConfig `json:"generationConfig"`
+	Model string `json:"model"`
+}
+
+type Content struct {
+	Parts []Part `json:"parts"`
+	Role string `json:"role"`
+}
+
+type Part struct {
+	Text string `json:"text"`
+}
+
+type SafetySetting struct {
+	Category int `json:"category"`
+	Threshold int `json:"threshold"`
+}
+
+type GenerationConfig struct {
+	CandidateCount int `json:"candidateCount"`
+	MaxOutputTokens int `json:"maxOutputTokens"`
+	Temperature float64 `json:"temperature"`
+	TopP float64 `json:"topP"`
+	TopK int `json:"topK"`
+}
+
 // SendMessage sends a message to the Gemini API chat endpoint.
 func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{}, error) {
 	// Type assertion to convert the interface{} to ChatRequest
@@ -92,15 +124,83 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 		return nil, fmt.Errorf("invalid request type: expected ChatRequest, got %T", req)
 	}
 
-	// TODO: Implement the actual HTTP request to the Gemini API
-	// using c.config and c.client.
-	// This is a placeholder implementation.
+	// Construct the Gemini API URL with the API key
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", c.config.Model, c.config.APIKey)
 
-	log.Printf("Gemini API Request: %+v\n", chatReq) // For demonstration
+	// Construct the Gemini request body
+	geminiRequest := GeminiRequest{
+		Model: fmt.Sprintf("models/%s", c.config.Model),
+		Contents: []Content{},
+		SafetySettings: []SafetySetting{
+			{Category: 10, Threshold: 3},
+			{Category: 7, Threshold: 3},
+			{Category: 8, Threshold: 3},
+			{Category: 9, Threshold: 3},
+		},
+		GenerationConfig: GenerationConfig{
+			CandidateCount: 1,
+			MaxOutputTokens: chatReq.MaxOutputTokens,
+			Temperature: 0.05,
+			TopP: 0.95,
+			TopK: 3,
+		},
+	}
+
+	for _, msg := range chatReq.Messages {
+		geminiRequest.Contents = append(geminiRequest.Contents, Content{
+			Parts: []Part{{Text: msg.Content}},
+			Role: msg.Role,
+		})
+	}
+
+	// Marshal the request body to JSON
+	requestBody, err := json.Marshal(geminiRequest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	// Create a new HTTP request
+	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	// Send the request
+	httpResp, err := c.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send HTTP request: %w", err)
+	}
+	defer httpResp.Body.Close()
+
+	// Read the response body
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Check the response status code
+	if httpResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned unexpected status code: %d, body: %s", httpResp.StatusCode, string(responseBody))
+	}
+
+	// Unmarshal the response body
+	var geminiResponse map[string]interface{}
+	if err := json.Unmarshal(responseBody, &geminiResponse); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response body: %w", err)
+	}
+
+	log.Printf("Gemini API Response: %+v\n", geminiResponse)
+
+	// Extract the content from the response
+	content, ok := geminiResponse["candidates"].([]interface{})[0].(map[string]interface{})["content"].(map[string]interface{})["parts"].([]interface{})[0].(map[string]interface{})["text"].(string)
+	if !ok {
+		return nil, fmt.Errorf("failed to extract content from response")
+	}
 
 	// Simulate a response
 	resp := &ChatResponse{
-		Content: "This is a simulated Gemini response.",
+		Content: content,
 	}
 
 	// Convert the response to interface{}
