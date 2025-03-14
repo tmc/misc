@@ -55,7 +55,7 @@ func main() {
 	anthropicConfig := anthropic.Config{
 		APIKey:     anthropicAPIKey,
 		APIVersion: "2023-06-01", // Example version, make configurable if needed
-		Model:      "claude-3-sonnet-20250219", // Example model, make configurable
+		Model:      "claude-3-7-sonnet-20250219", // Example model, make configurable
 	}
 	anthropicClient := anthropic.NewClient(anthropicConfig)
 
