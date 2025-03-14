@@ -45,6 +45,10 @@ type options struct {
 	timeout         int       // Global timeout in seconds
 	chromePath      string    // Path to Chrome executable
 	debugMode       bool      // Run Chrome debug diagnostics
+	waitStable      bool      // Wait until page is stable (network and DOM)
+	stableTimeout   int       // Max time in seconds to wait for stability
+	waitSelector    string    // Wait for specific CSS selector to appear
+	getHTML         bool      // Output HTML instead of HAR
 }
 
 type Runner struct {
@@ -115,6 +119,10 @@ func main() {
 	flag.IntVar(&opts.timeout, "timeout", 180, "Global timeout in seconds (default: 180)")
 	flag.StringVar(&opts.chromePath, "chrome-path", "", "Path to Chrome executable")
 	flag.BoolVar(&opts.debugMode, "debug-chrome", false, "Run Chrome debugging diagnostics")
+	flag.BoolVar(&opts.waitStable, "wait-stable", false, "Wait until page is stable (network and DOM)")
+	flag.IntVar(&opts.stableTimeout, "stable-timeout", 30, "Max time in seconds to wait for stability")
+	flag.StringVar(&opts.waitSelector, "wait-for", "", "Wait for specific CSS selector to appear")
+	flag.BoolVar(&opts.getHTML, "html", false, "Output HTML instead of HAR")
 
 	flag.Parse()
 

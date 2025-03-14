@@ -18,10 +18,6 @@ import (
 func init() {
 	// Only enable app sandbox for basic security
 	macgo.RequestEntitlements(macgo.EntAppSandbox)
-
-	// Enable auto-initialization in macgo
-	macgo.EnableAutoInit()
-
 	// Start macgo
 	macgo.Start()
 }
