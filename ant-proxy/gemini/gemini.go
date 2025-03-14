@@ -88,7 +88,7 @@ type ChatResponse struct {
 
 // Gemini API request structure
 type GeminiRequest struct {
-	Contents      []Content `json:"contents"`
+	Contents      []Content       `json:"contents"`
 	SafetySettings []SafetySetting `json:"safetySettings"`
 	GenerationConfig GenerationConfig `json:"generationConfig"`
 	Model string `json:"model"`
@@ -109,11 +109,11 @@ type SafetySetting struct {
 }
 
 type GenerationConfig struct {
-	CandidateCount int `json:"candidateCount"`
-	MaxOutputTokens int `json:"maxOutputTokens"`
-	Temperature float64 `json:"temperature"`
-	TopP float64 `json:"topP"`
-	TopK int `json:"topK"`
+	CandidateCount int     `json:"candidateCount"`
+	MaxOutputTokens int     `json:"maxOutputTokens"`
+	Temperature   float64 `json:"temperature"`
+	TopP          float64 `json:"topP"`
+	TopK          int     `json:"topK"`
 }
 
 // SendMessage sends a message to the Gemini API chat endpoint.
@@ -125,7 +125,7 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 	}
 
 	// Construct the Gemini API URL with the API key
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", c.config.Model, c.config.APIKey)
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?key=%s&%s", c.config.Model, c.config.APIKey, "%24alt=json%3Benum-encoding%3Dint")
 
 	// Construct the Gemini request body
 	geminiRequest := GeminiRequest{
@@ -140,16 +140,16 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 		GenerationConfig: GenerationConfig{
 			CandidateCount: 1,
 			MaxOutputTokens: chatReq.MaxOutputTokens,
-			Temperature: 0.05,
-			TopP: 0.95,
-			TopK: 3,
+			Temperature:   0.05,
+			TopP:          0.95,
+			TopK:          3,
 		},
 	}
 
 	for _, msg := range chatReq.Messages {
 		geminiRequest.Contents = append(geminiRequest.Contents, Content{
 			Parts: []Part{{Text: msg.Content}},
-			Role: msg.Role,
+			Role:    msg.Role,
 		})
 	}
 
