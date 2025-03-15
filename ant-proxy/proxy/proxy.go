@@ -94,13 +94,16 @@ func transformAnthropicToGemini(anthropicReq anthropic.MessageRequest) gemini.Ch
 	}
 
 	return gemini.ChatRequest{
-		Messages:      chatMessages,
+		Messages:        chatMessages,
 		MaxOutputTokens: anthropicReq.MaxTokens,
 	}
 }
 
 // transformGeminiToAnthropic transforms a Gemini ChatResponse to an Anthropic MessageResponse.
 func transformGeminiToAnthropic(geminiResp *gemini.ChatResponse) *anthropic.MessageResponse {
+	if geminiResp == nil {
+		return &anthropic.MessageResponse{} // Return empty response if geminiResp is nil
+	}
 	return &anthropic.MessageResponse{
 		Content: geminiResp.Content,
 	}
@@ -176,8 +179,9 @@ func (p *Proxy) HandleRequest(ctx context.Context, request interface{}) (interfa
 		}
 
 		// Transform Gemini response back to Anthropic response
-		//anthropicResponse := transformGeminiToAnthropic(resp)
-		return resp, nil
+		anthropicResponse := transformGeminiToAnthropic(resp.(*gemini.ChatResponse)) // Type assert here
+		log.Printf("Transformed Gemini response: %+v", anthropicResponse)            // Added logging
+		return anthropicResponse, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", providerName)

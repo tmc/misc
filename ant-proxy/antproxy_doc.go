@@ -15,7 +15,7 @@ The main package is responsible for:
 
 Example usage (running the proxy):
 
-	go run . -anthropic-api-key sk-ant-... -gemini-api-key AIza... -listen-address :8080
+go run . -anthropic-api-key sk-ant-... -gemini-api-key AIza... -listen-address :8080
 
 This will start the ant-proxy server, listening on port 8080, configured
 with Anthropic and Gemini API keys. Incoming requests to the proxy will be

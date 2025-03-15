@@ -68,7 +68,7 @@ func NewClient(cfg Config) *Client {
 
 // Message represents a message in the Anthropic API message structure.
 type Message struct {
-	Role    string   `json:"role"`
+	Role    string `json:"role"`
 	Content string `json:"content"`
 }
 
