@@ -155,6 +155,10 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer " + c.config.APIKey)
 
+	log.Printf("Gemini API URL: %s\n", url)
+	log.Printf("Gemini API Headers: %+v\n", httpReq.Header)
+	log.Printf("Gemini API Request Body: %s\n", string(requestBody))
+
 	// Send the request
 	httpResp, err := c.client.Do(httpReq)
 	if err != nil {
