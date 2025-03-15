@@ -90,6 +90,7 @@ type ChatResponse struct {
 type GeminiRequest struct {
 	Contents      []Content       `json:"contents"`
 	GenerationConfig GenerationConfig `json:"generationConfig"`
+	Model string `json:"model"`
 }
 
 type Content struct {
@@ -122,6 +123,7 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 
 	// Construct the Gemini request body
 	geminiRequest := GeminiRequest{
+		Model: fmt.Sprintf("models/%s", c.config.Model),
 		Contents: []Content{},
 		GenerationConfig: GenerationConfig{
 			Temperature:   1.0,
