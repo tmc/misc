@@ -118,7 +118,7 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 	}
 
 	// Construct the Gemini API URL
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent", c.config.Model)
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", c.config.Model, c.config.APIKey)
 
 	// Construct the Gemini request body
 	geminiRequest := GeminiRequest{
@@ -151,7 +151,6 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer " + c.config.APIKey)
 
 	// Send the request
 	httpResp, err := c.client.Do(httpReq)
