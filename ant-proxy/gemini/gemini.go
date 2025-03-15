@@ -10,7 +10,6 @@
 // Example usage:
 //
 //	import "github.com/tmc/misc/ant-proxy/gemini"
-
 //
 //	func main() {
 //		cfg := gemini.Config{
@@ -90,9 +89,7 @@ type ChatResponse struct {
 // Gemini API request structure
 type GeminiRequest struct {
 	Contents      []Content       `json:"contents"`
-	SafetySettings []SafetySetting `json:"safetySettings"`
 	GenerationConfig GenerationConfig `json:"generationConfig"`
-	Model string `json:"model"`
 }
 
 type Content struct {
@@ -104,17 +101,12 @@ type Part struct {
 	Text string `json:"text"`
 }
 
-type SafetySetting struct {
-	Category int `json:"category"`
-	Threshold int `json:"threshold"`
-}
-
 type GenerationConfig struct {
-	CandidateCount int     `json:"candidateCount"`
-	MaxOutputTokens int     `json:"maxOutputTokens"`
 	Temperature   float64 `json:"temperature"`
-	TopP          float64 `json:"topP"`
 	TopK          int     `json:"topK"`
+	TopP          float64 `json:"topP"`
+	MaxOutputTokens int     `json:"maxOutputTokens"`
+	ResponseMimeType string `json:"responseMimeType"`
 }
 
 // SendMessage sends a message to the Gemini API chat endpoint.
@@ -126,24 +118,17 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 	}
 
 	// Construct the Gemini API URL
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?%s", c.config.Model, "%24alt=json%3Benum-encoding%3Dint")
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", c.config.Model, c.config.APIKey)
 
 	// Construct the Gemini request body
 	geminiRequest := GeminiRequest{
-		Model: fmt.Sprintf("models/%s", c.config.Model),
 		Contents: []Content{},
-		SafetySettings: []SafetySetting{
-			{Category: 10, Threshold: 3},
-			{Category: 7, Threshold: 3},
-			{Category: 8, Threshold: 3},
-			{Category: 9, Threshold: 3},
-		},
 		GenerationConfig: GenerationConfig{
-			CandidateCount: 1,
-			MaxOutputTokens: chatReq.MaxOutputTokens,
-			Temperature:   0.05,
+			Temperature:   1.0,
+			TopK:          64,
 			TopP:          0.95,
-			TopK:          3,
+			MaxOutputTokens: chatReq.MaxOutputTokens,
+			ResponseMimeType: "text/plain",
 		},
 	}
 
@@ -166,7 +151,6 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", "Bearer " + c.config.APIKey)
 
 	// Send the request
 	httpResp, err := c.client.Do(httpReq)
