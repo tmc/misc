@@ -10,6 +10,7 @@
 // Example usage:
 //
 //	import "github.com/tmc/misc/ant-proxy/gemini"
+
 //
 //	func main() {
 //		cfg := gemini.Config{
@@ -124,8 +125,8 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 		return nil, fmt.Errorf("invalid request type: expected ChatRequest, got %T", req)
 	}
 
-	// Construct the Gemini API URL with the API key
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?key=%s&%s", c.config.Model, c.config.APIKey, "%24alt=json%3Benum-encoding%3Dint")
+	// Construct the Gemini API URL
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:streamGenerateContent?%s", c.config.Model, "%24alt=json%3Benum-encoding%3Dint")
 
 	// Construct the Gemini request body
 	geminiRequest := GeminiRequest{
@@ -165,6 +166,7 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Authorization", "Bearer " + c.config.APIKey)
 
 	// Send the request
 	httpResp, err := c.client.Do(httpReq)
