@@ -90,7 +90,6 @@ type ChatResponse struct {
 type GeminiRequest struct {
 	Contents      []Content       `json:"contents"`
 	GenerationConfig GenerationConfig `json:"generationConfig"`
-	Model string `json:"model"`
 }
 
 type Content struct {
@@ -123,7 +122,6 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 
 	// Construct the Gemini request body
 	geminiRequest := GeminiRequest{
-		Model: "models/gemini-2.0-pro-exp-02-05",
 		Contents: []Content{},
 		GenerationConfig: GenerationConfig{
 			Temperature:   1.0,
@@ -154,10 +152,6 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer " + c.config.APIKey)
-
-	log.Printf("Gemini API URL: %s\n", url)
-	log.Printf("Gemini API Headers: %+v\n", httpReq.Header)
-	log.Printf("Gemini API Request Body: %s\n", string(requestBody))
 
 	// Send the request
 	httpResp, err := c.client.Do(httpReq)

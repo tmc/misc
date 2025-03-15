@@ -61,7 +61,7 @@ func main() {
 
 	geminiConfig := gemini.Config{
 		APIKey: geminiAPIKey,
-		Model:  "gemini-2.0-pro-exp-02-05", // Example model, make configurable
+		Model:  "gemini-pro", // Example model, make configurable
 	}
 	geminiClient := gemini.NewClient(geminiConfig)
 
