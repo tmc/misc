@@ -123,7 +123,7 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 
 	// Construct the Gemini request body
 	geminiRequest := GeminiRequest{
-		Model: fmt.Sprintf("models/%s", c.config.Model),
+		Model: "models/gemini-2.0-pro-exp-02-05",
 		Contents: []Content{},
 		GenerationConfig: GenerationConfig{
 			Temperature:   1.0,
