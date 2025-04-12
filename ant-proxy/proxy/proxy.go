@@ -55,10 +55,24 @@ type ProviderClient interface {
 	SendMessage(context.Context, interface{}) (interface{}, error) // Generic interface for now
 }
 
+// ExtractorPattern represents a pattern for extracting data from a stream
+type ExtractorPattern struct {
+	Conditions  []Condition
+	ExtractPath string
+}
+
+// Condition represents a condition for matching in an extractor pattern
+type Condition struct {
+	Path  string
+	Value string
+}
+
 // Proxy is the core proxy type.
 type Proxy struct {
-	providers map[string]ProviderClient
-	// Add other proxy configurations as needed
+	providers       map[string]ProviderClient
+	recordSessions  bool
+	sessionsDir     string
+	defaultProvider string
 }
 
 // NewProxy creates a new Proxy instance.
@@ -106,6 +120,22 @@ func transformGeminiToAnthropic(geminiResp *gemini.ChatResponse) *anthropic.Mess
 	}
 	return &anthropic.MessageResponse{
 		Content: geminiResp.Content,
+	}
+}
+
+// NewExtractorPattern creates a new ExtractorPattern
+func NewExtractorPattern(extractPath string, conditions ...Condition) ExtractorPattern {
+	return ExtractorPattern{
+		ExtractPath: extractPath,
+		Conditions:  conditions,
+	}
+}
+
+// NewCondition creates a new Condition
+func NewCondition(path string, value string) Condition {
+	return Condition{
+		Path:  path,
+		Value: value,
 	}
 }
 

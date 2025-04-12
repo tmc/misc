@@ -38,9 +38,11 @@
 package anthropic
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 )
@@ -82,8 +84,17 @@ type MessageRequest struct {
 
 // MessageResponse represents the response body from the /v1/messages endpoint.
 type MessageResponse struct {
-	Content string `json:"content"` // Placeholder, adjust based on actual response structure
-	// Add other relevant fields from the Anthropic API response as needed
+	ID           string `json:"id"`
+	Type         string `json:"type"`
+	Role         string `json:"role"`
+	Content      string `json:"content"`
+	Model        string `json:"model"`
+	StopReason   string `json:"stop_reason,omitempty"`
+	StopSequence string `json:"stop_sequence,omitempty"`
+	Usage        struct {
+		InputTokens  int `json:"input_tokens"`
+		OutputTokens int `json:"output_tokens"`
+	} `json:"usage,omitempty"`
 }
 
 // SendMessage sends a message to the Anthropic API /v1/messages endpoint.
@@ -94,19 +105,62 @@ func (c *Client) SendMessage(ctx context.Context, req interface{}) (interface{},
 		return nil, fmt.Errorf("invalid request type: expected MessageRequest, got %T", req)
 	}
 
-	// TODO: Implement the actual HTTP request to the Anthropic API
-	// using c.config and c.client.
-	// This is a placeholder implementation.
-
-	log.Printf("Anthropic API Request: %+v\n", messageReq) // For demonstration
-
-	// Simulate a response
-	resp := &MessageResponse{
-		Content: "This is a simulated Anthropic response.",
+	// Set the model if not already set
+	if messageReq.Model == "" {
+		messageReq.Model = c.config.Model
 	}
 
+	// Construct API URL
+	url := "https://api.anthropic.com/v1/messages"
+
+	// Marshal the request body
+	requestBody, err := json.Marshal(messageReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	// Create a new HTTP request
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(requestBody))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
+	}
+
+	// Set headers
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-api-key", c.config.APIKey)
+	httpReq.Header.Set("anthropic-version", c.config.APIVersion)
+
+	log.Printf("Anthropic API Request: %+v\n", messageReq)
+
+	// Send the request
+	httpResp, err := c.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send HTTP request: %w", err)
+	}
+	defer httpResp.Body.Close()
+
+	// Read the response body
+	responseBody, err := io.ReadAll(httpResp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Check the response status code
+	if httpResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API returned unexpected status code: %d, body: %s", 
+			httpResp.StatusCode, string(responseBody))
+	}
+
+	// Unmarshal the response body
+	var anthropicResponse MessageResponse
+	if err := json.Unmarshal(responseBody, &anthropicResponse); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal response body: %w", err)
+	}
+
+	log.Printf("Anthropic API Response: %+v\n", anthropicResponse)
+
 	// Convert the response to interface{}
-	return interface{}(resp), nil
+	return interface{}(&anthropicResponse), nil
 }
 
 func (c *Client) String() string {

@@ -1,0 +1,83 @@
+# CDP Command Cheat Sheet
+# This file contains common CDP commands and aliases for reference
+
+# NAVIGATION
+goto https://example.com            # Navigate to URL
+reload                              # Reload current page
+back                                # Go back in history
+forward                             # Go forward in history
+Page.navigate {"url": "https://example.com"} # Full CDP navigation command
+
+# EVALUATION
+Runtime.evaluate {"expression": "document.title"} # Evaluate JavaScript
+Runtime.evaluate {"expression": "document.querySelector('#myElement').click()"}
+Runtime.callFunctionOn {"objectId": "obj123", "functionDeclaration": "function() { return this.value; }"}
+
+# PAGE INFO
+title                               # Get page title
+url                                 # Get current URL
+cookies                             # Get all cookies
+html                                # Get page HTML
+info                                # Get browser info
+Page.getResourceTree {}             # Get page resources
+
+# DOM INTERACTION
+click '#button'                     # Click element by selector
+focus '#input'                      # Focus element by selector
+type 'Hello World'                  # Type text at current focus
+DOM.getDocument {}                  # Get DOM document
+DOM.querySelector {"nodeId": 1, "selector": "#myElement"} # Find element
+DOM.getOuterHTML {"nodeId": 123}    # Get element HTML
+
+# SCREENSHOTS & PDF
+screenshot                          # Take a screenshot
+screenshot-full                     # Take a full-page screenshot
+pdf                                 # Generate PDF
+Page.captureScreenshot {"format": "png", "quality": 100} # Full screenshot command
+Page.printToPDF {"landscape": false, "printBackground": true} # PDF with options
+
+# DEVICE EMULATION
+mobile                              # Emulate mobile device
+desktop                             # Emulate desktop device
+clear-emulation                     # Clear emulation
+Emulation.setDeviceMetricsOverride {"width": 375, "height": 812, "deviceScaleFactor": 3, "mobile": true}
+
+# NETWORK
+offline                             # Go offline
+online                              # Go online
+slow-3g                             # Simulate slow 3G
+fast-3g                             # Simulate faster 3G
+Network.enable {}                   # Enable network events
+Network.setCacheDisabled {"cacheDisabled": true} # Disable cache
+Network.setUserAgentOverride {"userAgent": "Custom User Agent"} # Set user agent
+Network.getAllCookies {}            # Get all cookies
+Network.setCookie {"name": "session", "value": "123", "domain": "example.com"} # Set cookie
+
+# DEBUGGING
+pause                               # Pause execution
+resume                              # Resume execution
+step                                # Step into function call
+next                                # Step over function call
+out                                 # Step out of function
+Debugger.enable {}                  # Enable debugger
+Debugger.setBreakpoint {"location": {"scriptId": "123", "lineNumber": 42}} # Set breakpoint
+Debugger.setBreakpointByUrl {"url": "https://example.com/script.js", "lineNumber": 42} # URL breakpoint
+
+# COVERAGE ANALYSIS
+covjs_start                         # Start JS coverage
+covjs_take                          # Take JS coverage
+covjs_stop                          # Stop JS coverage
+covcss_start                        # Start CSS coverage
+covcss_take                         # Take CSS coverage
+covcss_stop                         # Stop CSS coverage
+
+# PERFORMANCE
+Performance.enable {}               # Enable performance metrics
+Performance.getMetrics {}           # Get performance metrics
+
+# BROWSER MANAGEMENT
+targets                             # List all targets
+Browser.getVersion {}               # Get browser version
+Browser.getWindowForTarget {"targetId": "123"} # Get window for target
+Target.createTarget {"url": "about:blank"} # Create new tab/target
+Target.closeTarget {"targetId": "123"} # Close a target

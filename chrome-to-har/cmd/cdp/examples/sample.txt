@@ -1,0 +1,51 @@
+# Sample CDP Script
+# This file demonstrates various CDP commands and aliases
+# that you can use with the cdp tool.
+
+# Navigate to a test page
+goto https://example.com
+
+# Wait for the page to load (1 second)
+Runtime.evaluate {"expression": "new Promise(resolve => setTimeout(resolve, 1000))"}
+
+# Get basic page information
+title
+url
+
+# Take a screenshot
+screenshot
+
+# Emulate a mobile device
+mobile
+
+# Take another screenshot in mobile mode
+screenshot
+
+# Test Debugger functionality
+# Set a breakpoint on a function
+Runtime.evaluate {"expression": "function testFunc() { console.log('test'); return 123; }"}
+Debugger.setBreakpointOnFunctionCall {"objectId": "globalThis", "functionName": "testFunc"}
+
+# Call the function to trigger the breakpoint
+Runtime.evaluate {"expression": "testFunc()", "awaitPromise": true}
+
+# Resume execution
+resume
+
+# Check the cookies
+cookies
+
+# Get browser info
+info
+
+# Get performance metrics
+Performance.getMetrics {}
+
+# Clear device emulation
+clear-emulation
+
+# Execute some complex JavaScript
+Runtime.evaluate {"expression": "Array.from(document.querySelectorAll('a')).map(a => ({href: a.href, text: a.textContent}))"}
+
+# Get the final HTML content
+html
