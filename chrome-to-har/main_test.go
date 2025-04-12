@@ -149,7 +149,7 @@ func TestListProfiles(t *testing.T) {
 func TestInteractiveScript(t *testing.T) {
 	// Skip this test if we're not in an environment with a browser
 	t.Skip("Skipping interactive mode test - requires a browser")
-	
+
 	// The test would be implemented as follows in a real environment:
 	// 1. Create a temporary directory
 	// 2. Create a script file with commands (document.title, exit, etc.)

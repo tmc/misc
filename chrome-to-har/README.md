@@ -1,6 +1,50 @@
+# Chrome Tools
+
+This repository contains Chrome-based tools for HTTP traffic capture, web page interaction, and more.
+
+## Tools Available
+
+- **chrome-to-har**: Capture network activity from Chrome to HAR format
+- **churl**: A curl-like tool that runs through Chrome to properly handle JavaScript/SPAs
+- **cdp**: Interactive CLI for direct Chrome DevTools Protocol interaction
+
+## Implementation Status
+
+- **chrome-to-har**: ✅ Functional
+- **churl**: ✅ Initial implementation complete
+- **cdp**: ✅ Fully functional
+- **Refactoring**: 🔄 Work in progress
+- **Advanced Features**: 🔄 Work in progress
+- **Documentation**: ✅ Complete
+
+See [implementation notes](docs/implementation.md) for details on what's done and what's next.
+
+## Installation
+
+```bash
+# Install chrome-to-har
+go install github.com/tmc/misc/chrome-to-har@latest
+
+# Install churl
+go install github.com/tmc/misc/chrome-to-har/cmd/churl@latest
+
+# Install cdp
+go install github.com/tmc/misc/chrome-to-har/cmd/cdp@latest
+```
+
+Alternatively, build from source:
+
+```bash
+git clone https://github.com/tmc/misc/chrome-to-har.git
+cd chrome-to-har
+go build -o chrome-to-har .
+go build -o churl ./cmd/churl
+go build -o cdp ./cmd/cdp
+```
+
 # chrome-to-har
 
-Launches a headed Chrome browser and captures network activity to HAR format, with optional interactive JavaScript CLI mode.
+Launches a Chrome browser and captures network activity to HAR format, with optional interactive JavaScript CLI mode.
 
 ## Troubleshooting
 
@@ -42,6 +86,72 @@ chrome-to-har -interactive -timeout=300 -headless
 - `-timeout`: Global timeout in seconds (default: 180)
 
 For HAR capture mode, press Ctrl+D to capture the HAR file.
+
+# churl
+
+A curl alternative that runs requests through Chrome, allowing it to properly handle JavaScript and Single Page Applications.
+
+## Usage
+
+```bash
+# Basic fetch, output to stdout
+churl https://example.com
+
+# Save output to file
+churl -o output.html https://example.com
+
+# Output as JSON with page info
+churl --output-format=json https://example.com
+
+# Wait for specific element to appear
+churl --wait-for "#content" https://example.com
+
+# Set custom headers
+churl -H "User-Agent: Chrome/90" -H "Cookie: session=123" https://example.com
+
+# Output HAR format
+churl --output-format=har https://example.com > output.har
+```
+
+See [churl documentation](docs/churl.md) for more details and examples.
+
+# cdp
+
+An interactive CLI tool for working directly with the Chrome DevTools Protocol.
+
+## Usage
+
+```bash
+# Start in interactive mode
+cdp
+
+# Connect to a specific URL
+cdp -url https://example.com
+
+# Run in headless mode
+cdp -headless
+
+# Connect to existing Chrome instance
+cdp -debug-port 9222
+
+# Run from a script file
+cdp -script commands.txt
+
+# Save output to file
+cdp -output results.txt
+```
+
+In interactive mode, you can use raw CDP commands or aliases:
+
+```
+cdp> Page.navigate {"url": "https://example.com"}
+cdp> Runtime.evaluate {"expression": "document.title"}
+cdp> goto https://google.com
+cdp> screenshot
+cdp> html
+```
+
+See [cdp documentation](docs/cdp.md) for comprehensive documentation.
 
 ## Interactive CLI Mode
 
