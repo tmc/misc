@@ -87,8 +87,7 @@ func main() {
 
 	geminiConfig := gemini.Config{
 		APIKey: geminiAPIKey,
-		ModelName:    "gemini-2.0-flash", // Example model, make configurable
-		ModelVersion: "v1beta",
+		Model:  "gemini-2.0-flash", // Example model, make configurable
 	}
 	geminiClient := gemini.NewClient(geminiConfig)
 
@@ -118,8 +117,11 @@ func main() {
 		defer in.Close()
 	}
 
+	// Parse pattern strings
+	patterns := parsePatterns(*pathsString)
+	
 	// Process the input (will automatically handle SSE or regular content)
-	if err := processInput(in, os.Stdout, nil); err != nil { // patterns not used in CLI mode yet
+	if err := processInput(in, os.Stdout, patterns); err != nil { 
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
@@ -220,6 +222,45 @@ g.w.Write([]byte("\033[0m"))
 return n, err
 }
 
+// parsePatterns parses a string of patterns into ExtractorPattern objects
+func parsePatterns(patternStr string) []proxy.ExtractorPattern {
+	patterns := []proxy.ExtractorPattern{}
+	
+	// Split by spaces to get individual patterns
+	patternStrings := strings.Fields(patternStr)
+	
+	for _, pattern := range patternStrings {
+		parts := strings.Split(pattern, " ")
+		if len(parts) < 1 {
+			continue
+		}
+		
+		// Get extract path and conditions
+		var extractPath string
+		conditions := []proxy.Condition{}
+		
+		for _, part := range parts {
+			// Check if this part contains an equals sign
+			if strings.Contains(part, "=") {
+				// This is a condition
+				condParts := strings.SplitN(part, "=", 2)
+				if len(condParts) == 2 {
+					conditions = append(conditions, proxy.NewCondition(condParts[0], condParts[1]))
+				}
+			} else {
+				// This is the extract path
+				extractPath = part
+			}
+		}
+		
+		if extractPath != "" {
+			patterns = append(patterns, proxy.NewExtractorPattern(extractPath, conditions...))
+		}
+	}
+	
+	return patterns
+}
+
 func processInput(r io.Reader, w io.Writer, patterns []proxy.ExtractorPattern) error { // Use proxy.ExtractorPattern
 // Buffer some initial content to check if it contains SSE events
 var buf bytes.Buffer
@@ -314,9 +355,9 @@ metadataInfo["usage"] = usage
 for _, pattern := range patterns {
 // Check if all conditions match
 allMatch := true
-for _, cond := range pattern.conditions {
-val, ok := getByPath(m, cond.path)
-if !ok || fmt.Sprintf("%v", val) != cond.value {
+for _, cond := range pattern.Conditions {
+val, ok := getByPath(m, cond.Path)
+if !ok || fmt.Sprintf("%v", val) != cond.Value {
 allMatch = false
 break
 }
@@ -324,7 +365,7 @@ break
 
 if allMatch {
 // Extract the text using the extraction path
-if text, ok := getByPath(m, pattern.extractPath); ok {
+if text, ok := getByPath(m, pattern.ExtractPath); ok {
 if textStr, ok := text.(string); ok {
 // Log the extracted text in verbose mode
 if *veryVerbose {

@@ -13,14 +13,14 @@ import (
 func runChromeDebug() error {
 	chromePath := "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 	fmt.Println("=== Chrome Debug Information ===")
-	
+
 	// Check if Chrome exists
 	if _, err := os.Stat(chromePath); err != nil {
 		fmt.Println("Chrome not found at path:", chromePath)
 		return err
 	}
 	fmt.Println("Chrome found at:", chromePath)
-	
+
 	// Try to launch Chrome with --version
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -31,7 +31,7 @@ func runChromeDebug() error {
 		return err
 	}
 	fmt.Printf("Chrome version: %s\n", output)
-	
+
 	// Check Chrome profile paths
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -67,7 +67,7 @@ func runChromeDebug() error {
 		grepOut, _ := grepCmd.StdoutPipe()
 		psCmd.Start()
 		grepCmd.Start()
-		
+
 		var grepBytes []byte
 		buffer := make([]byte, 1024)
 		for {
@@ -77,12 +77,12 @@ func runChromeDebug() error {
 			}
 			grepBytes = append(grepBytes, buffer[:n]...)
 		}
-		
+
 		psCmd.Wait()
 		grepCmd.Wait()
 		fmt.Println(string(grepBytes))
 	}
-	
+
 	// Try launching Chrome with remote debugging with a timeout
 	fmt.Println("\nChecking if Chrome can be launched with remote debugging (10s timeout)...")
 	tempDir, err := os.MkdirTemp("", "chrome-debug-")
@@ -91,10 +91,10 @@ func runChromeDebug() error {
 		return err
 	}
 	defer os.RemoveAll(tempDir)
-	
+
 	debugCtx, debugCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer debugCancel()
-	
+
 	// Try launching Chrome with remote debugging
 	debugCmd := exec.CommandContext(
 		debugCtx,
@@ -106,7 +106,7 @@ func runChromeDebug() error {
 		"--user-data-dir="+tempDir,
 		"about:blank",
 	)
-	
+
 	debugOutput, err := debugCmd.CombinedOutput()
 	if err != nil {
 		fmt.Println("Failed to launch Chrome with debugging:", err)
@@ -116,7 +116,7 @@ func runChromeDebug() error {
 		fmt.Println("Chrome launched successfully with remote debugging")
 		fmt.Println("Output:", string(debugOutput))
 	}
-	
+
 	// Try to list available Chrome DevTools endpoints
 	fmt.Println("\nTrying to connect to Chrome DevTools (if Chrome was launched)...")
 	curlCtx, curlCancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -129,6 +129,6 @@ func runChromeDebug() error {
 		fmt.Println("Chrome DevTools endpoints:")
 		fmt.Println(string(curlOutput))
 	}
-	
+
 	return nil
 }

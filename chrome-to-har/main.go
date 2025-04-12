@@ -41,14 +41,14 @@ type options struct {
 	filter          string
 	template        string
 	interactiveMode bool
-	debugPort       int       // Chrome debug port
-	timeout         int       // Global timeout in seconds
-	chromePath      string    // Path to Chrome executable
-	debugMode       bool      // Run Chrome debug diagnostics
-	waitStable      bool      // Wait until page is stable (network and DOM)
-	stableTimeout   int       // Max time in seconds to wait for stability
-	waitSelector    string    // Wait for specific CSS selector to appear
-	getHTML         bool      // Output HTML instead of HAR
+	debugPort       int    // Chrome debug port
+	timeout         int    // Global timeout in seconds
+	chromePath      string // Path to Chrome executable
+	debugMode       bool   // Run Chrome debug diagnostics
+	waitStable      bool   // Wait until page is stable (network and DOM)
+	stableTimeout   int    // Max time in seconds to wait for stability
+	waitSelector    string // Wait for specific CSS selector to appear
+	getHTML         bool   // Output HTML instead of HAR
 }
 
 type Runner struct {
@@ -148,11 +148,11 @@ func main() {
 	// Create a context with user-specified timeout
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(opts.timeout)*time.Second)
 	defer cancel()
-	
+
 	if opts.verbose {
 		log.Printf("Using global timeout of %d seconds", opts.timeout)
 	}
-	
+
 	pm, err := chromeprofiles.NewProfileManager(
 		chromeprofiles.WithVerbose(opts.verbose),
 	)
@@ -273,7 +273,7 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 		chromedp.Flag("password-store", "basic"),
 		chromedp.Flag("use-mock-keychain", true),
 	}
-	
+
 	// Add Chrome path if specified
 	if opts.chromePath != "" {
 		copts = append(copts, chromedp.ExecPath(opts.chromePath))
@@ -290,7 +290,7 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 			}
 		}
 	}
-	
+
 	// Add remote debugging port if specified
 	if opts.debugPort > 0 {
 		// Convert int to string to avoid type errors
@@ -304,7 +304,7 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 	if opts.headless {
 		copts = append(copts, chromedp.Headless)
 	}
-	
+
 	// Enable stderr/stdout capturing for Chrome for debugging
 	copts = append(copts, chromedp.CombinedOutput(os.Stdout))
 
@@ -312,7 +312,7 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 	if opts.verbose {
 		log.Printf("Launching Chrome with profile from: %s", r.pm.WorkDir())
 	}
-	
+
 	log.Printf("Creating new Chrome process...")
 	allocCtx, cancel := chromedp.NewExecAllocator(ctx, copts...)
 	defer cancel()
@@ -321,7 +321,7 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 	// Add browser debug logging if verbose
 	var taskCtx context.Context
 	var taskCancel context.CancelFunc
-	
+
 	if opts.verbose {
 		taskCtx, taskCancel = chromedp.NewContext(
 			allocCtx,
@@ -337,11 +337,11 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 	if opts.verbose {
 		log.Println("Testing Chrome connection with about:blank...")
 	}
-	
+
 	// Use a longer timeout for the connection test
 	testCtx, testCancel := context.WithTimeout(taskCtx, 180*time.Second)
 	defer testCancel()
-	
+
 	testErr := chromedp.Run(testCtx, chromedp.Navigate("about:blank"))
 	if testErr != nil {
 		if opts.verbose {
@@ -354,11 +354,11 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 		}
 		return errors.Wrap(testErr, "testing Chrome connection failed")
 	}
-	
+
 	if opts.verbose {
 		log.Printf("Successfully connected to Chrome browser")
 	}
-	
+
 	// Create recorder
 	rec, err := recorder.New(
 		recorder.WithVerbose(opts.verbose),
@@ -386,15 +386,15 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 		if opts.verbose {
 			log.Printf("Attempting to navigate to: %s", opts.startURL)
 		}
-		
+
 		// Add a timeout specifically for navigation
 		navCtx, navCancel := context.WithTimeout(taskCtx, 45*time.Second)
 		defer navCancel()
-		
+
 		if err := chromedp.Run(navCtx, chromedp.Navigate(opts.startURL)); err != nil {
 			return errors.Wrap(err, "navigating to URL")
 		}
-		
+
 		if opts.verbose {
 			log.Printf("Successfully navigated to: %s", opts.startURL)
 		}
