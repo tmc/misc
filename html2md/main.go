@@ -1,3 +1,7 @@
+// Embeds the documentation from doc.go
+//
+//go:generate cp doc.go docs.txt
+
 /*
 html2md converts HTML input to Markdown format.
 
@@ -7,10 +11,12 @@ library with the GitHub Flavored Markdown plugin enabled by default.
 
 Usage:
 
-	html2md [-input=<filename>]
+	html2md [-input=<filename>] [-sanitize]
 
 The -input flag specifies the input file. If omitted or set to "-", html2md
 reads from standard input.
+
+The -sanitize flag enables HTML sanitization via bluemonday before conversion to Markdown.
 
 html2md is designed to be simple and composable, following Unix philosophy. It
 can be easily integrated into pipelines or scripts for processing HTML content.
@@ -18,17 +24,26 @@ can be easily integrated into pipelines or scripts for processing HTML content.
 package main
 
 import (
+	_ "embed"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	"github.com/JohannesKaufmann/html-to-markdown/plugin"
+	"github.com/microcosm-cc/bluemonday"
 )
 
-var flagInput = flag.String("input", "-", "input file (default: stdin)")
+//go:embed doc.go
+var documentation string
+
+var (
+	flagInput    = flag.String("input", "-", "input file (default: stdin)")
+	flagSanitize = flag.Bool("sanitize", false, "sanitize HTML before conversion (using bluemonday)")
+)
 
 func main() {
 	flag.Parse()
@@ -36,12 +51,12 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	if err := run(*flagInput); err != nil {
+	if err := run(*flagInput, *flagSanitize); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run(input string) error {
+func run(input string, sanitize bool) error {
 	var r io.Reader
 	if input == "-" {
 		r = os.Stdin
@@ -54,7 +69,7 @@ func run(input string) error {
 		r = f
 	}
 
-	md, err := convert(r)
+	md, err := convert(r, sanitize)
 	if err != nil {
 		return err
 	}
@@ -62,10 +77,26 @@ func run(input string) error {
 	return nil
 }
 
-func convert(r io.Reader) (string, error) {
+func convert(r io.Reader, sanitize bool) (string, error) {
+	// Read the entire input
+	content, err := io.ReadAll(r)
+	if err != nil {
+		return "", err
+	}
+
+	// Sanitize if requested
+	if sanitize {
+		p := bluemonday.UGCPolicy()
+		content = []byte(p.SanitizeBytes(content))
+	}
+
+	// Create a new reader from the processed content
+	contentReader := strings.NewReader(string(content))
+
+	// Convert to markdown
 	conv := md.NewConverter("", true, nil)
 	conv.Use(plugin.GitHubFlavored())
-	markdown, err := conv.ConvertReader(r)
+	markdown, err := conv.ConvertReader(contentReader)
 	if err != nil {
 		return "", err
 	}
