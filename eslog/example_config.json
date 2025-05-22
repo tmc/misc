@@ -1,0 +1,76 @@
+{
+  "default_root_pid": 0,
+  "max_args_length": 120,
+  "default_format": "default",
+  "default_pid_filter": 0,
+  "default_name_filter": "",
+  "default_event_type": 0,
+  "default_tty_filter": "",
+  "command_extractors": [
+    {
+      "pattern": "source\\s+.*\\s+&&\\s+eval\\s+'([^']+)'",
+      "group": 1,
+      "display_name": "EVAL:"
+    },
+    {
+      "pattern": "which\\s+(\\S+)",
+      "group": 1,
+      "display_name": "WHICH:"
+    },
+    {
+      "pattern": "source\\s+([^\\s;]+)",
+      "group": 1,
+      "display_name": "SOURCE:"
+    },
+    {
+      "pattern": "go\\s+test\\s+(.+)",
+      "group": 1, 
+      "display_name": "GO TEST:"
+    },
+    {
+      "pattern": "SHELL:\\s+(.+)",
+      "group": 1,
+      "display_name": "SHELL:"
+    },
+    {
+      "pattern": "npm\\s+(run|start|test|build)\\s+(.+)",
+      "group": 2,
+      "display_name": "NPM:"
+    },
+    {
+      "pattern": "docker\\s+(run|exec)\\s+(.+)",
+      "group": 2,
+      "display_name": "DOCKER:"
+    }
+  ],
+  "tui": {
+    "color_scheme": "default",
+    "default_expand_level": 2,
+    "show_tooltips": true,
+    "file_operation_icons": true,
+    "auto_expand_filtered_tree": true,
+    "custom_colors": {
+      "active": "#16A085",
+      "completed": "#888888",
+      "error": "#E74C3C",
+      "selected": "#2C3E50",
+      "header": "#FFFFFF",
+      "tooltip": "#F39C12"
+    }
+  },
+  "opentelemetry": {
+    "default_service_name": "my-application",
+    "default_exporter": "otlp",
+    "default_endpoint": "localhost:4317",
+    "skip_stats_events": true,
+    "skip_lookup_events": true,
+    "batch_size": 100,
+    "create_root_span": true,
+    "default_root_span_name": "application-trace",
+    "respect_existing_context": true,
+    "use_metrics": true,
+    "aggregate_io": true,
+    "metrics_temporality": "delta",
+    "metrics_export_interval": "5s"
+  }
+}

@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package examples;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/any.proto";
+
+option go_package = "github.com/tmc/misc/protoc-gen-jsonschema/testdata";
+
+// This is the example message title 
+//
+// This is a multi-line description for the example message.
+// It should appear in the JSON Schema description.
+message ExampleMessage {
+  // Name field description
+  string name = 1;
+  
+  // Timestamp field description
+  google.protobuf.Timestamp timestamp = 2;
+  
+  // Id field description
+  int32 id = 3;
+  
+  // Rating field description
+  double rating = 4;
+  
+  // Required field
+  bool is_active = 5;
+  
+  // Wrapped value demonstration
+  google.protobuf.StringValue description = 6;
+  
+  // Repeated string field
+  repeated string tags = 7;
+  
+  // Nested message field
+  AddressInfo address = 8;
+  
+  // Map field with string keys and string values
+  map<string, string> metadata = 9;
+  
+  // Any field example
+  google.protobuf.Any details = 10;
+  
+  // Dynamic JSON field
+  google.protobuf.Struct attributes = 11;
+  
+  // Int64 that should be represented as string
+  int64 big_number = 12;
+  
+  // Bytes field
+  bytes binary_data = 13;
+  
+  // Oneof field example
+  oneof contact_method {
+    string email = 14;
+    string phone = 15;
+    string mail = 16;
+  }
+  
+  // Enum for status
+  StatusEnum status = 17;
+  
+  // Repeated enum values
+  repeated StatusEnum history = 18;
+}
+
+// Nested message definition
+message AddressInfo {
+  string street = 1;
+  string city = 2;
+  string state = 3;
+  string zip = 4;
+  
+  // Nested enum example
+  AddressType type = 5;
+  
+  enum AddressType {
+    ADDRESS_TYPE_UNSPECIFIED = 0;
+    ADDRESS_TYPE_HOME = 1;
+    ADDRESS_TYPE_WORK = 2;
+    ADDRESS_TYPE_OTHER = 3;
+  }
+}
+
+// Top-level enum definition
+enum StatusEnum {
+  STATUS_ENUM_UNSPECIFIED = 0;
+  STATUS_ENUM_PENDING = 1;
+  STATUS_ENUM_ACTIVE = 2;
+  STATUS_ENUM_INACTIVE = 3;
+  STATUS_ENUM_DELETED = 4;
+}
+
+// Self-reference example
+message SelfReference {
+  string name = 1;
+  SelfReference parent = 2;
+}
+
+// Message with array of messages
+message ArrayOfMessages {
+  repeated ExampleMessage messages = 1;
+}
+
+// Map example with complex values
+message MapsWithMessageValues {
+  map<string, AddressInfo> addresses = 1;
+}
+
+// Example with optional fields (proto3)
+message OptionalFields {
+  optional string opt_string = 1;
+  optional int32 opt_int = 2;
+  optional bool opt_bool = 3;
+  optional ExampleMessage opt_message = 4;
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AddressInfo": {
+      "description": "Nested message definition",
+      "properties": {
+        "city": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "street": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "ADDRESS_TYPE_HOME",
+            "ADDRESS_TYPE_WORK",
+            "ADDRESS_TYPE_OTHER"
+          ],
+          "type": "string"
+        },
+        "zip": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "street",
+        "city",
+        "state",
+        "zip",
+        "type"
+      ],
+      "title": "AddressInfo",
+      "type": "object"
+    },
+    "SelfReference": {
+      "description": "Self-reference example",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "parent": {
+          "$ref": "#/definitions/SelfReference"
+        }
+      },
+      "required": [
+        "name",
+        "parent"
+      ],
+      "title": "SelfReference",
+      "type": "object"
+    }
+  },
+  "description": "Self-reference example",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "parent": {
+      "$ref": "#/definitions/SelfReference"
+    }
+  },
+  "required": [
+    "name",
+    "parent"
+  ],
+  "title": "SelfReference",
+  "type": "object"
+}
