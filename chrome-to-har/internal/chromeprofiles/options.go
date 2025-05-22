@@ -9,3 +9,10 @@ func WithVerbose(verbose bool) Option {
 		pm.verbose = verbose
 	}
 }
+
+// WithProfileDir sets the base profile directory
+func WithProfileDir(dir string) Option {
+	return func(pm *profileManager) {
+		pm.baseDir = dir
+	}
+}

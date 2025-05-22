@@ -1,20 +1,22 @@
 # Chrome Tools
 
-This repository contains Chrome-based tools for HTTP traffic capture, web page interaction, and more.
+This repository contains Chrome-based tools for HTTP traffic capture, web page interaction, and browser automation.
 
 ## Tools Available
 
 - **chrome-to-har**: Capture network activity from Chrome to HAR format
 - **churl**: A curl-like tool that runs through Chrome to properly handle JavaScript/SPAs
+- **chrome-shell**: Interactive browser shell with Unix socket control and Puppeteer-like API
 - **cdp**: Interactive CLI for direct Chrome DevTools Protocol interaction
 
 ## Implementation Status
 
 - **chrome-to-har**: ✅ Functional
 - **churl**: ✅ Initial implementation complete
+- **chrome-shell**: ✅ Real-time browser control with Unix socket
 - **cdp**: ✅ Fully functional
-- **Refactoring**: 🔄 Work in progress
-- **Advanced Features**: 🔄 Work in progress
+- **Refactoring**: ✅ Complete
+- **Advanced Features**: ✅ Complete
 - **Documentation**: ✅ Complete
 
 See [implementation notes](docs/implementation.md) for details on what's done and what's next.
@@ -27,6 +29,9 @@ go install github.com/tmc/misc/chrome-to-har@latest
 
 # Install churl
 go install github.com/tmc/misc/chrome-to-har/cmd/churl@latest
+
+# Install chrome-shell
+go install github.com/tmc/misc/chrome-to-har/cmd/chrome-shell@latest
 
 # Install cdp
 go install github.com/tmc/misc/chrome-to-har/cmd/cdp@latest
@@ -86,6 +91,49 @@ chrome-to-har -interactive -timeout=300 -headless
 - `-timeout`: Global timeout in seconds (default: 180)
 
 For HAR capture mode, press Ctrl+D to capture the HAR file.
+
+# chrome-shell
+
+Interactive browser shell with real-time control via REPL and Unix socket, featuring a Puppeteer-like API.
+
+## Usage
+
+```bash
+# Start interactive shell
+chrome-shell
+
+# Start with Unix socket server
+chrome-shell --socket=/tmp/browser.sock
+
+# Non-headless mode
+chrome-shell --headless=false
+
+# Execute script file
+chrome-shell --script=commands.txt
+```
+
+### Interactive Commands
+
+```
+browser> goto https://example.com
+browser> screenshot page.png
+browser> click button
+browser> type #search "hello world"
+browser> eval document.title
+browser> help
+```
+
+### Unix Socket Control
+
+```go
+// Connect from Go
+client, _ := client.New("/tmp/browser.sock")
+client.Navigate("https://example.com")
+title, _ := client.GetTitle()
+client.Screenshot("page.png")
+```
+
+See [browser shell documentation](docs/browser-shell.md) for complete details.
 
 # churl
 
