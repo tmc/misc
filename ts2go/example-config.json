@@ -1,0 +1,130 @@
+{
+  "typeMappings": {
+    "string": "string",
+    "number": "float64",
+    "boolean": "bool",
+    "any": "interface{}",
+    "void": "struct{}",
+    "null": "nil",
+    "undefined": "nil",
+    "object": "map[string]interface{}",
+    "RequestId": "RequestID",
+    "Content": "Content"
+  },
+  "usePointersForOptionalFields": true,
+  "initialisms": [
+    "ID", "URL", "URI", "JSON", "XML", "HTTP", "HTML", "API",
+    "SQL", "RPC", "TCP", "UDP", "IP", "DNS", "EOF", "UUID", "MIME"
+  ],
+  "customImports": [
+    "encoding/json",
+    "fmt"
+  ],
+  "specialTypes": [
+    {
+      "typeName": "RequestId",
+      "goTypeName": "RequestID",
+      "isInterface": false,
+      "fields": [
+        {
+          "name": "value",
+          "type": "interface{}",
+          "optional": false
+        }
+      ],
+      "methods": [
+        {
+          "name": "StringID",
+          "signature": "func StringID(s string) RequestID",
+          "body": "return RequestID{value: s}"
+        },
+        {
+          "name": "Int64ID",
+          "signature": "func Int64ID(i int64) RequestID",
+          "body": "return RequestID{value: i}"
+        },
+        {
+          "name": "Float64ID",
+          "signature": "func Float64ID(f float64) RequestID",
+          "body": "return RequestID{value: f}"
+        },
+        {
+          "name": "IsValid",
+          "signature": "func (id RequestID) IsValid() bool",
+          "body": "return id.value != nil"
+        },
+        {
+          "name": "String",
+          "signature": "func (id RequestID) String() string",
+          "body": "if !id.IsValid() {\n\t\treturn \"<invalid>\"\n\t}\n\treturn fmt.Sprintf(\"%v\", id.value)"
+        },
+        {
+          "name": "MarshalJSON",
+          "signature": "func (id RequestID) MarshalJSON() ([]byte, error)",
+          "body": "if !id.IsValid() {\n\t\treturn []byte(\"null\"), nil\n\t}\n\treturn json.Marshal(id.value)"
+        }
+      ],
+      "imports": ["encoding/json", "fmt"]
+    },
+    {
+      "typeName": "JSONRPCMessage",
+      "goTypeName": "JSONRPCMessage",
+      "isInterface": true,
+      "methods": [
+        {
+          "name": "isJSONRPCMessage",
+          "signature": "isJSONRPCMessage()"
+        }
+      ],
+      "customCode": "// JSONRPCMessage represents any valid JSON-RPC object that can be decoded off the wire,\n// or encoded to be sent.\ntype JSONRPCMessage interface {\n\tisJSONRPCMessage()\n}"
+    },
+    {
+      "typeName": "Content",
+      "goTypeName": "Content",
+      "isInterface": true,
+      "methods": [
+        {
+          "name": "contentType",
+          "signature": "contentType() string"
+        }
+      ],
+      "customCode": "// Content is an interface for different content types.\ntype Content interface {\n\tcontentType() string\n}"
+    },
+    {
+      "typeName": "TextContent",
+      "goTypeName": "TextContent",
+      "isInterface": false,
+      "fields": [
+        {
+          "name": "Type",
+          "type": "string",
+          "jsonName": "type"
+        },
+        {
+          "name": "Text",
+          "type": "string",
+          "jsonName": "text",
+          "description": "The text content of the message"
+        },
+        {
+          "name": "Annotations",
+          "type": "Annotations",
+          "jsonName": "annotations",
+          "optional": true,
+          "description": "Optional annotations for the client"
+        }
+      ],
+      "methods": [
+        {
+          "name": "contentType",
+          "signature": "func (TextContent) contentType() string",
+          "body": "return \"text\""
+        }
+      ]
+    }
+  ],
+  "transformers": {
+    "enableDefault": true,
+    "enableMCP": true
+  }
+} 

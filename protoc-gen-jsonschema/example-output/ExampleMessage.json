@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ExampleMessage",
+  "description": "This is the example message title \n\nThis is a multi-line description for the example message.\nIt should appear in the JSON Schema description.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "description": "Name field description",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "Timestamp field description",
+      "type": "string",
+      "format": "date-time"
+    },
+    "id": {
+      "description": "Id field description",
+      "type": "integer",
+      "format": "int32"
+    },
+    "rating": {
+      "description": "Rating field description",
+      "type": "number",
+      "format": "double"
+    },
+    "isActive": {
+      "description": "Required field",
+      "type": "boolean"
+    },
+    "description": {
+      "description": "Wrapped value demonstration",
+      "type": "string"
+    },
+    "tags": {
+      "description": "Repeated string field",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "address": {
+      "description": "Nested message field",
+      "$ref": "#/definitions/AddressInfo"
+    },
+    "metadata": {
+      "description": "Map field with string keys and string values",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "details": {
+      "description": "Any field example",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "attributes": {
+      "description": "Dynamic JSON field",
+      "type": "object",
+      "additionalProperties": true
+    },
+    "bigNumber": {
+      "description": "Int64 that should be represented as string",
+      "type": "string",
+      "pattern": "^-?[0-9]+$"
+    },
+    "binaryData": {
+      "description": "Bytes field",
+      "type": "string",
+      "contentEncoding": "base64"
+    },
+    "email": {
+      "description": "Oneof field example",
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "mail": {
+      "type": "string"
+    },
+    "status": {
+      "description": "Enum for status",
+      "type": "string",
+      "enum": [
+        "STATUS_ENUM_PENDING",
+        "STATUS_ENUM_ACTIVE",
+        "STATUS_ENUM_INACTIVE",
+        "STATUS_ENUM_DELETED"
+      ]
+    },
+    "history": {
+      "description": "Repeated enum values",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "STATUS_ENUM_PENDING",
+          "STATUS_ENUM_ACTIVE",
+          "STATUS_ENUM_INACTIVE",
+          "STATUS_ENUM_DELETED"
+        ]
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "required": ["email"]
+    },
+    {
+      "required": ["phone"]
+    },
+    {
+      "required": ["mail"]
+    }
+  ],
+  "definitions": {
+    "AddressInfo": {
+      "type": "object",
+      "properties": {
+        "street": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "zip": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "ADDRESS_TYPE_HOME",
+            "ADDRESS_TYPE_WORK",
+            "ADDRESS_TYPE_OTHER"
+          ]
+        }
+      }
+    }
+  }
+}

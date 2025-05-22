@@ -1,0 +1,187 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "AddressInfo": {
+      "description": "Nested message definition",
+      "properties": {
+        "city": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "street": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "ADDRESS_TYPE_HOME",
+            "ADDRESS_TYPE_WORK",
+            "ADDRESS_TYPE_OTHER"
+          ],
+          "type": "string"
+        },
+        "zip": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "street",
+        "city",
+        "state",
+        "zip",
+        "type"
+      ],
+      "title": "AddressInfo",
+      "type": "object"
+    },
+    "ExampleMessage": {
+      "description": "This is a multi-line description for the example message.\n It should appear in the JSON Schema description.",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/AddressInfo"
+        },
+        "attributes": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "bigNumber": {
+          "pattern": "^-?[0-9]+$",
+          "type": "string"
+        },
+        "binaryData": {
+          "contentEncoding": "base64",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "email": {
+          "type": "string"
+        },
+        "history": {
+          "description": "Repeated enum values",
+          "items": {
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "id": {
+          "format": "int32",
+          "type": "integer"
+        },
+        "isActive": {
+          "type": "boolean"
+        },
+        "mail": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Map field with string keys and string values",
+          "type": "object"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "rating": {
+          "format": "double",
+          "type": "number"
+        },
+        "status": {
+          "description": "Top-level enum definition",
+          "enum": [
+            "STATUS_ENUM_PENDING",
+            "STATUS_ENUM_ACTIVE",
+            "STATUS_ENUM_INACTIVE",
+            "STATUS_ENUM_DELETED"
+          ],
+          "type": "string"
+        },
+        "tags": {
+          "description": "Repeated string field",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "timestamp",
+        "id",
+        "rating",
+        "isActive",
+        "description",
+        "address",
+        "details",
+        "attributes",
+        "bigNumber",
+        "binaryData",
+        "email",
+        "phone",
+        "mail",
+        "status"
+      ],
+      "title": "This is the example message title",
+      "type": "object"
+    },
+    "SelfReference": {
+      "description": "Self-reference example",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "parent": {
+          "$ref": "#/definitions/SelfReference"
+        }
+      },
+      "required": [
+        "name",
+        "parent"
+      ],
+      "title": "SelfReference",
+      "type": "object"
+    }
+  },
+  "description": "Simple message for testing",
+  "properties": {
+    "active": {
+      "type": "boolean"
+    },
+    "id": {
+      "format": "int32",
+      "type": "integer"
+    },
+    "name": {
+      "type": "string"
+    },
+    "tags": {
+      "description": "A list of strings",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "name",
+    "id",
+    "active"
+  ],
+  "title": "SimpleMessage",
+  "type": "object"
+}

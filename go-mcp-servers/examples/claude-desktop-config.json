@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "/usr/local/bin/filesystem-mcp-server",
+      "args": [],
+      "env": {}
+    },
+    "git": {
+      "command": "/usr/local/bin/git-mcp-server",
+      "args": [],
+      "env": {}
+    },
+    "http": {
+      "command": "/usr/local/bin/http-mcp-server",
+      "args": [],
+      "env": {}
+    },
+    "system": {
+      "command": "/usr/local/bin/system-mcp-server",
+      "args": [],
+      "env": {}
+    },
+    "time": {
+      "command": "/usr/local/bin/time-mcp-server",
+      "args": [],
+      "env": {}
+    },
+    "database": {
+      "command": "/usr/local/bin/database-mcp-server",
+      "args": [],
+      "env": {}
+    }
+  }
+}

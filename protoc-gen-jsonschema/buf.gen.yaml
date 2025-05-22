@@ -1,0 +1,10 @@
+version: v1
+plugins:
+  - plugin: buf.build/protocolbuffers/go
+    out: testout/generated
+    opt:
+      - paths=source_relative
+  - name: jsonschema
+    path: ./protoc-gen-jsonschema
+    out: testout/jsonschema
+    opt: debug,allow_null_values

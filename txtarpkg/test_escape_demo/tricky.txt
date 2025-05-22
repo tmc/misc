@@ -1,0 +1,5 @@
+Normal line
+-- fake-file.txt --
+This looks like a file marker but it's not
+\escaped content
+Another normal line

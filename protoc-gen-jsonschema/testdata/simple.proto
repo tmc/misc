@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package simple;
+
+option go_package = "github.com/tmc/misc/protoc-gen-jsonschema/testdata/simple";
+
+// Simple message for testing
+message SimpleMessage {
+  // A basic string field
+  string name = 1;
+  
+  // A number field
+  int32 id = 2;
+  
+  // A boolean flag
+  bool active = 3;
+  
+  // A list of strings
+  repeated string tags = 4;
+}
+
+// Enum for testing
+enum SimpleEnum {
+  SIMPLE_ENUM_UNSPECIFIED = 0;
+  SIMPLE_ENUM_ONE = 1;
+  SIMPLE_ENUM_TWO = 2;
+  SIMPLE_ENUM_THREE = 3;
+}

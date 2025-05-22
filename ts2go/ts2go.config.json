@@ -1,0 +1,22 @@
+{
+  "TypeMappings": {
+    "string": "string",
+    "number": "float64",
+    "boolean": "bool",
+    "any": "interface{}",
+    "void": "struct{}",
+    "null": "nil",
+    "undefined": "nil",
+    "object": "map[string]interface{}",
+    "RequestId": "json.RawMessage",
+    "Content": "Content"
+  },
+  "UsePointersForOptionalFields": true,
+  "Initialisms": [
+    "ID", "URL", "URI", "JSON", "XML", "HTTP", "HTML", "API",
+    "SQL", "RPC", "TCP", "UDP", "IP", "DNS", "EOF", "UUID"
+  ],
+  "CustomImports": [
+    "encoding/json"
+  ]
+} 

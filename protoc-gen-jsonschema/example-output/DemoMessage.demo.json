@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "This is a demonstration message",
+  "properties": {
+    "age": {
+      "description": "The age field",
+      "format": "int32",
+      "type": "integer"
+    },
+    "name": {
+      "description": "The name field",
+      "type": "string"
+    },
+    "tags": {
+      "description": "A list of tags",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "title": "DemoMessage",
+  "type": "object"
+}
