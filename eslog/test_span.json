@@ -1,0 +1,32 @@
+{
+  "resource": {
+    "attributes": {
+      "service.name": "test-service"
+    }
+  },
+  "scopeSpans": [
+    {
+      "scope": {
+        "name": "test-scope"
+      },
+      "spans": [
+        {
+          "traceId": "5b8aa5a2d2c872e8321cf37308d69df2",
+          "spanId": "5fb397be34d25d33",
+          "name": "test-span",
+          "kind": 1,
+          "startTimeUnixNano": "1619095213000000000",
+          "endTimeUnixNano": "1619095213100000000",
+          "attributes": [
+            {
+              "key": "test.key",
+              "value": {
+                "stringValue": "test-value"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

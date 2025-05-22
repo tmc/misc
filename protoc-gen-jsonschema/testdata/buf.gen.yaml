@@ -1,0 +1,9 @@
+version: v1
+plugins:
+  - name: go
+    out: gen/go
+    opt: paths=source_relative
+  - name: jsonschema
+    path: ../protoc-gen-jsonschema
+    out: gen/jsonschema
+    opt: debug,allow_null_values
