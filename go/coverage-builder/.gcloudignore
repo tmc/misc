@@ -1,0 +1,33 @@
+# Ignore everything by default
+*
+
+# Include specific files needed for deployment
+!main.go
+!go.mod
+!go.sum
+!templates/
+!templates/**
+!Dockerfile
+
+# Exclude common unnecessary files
+**/.git
+**/.gitignore
+**/node_modules
+**/*.swp
+**/*.tmp
+**/*~
+.DS_Store
+*.log
+
+# Exclude build artifacts
+coverage-builder
+bin/
+dist/
+
+# Exclude development files
+Makefile
+README.md
+*.md
+docker-compose.yml
+.env
+.env.*
