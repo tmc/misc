@@ -1,0 +1,13 @@
+# Log files
+/tmp/lsp-logs/
+
+# Vim files
+*.swp
+*.swo
+.netrwhist
+
+# Downloaded plugin files
+vim-plugins/**/.git
+
+# Temporary files
+cleanup/
