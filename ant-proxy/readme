@@ -1,0 +1,3 @@
+ant-proxy allows you to talk/accept anthropic api calls but then send them to other providers (google, openai, ollama).
+
+it builds on google's proxying and allows live comparison (mirroring) as well as transformation.
