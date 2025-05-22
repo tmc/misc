@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ctx-src-server
+  labels:
+    app: ctx-src-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ctx-src-server
+  template:
+    metadata:
+      labels:
+        app: ctx-src-server
+    spec:
+      containers:
+      - name: ctx-src-server
+        image: gcr.io/your-project/ctx-src-server:latest
+        ports:
+        - containerPort: 8080
+        securityContext:
+          privileged: true  # Required for fuse filesystem
+          capabilities:
+            add:
+            - SYS_ADMIN
+        args:
+        - "--addr=:8080"
+        - "--gcs-bucket=your-bucket-name"
+        - "--verbose"
+        env:
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: /secrets/gcs-sa/key.json
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        volumeMounts:
+        - name: gcs-sa
+          mountPath: /secrets/gcs-sa
+          readOnly: true
+        - name: fuse
+          mountPath: /dev/fuse
+        - name: cache-volume
+          mountPath: /mnt/ctx-src-cache
+          mountPropagation: Bidirectional
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 30
+      volumes:
+      - name: gcs-sa
+        secret:
+          secretName: gcs-service-account
+      - name: fuse
+        hostPath:
+          path: /dev/fuse
+      - name: cache-volume
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ctx-src-server
+spec:
+  selector:
+    app: ctx-src-server
+  ports:
+  - port: 80
+    targetPort: 8080
+  type: ClusterIP

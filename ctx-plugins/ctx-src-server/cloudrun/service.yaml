@@ -1,0 +1,47 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: ctx-src-server
+spec:
+  template:
+    metadata:
+      annotations:
+        # Use CPU always allocated for better performance
+        autoscaling.knative.dev/minScale: "1"
+        autoscaling.knative.dev/maxScale: "5"
+        # Maximum concurrency
+        autoscaling.knative.dev/target: "80"
+        # Enable FUSE and filesystem capabilities
+        run.googleapis.com/execution-environment: "gen2"
+        run.googleapis.com/cpu-throttling: "false"
+        run.googleapis.com/sandbox: "gvisor"
+        # FUSE filesystem support
+        run.googleapis.com/launch-stage: "BETA"
+        run.googleapis.com/local-mount-path: "/mnt/ctx-src-cache"
+        run.googleapis.com/mount-host-path: "/tmp"
+    spec:
+      containerConcurrency: 80
+      timeoutSeconds: 600
+      serviceAccountName: ctx-src-server@PROJECT_ID.iam.gserviceaccount.com
+      containers:
+      - image: gcr.io/PROJECT_ID/ctx-src-server:latest
+        args:
+        - "--addr=:8080"
+        - "--cache-dir=/tmp/ctx-src-cache"
+        - "--verbose"
+        - "--max-concurrent=3"
+        - "--clone-timeout=5m"
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 2.0
+            memory: 4Gi
+        securityContext:
+          privileged: false
+          capabilities:
+            add:
+            - "SYS_ADMIN"
+        env:
+        - name: PORT
+          value: "8080"

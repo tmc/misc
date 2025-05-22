@@ -1,0 +1,18 @@
+[Unit]
+Description=ctx-src-server
+After=network.target
+
+[Service]
+User=ctx-src
+Group=ctx-src
+WorkingDirectory=/opt/ctx-src-server
+ExecStart=/opt/ctx-src-server/ctx-src-server --addr=:8080 --cache-dir=/var/cache/ctx-src --verbose
+Restart=on-failure
+RestartSec=5
+# For using gcsfuse, additional capabilities are needed
+#CapabilityBoundingSet=CAP_SYS_ADMIN
+#AmbientCapabilities=CAP_SYS_ADMIN
+#Environment=GOOGLE_APPLICATION_CREDENTIALS=/opt/ctx-src-server/credentials.json
+
+[Install]
+WantedBy=multi-user.target
