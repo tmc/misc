@@ -1,0 +1,8 @@
+version: v1
+name: github.com/tmc/misc/protoc-gen-anything/examples/jsonschema
+lint:
+  use:
+    - DEFAULT
+breaking:
+  use:
+    - FILE

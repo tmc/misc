@@ -1,0 +1,166 @@
+// GENERATION_BEHAVIOR: overwrite
+/**
+ * TypeScript client for {{.Service.GoName}} service
+ * Generated using protoc-gen-anything
+ */
+
+// Types for request and response messages
+{{- range .File.Messages }}
+export interface {{ .GoIdent.GoName }} {
+  {{- range .Fields }}
+  {{ lowerCamelCase .GoName }}{{ if .Desc.HasOptionalKeyword }}?{{ end }}: {{ tsType . }};
+  {{- end }}
+}
+{{- end }}
+
+/**
+ * {{.Service.GoName}} API client
+ */
+export class {{ .Service.GoName }}Client {
+  private baseUrl: string;
+  private headers: Record<string, string>;
+
+  /**
+   * Creates a new API client
+   * @param baseUrl - The base URL of the API (e.g., "https://api.example.com")
+   * @param apiKey - Optional API key for authentication
+   */
+  constructor(baseUrl: string, apiKey?: string) {
+    this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    this.headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    
+    if (apiKey) {
+      this.headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+  }
+
+  /**
+   * Sets a custom header for all requests
+   */
+  setHeader(name: string, value: string): void {
+    this.headers[name] = value;
+  }
+
+  /**
+   * Makes an HTTP request to the API
+   */
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: any
+  ): Promise<T> {
+    const url = `${this.baseUrl}${path}`;
+    const response = await fetch(url, {
+      method,
+      headers: this.headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API request failed: ${response.status} - ${errorText}`);
+    }
+
+    // Handle empty responses
+    if (response.status === 204 || response.headers.get('Content-Length') === '0') {
+      return {} as T;
+    }
+
+    const contentType = response.headers.get('Content-Type');
+    if (contentType && contentType.includes('application/json')) {
+      return await response.json() as T;
+    } else {
+      // For non-JSON responses
+      const text = await response.text();
+      return text as unknown as T;
+    }
+  }
+
+{{- range .Service.Methods }}
+{{- $httpRule := methodExtension . "google.api.http" }}
+  /**
+   * {{.GoName}} - {{ if .Comments.Leading }}{{ .Comments.Leading }}{{ else }}Calls the {{.GoName}} endpoint{{ end }}
+   */
+  {{- if $httpRule }}
+  {{- range $pattern, $path := $httpRule }}
+  {{- if and (ne $pattern "additional_bindings") (ne $pattern "body") (ne $pattern "response_body") }}
+  async {{ lowerCamelCase .GoName }}(
+    {{- if eq $pattern "get" }}
+    {{- /* For GET, extract path parameters from URL template */ -}}
+    {{- $params := extractPathParams $path }}
+    {{- range $params }}
+    {{ . }}: string,
+    {{- end }}
+    {{- else }}
+    {{- /* For non-GET methods with a request body */ -}}
+    request: {{ .Input.GoIdent.GoName }},
+    {{- end }}
+  ): Promise<{{ .Output.GoIdent.GoName }}> {
+    {{- if eq $pattern "get" }}
+    {{- /* For GET requests, build the URL with path parameters */ -}}
+    {{- $url := $path }}
+    {{- range $params := extractPathParams $path }}
+    {{- $url = replace (printf "{%s}" $params) (printf "${%s}" $params) $url }}
+    {{- end }}
+    return this.request<{{ .Output.GoIdent.GoName }}>("{{ upperCase $pattern }}", `{{ $url }}`, undefined);
+    {{- else }}
+    {{- /* For other methods with request body */ -}}
+    return this.request<{{ .Output.GoIdent.GoName }}>("{{ upperCase $pattern }}", "{{ $path }}", request);
+    {{- end }}
+  }
+  {{- end }}
+  {{- end }}
+  {{- else }}
+  // No HTTP rule defined for this method, using fallback RPC style
+  async {{ lowerCamelCase .GoName }}(
+    request: {{ .Input.GoIdent.GoName }}
+  ): Promise<{{ .Output.GoIdent.GoName }}> {
+    return this.request<{{ .Output.GoIdent.GoName }}>("POST", "/{{ .Service.Desc.FullName }}/{{ .GoName }}", request);
+  }
+  {{- end }}
+{{- end }}
+}
+
+{{- /* Helper function to extract path parameters */ -}}
+{{- define "extractPathParams" -}}
+{{- $path := . -}}
+{{- $params := list -}}
+{{- $segments := splitArray "/" $path -}}
+{{- range $segments -}}
+  {{- if hasPrefix "{" . -}}
+    {{- $param := trimPrefix "{" . -}}
+    {{- $param = trimSuffix "}" $param -}}
+    {{- $params = append $params $param -}}
+  {{- end -}}
+{{- end -}}
+{{- return $params -}}
+{{- end -}}
+
+{{- /* Helper function to convert protobuf types to TypeScript types */ -}}
+{{- define "tsType" -}}
+{{- $field := . -}}
+{{- if $field.Desc.IsList -}}
+  {{- if $field.Message -}}
+    {{ $field.Message.GoIdent.GoName }}[]
+  {{- else if eq $field.Desc.Kind 10 -}}
+    boolean[]
+  {{- else if or (eq $field.Desc.Kind 1) (eq $field.Desc.Kind 2) (eq $field.Desc.Kind 3) (eq $field.Desc.Kind 4) (eq $field.Desc.Kind 5) (eq $field.Desc.Kind 6) (eq $field.Desc.Kind 7) (eq $field.Desc.Kind 8) -}}
+    number[]
+  {{- else -}}
+    string[]
+  {{- end -}}
+{{- else if $field.Desc.IsMap -}}
+  Record<string, {{ if $field.Message.Fields }}{{ tsType $field.Message.Fields }}{{ else }}any{{ end }}>
+{{- else if $field.Message -}}
+  {{ $field.Message.GoIdent.GoName }}
+{{- else if eq $field.Desc.Kind 10 -}}
+  boolean
+{{- else if or (eq $field.Desc.Kind 1) (eq $field.Desc.Kind 2) (eq $field.Desc.Kind 3) (eq $field.Desc.Kind 4) (eq $field.Desc.Kind 5) (eq $field.Desc.Kind 6) (eq $field.Desc.Kind 7) (eq $field.Desc.Kind 8) -}}
+  number
+{{- else -}}
+  string
+{{- end -}}
+{{- end -}}

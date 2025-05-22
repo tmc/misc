@@ -1,0 +1,6 @@
+version: v1
+name: buf.build/tmc/sql-example
+deps:
+  - buf.build/googleapis/googleapis
+build:
+  excludes: []

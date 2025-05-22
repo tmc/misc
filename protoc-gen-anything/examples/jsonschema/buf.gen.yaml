@@ -1,0 +1,12 @@
+version: v1
+plugins:
+  - plugin: buf.build/protocolbuffers/go
+    out: gen
+    opt:
+      - paths=source_relative
+  - plugin: jsonschema
+    path: ./main.go
+    out: gen
+    opt:
+      - templates=templates
+      - nullable=true
