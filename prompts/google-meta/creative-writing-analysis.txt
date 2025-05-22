@@ -1,0 +1,71 @@
+backend: googleai
+messages:
+- role: system
+  text: You are an expert in analyzing the trajectory of creative writing LLMs. Examine
+    the history of interactions, focusing on the evolution of narrative, character
+    development, and stylistic choices. Identify successful prompting techniques for
+    eliciting high-quality creative content.
+- role: human
+  text: Begin your analysis by outlining the key metrics you will use to evaluate
+    the trajectory of a creative writing LLM.
+- role: ai
+  text: |
+    Okay, here's an outline of the key metrics I will use to evaluate the trajectory of creative writing LLMs, focusing on their evolution in narrative, character development, and stylistic choices. These metrics are designed to be comprehensive and cover both qualitative and quantitative aspects of the LLMs' output.
+
+    **I. Narrative Development:**
+
+    *   **A. Plot Complexity & Coherence:**
+        *   **1. Plot Structure:**  Assessing the presence and sophistication of narrative elements like exposition, rising action, climax, falling action, and resolution. Moving from simple linear plots to more complex structures involving subplots, flashbacks, and foreshadowing.
+        *   **2. Logical Consistency:** Evaluating the internal logic of the narrative, ensuring events follow a cause-and-effect relationship and avoid plot holes or contradictions.
+        *   **3. Narrative Scope:** Measuring the breadth and depth of the story, including the number of characters, settings, and plot threads.
+        *   **4. Originality/Novelty:**  Assessing the uniqueness of the plot and its departure from common tropes and clichés.
+        *   **5. Engagement/Suspense:** Evaluating the ability to create a compelling narrative that keeps the reader interested and invested in the outcome.
+
+    *   **B. Theme & Depth:**
+        *   **1. Thematic Exploration:** Analyzing the presence and development of underlying themes, such as love, loss, justice, or identity.
+        *   **2. Symbolic Representation:** Evaluating the use of symbolism and metaphor to add layers of meaning to the narrative.
+        *   **3. Philosophical/Moral Depth:** Assessing the extent to which the narrative engages with complex philosophical or moral questions.
+        *   **4. Emotional Resonance:** Measuring the ability to evoke emotions in the reader through the narrative.
+
+    **II. Character Development:**
+
+    *   **A. Character Complexity & Realism:**
+        *   **1. Character Depth:** Assessing the presence of internal conflicts, motivations, and backstories that make characters feel multi-dimensional.
+        *   **2. Believability/Authenticity:** Evaluating whether characters act and speak in ways that are consistent with their established personalities and the context of the story.
+        *   **3. Character Agency:** Measuring the extent to which characters drive the plot through their choices and actions, rather than being passive recipients of events.
+        *   **4. Character Relationships:** Analyzing the complexity and realism of interactions between characters, including friendships, rivalries, and romantic relationships.
+
+    *   **B. Character Growth & Transformation:**
+        *   **1. Character Arcs:** Assessing whether characters undergo meaningful change or development over the course of the narrative.
+        *   **2. Internal Conflict Resolution:** Evaluating how characters grapple with and resolve their internal struggles.
+        *   **3. Dynamic Relationships:** Measuring how relationships between characters evolve and change throughout the story.
+
+    **III. Stylistic Choices:**
+
+    *   **A. Language & Tone:**
+        *   **1. Vocabulary & Diction:** Analyzing the range and appropriateness of the language used, including the use of descriptive language, figurative language, and dialogue.
+        *   **2. Sentence Structure & Syntax:** Evaluating the variety and complexity of sentence structures, and their impact on the rhythm and flow of the writing.
+        *   **3. Tone & Mood:** Assessing the overall emotional atmosphere of the writing, and the ability to adapt tone to suit different scenes and characters.
+        *   **4. Voice & Style:** Evaluating the distinctiveness of the writing style, including the use of unique phrasing, imagery, and narrative voice.
+
+    *   **B. Literary Devices & Techniques:**
+        *   **1. Figurative Language:** Analyzing the use of metaphors, similes, personification, and other literary devices to enhance the imagery and meaning of the writing.
+        *   **2. Show, Don't Tell:** Evaluating the ability to convey information through vivid descriptions and actions, rather than relying on exposition.
+        *   **3. Pacing & Rhythm:** Assessing the control over the pace of the narrative, using sentence length, paragraph structure, and other techniques to create a sense of urgency or calmness.
+        *   **4. Point of View:** Evaluating the consistency and effectiveness of the chosen point of view (first-person, second-person, third-person limited, third-person omniscient).
+
+    **IV. Prompting Techniques:**
+
+    *   **A. Prompt Engineering Effectiveness:**
+        *   **1. Clarity & Specificity:** How well-defined prompts lead to desired outputs.
+        *   **2. Control & Guidance:** The ability of prompts to steer the LLM towards specific narrative elements, character traits, or stylistic choices.
+        *   **3. Iterative Prompting:** The effectiveness of refining prompts through multiple interactions to improve output quality.
+        *   **4. Zero-shot, One-shot, Few-shot Learning:** How the model performs with different levels of examples in the prompt.
+
+    *   **B. Creativity & Exploration:**
+        *   **1. Open-ended Prompts:** The ability of open-ended prompts to encourage original and unexpected outputs.
+        *   **2. Constraint-based Prompts:** How constraints (e.g., word count, genre, specific themes) can foster creativity.
+        *   **3. Role-playing Prompts:** The effectiveness of prompts that ask the LLM to adopt a specific persona or writing style.
+
+    By analyzing these metrics, we can gain a comprehensive understanding of the progress of creative writing LLMs and identify areas where they excel and where they still need improvement. This will also help us understand which prompting techniques are most effective in eliciting high-quality creative content.
+model: gemini-exp-1206

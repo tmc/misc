@@ -1,0 +1,42 @@
+" Absolutely minimal Vim configuration for LSP
+" This focuses on simplicity and reliability
+
+" Load the required plugins
+set rtp+=./vim-plugins/vim-lsp
+set rtp+=./vim-plugins/asyncomplete.vim
+set rtp+=./vim-plugins/asyncomplete-lsp.vim
+
+" Basic settings
+set nocompatible
+filetype plugin indent on
+syntax on
+
+" Essential completion settings
+set completeopt=menuone,noinsert
+let g:asyncomplete_auto_popup = 1
+let g:lsp_text_edit_enabled = 0
+
+" Register the minimal LSP server
+if executable('./server/minimal-lsp-server.sh')
+  au User lsp_setup call lsp#register_server({
+        \ 'name': 'minimal-lsp',
+        \ 'cmd': {server_info->['./server/minimal-lsp-server.sh']},
+        \ 'whitelist': ['text'],
+        \ })
+  
+  " Set text filetype for txt files
+  autocmd BufRead,BufNewFile *.txt setfiletype text
+endif
+
+" Set up omnifunc
+autocmd FileType text setlocal omnifunc=lsp#complete
+
+" Simple key mapping for completion
+inoremap <C-Space> <C-x><C-o>
+inoremap <C-@> <C-Space>  " Terminal compatibility
+
+" Show status on key press
+nnoremap <Leader>l :echo "LSP Status: " . lsp#get_server_status('minimal-lsp')<CR>
+
+" Startup message
+autocmd VimEnter * echomsg "Minimal LSP configuration loaded. Press Ctrl+Space for completions."

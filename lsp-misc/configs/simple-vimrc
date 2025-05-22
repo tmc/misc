@@ -1,0 +1,68 @@
+" Simple Vim configuration for bash-lsp-server demo with vim-plug
+
+" Create autoload directory and download vim-plug if needed
+if empty(glob('./autoload/plug.vim'))
+  silent !mkdir -p ./autoload
+  silent !curl -fLo ./autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+endif
+
+" Setup vim-plug to use local directories
+set rtp+=./autoload
+let g:plug_home = './vim-plugins'
+call plug#begin(g:plug_home)
+
+" LSP plugins
+Plug 'prabirshrestha/vim-lsp'
+Plug 'prabirshrestha/asyncomplete.vim'
+Plug 'prabirshrestha/asyncomplete-lsp.vim'
+
+call plug#end()
+
+" Basic settings
+set nocompatible
+filetype plugin indent on
+syntax on
+
+" Ensure completion menu shows
+set completeopt=menu,preview,noinsert
+let g:asyncomplete_auto_popup = 1
+let g:asyncomplete_popup_delay = 200
+
+" Set up the bash LSP server
+if executable('./bash-lsp-server.sh')
+  au User lsp_setup call lsp#register_server({
+        \ 'name': 'bash-lsp-server',
+        \ 'cmd': {server_info->['./bash-lsp-server.sh']},
+        \ 'whitelist': ['text']
+        \ })
+  
+  " Force text files to use LSP
+  autocmd BufRead,BufNewFile *.txt setfiletype text
+endif
+
+" Enable LSP for text files
+autocmd FileType text setlocal omnifunc=lsp#complete
+
+" Key mappings for LSP
+function! s:on_lsp_buffer_enabled() abort
+  setlocal omnifunc=lsp#complete
+  nmap <buffer> gd <plug>(lsp-definition)
+  nmap <buffer> K <plug>(lsp-hover)
+  
+  " Make completion more accessible with Tab key
+  inoremap <expr> <Tab> pumvisible() ? "\<C-n>" : "\<Tab>"
+  inoremap <expr> <S-Tab> pumvisible() ? "\<C-p>" : "\<S-Tab>"
+endfunction
+
+augroup lsp_install
+  au!
+  autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+augroup END
+
+" Enable popup and status display
+let g:lsp_diagnostics_enabled = 1
+let g:lsp_diagnostics_echo_cursor = 1
+
+" Show LSP status on startup
+autocmd VimEnter * echomsg "Vim started with LSP configuration. Open a .txt file and use Ctrl-X Ctrl-O for completions"

@@ -1,0 +1,30 @@
+{
+  "name": "demo-lsp-client",
+  "displayName": "Demo LSP Client",
+  "description": "Demo LSP client for bash-lsp-server",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:plaintext"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "plaintext",
+        "extensions": [
+          ".txt"
+        ]
+      }
+    ]
+  },
+  "scripts": {},
+  "dependencies": {
+    "vscode-languageclient": "^7.0.0"
+  }
+}
