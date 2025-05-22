@@ -1,0 +1,66 @@
+ls
+hisotry
+history
+cd
+ls
+ls -alh
+history
+cd
+ls -alh
+env |grep HIST
+HISTFILE=.bash_history
+ls
+history
+cd
+ls
+ls -alh
+cd
+pwd
+ls -alh
+ls -alh
+ash
+bash
+history
+ls
+ls -alh
+cd
+ls -alh
+env |grep HIS
+env
+ls -alh
+cd
+ls -alh
+ls
+env |grep HIST
+ls -alh
+history
+history
+ls -alh
+cd
+mount
+cat /etc/bash.bashrc 
+env
+HISTFILE=.bash_history
+ls -alh
+history
+ls -alh
+env
+history
+tail .bash_history_claude_code 
+ls
+echo foo
+tail .bash_history_claude_code 
+ls -alh
+cat >xx
+history
+cd
+ls -alh
+cat .bash_history_claude_code 
+env |grep HIST
+bash
+cd
+ls -alh
+ls bash/
+env
+history
+npx
