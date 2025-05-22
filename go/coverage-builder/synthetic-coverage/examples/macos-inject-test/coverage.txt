@@ -1,0 +1,20 @@
+mode: set
+main/generated.go:1.1,100.1 50 1
+main/generated.go:101.1,200.1 45 1
+main/mocks/database.go:1.1,150.1 75 1
+main/mocks/redis.go:1.1,100.1 50 0
+github.com/vendor/lib/utils.go:1.1,300.1 150 1
+main/synthetic/processor.go:1.1,250.1 125 1
+macoscovtest/main.go:14.47,16.2 1 1
+macoscovtest/main.go:19.48,21.2 1 1
+macoscovtest/main.go:24.53,26.2 1 1
+macoscovtest/main.go:29.53,31.2 1 0
+macoscovtest/main.go:34.60,35.12 1 0
+macoscovtest/main.go:35.12,37.3 1 0
+macoscovtest/main.go:38.2,38.19 1 0
+macoscovtest/main.go:42.57,45.2 2 1
+macoscovtest/main.go:48.46,50.2 1 0
+macoscovtest/main.go:53.40,54.20 1 1
+macoscovtest/main.go:54.20,56.3 1 1
+macoscovtest/main.go:57.2,57.33 1 1
+macoscovtest/main.go:60.13,64.2 3 0
