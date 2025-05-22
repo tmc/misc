@@ -1,0 +1,63 @@
+aistudio 2025/04/24 02:30:35 main.go:104: --- Application Start ---
+aistudio 2025/04/24 02:30:35 main.go:105: CLI Flags: model="models/gemini-2.0-flash-live-001" audio=true voice="Puck" player="" api-key-set=false list-models=false
+aistudio 2025/04/24 02:30:35 main.go:202: Using API Key from GEMINI_API_KEY environment variable.
+aistudio 2025/04/24 02:30:35 ui.go:112: Detected 'afplay'. Will use temp files for playback.
+aistudio 2025/04/24 02:30:35 aistudio.go:150: Initializing AfplayPlayer during startup
+aistudio 2025/04/24 02:30:35 aistudio.go:157: AfplayPlayer initialized: true
+aistudio 2025/04/24 02:30:35 aistudio.go:195: Using model: models/gemini-2.0-flash-live-001
+aistudio 2025/04/24 02:30:35 aistudio.go:196: Bidirectional streaming enabled: true
+aistudio 2025/04/24 02:30:35 aistudio.go:197: Audio output enabled: true
+aistudio 2025/04/24 02:30:35 aistudio.go:202: Audio voice: Puck
+aistudio 2025/04/24 02:30:35 aistudio.go:203: Audio player command: "afplay"
+aistudio 2025/04/24 02:30:35 aistudio.go:204: Audio playback mode: 1
+aistudio 2025/04/24 02:30:35 aistudio.go:206: Show logo: true
+aistudio 2025/04/24 02:30:35 aistudio.go:207: Show log messages: false (max 10)
+aistudio 2025/04/24 02:30:35 aistudio.go:208: Show audio status: true
+aistudio 2025/04/24 02:30:35 aistudio.go:209: History enabled: true
+aistudio 2025/04/24 02:30:35 aistudio.go:210: Tool calling enabled: true
+aistudio 2025/04/24 02:30:35 aistudio.go:215: Available tools: 0
+aistudio 2025/04/24 02:30:35 aistudio.go:216: Tools info: Press Ctrl+T to list all available tools
+aistudio 2025/04/24 02:30:35 main.go:303: Starting Bubble Tea program...
+aistudio 2025/04/24 02:30:35 aistudio.go:235: Init called - starting the application
+aistudio 2025/04/24 02:30:35 aistudio.go:271: Using model: models/gemini-2.0-flash-live-001
+aistudio 2025/04/24 02:30:35 aistudio.go:272: Bidirectional streaming enabled: true
+aistudio 2025/04/24 02:30:35 aistudio.go:273: Audio output enabled: true
+aistudio 2025/04/24 02:30:35 aistudio.go:278: Audio voice: Puck
+aistudio 2025/04/24 02:30:35 aistudio.go:279: Audio player command: "afplay"
+aistudio 2025/04/24 02:30:35 aistudio.go:280: Audio playback mode: 1
+aistudio 2025/04/24 02:30:35 aistudio.go:282: Show logo: true
+aistudio 2025/04/24 02:30:35 aistudio.go:283: Show log messages: false (max 10)
+aistudio 2025/04/24 02:30:35 aistudio.go:284: Show audio status: true
+aistudio 2025/04/24 02:30:35 aistudio.go:285: History enabled: true
+aistudio 2025/04/24 02:30:35 aistudio.go:286: Tool calling enabled: true
+aistudio 2025/04/24 02:30:35 aistudio.go:291: Available tools: 0
+aistudio 2025/04/24 02:30:35 aistudio.go:292: Tool approval required: false
+aistudio 2025/04/24 02:30:35 aistudio.go:293: Tools info: Press Ctrl+T to list all available tools
+aistudio 2025/04/24 02:30:35 audio_player.go:38: Starting audio processor goroutine
+aistudio 2025/04/24 02:30:35 audio_player.go:51: Starting FIFO audio processor with lookahead buffering
+aistudio 2025/04/24 02:30:35 stream.go:83: initStreamCmd: Starting connection attempt
+aistudio 2025/04/24 02:30:35 client.go:120: Using provided API Key.
+aistudio 2025/04/24 02:30:35 client.go:143: Initializing GenerativeClient with options: [option.withAPIKey]
+aistudio 2025/04/24 02:30:35 client.go:150: GenerativeClient initialized successfully.
+aistudio 2025/04/24 02:30:35 stream.go:161: Attempting to establish bidirectional stream
+aistudio 2025/04/24 02:30:35 client.go:203: Starting BidiGenerateContent for model: models/gemini-2.0-flash-live-001
+aistudio 2025/04/24 02:30:37 client.go:210: Bidirectional stream established
+aistudio 2025/04/24 02:30:37 client.go:226: Using system prompt: 
+aistudio 2025/04/24 02:30:37 client.go:237: Using API tools: []
+aistudio 2025/04/24 02:30:37 client.go:317: Setup message sent to bidirectional stream successfully.
+aistudio 2025/04/24 02:30:37 stream.go:173: Bidirectional stream established successfully
+aistudio 2025/04/24 02:30:37 aistudio.go:1003: Bidirectional stream connection successful, retry counter reset.
+aistudio 2025/04/24 02:30:37 stream.go:239: rpc error: code = Canceled desc = context canceled
+aistudio 2025/04/24 02:30:37 stream.go:247: receiveBidiStreamCmd: Received stream closed signal.
+aistudio 2025/04/24 02:30:37 aistudio.go:1517: Stream closed cleanly or unexpectedly.
+aistudio 2025/04/24 02:30:46 aistudio.go:873: Sending message: does the program in in this dir allow streaming?
+aistudio 2025/04/24 02:30:46 stream.go:301: Sending new message to models/gemini-2.0-flash-live-001 via StreamGenerateContent: does the program in in this dir allow streaming?
+aistudio 2025/04/24 02:30:46 stream.go:338: genclient:
+aistudio 2025/04/24 02:30:46 stream.go:339: &{0x14000114360 0x140003e40e0}
+aistudio 2025/04/24 02:30:46 history.go:215: Saved 3 messages to session session_1745487035
+aistudio 2025/04/24 02:30:46 stream.go:223: receiveBidiStreamCmd: Bidi stream is nil
+aistudio 2025/04/24 02:30:46 aistudio.go:1781: Chat history saved successfully
+aistudio 2025/04/24 02:30:46 aistudio.go:1517: Stream closed cleanly or unexpectedly.
+aistudio 2025/04/24 02:30:49 aistudio.go:727: Ctrl+C pressed, entering Quitting state.
+aistudio 2025/04/24 02:30:49 aistudio.go:1993: Quitting state detected, returning tea.Quit
+aistudio 2025/04/24 02:30:49 main.go:330: --- Application End ---
