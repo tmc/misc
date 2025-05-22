@@ -13,13 +13,13 @@ import (
 
 // Capabilities represents a tool's capabilities, flags, and relevance scoring.
 type Capabilities struct {
-	Name        string              `json:"name"`
-	Description string              `json:"description"`
-	Version     string              `json:"version"`
-	Author      string              `json:"author"`
-	Flags       []Flag              `json:"flags"`
-	EnvVars     []EnvironmentVar    `json:"environment_variables"`
-	Relevance   RelevanceScores     `json:"relevance"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Version     string           `json:"version"`
+	Author      string           `json:"author"`
+	Flags       []Flag           `json:"flags"`
+	EnvVars     []EnvironmentVar `json:"environment_variables"`
+	Relevance   RelevanceScores  `json:"relevance"`
 }
 
 // Flag represents a command-line flag for a tool.
@@ -99,7 +99,7 @@ func formatJSON(tool, cmd, stdout, stderr string, err error) string {
 	if err != nil {
 		output.Error = err.Error()
 	}
-	
+
 	jsonBytes, jsonErr := json.MarshalIndent(output, "", "  ")
 	if jsonErr != nil {
 		// Fall back to a simpler format if JSON marshaling fails
@@ -114,22 +114,22 @@ func formatXML(opts Options, tool, cmd, stdout, stderr string, err error) string
 	if tagName == "" {
 		tagName = tool
 	}
-	
+
 	var result string
 	result += fmt.Sprintf("<%s cmd=%q>\n", tagName, cmd)
-	
+
 	if stdout != "" {
 		result += fmt.Sprintf("  <stdout>%s</stdout>\n", escapeIfNeeded(stdout, opts.Escape))
 	}
-	
+
 	if stderr != "" {
 		result += fmt.Sprintf("  <stderr>%s</stderr>\n", escapeIfNeeded(stderr, opts.Escape))
 	}
-	
+
 	if err != nil {
 		result += fmt.Sprintf("  <e>%s</e>\n", escapeIfNeeded(err.Error(), opts.Escape))
 	}
-	
+
 	result += fmt.Sprintf("</%s>\n", tagName)
 	return result
 }
@@ -159,7 +159,7 @@ func PrintOutput(opts Options, tool, cmd, stdout, stderr string, err error) {
 // ReadOptionsFromEnv reads options from environment variables.
 func ReadOptionsFromEnv(toolName string) Options {
 	opts := Options{}
-	
+
 	// Check common environment variables
 	if os.Getenv("CTX_TOOL_ESCAPE") == "true" {
 		opts.Escape = true
@@ -173,7 +173,7 @@ func ReadOptionsFromEnv(toolName string) Options {
 	if os.Getenv("CTX_TOOL_DEBUG") == "true" {
 		opts.Debug = true
 	}
-	
+
 	// Check tool-specific environment variables
 	prefix := fmt.Sprintf("CTX_%s_", toolName)
 	if os.Getenv(prefix+"ESCAPE") == "true" {
@@ -182,13 +182,13 @@ func ReadOptionsFromEnv(toolName string) Options {
 	if os.Getenv(prefix+"JSON") == "true" {
 		opts.JSON = true
 	}
-	if tag := os.Getenv(prefix+"TAG"); tag != "" {
+	if tag := os.Getenv(prefix + "TAG"); tag != "" {
 		opts.Tag = tag
 	}
 	if os.Getenv(prefix+"DEBUG") == "true" {
 		opts.Debug = true
 	}
-	
+
 	return opts
 }
 

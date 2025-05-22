@@ -1,0 +1,271 @@
+Use txtar to write files.
+Use martian if appropriate.
+keep it simple and clear.
+
+use har file to write the file.
+
+start with a simple example and begin just replaying the response on the anthropic request (save money).
+# .extra_instructions
+
+## Project: ant-proxy
+
+### Overview
+
+You are working on 'ant-proxy', a service that acts as a proxy for Anthropic API calls, routing them to different providers like Google, OpenAI, and Ollama. The current implementation includes a basic health check and a proxy handler that currently only routes requests to Ollama.
+
+### Current Status
+
+-   The project is initialized with:
+    -   A `main.go` file that sets up the HTTP server using the `chi` router. It includes:
+        -   Middleware for request ID, logging, and recovery.
+        -   A `/health` endpoint for health checks.
+        -   A `/` endpoint (proxyHandler) that receives Anthropic requests.
+    -   Data structures (`AnthropicRequest`, `Message`, `AnthropicResponse`) for handling Anthropic API requests and responses in `anthropic.go`.
+    -   Functions for calling the Ollama API (`callOllama`) and corresponding data structures (`OllamaRequest`, `OllamaResponse`) in `ollama.go`.
+-   The `proxyHandler` currently decodes the Anthropic request, calls the `callOllama` function, and returns the Ollama response.
+-   Error handling is present for decoding requests, calling Ollama, and encoding responses.
+
+### Next Development Tasks
+
+1.  **Provider Abstraction:**
+    -   Create an interface for different providers (Ollama, Google, OpenAI). This will allow for easy addition of new providers and switching between them.  Name the interface `Provider`.
+    -   Implement the `Provider` interface for Ollama.
+    -   Modify the `proxyHandler` to use the `Provider` interface.
+
+2.  **Configuration:**
+    -   Introduce a configuration file (e.g., `config.yaml` or environment variables) to manage:
+        -   Provider selection (which provider to use based on the Anthropic model name or other criteria).
+        -   API keys for different providers (if required).
+        -   Ollama endpoint URL.
+        -   Default settings (e.g., default model, temperature).
+    -   Implement a function to load the configuration from the file or environment variables.
+
+3.  **Google Provider Implementation:**
+    -   Implement the `Provider` interface for Google's Vertex AI PaLM API.
+    -   Handle authentication with Google Cloud.
+    -   Map Anthropic request parameters to Google's API parameters.
+    -   Handle Google's API response and map it to the `AnthropicResponse` format.
+
+4.  **OpenAI Provider Implementation:**
+    -   Implement the `Provider` interface for OpenAI's API.
+    -   Handle authentication with OpenAI.
+    -   Map Anthropic request parameters to OpenAI's API parameters.
+    -   Handle OpenAI's API response and map it to the `AnthropicResponse` format.
+
+5.  **Request Mapping and Parameter Translation:**
+    -   Implement robust mapping between Anthropic's request parameters and the parameters of each provider's API.
+    -   Consider differences in parameter names, data types, and supported features.
+    -   Implement logic to handle parameters that are not directly supported by a provider (e.g., by using default values or raising an error).
+
+6.  **Error Handling and Logging:**
+    -   Implement comprehensive error handling for all API calls and data transformations.
+    -   Log errors and warnings with sufficient detail to aid in debugging.
+    -   Return appropriate HTTP error codes to the client.
+
+7.  **Rate Limiting:**
+    -   Implement rate limiting to prevent abuse and protect the underlying providers.
+    -   Consider using a token bucket or leaky bucket algorithm.
+    -   Allow configuration of rate limits per provider and/or per client.
+
+8.  **Authentication and Authorization:**
+    -   Implement authentication to verify the identity of the client.
+    -   Implement authorization to control which clients can access which providers.
+    -   Consider using API keys, JWTs, or other authentication mechanisms.
+
+9.  **Testing:**
+    -   Write unit tests for all core functions, including request mapping, API calls, and error handling.
+    -   Write integration tests to verify the end-to-end functionality of the proxy.
+
+### API Details
+
+*   **Anthropic API:** The proxy should accept requests in the Anthropic API format.  Refer to the `AnthropicRequest` and `AnthropicResponse` structs for the data format.  The key fields are `model`, `messages`, `max_tokens`, and `temperature`.
+*   **Ollama API:**
+    *   Endpoint: `http://localhost:11434/api/generate`
+    *   Method: `POST`
+    *   Request Body (JSON):
+        ```json
+        {
+          "prompt": "The user prompt",
+          "model": "The Ollama model name"
+        }
+        ```
+    *   Response Body (JSON):
+        ```json
+        {
+          "response": "The generated text"
+        }
+        ```
+*   **Google Vertex AI PaLM API:** (To be implemented) Refer to the Google Cloud documentation for the specific API details, authentication methods, and request/response formats.  The relevant API is likely the `TextGeneration` or `Chat` API.
+*   **OpenAI API:** (To be implemented) Refer to the OpenAI API documentation for the specific API details, authentication methods, and request/response formats.  The relevant API is likely the `ChatCompletion` API.
+
+### Design Considerations
+
+*   **Modularity:** Design the code to be modular and easy to extend. Use interfaces and abstract classes to decouple components.
+*   **Configuration:** Use a configuration file or environment variables to manage settings.  Avoid hardcoding values.
+*   **Error Handling:** Implement robust error handling to prevent the proxy from crashing.  Log errors and return appropriate HTTP error codes to the client.
+*   **Performance:** Optimize the code for performance.  Use caching to reduce latency.
+*   **Scalability:** Design the proxy to be scalable.  Consider using a load balancer and multiple instances of the proxy.
+*   **Observability:** Implement monitoring and logging to track the performance of the proxy.
+
+### Task Breakdown for the immediate next steps (Provider Abstraction):
+
+1.  **Define the `Provider` interface:** Create a new file named `provider.go`.  Define the `Provider` interface with a single method `Generate` that takes an `AnthropicRequest` and returns an `AnthropicResponse` and an error.
+
+2.  **Implement `Provider` for Ollama:** Modify the `ollama.go` file to implement the `Provider` interface.  Create a new struct `OllamaProvider` that encapsulates the Ollama-specific logic.  The `Generate` method of `OllamaProvider` should call the existing `callOllama` function and adapt the response.
+
+3.  **Modify `proxyHandler`:**  In `main.go`, modify the `proxyHandler` to use the `Provider` interface.  Create a `map[string]Provider` to store the available providers.  The `proxyHandler` should select the appropriate provider based on the `AnthropicRequest.Model` field (or a default provider if the model is not specified).
+
+4.  **Refactor `callOllama`:**  The `callOllama` function should be refactored to be a method on the `OllamaProvider` struct.  This will allow the `OllamaProvider` to manage its own configuration (e.g., the Ollama endpoint URL).
+
+### Example Code Snippets (Illustrative - Adapt as needed)
+
+**provider.go:**
+
+```go
+package main
+
+type Provider interface {
+	Generate(request AnthropicRequest) (AnthropicResponse, error)
+}
+```
+
+**ollama.go (Partial - Illustrative):**
+
+```go
+package main
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"net/http"
+)
+
+type OllamaProvider struct {
+	Endpoint string // e.g., "http://localhost:11434/api/generate"
+}
+
+func (op *OllamaProvider) Generate(request AnthropicRequest) (AnthropicResponse, error) {
+	ollamaModel := "llama2" // Default model
+	if request.Model \!= "" {
+		ollamaModel = request.Model
+	}
+
+	ollamaReq := OllamaRequest{
+		Prompt: request.Messages[0].Content, // Assuming single message
+		Model:  ollamaModel,
+	}
+	reqBody, err := json.Marshal(ollamaReq)
+	if err \!= nil {
+		return AnthropicResponse{}, fmt.Errorf("error marshaling Ollama request: %w", err)
+	}
+
+	resp, err := http.Post(op.Endpoint, "application/json", bytes.NewBuffer(reqBody))
+	if err \!= nil {
+		return AnthropicResponse{}, fmt.Errorf("error calling Ollama API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode \!= http.StatusOK {
+		return AnthropicResponse{}, fmt.Errorf("Ollama API returned error: %s", resp.Status)
+	}
+
+	var ollamaResp OllamaResponse
+	err = json.NewDecoder(resp.Body).Decode(&ollamaResp)
+	if err \!= nil {
+		return AnthropicResponse{}, fmt.Errorf("error decoding Ollama response: %w", err)
+	}
+
+	anthropicResponse := AnthropicResponse{
+		Completion: ollamaResp.Response,
+	}
+
+	return anthropicResponse, nil
+}
+```
+
+**main.go (Partial - Illustrative):**
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"log"
+	"os"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+)
+
+var providers map[string]Provider
+
+func main() {
+	// Initialize router
+	r := chi.NewRouter()
+
+	// Middlewares
+	r.Use(middleware.RequestID)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	// Health check endpoint
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	})
+
+	// Initialize providers
+	providers = map[string]Provider{
+		"ollama": &OllamaProvider{Endpoint: "http://localhost:11434/api/generate"}, // Configure endpoint
+	}
+
+	// Define the main proxy endpoint (to be implemented later)
+	r.Post("/", proxyHandler)
+
+	// Start server
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // Default port if not specified
+	}
+	log.Printf("Server listening on port %s", port)
+	log.Fatal(http.ListenAndServe(":"+port, r))
+}
+
+func proxyHandler(w http.ResponseWriter, r *http.Request) {
+	var anthropicReq AnthropicRequest
+	err := json.NewDecoder(r.Body).Decode(&anthropicReq)
+	if err \!= nil {
+		http.Error(w, "Error decoding request body", http.StatusBadRequest)
+		return
+	}
+
+	providerName := "ollama" // Default provider
+	if anthropicReq.Model \!= "" {
+		// Logic to select provider based on model name (to be expanded)
+		// For now, just use ollama
+	}
+
+	provider, ok := providers[providerName]
+	if \!ok {
+		http.Error(w, fmt.Sprintf("Provider not found: %s", providerName), http.StatusBadRequest)
+		return
+	}
+
+	anthropicResp, err := provider.Generate(anthropicReq)
+	if err \!= nil {
+		http.Error(w, fmt.Sprintf("Error calling provider: %s", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+
+	err = json.NewEncoder(w).Encode(anthropicResp)
+	if err \!= nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		return
+	}
+}
