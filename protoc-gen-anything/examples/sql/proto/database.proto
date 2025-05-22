@@ -1,0 +1,241 @@
+syntax = "proto3";
+
+package sql.example;
+
+import "sql_options.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/tmc/misc/examples/sql/proto/database";
+
+// User table
+message User {
+  option (sql.options.table_name) = "users";
+  option (sql.options.comment) = "Stores user account information";
+  option (sql.options.engine) = "InnoDB";
+  option (sql.options.charset) = "utf8mb4";
+  option (sql.options.collation) = "utf8mb4_unicode_ci";
+  
+  // Unique user identifier
+  string id = 1 [
+    (sql.options.primary_key) = true,
+    (sql.options.column_type) = "VARCHAR(36)",
+    (sql.options.constraints) = "NOT NULL"
+  ];
+  
+  // User's email address
+  string email = 2 [
+    (sql.options.column_type) = "VARCHAR(255)",
+    (sql.options.constraints) = "NOT NULL UNIQUE",
+    (sql.options.index) = "email_idx"
+  ];
+  
+  // User's display name
+  string name = 3 [
+    (sql.options.column_type) = "VARCHAR(100)",
+    (sql.options.constraints) = "NOT NULL"
+  ];
+  
+  // Hashed password
+  string password_hash = 4 [
+    (sql.options.column_type) = "VARCHAR(255)",
+    (sql.options.constraints) = "NOT NULL"
+  ];
+  
+  // Account creation timestamp
+  google.protobuf.Timestamp created_at = 5 [
+    (sql.options.column_type) = "TIMESTAMP",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.default_value) = "CURRENT_TIMESTAMP"
+  ];
+  
+  // Last update timestamp
+  google.protobuf.Timestamp updated_at = 6 [
+    (sql.options.column_type) = "TIMESTAMP",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.default_value) = "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+  ];
+  
+  // User role (admin, user, etc.)
+  UserRole role = 7 [
+    (sql.options.column_type) = "VARCHAR(20)",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.default_value) = "'user'"
+  ];
+  
+  // Account status
+  bool is_active = 8 [
+    (sql.options.column_type) = "BOOLEAN",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.default_value) = "TRUE"
+  ];
+  
+  // Profile settings (stored as JSON)
+  string profile_settings = 9 [
+    (sql.options.column_type) = "JSON",
+    (sql.options.column_name) = "profile"
+  ];
+  
+  // Internal field - not stored in DB
+  string session_token = 10 [
+    (sql.options.skip) = true
+  ];
+}
+
+// User roles
+enum UserRole {
+  USER_ROLE_UNSPECIFIED = 0;
+  USER_ROLE_ADMIN = 1;
+  USER_ROLE_USER = 2;
+  USER_ROLE_MODERATOR = 3;
+}
+
+// Post table
+message Post {
+  option (sql.options.table_name) = "posts";
+  option (sql.options.comment) = "Blog posts created by users";
+  
+  // Unique post identifier
+  string id = 1 [
+    (sql.options.primary_key) = true,
+    (sql.options.column_type) = "VARCHAR(36)",
+    (sql.options.constraints) = "NOT NULL"
+  ];
+  
+  // Post author (foreign key to users table)
+  string author_id = 2 [
+    (sql.options.column_type) = "VARCHAR(36)",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.foreign_key) = {
+      table: "users",
+      column: "id",
+      on_delete: "CASCADE",
+      on_update: "CASCADE"
+    }
+  ];
+  
+  // Post title
+  string title = 3 [
+    (sql.options.column_type) = "VARCHAR(255)",
+    (sql.options.constraints) = "NOT NULL"
+  ];
+  
+  // Post content
+  string content = 4 [
+    (sql.options.column_type) = "TEXT",
+    (sql.options.constraints) = "NOT NULL"
+  ];
+  
+  // Publication status
+  PostStatus status = 5 [
+    (sql.options.column_type) = "VARCHAR(20)",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.default_value) = "'draft'"
+  ];
+  
+  // Creation timestamp
+  google.protobuf.Timestamp created_at = 6 [
+    (sql.options.column_type) = "TIMESTAMP",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.default_value) = "CURRENT_TIMESTAMP"
+  ];
+  
+  // Last update timestamp
+  google.protobuf.Timestamp updated_at = 7 [
+    (sql.options.column_type) = "TIMESTAMP",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.default_value) = "CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
+  ];
+  
+  // Publication timestamp (if published)
+  google.protobuf.Timestamp published_at = 8 [
+    (sql.options.column_type) = "TIMESTAMP",
+    (sql.options.constraints) = "NULL"
+  ];
+  
+  // Search keywords for the post
+  repeated string tags = 9 [
+    (sql.options.column_type) = "JSON",
+    (sql.options.constraints) = "NULL"
+  ];
+  
+  // View count
+  int32 views = 10 [
+    (sql.options.column_type) = "INT",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.default_value) = "0"
+  ];
+}
+
+// Post publication status
+enum PostStatus {
+  POST_STATUS_UNSPECIFIED = 0;
+  POST_STATUS_DRAFT = 1;
+  POST_STATUS_PUBLISHED = 2;
+  POST_STATUS_ARCHIVED = 3;
+}
+
+// Comment table
+message Comment {
+  option (sql.options.table_name) = "comments";
+  option (sql.options.comment) = "User comments on posts";
+  
+  // Unique comment identifier
+  string id = 1 [
+    (sql.options.primary_key) = true,
+    (sql.options.column_type) = "VARCHAR(36)",
+    (sql.options.constraints) = "NOT NULL"
+  ];
+  
+  // Post this comment belongs to
+  string post_id = 2 [
+    (sql.options.column_type) = "VARCHAR(36)",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.foreign_key) = {
+      table: "posts",
+      column: "id",
+      on_delete: "CASCADE"
+    }
+  ];
+  
+  // Comment author
+  string author_id = 3 [
+    (sql.options.column_type) = "VARCHAR(36)",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.foreign_key) = {
+      table: "users",
+      column: "id",
+      on_delete: "CASCADE"
+    }
+  ];
+  
+  // Comment content
+  string content = 4 [
+    (sql.options.column_type) = "TEXT",
+    (sql.options.constraints) = "NOT NULL"
+  ];
+  
+  // Creation timestamp
+  google.protobuf.Timestamp created_at = 5 [
+    (sql.options.column_type) = "TIMESTAMP",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.default_value) = "CURRENT_TIMESTAMP"
+  ];
+  
+  // Is this comment flagged by moderators
+  bool is_flagged = 6 [
+    (sql.options.column_type) = "BOOLEAN",
+    (sql.options.constraints) = "NOT NULL",
+    (sql.options.default_value) = "FALSE"
+  ];
+  
+  // Parent comment ID for nested replies
+  string parent_id = 7 [
+    (sql.options.column_type) = "VARCHAR(36)",
+    (sql.options.constraints) = "NULL",
+    (sql.options.foreign_key) = {
+      table: "comments",
+      column: "id",
+      on_delete: "CASCADE"
+    }
+  ];
+}

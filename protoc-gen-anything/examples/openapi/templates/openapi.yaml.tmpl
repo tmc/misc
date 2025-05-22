@@ -1,0 +1,113 @@
+# GENERATION_BEHAVIOR: overwrite
+openapi: "3.1.0"
+info:
+  title: "{{ .File.GoPackageName }} API"
+  version: "0.1.0"
+  description: "API generated from Protocol Buffers using protoc-gen-anything"
+
+paths:
+{{- range .File.Services }}
+  {{- range .Methods }}
+  {{- $httpRule := methodExtension . "google.api.http" }}
+  {{- if $httpRule }}
+  {{- range $pattern, $path := $httpRule }}
+  {{- if and (ne $pattern "additional_bindings") (ne $pattern "body") (ne $pattern "response_body") }}
+  "{{ $path }}":
+    {{ $pattern }}:
+      operationId: "{{ $.Service.GoName }}_{{ .GoName }}"
+      summary: "{{ .GoName }}"
+      {{- if .Comments.Leading }}
+      description: "{{ .Comments.Leading }}"
+      {{- end }}
+      
+      {{- if isStreaming . }}
+      responses:
+        "200":
+          description: "Streaming response"
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+      {{- else }}
+      responses:
+        "200":
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/{{ .Output.GoIdent.GoName }}"
+      
+      {{- /* Parameters section */ -}}
+      {{- if ne ($httpRule.body) "*" }}
+      parameters:
+        {{- range .Input.Fields }}
+        {{- if contains .GoName (trimstr "{}" (trimstr "/" $path)) }}
+        - name: "{{ .GoName }}"
+          in: path
+          required: true
+          schema:
+            type: "{{ getOpenAPIType . }}"
+        {{- end }}
+        {{- end }}
+      {{- end }}
+      
+      {{- /* Request body section */ -}}
+      {{- if $httpRule.body }}
+      requestBody:
+        content:
+          application/json:
+            schema:
+              {{- if eq $httpRule.body "*" }}
+              $ref: "#/components/schemas/{{ .Input.GoIdent.GoName }}"
+              {{- else }}
+              type: object
+              properties:
+                {{ $httpRule.body }}:
+                  $ref: "#/components/schemas/{{ .Input.GoIdent.GoName }}"
+              {{- end }}
+        required: true
+      {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+components:
+  schemas:
+  {{- range .File.Messages }}
+    {{ .GoIdent.GoName }}:
+      type: object
+      properties:
+      {{- range .Fields }}
+        {{ .Desc.JSONName }}:
+          type: "{{ getOpenAPIType . }}"
+          {{- if .Comments.Leading }}
+          description: "{{ .Comments.Leading }}"
+          {{- end }}
+      {{- end }}
+  {{- end }}
+
+{{- /* Helper function to get OpenAPI type */ -}}
+{{- define "getOpenAPIType" }}
+  {{- if .Desc.IsMap }}json{{ else }}
+  {{- if eq .Desc.Kind 1 }}number{{ else }}
+  {{- if eq .Desc.Kind 2 }}number{{ else }}
+  {{- if eq .Desc.Kind 3 }}number{{ else }}
+  {{- if eq .Desc.Kind 4 }}number{{ else }}
+  {{- if eq .Desc.Kind 5 }}number{{ else }}
+  {{- if eq .Desc.Kind 6 }}number{{ else }}
+  {{- if eq .Desc.Kind 7 }}number{{ else }}
+  {{- if eq .Desc.Kind 8 }}number{{ else }}
+  {{- if eq .Desc.Kind 9 }}string{{ else }}
+  {{- if eq .Desc.Kind 10 }}boolean{{ else }}
+  {{- if eq .Desc.Kind 11 }}string{{ else }}
+  {{- if eq .Desc.Kind 12 }}string{{ else }}
+  {{- if eq .Desc.Kind 13 }}string{{ else }}
+  {{- if eq .Desc.Kind 14 }}string{{ else }}object{{ end }}
+  {{- end }}{{- end }}{{- end }}{{- end }}{{- end }}{{- end }}
+  {{- end }}{{- end }}{{- end }}{{- end }}{{- end }}{{- end }}
+  {{- end }}{{- end }}{{- end }}
+{{- end }}

@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package sql.options;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/tmc/misc/examples/sql/proto/options";
+
+// SQL field options
+extend google.protobuf.FieldOptions {
+  // SQL column name override
+  string column_name = 60001;
+  
+  // SQL column type override
+  string column_type = 60002;
+  
+  // SQL column constraints (e.g., "NOT NULL", "UNIQUE")
+  string constraints = 60003;
+  
+  // Default value for the column
+  string default_value = 60004;
+  
+  // Skip this field when generating SQL
+  bool skip = 60005;
+  
+  // Mark this field as a primary key
+  bool primary_key = 60006;
+  
+  // Mark this field as a foreign key
+  ForeignKey foreign_key = 60007;
+  
+  // Mark this field as an index
+  string index = 60008;
+}
+
+// SQL message options
+extend google.protobuf.MessageOptions {
+  // SQL table name override
+  string table_name = 60001;
+  
+  // Skip this message when generating SQL
+  bool skip = 60002;
+  
+  // Table comment
+  string comment = 60003;
+  
+  // Database schema name
+  string schema = 60004;
+  
+  // Database engine (e.g., "InnoDB")
+  string engine = 60005;
+  
+  // Character set
+  string charset = 60006;
+  
+  // Collation
+  string collation = 60007;
+  
+  // Explicitly mark this message as a table (default is true for top-level messages)
+  bool is_table = 60008;
+}
+
+// Foreign key definition
+message ForeignKey {
+  // Referenced table
+  string table = 1;
+  
+  // Referenced column (default is "id")
+  string column = 2;
+  
+  // ON DELETE action
+  string on_delete = 3;
+  
+  // ON UPDATE action
+  string on_update = 4;
+}

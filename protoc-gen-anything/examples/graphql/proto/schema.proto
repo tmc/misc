@@ -1,0 +1,257 @@
+syntax = "proto3";
+
+package graphql.example;
+
+import "graphql_options.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/tmc/misc/examples/graphql/proto/schema";
+
+// Represents a user in the system
+message User {
+  option (graphql.options.description) = "A user in the system";
+  
+  // Unique identifier for the user
+  string id = 1 [(graphql.options.description) = "Unique identifier for the user"];
+  
+  // User's display name
+  string name = 2;
+  
+  // User's email address
+  string email = 3;
+  
+  // Internal field - not exposed in GraphQL
+  string internal_id = 4 [(graphql.options.skip) = true];
+  
+  // When the user was created
+  google.protobuf.Timestamp created_at = 5;
+  
+  // User's role in the system
+  UserRole role = 6;
+  
+  // User's posts
+  repeated Post posts = 7;
+}
+
+// Represents a user's role
+enum UserRole {
+  // Unknown role
+  USER_ROLE_UNSPECIFIED = 0;
+  // Regular user
+  USER_ROLE_USER = 1;
+  // Administrator
+  USER_ROLE_ADMIN = 2;
+}
+
+// Represents a post created by a user
+message Post {
+  option (graphql.options.description) = "A post created by a user";
+  
+  // Unique identifier for the post
+  string id = 1;
+  
+  // Post's title
+  string title = 2;
+  
+  // Post's content
+  string content = 3;
+  
+  // When the post was created
+  google.protobuf.Timestamp created_at = 4;
+  
+  // Author of the post
+  User author = 5;
+  
+  // Post status (draft, published, etc)
+  PostStatus status = 6;
+  
+  // Categories assigned to this post
+  repeated string categories = 7;
+  
+  // Tags assigned to this post
+  repeated string tags = 8;
+  
+  // Comments on this post
+  repeated Comment comments = 9;
+}
+
+// Post status
+enum PostStatus {
+  // Unknown status
+  POST_STATUS_UNSPECIFIED = 0;
+  // Draft - not yet published
+  POST_STATUS_DRAFT = 1;
+  // Published and visible
+  POST_STATUS_PUBLISHED = 2;
+  // Archived - no longer visible
+  POST_STATUS_ARCHIVED = 3;
+}
+
+// Represents a comment on a post
+message Comment {
+  option (graphql.options.description) = "A comment on a post";
+  
+  // Unique identifier for the comment
+  string id = 1;
+  
+  // Comment content
+  string content = 2;
+  
+  // Author of the comment
+  User author = 3;
+  
+  // When the comment was created
+  google.protobuf.Timestamp created_at = 4;
+}
+
+// Used for creating new users
+message CreateUserInput {
+  option (graphql.options.input_type) = true;
+  option (graphql.options.description) = "Input for creating a new user";
+  
+  // User's name
+  string name = 1;
+  
+  // User's email
+  string email = 2;
+  
+  // User's role
+  UserRole role = 3;
+}
+
+// Used for creating new posts
+message CreatePostInput {
+  option (graphql.options.input_type) = true;
+  option (graphql.options.description) = "Input for creating a new post";
+  
+  // Post title
+  string title = 1;
+  
+  // Post content
+  string content = 2;
+  
+  // Author's ID
+  string author_id = 3;
+  
+  // Post status
+  PostStatus status = 4;
+  
+  // Categories
+  repeated string categories = 5;
+  
+  // Tags
+  repeated string tags = 6;
+}
+
+// Interface for entities with timestamps
+message Timestamped {
+  option (graphql.options.interface) = true;
+  option (graphql.options.description) = "An entity with timestamp information";
+  
+  // When the entity was created
+  google.protobuf.Timestamp created_at = 1;
+}
+
+// GraphQL API service definition
+service BlogService {
+  option (graphql.options.description) = "Blog service API";
+  
+  // Get a user by ID
+  rpc GetUser(GetUserRequest) returns (User);
+  
+  // List all users
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  
+  // Create a new user
+  rpc CreateUser(CreateUserRequest) returns (User);
+  
+  // Get a post by ID
+  rpc GetPost(GetPostRequest) returns (Post);
+  
+  // List all posts
+  rpc ListPosts(ListPostsRequest) returns (ListPostsResponse);
+  
+  // Create a new post
+  rpc CreatePost(CreatePostRequest) returns (Post);
+  
+  // Add a comment to a post
+  rpc AddComment(AddCommentRequest) returns (Comment);
+}
+
+// Request to get a user by ID
+message GetUserRequest {
+  // User ID to retrieve
+  string id = 1;
+}
+
+// Request to list users
+message ListUsersRequest {
+  // Maximum number of results to return
+  int32 page_size = 1;
+  
+  // Token for pagination
+  string page_token = 2;
+}
+
+// Response for listing users
+message ListUsersResponse {
+  // List of users
+  repeated User users = 1;
+  
+  // Token for getting the next page of results
+  string next_page_token = 2;
+}
+
+// Request to create a new user
+message CreateUserRequest {
+  // User creation details
+  CreateUserInput user = 1;
+}
+
+// Request to get a post by ID
+message GetPostRequest {
+  // Post ID to retrieve
+  string id = 1;
+}
+
+// Request to list posts
+message ListPostsRequest {
+  // Maximum number of results to return
+  int32 page_size = 1;
+  
+  // Token for pagination
+  string page_token = 2;
+  
+  // Filter by author ID
+  string author_id = 3;
+  
+  // Filter by status
+  PostStatus status = 4;
+}
+
+// Response for listing posts
+message ListPostsResponse {
+  // List of posts
+  repeated Post posts = 1;
+  
+  // Token for getting the next page of results
+  string next_page_token = 2;
+}
+
+// Request to create a new post
+message CreatePostRequest {
+  // Post creation details
+  CreatePostInput post = 1;
+}
+
+// Request to add a comment to a post
+message AddCommentRequest {
+  // Post ID to add the comment to
+  string post_id = 1;
+  
+  // Comment content
+  string content = 2;
+  
+  // Author of the comment
+  string author_id = 3;
+}

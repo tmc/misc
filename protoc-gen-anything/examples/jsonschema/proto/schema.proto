@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package example.jsonschema;
+
+option go_package = "github.com/tmc/misc/protoc-gen-anything/examples/jsonschema/gen;jsonschema";
+
+// Person represents a person with basic details
+message Person {
+  string name = 1;
+  int32 age = 2;
+  string email = 3;
+  Address address = 4;
+  repeated string tags = 5;
+  PhoneType phone_type = 6;
+  map<string, string> metadata = 7;
+}
+
+// Address holds the address details
+message Address {
+  string street = 1;
+  string city = 2;
+  string state = 3;
+  string country = 4;
+  string zip_code = 5;
+}
+
+// PhoneType enum for different types of phone numbers
+enum PhoneType {
+  PHONE_TYPE_UNSPECIFIED = 0;
+  PHONE_TYPE_MOBILE = 1;
+  PHONE_TYPE_HOME = 2;
+  PHONE_TYPE_WORK = 3;
+}

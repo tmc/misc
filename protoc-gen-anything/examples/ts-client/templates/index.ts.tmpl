@@ -1,0 +1,9 @@
+// GENERATION_BEHAVIOR: overwrite
+/**
+ * Generated TypeScript clients for Protocol Buffer services
+ * DO NOT EDIT - This file is generated using protoc-gen-anything
+ */
+
+{{- range .File.Services }}
+export * from './{{ .GoName }}.client';
+{{- end }}

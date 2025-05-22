@@ -1,0 +1,9 @@
+version: v1
+plugins:
+  - name: anything
+    out: gen
+    path: ../../protoc-gen-anything
+    opt:
+      - templates=templates
+      - log_level=debug
+      - verbose=true
