@@ -204,28 +204,28 @@ func gatherDirectoryInfo(path string, options exampleOptions) (string, string, e
 
 	// Use find command to list directory contents with options
 	args := []string{path}
-	
+
 	// Add depth limit
 	args = append(args, "-maxdepth", fmt.Sprintf("%d", options.MaxDepth))
-	
+
 	// Add pattern matching
 	args = append(args, "-name", options.Pattern)
-	
+
 	// Exclude hidden files unless requested
 	if !options.IncludeHidden {
 		args = append(args, "!", "-path", "*/.*")
 	}
 
 	cmd := exec.Command("find", args...)
-	
+
 	// Capture command output
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	
+
 	// Run the command
 	err = cmd.Run()
-	
+
 	return stdout.String(), stderr.String(), err
 }
 
