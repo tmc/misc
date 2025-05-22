@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package graphql.options;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/tmc/misc/examples/graphql/proto/options";
+
+// GraphQL field options
+extend google.protobuf.FieldOptions {
+  // Skip this field when generating GraphQL schema
+  bool skip = 50001;
+  
+  // GraphQL field name override - use this name instead of the field name
+  string name = 50002;
+  
+  // GraphQL field description
+  string description = 50003;
+  
+  // GraphQL field deprecation reason
+  string deprecated = 50004;
+}
+
+// GraphQL message options
+extend google.protobuf.MessageOptions {
+  // Skip this message when generating GraphQL schema
+  bool skip = 50001;
+  
+  // GraphQL type name override - use this name instead of the message name
+  string name = 50002;
+  
+  // GraphQL type description
+  string description = 50003;
+  
+  // Indicate this message should be treated as an input type
+  bool input_type = 50004;
+  
+  // Indicate this message should be treated as an interface
+  bool interface = 50005;
+}
+
+// GraphQL service options
+extend google.protobuf.ServiceOptions {
+  // Skip this service when generating GraphQL schema
+  bool skip = 50001;
+  
+  // Service description
+  string description = 50002;
+}

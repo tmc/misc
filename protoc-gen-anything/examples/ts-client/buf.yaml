@@ -1,0 +1,7 @@
+version: v1
+name: buf.build/tmc/ts-client-example
+deps:
+  - buf.build/googleapis/googleapis
+  - buf.build/bufbuild/protovalidate
+build:
+  excludes: []
