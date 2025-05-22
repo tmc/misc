@@ -1,0 +1,20 @@
+diff --git a/macgo.go b/macgo.go
+index a353bb4..4e42b9f 100644
+--- a/macgo.go
++++ b/macgo.go
+@@ -276,6 +276,7 @@ func initializeMacGo() {
+ 	// Only relaunch if enabled and not running in a test
+ 	if DefaultConfig.Relaunch && !isTestMode() {
+ 		if customReLaunchFunction != nil {
+ 			// Prepare open command arguments
+ 			args := []string{
+ 				"-a", appPath,
+@@ -292,6 +293,9 @@ func initializeMacGo() {
+ 			// Use the custom relaunch function if available
+ 			customReLaunchFunction(appPath, execPath, args)
++		} else if UseImprovedSignalHandling {
++			// Use improved signal handling (Go tools style)
++			relaunchWithGoToolsSignalHandling(appPath, execPath)
+ 		} else {
+ 			// Use the default relaunch implementation
+ 			relaunch(appPath, execPath)
