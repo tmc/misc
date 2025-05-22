@@ -1,0 +1,39 @@
+-- Session 2025-02-28 --
+
+Key concepts:
+- Analyzing context (ctx) tools for consistent patterns
+- Creating standardized specifications
+- Evaluating compatibility between tools
+- Proposing shared library architecture
+- Exploring ways to make tools more consistent
+
+Current analysis shows:
+- ctx-exec is most mature with complete flag/formatting support
+- Other tools have varying levels of compatibility
+- Common patterns include XML/JSON output formats
+- Standard flags like -escape, -json, -tag
+
+Found github.com/tmc/ctx repository:
+- Main ctx framework with plugin architecture
+- Three-phase execution: discovery, planning, execution
+- Formal plugin specification
+- Capabilities reporting system
+- Common output formats (aligned with ctx-plugins)
+
+Differences from ctx-plugins:
+- Centralized framework vs standalone tools
+- Formal plugin discovery vs independent executables
+- Planning phase for orchestrating tools
+- Relevance scoring for context-aware tool selection
+
+Created deliverables:
+- ctx-tool-spec.md: Basic specification for ctx tools
+- mcp-tools-compatibility-checklist.md: Evaluation of existing tools
+- ctx-tool-spec-v2.md: Enhanced spec combining both approaches
+- ctx-tools-lib-interface.go: Library interface for implementation
+- mcp-tools-library-proposal.md: Proposal for shared library
+
+Next steps:
+- Sample implementation of a tool using the library
+- Migration guide for existing tools
+- Test framework for validating compatibility

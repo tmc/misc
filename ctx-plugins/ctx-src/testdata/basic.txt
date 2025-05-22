@@ -1,0 +1,33 @@
+# Basic test for ctx-src
+
+-- hello.txt --
+Hello, World!
+
+-- subdir1/file1.txt --
+Content of file1
+
+-- subdir1/file2.txt --
+Content of file2
+
+-- .ctx-src-ignore --
+# Test ignore file
+subdir1/file1.txt
+
+# Test basic functionality
+ctx-src
+stdout '<src path="'
+stdout '<file path="hello.txt">'
+stdout '    Hello, World!'
+stdout '</file>'
+stdout '<file path="subdir1/file2.txt">'
+stdout '    Content of file2'
+stdout '</file>'
+! stdout 'Content of file1'
+stdout '</src>'
+
+# Test with --no-xml-tags
+ctx-src --no-xml-tags
+stdout 'Hello, World!'
+! stdout '<file path='
+stdout 'Content of file2'
+! stdout 'Content of file1'

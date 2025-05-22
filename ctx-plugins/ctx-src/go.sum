@@ -1,0 +1,6 @@
+github.com/google/go-cmp v0.6.0 h1:Ncr2QK9IG+5Cn4EyI2QPmV0DHrDJxiRWHYQ9FEYdIKo=
+github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
+rsc.io/diff v0.0.0-20210324174706-dd6d4e7c5199 h1:AVFnSu15WrJItPiWh+N7cusBwARklV6QxXOFjDKBN7E=
+rsc.io/diff v0.0.0-20210324174706-dd6d4e7c5199/go.mod h1:pxiCir6XKIB5yUVFWLdtIYGRbXOtmgfyplI7iY4Fjvs=
+rsc.io/script v0.0.0-20211227175535-14c2c4ff7f67 h1:cUc3p5eSA2OD0fO5YEzb9iWW2GShSB1q4S8CURwH5qI=
+rsc.io/script v0.0.0-20211227175535-14c2c4ff7f67/go.mod h1:MU/3uqgqQZ++SGQXMiD6pxeR+ED+nYs9eU/hR/MUX4E=
