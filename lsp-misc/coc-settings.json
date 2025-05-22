@@ -1,0 +1,9 @@
+{
+  "languageserver": {
+    "bash-lsp": {
+      "command": "/Volumes/tmc/go/src/github.com/tmc/misc/lsp-misc/bash-lsp-server.sh",
+      "filetypes": ["text"],
+      "rootPatterns": [".git/"]
+    }
+  }
+}

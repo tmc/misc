@@ -1,0 +1,7 @@
+This is a test text file.
+You should be able to get word completions here.
+
+a
+
+Try typing a few letters and then press Ctrl-X Ctrl-O in insert mode.
+
