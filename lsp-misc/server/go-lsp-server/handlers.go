@@ -25,11 +25,13 @@ func textDocumentDidChange(context *glsp.Context, params *protocol.DidChangeText
 	uri := params.TextDocument.URI
 	
 	// Update document content
-	if content, exists := documents[uri]; exists {
+	if _, exists := documents[uri]; exists {
 		for _, change := range params.ContentChanges {
 			// For simplicity, we're assuming full document sync
-			if change.Text != "" {
-				documents[uri] = change.Text
+			if changeMap, ok := change.(map[string]interface{}); ok {
+				if text, ok := changeMap["text"].(string); ok && text != "" {
+					documents[uri] = text
+				}
 			}
 		}
 		
@@ -59,7 +61,7 @@ func textDocumentCompletion(context *glsp.Context, params *protocol.CompletionPa
 		{
 			Label:  "println",
 			Detail: new(string),
-			Kind:   protocol.CompletionItemKindFunction,
+			Kind:   &[]protocol.CompletionItemKind{protocol.CompletionItemKindFunction}[0],
 			Documentation: &protocol.MarkupContent{
 				Kind:  protocol.MarkupKindMarkdown,
 				Value: "Prints values to stdout",
@@ -69,7 +71,7 @@ func textDocumentCompletion(context *glsp.Context, params *protocol.CompletionPa
 		{
 			Label:  "if",
 			Detail: new(string),
-			Kind:   protocol.CompletionItemKindKeyword,
+			Kind:   &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
 			Documentation: &protocol.MarkupContent{
 				Kind:  protocol.MarkupKindMarkdown,
 				Value: "Conditional statement",
@@ -79,7 +81,7 @@ func textDocumentCompletion(context *glsp.Context, params *protocol.CompletionPa
 		{
 			Label:  "for",
 			Detail: new(string),
-			Kind:   protocol.CompletionItemKindKeyword,
+			Kind:   &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
 			Documentation: &protocol.MarkupContent{
 				Kind:  protocol.MarkupKindMarkdown,
 				Value: "Loop statement",
@@ -89,7 +91,7 @@ func textDocumentCompletion(context *glsp.Context, params *protocol.CompletionPa
 		{
 			Label:  "func",
 			Detail: new(string),
-			Kind:   protocol.CompletionItemKindKeyword,
+			Kind:   &[]protocol.CompletionItemKind{protocol.CompletionItemKindKeyword}[0],
 			Documentation: &protocol.MarkupContent{
 				Kind:  protocol.MarkupKindMarkdown,
 				Value: "Function declaration",
@@ -139,30 +141,15 @@ func textDocumentHover(context *glsp.Context, params *protocol.HoverParams) (any
 	return nil, nil
 }
 
-func textDocumentDiagnostic(context *glsp.Context, params *protocol.DocumentDiagnosticParams) (any, error) {
+func textDocumentDiagnostic(context *glsp.Context, params *protocol.TextDocumentPositionParams) (any, error) {
 	uri := params.TextDocument.URI
 	content, exists := documents[uri]
 	if !exists {
-		return protocol.DocumentDiagnosticReport{
-			Kind: "full",
-			Items: protocol.RelatedFullDocumentDiagnosticReport{
-				FullDocumentDiagnosticReport: protocol.FullDocumentDiagnosticReport{
-					Items: []protocol.Diagnostic{},
-				},
-			},
-		}, nil
+		return []protocol.Diagnostic{}, nil
 	}
 	
 	diagnostics := generateDiagnostics(content)
-	
-	return protocol.DocumentDiagnosticReport{
-		Kind: "full",
-		Items: protocol.RelatedFullDocumentDiagnosticReport{
-			FullDocumentDiagnosticReport: protocol.FullDocumentDiagnosticReport{
-				Items: diagnostics,
-			},
-		},
-	}, nil
+	return diagnostics, nil
 }
 
 func textDocumentDefinition(context *glsp.Context, params *protocol.DefinitionParams) (any, error) {
