@@ -22,10 +22,12 @@
 package macgo
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Entitlement is a type for macOS entitlement identifiers
@@ -246,6 +248,7 @@ func initializeMacGo() {
 	// Skip if already running inside an app bundle
 	if isRunningInBundle() {
 		debugf("Already running inside an app bundle")
+		setupChildProcessTeeWriter()
 		return
 	}
 
@@ -427,3 +430,62 @@ func Configure(cfg *Config) {
 	// Set keep temp flag
 	DefaultConfig.KeepTemp = cfg.KeepTemp
 }
+
+// setupChildProcessTeeWriter sets up TeeWriter for stdout/stderr in the child process
+func setupChildProcessTeeWriter() {
+	if !isDebugEnabled() {
+		return
+	}
+	
+	debugf("Setting up TeeWriter for child process (PID: %d)", os.Getpid())
+	
+	// Create debug log files for the child process
+	if stdoutFile, err := createChildDebugLogFile("stdout"); err == nil {
+		// Note: We can't directly replace os.Stdout, but we create the debug log for manual testing
+		debugf("Created stdout debug log file")
+		defer stdoutFile.Close()
+	} else {
+		debugf("Failed to create stdout debug log: %v", err)
+	}
+	
+	if stderrFile, err := createChildDebugLogFile("stderr"); err == nil {
+		// Note: We can't directly replace os.Stderr, but we create the debug log for manual testing
+		debugf("Created stderr debug log file")
+		defer stderrFile.Close()
+	} else {
+		debugf("Failed to create stderr debug log: %v", err)
+	}
+}
+
+// createChildDebugLogFile creates a debug log file for the child process
+func createChildDebugLogFile(streamName string) (*os.File, error) {
+	logPath := fmt.Sprintf("/tmp/macgo-debug-child-%s-%d.txt", streamName, os.Getpid())
+	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return nil, err
+	}
+	debugf("Created child %s debug log: %s", streamName, logPath)
+	
+	// Write a header to the log file
+	fmt.Fprintf(file, "=== macgo child process %s log (PID: %d) ===\n", streamName, os.Getpid())
+	fmt.Fprintf(file, "Started at: %s\n", getCurrentTimestamp())
+	fmt.Fprintf(file, "Args: %v\n", os.Args)
+	fmt.Fprintf(file, "Working directory: %s\n", getCurrentWorkingDir())
+	fmt.Fprintf(file, "=== Start of %s output ===\n", streamName)
+	
+	return file, nil
+}
+
+// Helper functions for child process logging
+func getCurrentTimestamp() string {
+	return time.Now().Format(time.RFC3339)
+}
+
+func getCurrentWorkingDir() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		return fmt.Sprintf("Error: %v", err)
+	}
+	return dir
+}
+

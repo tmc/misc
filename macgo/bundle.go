@@ -77,6 +77,9 @@ func createBundle(execPath string) (string, error) {
 		}
 	}
 
+	// Check developer environment for potential issues
+	checkDeveloperEnvironment()
+
 	// Create app bundle structure
 	contentsPath := filepath.Join(appPath, "Contents")
 	macosPath := filepath.Join(contentsPath, "MacOS")
@@ -277,14 +280,32 @@ func relaunch(appPath, execPath string) {
 	// Set up signal forwarding from parent to child process group
 	forwardSignals(cmd.Process.Pid)
 
+	// Create debug log files for stdout/stderr if debug is enabled
+	var stdoutTee, stderrTee io.Writer = os.Stdout, os.Stderr
+	debugf("Setting up IO redirection (debug enabled: %t)", isDebugEnabled())
+	if isDebugEnabled() {
+		if stdoutFile, err := createDebugLogFile("stdout"); err == nil {
+			stdoutTee = io.MultiWriter(os.Stdout, stdoutFile)
+			defer stdoutFile.Close()
+		} else {
+			debugf("Failed to create stdout debug log: %v", err)
+		}
+		if stderrFile, err := createDebugLogFile("stderr"); err == nil {
+			stderrTee = io.MultiWriter(os.Stderr, stderrFile)
+			defer stderrFile.Close()
+		} else {
+			debugf("Failed to create stderr debug log: %v", err)
+		}
+	}
+
 	// Handle stdin
 	go pipeIO(pipes[0], os.Stdin, nil)
 
 	// Handle stdout
-	go pipeIO(pipes[1], nil, os.Stdout)
+	go pipeIO(pipes[1], nil, stdoutTee)
 
 	// Handle stderr
-	go pipeIO(pipes[2], nil, os.Stderr)
+	go pipeIO(pipes[2], nil, stderrTee)
 
 	// Wait for process to finish and exit with its status code
 	err := cmd.Wait()
@@ -349,6 +370,17 @@ func checksum(path string) (string, error) {
 	}
 
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// createDebugLogFile creates a debug log file for capturing IO
+func createDebugLogFile(streamName string) (*os.File, error) {
+	logPath := fmt.Sprintf("/tmp/macgo-debug-%s-%d.txt", streamName, os.Getpid())
+	file, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return nil, err
+	}
+	debugf("Created %s debug log: %s", streamName, logPath)
+	return file, nil
 }
 
 // copyFile copies a file from src to dst.
@@ -641,4 +673,54 @@ func debugf(format string, args ...any) {
 		prefix := fmt.Sprintf("[macgo:%s] ", timestamp)
 		fmt.Fprintf(os.Stderr, prefix+format+"\n", args...)
 	}
+}
+
+// checkDeveloperEnvironment checks for common macOS developer environment issues
+func checkDeveloperEnvironment() {
+	if !isDebugEnabled() {
+		return
+	}
+	
+	// Check Xcode developer directory
+	devDir := os.Getenv("DEVELOPER_DIR")
+	if devDir == "" {
+		// Get default from xcode-select
+		cmd := exec.Command("xcode-select", "--print-path")
+		output, err := cmd.Output()
+		if err != nil {
+			debugf("Warning: Could not get Xcode developer directory: %v", err)
+			return
+		}
+		devDir = strings.TrimSpace(string(output))
+	}
+	
+	debugf("Xcode developer directory: %s", devDir)
+	
+	// Check if Platforms directory exists (required for 'open' command)
+	platformsDir := filepath.Join(devDir, "Platforms")
+	if _, err := os.Stat(platformsDir); err != nil {
+		debugf("WARNING: Platforms directory missing at %s", platformsDir)
+		debugf("This may cause 'open' command to fail when launching app bundles")
+		debugf("SOLUTIONS (try in order):")
+		debugf("  1. sudo xcode-select --reset")
+		debugf("  2. sudo xcode-select --switch /Library/Developer/CommandLineTools")
+		debugf("  3. xcode-select --install (to reinstall Command Line Tools)")
+		debugf("Note: Full Xcode is NOT required - this is a Command Line Tools config issue")
+		
+		// Try to auto-detect if we can suggest a specific fix
+		if _, err := os.Stat("/Applications/Xcode.app"); err == nil {
+			debugf("  Alternative: Use Xcode path: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer")
+		}
+		
+		// Check if Command Line Tools are properly installed
+		if _, err := os.Stat("/Library/Developer/CommandLineTools/usr/bin"); err != nil {
+			debugf("  Command Line Tools may not be properly installed")
+		}
+	} else {
+		debugf("Platforms directory found at %s", platformsDir)
+	}
+}
+
+func isDebugEnabled() bool {
+	return os.Getenv("MACGO_DEBUG") == "1"
 }
