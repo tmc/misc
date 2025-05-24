@@ -1,13 +1,16 @@
 # gocmddoc
 
-gocmddoc is a simple command-line tool that generates Markdown documentation
-from Go package documentation.
+Gocmddoc generates Markdown documentation from Go package documentation
+comments.
 
-The tool extracts package documentation, including the package comment,
-exported types, functions, methods, and constants, and formats them as
-a Markdown file suitable for README files or other documentation purposes.
+The tool extracts package documentation and formats it as clean, readable
+Markdown suitable for README files or other documentation purposes. For
+library packages, it includes exported types, functions, methods, constants,
+and variables. For main packages, it shows only the package documentation
+by default.
 
-Usage:
+## Usage
+
 
     gocmddoc [flags] [package]
 
@@ -16,20 +19,23 @@ The package argument can be:
   - An import path (e.g., github.com/user/repo/pkg)
   - Empty (defaults to current directory)
 
-Flags:
+## Flags
+
+
+- The following flags control the tool's behavior:
 
     -o, -output string
-    	Output file path (default: stdout)
-    	If not specified, the Markdown is written to standard output.
+- Output file path. If not specified, writes to stdout.
 
     -a, -all
-    	Include all declarations for main packages
-    	By default, main packages only show the package documentation.
+- Include all declarations for main packages.
+- By default, main packages only show package documentation.
 
     -h, -help
-    	Show usage information
+- Show usage information.
 
-Examples:
+## Examples
+
 
 Generate documentation for the current package:
 
@@ -43,9 +49,16 @@ Generate documentation for a local package:
 
     gocmddoc -o docs/api.md ./internal/mypackage
 
-Output Format:
+Show all declarations for a command-line tool:
+
+    gocmddoc -all -o README.md ./cmd/mytool
+
+## Output Format
+
 
 The generated Markdown follows this structure:
+
+For library packages:
 
 ## Package packagename
 
@@ -54,20 +67,38 @@ The generated Markdown follows this structure:
 
     ## Constants
 
-    List of exported constants with their documentation.
+    Exported constants with their documentation.
 
     ## Variables
 
-    List of exported variables with their documentation.
+    Exported variables with their documentation.
 
     ## Functions
 
-    List of exported functions with their signatures and documentation.
+    Exported functions with their signatures and documentation.
 
     ## Types
 
-    List of exported types, their methods, and documentation.
+    Exported types, their methods, and documentation.
 
-The tool focuses on simplicity and generates clean, readable Markdown
-that can be directly used in GitHub repositories or other documentation
-systems that support Markdown.
+For main packages (commands), only the package comment is shown by default,
+with the binary name as the title. Use -all to include declarations.
+
+## Features
+
+
+The tool provides intelligent formatting:
+  - Recognizes and formats code blocks with proper indentation
+  - Converts documentation sections (like FLAGS, USAGE) to proper headings
+  - Formats lists appropriately based on context
+  - Preserves code examples and formatting from source comments
+  - Uses the directory name as the title for main packages
+
+## Go Generate
+
+
+Add this directive to your Go files to automatically update documentation:
+
+    //go:generate gocmddoc -o README.md
+
+This will regenerate the README.md whenever go generate is run.
