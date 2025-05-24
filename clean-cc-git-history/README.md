@@ -14,23 +14,23 @@ preserved through Git notes for auditability.
 
     clean-cc-git-history [flags]
 
-    The tool operates on the current Git repository and branch.
+The tool operates on the current Git repository and branch.
 
 ## Flags
 
 
 - The following flags control the tool's behavior:
 
--all
+    -all
 - Process all commits on the current branch, not just unpushed ones.
 
--dry-run
+    -dry-run
 - Show what would be changed without making any modifications.
 
--verbose
+    -verbose
 - Enable verbose output showing detailed processing information.
 
--help
+    -help
 - Show usage information.
 
 ## Behavior
@@ -41,8 +41,8 @@ The tool performs the following operations for each qualifying commit:
   1. Identifies commits containing "Generated with" or "Co-Authored-By" lines
   2. Creates a new commit with the cleaned message (removing matching lines)
   3. Attaches two Git notes to the new commit:
-         - "original-commit": Contains the SHA of the original commit
-         - "clean-cc-tool": Records that this commit was modified by clean-cc-git-history
+     - "original-commit": Contains the SHA of the original commit
+     - "clean-cc-tool": Records that this commit was modified by clean-cc-git-history
 
 Lines are removed if they match these patterns (case-insensitive):
   - Lines starting with "Generated with"
@@ -51,15 +51,15 @@ Lines are removed if they match these patterns (case-insensitive):
 ## Examples
 
 
-    Process unpushed commits on the current branch:
+Process unpushed commits on the current branch:
 
     clean-cc-git-history
 
-    Process all commits on the current branch:
+Process all commits on the current branch:
 
     clean-cc-git-history -all
 
-    Preview changes without modifying the repository:
+Preview changes without modifying the repository:
 
     clean-cc-git-history -dry-run -verbose
 
@@ -78,10 +78,10 @@ Git notes are stored in the following refs:
 
 
 - The tool requires:
-- Must be run from within a Git repository
-- Git must be available in PATH
-- Current branch must have commits to process
-- For unpushed commit detection, a remote repository must be configured
+  - Must be run from within a Git repository
+  - Git must be available in PATH
+  - Current branch must have commits to process
+  - For unpushed commit detection, a remote repository must be configured
 
 ## Exit Codes
 
