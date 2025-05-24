@@ -21,6 +21,10 @@ Flags:
 		Output file path (default: stdout)
 		If not specified, the Markdown is written to standard output.
 
+	-a, -all
+		Include all declarations for main packages
+		By default, main packages only show the package documentation.
+
 	-h, -help
 		Show usage information
 
