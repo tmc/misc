@@ -87,3 +87,5 @@ The tool will exit with an error if run outside a Git repository or if Git
 operations fail.
 */
 package main
+
+//go:generate go run github.com/tmc/misc/gocmddoc@latest
