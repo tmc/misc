@@ -19,11 +19,13 @@ import (
 
 func main() {
 	output := flag.String("o", "", "Output file path (default: stdout)")
+	allDecl := flag.Bool("all", false, "Include all declarations for main packages")
 	toc := flag.Bool("toc", false, "Generate table of contents")
 	badge := flag.Bool("badge", true, "Add pkg.go.dev badge for library packages")
 	install := flag.Bool("add-install-section", true, "Add installation instructions section")
 	shields := flag.String("shields", "", "Add shields: all, version, license, build, report (comma-separated)")
 	flag.StringVar(output, "output", "", "Output file path (default: stdout)")
+	flag.BoolVar(allDecl, "a", false, "Include all declarations for main packages")
 	flag.Parse()
 
 	pkgPath := "."
@@ -31,7 +33,7 @@ func main() {
 		pkgPath = flag.Arg(0)
 	}
 
-	md, err := generateMarkdown(pkgPath, *toc, *badge, *install, *shields)
+	md, err := generateMarkdown(pkgPath, *allDecl, *toc, *badge, *install, *shields)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
@@ -48,7 +50,7 @@ func main() {
 	}
 }
 
-func generateMarkdown(pkgPath string, genTOC, genBadge, genInstall bool, shieldsStr string) (string, error) {
+func generateMarkdown(pkgPath string, showAll, genTOC, genBadge, genInstall bool, shieldsStr string) (string, error) {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, pkgPath, nil, parser.ParseComments)
 	if err != nil {
@@ -232,26 +234,29 @@ func generateMarkdown(pkgPath string, genTOC, genBadge, genInstall bool, shields
 		}
 	}
 
-	// Add declarations
-	if len(docPkg.Consts) > 0 {
-		headers = append(headers, header{level: 2, text: "Constants", id: "constants"})
-		content.WriteString("## Constants\n\n")
-		writeSectionContent(&content, docPkg.Consts, fset)
-	}
-	if len(docPkg.Vars) > 0 {
-		headers = append(headers, header{level: 2, text: "Variables", id: "variables"})
-		content.WriteString("## Variables\n\n")
-		writeSectionContent(&content, docPkg.Vars, fset)
-	}
-	if len(docPkg.Funcs) > 0 {
-		headers = append(headers, header{level: 2, text: "Functions", id: "functions"})
-		content.WriteString("## Functions\n\n")
-		writeFuncsContent(&content, docPkg.Funcs, fset, &headers)
-	}
-	if len(docPkg.Types) > 0 {
-		headers = append(headers, header{level: 2, text: "Types", id: "types"})
-		content.WriteString("## Types\n\n")
-		writeTypesContent(&content, docPkg.Types, fset, &headers)
+	// Skip declarations for main packages unless -all
+	if !isMain || showAll {
+		// Declarations
+		if len(docPkg.Consts) > 0 {
+			headers = append(headers, header{level: 2, text: "Constants", id: "constants"})
+			content.WriteString("## Constants\n\n")
+			writeSectionContent(&content, docPkg.Consts, fset)
+		}
+		if len(docPkg.Vars) > 0 {
+			headers = append(headers, header{level: 2, text: "Variables", id: "variables"})
+			content.WriteString("## Variables\n\n")
+			writeSectionContent(&content, docPkg.Vars, fset)
+		}
+		if len(docPkg.Funcs) > 0 {
+			headers = append(headers, header{level: 2, text: "Functions", id: "functions"})
+			content.WriteString("## Functions\n\n")
+			writeFuncsContent(&content, docPkg.Funcs, fset, &headers)
+		}
+		if len(docPkg.Types) > 0 {
+			headers = append(headers, header{level: 2, text: "Types", id: "types"})
+			content.WriteString("## Types\n\n")
+			writeTypesContent(&content, docPkg.Types, fset, &headers)
+		}
 	}
 
 	// Add package doc intro
