@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	_ "embed"
 	"flag"
 	"fmt"
 	"os"
@@ -9,6 +10,9 @@ import (
 	"regexp"
 	"strings"
 )
+
+//go:embed doc.go
+var documentation string
 
 var (
 	flagAll                        = flag.Bool("all", false, "Process all commits on the current branch, not just unpushed ones")
@@ -844,35 +848,19 @@ func indentText(text string) string {
 }
 
 func printUsage() {
-	fmt.Printf(`Command clean-cc-git-history removes AI-generated and co-authorship attribution
-lines from Git commit messages and preserves original commit information via
-Git notes.
-
-USAGE
-	clean-cc-git-history [flags]
-
-FLAGS
-	-all		Process all commits on the current branch, not just unpushed ones
-	-run		Actually execute the changes (default is dry-run mode)
-	-dry-run	Show what would be changed without making any modifications (default: true)
-	-verbose	Enable verbose output showing detailed processing information
-	-limit N	Limit the number of commits to process (0 = no limit)
-	-msg-command	Command to generate new commit message (repo staged with commit changes)
-	-msg-command-limit N	Limit the number of times msg-command is invoked (0 = no limit)
-	-msg-use-git-auto-commit-message	Use git-auto-commit-message --message-only (shortcut)
-	-generate-script	Generate a bash script to review and run manually
-	-help		Show usage information
-
-EXAMPLES
-	clean-cc-git-history			Show what commits need cleaning (dry-run)
-	clean-cc-git-history -verbose		Show detailed preview with commit messages
-	clean-cc-git-history -run		Actually clean the commits
-	clean-cc-git-history -all -run		Clean all commits on current branch
-	clean-cc-git-history -generate-script > clean.sh	Generate reviewable script
-	clean-cc-git-history -run -msg-use-git-auto-commit-message	Clean with git-auto-commit-message
-	clean-cc-git-history -run -msg-command "expensive-ai-tool" -msg-command-limit 3	Generate messages for first 3 commits only
-
-WARNING: This tool rewrites Git history. Ensure you have backups and coordinate
-with team members before running on shared branches.
-`)
+	doc := documentation
+	// Strip Go comment delimiters
+	if strings.HasPrefix(doc, "/*") {
+		doc = doc[2:]
+	}
+	if idx := strings.Index(doc, "*/"); idx != -1 {
+		doc = doc[:idx]
+	}
+	
+	// Just print everything up to "# NOTES" section
+	if idx := strings.Index(doc, "\n# NOTES"); idx != -1 {
+		doc = doc[:idx]
+	}
+	
+	fmt.Print(strings.TrimSpace(doc))
 }
