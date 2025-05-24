@@ -22,7 +22,10 @@ The following flags control the tool's behavior:
 		Process all commits on the current branch, not just unpushed ones.
 
 	-dry-run
-		Show what would be changed without making any modifications.
+		Show what would be changed without making any modifications (default: true).
+
+	-run
+		Actually execute the changes (overrides dry-run).
 
 	-verbose
 		Enable verbose output showing detailed processing information.
@@ -30,43 +33,79 @@ The following flags control the tool's behavior:
 	-help
 		Show usage information.
 
+	-limit N
+		Limit the number of commits to process (0 = no limit, default: 0).
+
+	-msg-command "command"
+		Command to generate new commit message (receives cleaned message on stdin).
+
+	-msg-command-limit N
+		Limit the number of times msg-command is invoked (0 = no limit, falls back to cleaned messages).
+
+	-msg-use-git-auto-commit-message
+		Use git-auto-commit-message --message-only (shortcut for -msg-command).
+
+	-generate-script
+		Generate a bash script to review and run manually.
+
 # Behavior
 
 The tool performs the following operations for each qualifying commit:
 
- 1. Identifies commits containing "Generated with" or "Co-Authored-By" lines
- 2. Creates a new commit with the cleaned message (removing matching lines)
- 3. Attaches two Git notes to the new commit:
-    - "original-commit": Contains the SHA of the original commit
-    - "clean-cc-tool": Records that this commit was modified by clean-cc-git-history
+ 1. Identifies commits containing "🤖 Generated with" or "Co-Authored-By" lines
+ 2. Uses interactive rebase to reword commit messages, removing matching lines
+ 3. Optionally generates new commit messages using a custom command
 
 Lines are removed if they match these patterns (case-insensitive):
-  - Lines starting with "Generated with"
+  - Lines containing "🤖 Generated with" (or similar variations)
   - Lines starting with "Co-Authored-By"
+
+When using -msg-command, the tool can generate entirely new commit messages
+based on the cleaned content. This is useful for creating more descriptive
+commit messages after removing attribution lines.
 
 # Examples
 
-Process unpushed commits on the current branch:
+Preview changes for unpushed commits (default behavior):
 
 	clean-cc-git-history
 
+Actually clean unpushed commits:
+
+	clean-cc-git-history -run
+
 Process all commits on the current branch:
 
-	clean-cc-git-history -all
+	clean-cc-git-history -all -run
 
-Preview changes without modifying the repository:
+Preview changes with verbose output:
 
-	clean-cc-git-history -dry-run -verbose
+	clean-cc-git-history -verbose
 
-# Git Notes
+Generate new commit messages using git-auto-commit-message:
 
-This tool modifies Git history by creating new commits with cleaned messages.
-The original commits are preserved through Git notes but are no longer part
-of the active branch history.
+	clean-cc-git-history -msg-use-git-auto-commit-message -run
 
-Git notes are stored in the following refs:
-  - refs/notes/original-commit: Maps new commits to original commit SHAs
-  - refs/notes/clean-cc-tool: Records tool modification metadata
+Limit processing to first 5 commits with custom message generation:
+
+	clean-cc-git-history -limit 5 -msg-command "my-commit-msg-tool" -run
+
+Generate a reviewable script:
+
+	clean-cc-git-history -generate-script > review-and-clean.sh
+
+# Implementation Details
+
+This tool uses Git's interactive rebase feature to modify commit messages.
+Unlike approaches that create entirely new commits, rebase preserves more
+of the original commit metadata while still allowing message modification.
+
+The tool creates temporary shell scripts during execution:
+  - A sequence editor to mark commits for rewording
+  - A commit editor to apply the cleaned messages
+
+When using -generate-script, these operations are packaged into a
+standalone bash script for review and manual execution.
 
 # Requirements
 
