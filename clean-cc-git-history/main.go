@@ -856,11 +856,11 @@ func printUsage() {
 	if idx := strings.Index(doc, "*/"); idx != -1 {
 		doc = doc[:idx]
 	}
-	
+
 	// Just print everything up to "# NOTES" section
 	if idx := strings.Index(doc, "\n# NOTES"); idx != -1 {
 		doc = doc[:idx]
 	}
-	
+
 	fmt.Print(strings.TrimSpace(doc))
 }
