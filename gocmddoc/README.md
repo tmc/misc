@@ -86,6 +86,10 @@ The following flags control the tool's behavior:
     -o, -output string
     	Output file path. If not specified, writes to stdout.
 
+    -a, -all
+    	Include all declarations for main packages (default: false).
+    	By default, main packages only show package documentation.
+
     -toc
     	Generate table of contents (default: false).
     	Use -toc to enable.
@@ -123,9 +127,9 @@ Generate documentation for a local package:
 
     gocmddoc -o docs/api.md ./internal/mypackage
 
-Generate documentation for a command-line tool:
+Show all declarations for a command-line tool:
 
-    gocmddoc -o README.md ./cmd/mytool
+    gocmddoc -all -o README.md ./cmd/mytool
 
 Generate documentation with installation instructions:
 
@@ -158,8 +162,8 @@ For library packages:
 
     Exported types, their methods, and documentation.
 
-For main packages (commands), the binary name is used as the title, and all
-declarations are included along with the package comment.
+For main packages (commands), only the package comment is shown by default,
+with the binary name as the title. Use -all to include declarations.
 
 ## Features
 
