@@ -22,13 +22,15 @@ var (
 	delay       = flag.Duration("delay", 0, "delay between chunks")
 	pathsString = flag.String("path", "type=content_block_delta,delta.type=text_delta,delta.text input_json_delta=delta.partial_json",
 		"paths to extract (space-separated patterns)")
-	webServer   = flag.Bool("w", false, "run HTTP server that streams output")
-	port        = flag.Int("port", 8072, "HTTP server port when using -w")
-	showMeta    = flag.Bool("m", false, "include metadata (tokens, stop reason) in output, defaults to txtar format")
-	verbose     = flag.Bool("v", false, "verbose output (print formatted JSON)")
-	veryVerbose = flag.Bool("vv", false, "very verbose output (print raw lines and formatted JSON)")
-	failOnError = flag.Bool("fail-on-error", true, "exit with error on JSON parsing failures")
-	catNonSSE   = flag.Bool("cat-non-sse", true, "output raw content for non-SSE input instead of exiting with error")
+	webServer    = flag.Bool("w", false, "run HTTP server that streams output")
+	port         = flag.Int("port", 8072, "HTTP server port when using -w")
+	showMeta     = flag.Bool("m", false, "include metadata (tokens, stop reason) in output, defaults to txtar format")
+	verbose      = flag.Bool("v", false, "verbose output (print formatted JSON)")
+	veryVerbose  = flag.Bool("vv", false, "very verbose output (print raw lines and formatted JSON)")
+	failOnError  = flag.Bool("fail-on-error", true, "exit with error on JSON parsing failures")
+	catNonSSE    = flag.Bool("cat-non-sse", true, "output raw content for non-SSE input instead of exiting with error")
+	showProgress = flag.Bool("progress", false, "show streaming progress on stderr with # prefix")
+	omitMsgStart = flag.Bool("omit-message-start", false, "omit message_start events from output")
 	// For test environment detection
 	inTest = len(os.Getenv("WORK")) > 0
 )
@@ -43,6 +45,59 @@ type ExtractorPattern struct {
 type condition struct {
 	path  string
 	value string
+}
+
+// ContentBlock represents a content block in the SSE stream
+type ContentBlock struct {
+	Type  string      `json:"type"`
+	ID    string      `json:"id,omitempty"`
+	Name  string      `json:"name,omitempty"`
+	Input interface{} `json:"input,omitempty"`
+	Text  string      `json:"text,omitempty"`
+}
+
+// ContentBlockStream manages accumulation of content block deltas
+type ContentBlockStream struct {
+	block        ContentBlock
+	inputBuilder strings.Builder
+	textBuilder  strings.Builder
+}
+
+// ProcessDelta processes a content block delta
+func (s *ContentBlockStream) ProcessDelta(delta map[string]any) {
+	if deltaType, ok := delta["type"].(string); ok {
+		switch deltaType {
+		case "input_json_delta":
+			if partial, ok := delta["partial_json"].(string); ok {
+				s.inputBuilder.WriteString(partial)
+			}
+		case "text_delta":
+			if text, ok := delta["text"].(string); ok {
+				s.textBuilder.WriteString(text)
+			}
+		}
+	}
+}
+
+// Complete finalizes the content block with accumulated data
+func (s *ContentBlockStream) Complete() (ContentBlock, error) {
+	result := s.block
+
+	// Parse accumulated JSON input for tool_use blocks
+	if result.Type == "tool_use" && s.inputBuilder.Len() > 0 {
+		var input map[string]any
+		if err := json.Unmarshal([]byte(s.inputBuilder.String()), &input); err != nil {
+			return result, fmt.Errorf("failed to parse tool input: %w", err)
+		}
+		result.Input = input
+	}
+
+	// Set accumulated text for text blocks
+	if result.Type == "text" {
+		result.Text = s.textBuilder.String()
+	}
+
+	return result, nil
 }
 
 type greyTextWriter struct {
@@ -237,6 +292,8 @@ func processInput(r io.Reader, w io.Writer, patterns []ExtractorPattern) error {
 
 	// Process as SSE stream (or continue with standard behavior in test mode)
 	metadataInfo := make(map[string]any)
+	contentStreams := make(map[int]*ContentBlockStream) // Store content streams by index
+	var progressBuffer []string                         // Buffer for progress messages
 
 	// Create a new scanner for the combined buffer and remaining input
 	scanner := bufio.NewScanner(io.MultiReader(&buf, r))
@@ -265,6 +322,92 @@ func processInput(r io.Reader, w io.Writer, patterns []ExtractorPattern) error {
 			continue
 		}
 
+		// Handle content block events
+		if typeVal, ok := m["type"].(string); ok {
+			switch typeVal {
+			case "message_start":
+				// Output message start as JSON unless omitted
+				if !*omitMsgStart {
+					msgJSON, err := json.Marshal(m)
+					if err == nil {
+						fmt.Fprintln(w, string(msgJSON))
+					}
+				}
+			case "content_block_start":
+				// Create a new content stream for accumulation
+				if idx, ok := m["index"].(float64); ok {
+					if contentBlock, ok := m["content_block"].(map[string]any); ok {
+						stream := &ContentBlockStream{
+							block: ContentBlock{
+								Type: getStringField(contentBlock, "type"),
+								ID:   getStringField(contentBlock, "id"),
+								Name: getStringField(contentBlock, "name"),
+							},
+						}
+						// Initialize empty input for tool_use blocks
+						if stream.block.Type == "tool_use" {
+							stream.block.Input = make(map[string]any)
+						}
+						contentStreams[int(idx)] = stream
+					}
+				}
+			case "content_block_delta":
+				// Process delta through the appropriate stream
+				if idx, ok := m["index"].(float64); ok {
+					if stream, exists := contentStreams[int(idx)]; exists {
+						if delta, ok := m["delta"].(map[string]any); ok {
+							stream.ProcessDelta(delta)
+
+							if *showProgress {
+								// Buffer current accumulated content
+								var progressLine string
+								if stream.block.Type == "text" {
+									progressLine = fmt.Sprintf("# %s", stream.textBuilder.String())
+								} else if stream.block.Type == "tool_use" {
+									progressLine = fmt.Sprintf("# [%s] %s", stream.block.Name, stream.inputBuilder.String())
+								}
+								if progressLine != "" {
+									progressBuffer = append(progressBuffer, progressLine)
+								}
+							}
+						}
+					}
+				}
+			case "content_block_stop":
+				// Complete and output the block
+				if idx, ok := m["index"].(float64); ok {
+					if stream, exists := contentStreams[int(idx)]; exists {
+						block, err := stream.Complete()
+						if err != nil {
+							log.Printf("Error completing content block: %v", err)
+						} else {
+							// Flush progress buffer before outputting block
+							if *showProgress && len(progressBuffer) > 0 {
+								for _, line := range progressBuffer {
+									fmt.Fprintln(os.Stderr, line)
+								}
+								progressBuffer = progressBuffer[:0] // Clear buffer
+							}
+
+							// Output the block content
+							if block.Type == "text" {
+								// For text blocks, output just the text content
+								fmt.Fprintln(w, block.Text)
+							} else if block.Type == "tool_use" {
+								// For tool blocks, output the JSON representation
+								blockJSON, err := json.Marshal(block)
+								if err == nil {
+									fmt.Fprintln(w, string(blockJSON))
+								}
+							}
+						}
+						// Remove the stream from storage
+						delete(contentStreams, int(idx))
+					}
+				}
+			}
+		}
+
 		// Check for metadata in message_start or message_delta events
 		if *showMeta {
 			if typeVal, ok := m["type"].(string); ok {
@@ -289,7 +432,26 @@ func processInput(r io.Reader, w io.Writer, patterns []ExtractorPattern) error {
 			}
 		}
 
-		// Try each pattern to extract text
+		// Try each pattern to extract text (skip for already handled events)
+		skipPatternExtraction := false
+		if typeVal, ok := m["type"].(string); ok {
+			if typeVal == "content_block_start" || typeVal == "content_block_stop" {
+				skipPatternExtraction = true
+			} else if typeVal == "content_block_delta" {
+				// Check if this delta belongs to a tool_use block
+				if idx, ok := m["index"].(float64); ok {
+					if _, exists := contentStreams[int(idx)]; exists {
+						// Skip pattern extraction for all content blocks we're accumulating
+						skipPatternExtraction = true
+					}
+				}
+			}
+		}
+
+		if skipPatternExtraction {
+			continue
+		}
+
 		for _, pattern := range patterns {
 			// Check if all conditions match
 			allMatch := true
@@ -376,6 +538,16 @@ func formatMetadata(metadataInfo map[string]any) string {
 	}
 
 	return sb.String()
+}
+
+// getStringField safely extracts a string field from a map
+func getStringField(m map[string]any, key string) string {
+	if val, ok := m[key]; ok {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
 }
 
 // Helper function to get value from nested maps by path
