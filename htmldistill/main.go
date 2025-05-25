@@ -20,6 +20,8 @@ improving readability, or preparing data for natural language processing tasks.
 */
 package main
 
+//go:generate go run github.com/tmc/misc/gocmddoc@latest -o README.md
+
 import (
 	"flag"
 	"fmt"

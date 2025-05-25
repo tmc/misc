@@ -3,6 +3,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"os/exec"
 	"testing"
 
@@ -25,5 +27,8 @@ func TestScript(t *testing.T) {
 	engine.Cmds["ssecat"] = script.Program("ssecat", nil, 0)
 
 	ctx := context.Background()
-	scripttest.Test(t, ctx, engine, nil, "testdata/*.txt")
+	env := []string{
+		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
+	}
+	scripttest.Test(t, ctx, engine, env, "testdata/*.txt")
 }

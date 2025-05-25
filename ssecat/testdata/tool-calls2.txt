@@ -1,4 +1,4 @@
-# Test basic message
+# Test tool call message
 ssecat -f=input -m
 
 stdout 'Message ID: msg_01Wz96btTuHBdm24LXxDxP5F'

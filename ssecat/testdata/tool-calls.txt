@@ -38,4 +38,6 @@ event: message_stop
 data: {"type":"message_stop" }
 
 -- want --
-{"a": 2, "b": 2}
+{"message":{"content":[],"id":"msg_01X6mUaB62nPUmeNHBqSErF4","model":"claude-3-7-sonnet-20250219","role":"assistant","stop_reason":null,"stop_sequence":null,"type":"message","usage":{"cache_creation_input_tokens":465,"cache_read_input_tokens":17878,"input_tokens":6,"output_tokens":31}},"type":"message_start"}
+{"type":"tool_use","id":"toolu_01B28ZsJWdymH3V8kkuJXtES","name":"mcp__weather-example__add","input":{"a":2,"b":2}}
+
