@@ -1,0 +1,20 @@
+# Test multiple containers
+
+# Start multiple containers
+testctr start alpine:latest alpine1 --cmd sleep infinity
+testctr start alpine:latest alpine2 --cmd sh -c 'echo ready && sleep infinity'
+
+# Wait for both
+testctr wait alpine1
+testctr wait alpine2 5s
+
+# Execute commands in each
+testctr exec alpine1 echo hello from alpine1
+stdout 'hello from alpine1'
+
+testctr exec alpine2 echo hello from alpine2
+stdout 'hello from alpine2'
+
+# Clean up is automatic, but we can stop explicitly
+testctr stop alpine1
+testctr stop alpine2

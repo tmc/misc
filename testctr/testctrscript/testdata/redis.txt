@@ -1,0 +1,26 @@
+# Test Redis container with testctr
+
+# Start Redis container in background
+testctr start redis:7-alpine myredis -p 6379
+
+# Test basic Redis operations
+testctr exec myredis redis-cli PING
+stdout PONG
+
+# Set and get a value
+testctr exec myredis redis-cli SET testkey testvalue
+stdout OK
+
+testctr exec myredis redis-cli GET testkey
+stdout testvalue
+
+# Test Redis info command (should include redis_version)
+testctr exec myredis redis-cli INFO server
+stdout 'redis_version'
+
+# Get the endpoint for external access
+testctr endpoint myredis 6379
+stdout '127.0.0.1:'
+
+# Stop the container
+testctr stop myredis

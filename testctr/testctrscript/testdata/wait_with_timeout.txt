@@ -1,0 +1,25 @@
+# Test wait command with timeout
+# Start a container
+testctr start redis:7-alpine cache -p 6379
+
+# Wait with default timeout (30s)
+testctr wait cache
+
+# Wait with custom timeout
+testctr start postgres:15 db -p 5432 -e POSTGRES_PASSWORD=test
+testctr wait db 10s
+
+# Verify containers are working
+testctr exec cache redis-cli PING
+stdout PONG
+
+testctr exec db psql -U postgres -c 'SELECT 1' postgres
+stdout 1
+
+# Test that wait fails for non-existent container
+! testctr wait nonexistent
+stderr 'container nonexistent not found'
+
+# Cleanup
+testctr stop cache
+testctr stop db

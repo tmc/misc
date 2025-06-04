@@ -1,0 +1,25 @@
+# Test running inside a container environment
+
+# Check we're in a container by looking at environment
+env | grep -E "(WORK|PATH)"
+
+# Test basic shell commands
+echo "Hello from container!"
+
+# Create and test a file
+echo "test content" > testfile.txt
+cat testfile.txt
+
+# Test that we have basic tools
+which sh
+
+-- config.json --
+{
+  "name": "test-config",
+  "value": 42
+}
+
+-- script.sh --
+#!/bin/sh
+echo "Script file executed successfully"
+cat config.json

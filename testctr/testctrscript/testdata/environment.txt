@@ -1,0 +1,18 @@
+# Test environment variables and custom commands
+
+# Start container with environment variables
+testctr start alpine:latest env1 -e FOO=bar -e BAZ=qux --cmd sh -c 'echo $FOO $BAZ && sleep infinity'
+
+# Check environment was set
+testctr exec env1 sh -c 'echo $FOO'
+stdout bar
+
+testctr exec env1 sh -c 'echo $BAZ'
+stdout qux
+
+# Test port mapping
+testctr start nginx:alpine web1 -p 80
+testctr wait web1
+
+# Get the mapped port (should be a number)
+testctr port web1 80
