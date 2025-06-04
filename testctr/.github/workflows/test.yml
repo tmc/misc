@@ -1,0 +1,73 @@
+name: Test
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+    
+    strategy:
+      matrix:
+        go-version: ['1.23']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+    
+    - name: Install Docker CLI
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y docker.io
+        docker --version
+    
+    - name: Test core testctr package
+      run: |
+        go test -v -race -coverprofile=coverage-core.txt -covermode=atomic ./...
+      env:
+        DOCKER_HOST: unix:///var/run/docker.sock
+    
+    - name: Test backend implementations
+      run: |
+        go test -v -race -coverprofile=coverage-backends.txt -covermode=atomic ./backends/...
+      env:
+        DOCKER_HOST: unix:///var/run/docker.sock
+    
+    - name: Test ctropts package
+      run: |
+        go test -v -race -coverprofile=coverage-ctropts.txt -covermode=atomic ./ctropts/...
+      env:
+        DOCKER_HOST: unix:///var/run/docker.sock
+    
+    - name: Test generated modules
+      run: |
+        go test -v -race -coverprofile=coverage-generated.txt -covermode=atomic ./exp/gen/modules/...
+      env:
+        DOCKER_HOST: unix:///var/run/docker.sock
+    
+    - name: Test scripttest framework
+      run: |
+        cd testctrscript
+        go test -v -race -coverprofile=coverage-scripttest.txt -covermode=atomic ./...
+      env:
+        DOCKER_HOST: unix:///var/run/docker.sock
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage-core.txt,./coverage-backends.txt,./coverage-ctropts.txt,./coverage-generated.txt,./testctrscript/coverage-scripttest.txt
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
