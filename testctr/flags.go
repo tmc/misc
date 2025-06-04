@@ -130,7 +130,19 @@ func checkOldContainers(t testing.TB) {
 	checkOldOnce.Do(func() {
 		// This function will use the default CLI backend's runtime determination logic.
 		// It assumes that old containers were also created by a CLI backend.
-		rt := discoverContainerRuntime() // Get runtime
+		// Since we now use backends, we'll use the CLI backend's logic directly
+		rt := "docker" // Default to docker
+		if runtime := os.Getenv("TESTCTR_RUNTIME"); runtime != "" {
+			rt = runtime
+		} else {
+			// Try to find available runtimes
+			for _, runtime := range []string{"docker", "podman", "nerdctl"} {
+				if _, err := exec.LookPath(runtime); err == nil {
+					rt = runtime
+					break
+				}
+			}
+		}
 		doCheckOldContainersCLI(t, rt)
 	})
 }
