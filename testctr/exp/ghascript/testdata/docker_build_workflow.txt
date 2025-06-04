@@ -1,0 +1,48 @@
+# Test Docker build workflow with buildx warning
+# This test demonstrates buildx detection and warnings
+
+# Check Docker capabilities
+workflow doctor
+stdout 'Docker and buildx capability check'
+
+# Check that workflow file exists
+[workflow docker-build]
+
+# List available workflows
+workflow list
+stdout '.github/workflows/docker-build.yml'
+
+# Run the Docker build workflow (may show buildx warnings)
+workflow run docker-build
+stdout 'Workflow docker-build completed successfully'
+
+# Check that workflow succeeded
+[workflow-success docker-build]
+
+-- .github/workflows/docker-build.yml --
+name: Docker Build
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: myapp:latest
+          
+      - name: Simple build
+        run: |
+          echo "Building without buildx..."
+          echo "FROM alpine:latest" > Dockerfile
+          echo "RUN echo 'Hello World'" >> Dockerfile
