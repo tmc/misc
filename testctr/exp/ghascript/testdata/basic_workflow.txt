@@ -1,0 +1,40 @@
+# Test basic workflow execution
+# This test demonstrates running a simple GitHub Actions workflow locally
+
+# List available workflows
+workflow list
+stdout '.github/workflows/ci.yml'
+
+# Run the CI workflow  
+ls
+workflow run ci
+stdout 'Workflow ci completed successfully'
+
+# Check that workflow succeeded
+[workflow-success ci]
+
+# List events for the workflow
+workflow events ci
+stdout 'push'
+stdout 'pull_request'
+
+-- .github/workflows/ci.yml --
+name: CI
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Say hello
+        run: echo "Hello from GitHub Actions"
+      
+      - name: Show environment
+        run: |
+          echo "Runner OS: $RUNNER_OS"
+          echo "GitHub Workspace: $GITHUB_WORKSPACE"
+          
+      - name: Simple test
+        run: |
+          echo "Running tests..."
+          [ "1" = "1" ] && echo "Test passed!"
