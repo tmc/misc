@@ -30,6 +30,34 @@ func WithPodman() testctr.Option {
 	return WithRuntime("podman")
 }
 
+// WithPlatform specifies the target platform/architecture for the container.
+// This enables running containers for different architectures than the host.
+//
+// Common platform values:
+//   - "linux/amd64" - x86_64 architecture
+//   - "linux/arm64" - ARM64 architecture  
+//   - "linux/arm/v7" - ARM v7 architecture
+//   - "linux/386" - 32-bit x86 architecture
+//
+// Example:
+//   // Run ARM64 container on any host
+//   container := testctr.New(t, "nginx", ctropts.WithPlatform("linux/arm64"))
+//
+// Platform emulation is handled automatically by Docker/Podman when the target
+// platform differs from the host architecture.
+// WithLabel adds a label to the container.
+func WithLabel(key, value string) testctr.Option {
+	// For now, store as environment variable since we don't have direct label support
+	// Backends can read this and convert to actual labels
+	return testctr.WithEnv("LABEL_"+key, value)
+}
+
+func WithPlatform(platform string) testctr.Option {
+	// Store platform information as a special environment variable that
+	// backends can recognize and use when creating containers with --platform
+	return testctr.WithEnv("TESTCTR_PLATFORM", platform)
+}
+
 // WithNerdctl configures the container to use nerdctl (containerd CLI).
 // This is a convenience wrapper around WithRuntime("nerdctl").
 func WithNerdctl() testctr.Option {
