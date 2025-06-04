@@ -1,0 +1,45 @@
+# Test network connectivity between containers
+echo "Testing container networking..."
+
+# Start web server
+testctr start nginx:alpine web -p 80
+
+# Start client container
+testctr start curlimages/curl:latest client --cmd sleep 300
+
+# Wait for containers
+testctr wait web
+testctr wait client
+
+# Verify containers exist
+[container web]
+[container client]
+
+# Test internal networking (if supported)
+echo "Testing container connectivity..."
+
+# Get web container endpoint
+testctr endpoint web 80
+stdout '127.0.0.1:'
+
+# Test external connectivity from client
+testctr exec client curl -s http://httpbin.org/json
+stdout '"origin"'
+
+# Test that nginx is serving
+testctr exec web cat /etc/nginx/nginx.conf
+stdout 'server'
+
+# Test nginx is running
+testctr exec web nginx -t
+stdout 'syntax is ok'
+
+# Test port mapping works
+testctr port web 80
+
+# Cleanup
+testctr stop client  
+testctr stop web
+
+[!container client]
+[!container web]

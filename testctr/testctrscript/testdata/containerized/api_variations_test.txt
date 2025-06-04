@@ -1,0 +1,34 @@
+# Test different API usage patterns
+echo "Testing API variations..."
+
+# Check what environment we're in
+if command -v apt >/dev/null 2>&1; then
+    echo "Environment: Ubuntu (apt available)"
+    DETECTED_OS="ubuntu"
+elif command -v apk >/dev/null 2>&1; then
+    echo "Environment: Alpine (apk available)"
+    DETECTED_OS="alpine"
+else
+    echo "Environment: Unknown"
+    DETECTED_OS="unknown"
+fi
+
+# Show environment variables that might be set
+echo "TEST_CASE=${TEST_CASE:-not_set}"
+echo "EXTRA_VAR=${EXTRA_VAR:-not_set}"
+
+# Test basic shell functionality
+whoami
+pwd
+echo "Shell: $0"
+
+# Create a simple test file
+echo "Hello from $DETECTED_OS" > test_output.txt
+cat test_output.txt
+
+# Test that basic utilities are available
+which sh
+which echo
+which cat
+
+echo "API variations test completed in $DETECTED_OS environment"

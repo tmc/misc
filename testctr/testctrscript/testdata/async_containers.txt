@@ -1,0 +1,43 @@
+# Test asynchronous container startup
+echo "Starting containers asynchronously..."
+
+# Start multiple containers async
+testctr start redis:7-alpine cache1 -p 6379 --async
+stdout 'started container cache1 asynchronously'
+
+testctr start postgres:15-alpine db1 -p 5432 -e POSTGRES_PASSWORD=secret --async
+stdout 'started container db1 asynchronously'
+
+testctr start nginx:alpine web1 -p 80 --async
+stdout 'started container web1 asynchronously'
+
+# Wait for all containers to be ready
+testctr wait cache1
+testctr wait db1 
+testctr wait web1
+
+# Test that all containers are running
+[container cache1]
+[container db1]
+[container web1]
+
+# Test Redis
+testctr exec cache1 redis-cli PING
+stdout PONG
+
+# Test Postgres (basic connection)
+testctr exec db1 pg_isready
+stdout 'accepting connections'
+
+# Test Nginx
+testctr exec web1 nginx -t
+stdout 'syntax is ok'
+
+# Clean up
+testctr stop cache1
+testctr stop db1
+testctr stop web1
+
+[!container cache1]
+[!container db1]
+[!container web1]

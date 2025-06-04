@@ -1,0 +1,23 @@
+# Test environment variables in container
+echo "Testing environment variables..."
+
+# Check that our custom environment variables are set
+echo "TEST_VAR=$TEST_VAR"
+echo "DEBUG=$DEBUG"
+
+# Verify values
+if [ "$TEST_VAR" = "hello" ]; then
+    echo "TEST_VAR is correctly set to 'hello'"
+else
+    echo "ERROR: TEST_VAR is not set correctly, got: $TEST_VAR"
+    exit 1
+fi
+
+if [ "$DEBUG" = "1" ]; then
+    echo "DEBUG is correctly set to '1'"
+else
+    echo "ERROR: DEBUG is not set correctly, got: $DEBUG"
+    exit 1
+fi
+
+echo "Environment variable test completed successfully"

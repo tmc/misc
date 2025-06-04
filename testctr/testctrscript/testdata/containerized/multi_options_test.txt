@@ -1,0 +1,47 @@
+# Test multiple options with Node.js environment
+echo "Testing Node.js environment with multiple options..."
+
+# Check Node.js is available
+which node
+node --version
+
+# Check npm is available
+which npm
+npm --version
+
+# Test environment variables
+echo "NODE_ENV=$NODE_ENV"
+echo "PORT=$PORT" 
+echo "DEBUG=$DEBUG"
+
+# Verify environment values
+if [ "$NODE_ENV" = "test" ]; then
+    echo "✅ NODE_ENV correctly set to 'test'"
+else
+    echo "❌ NODE_ENV incorrect: $NODE_ENV"
+    exit 1
+fi
+
+if [ "$PORT" = "3000" ]; then
+    echo "✅ PORT correctly set to '3000'"
+else
+    echo "❌ PORT incorrect: $PORT"
+    exit 1
+fi
+
+if [ "$DEBUG" = "testctr:*" ]; then
+    echo "✅ DEBUG correctly set to 'testctr:*'"
+else
+    echo "❌ DEBUG incorrect: $DEBUG"
+    exit 1
+fi
+
+# Test Node.js execution
+echo "console.log('Hello from Node.js!'); console.log('Environment:', process.env.NODE_ENV);" | node
+
+# Create and run a simple package.json test
+echo '{"name":"test","version":"1.0.0","main":"index.js"}' > package.json
+echo "console.log('Package test successful');" > index.js
+node index.js
+
+echo "Multi-options test completed successfully!"

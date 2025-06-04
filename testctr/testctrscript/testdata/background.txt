@@ -1,0 +1,21 @@
+# Test background container management
+
+# Start multiple containers
+testctr start redis:7-alpine cache -p 6379
+testctr start nginx:alpine web -p 80
+
+# Test Redis in background
+testctr exec cache redis-cli SET background-test success
+stdout OK
+
+# Test nginx in background
+testctr exec web nginx -t
+stdout 'syntax is ok'
+
+# Verify our data persists
+testctr exec cache redis-cli GET background-test
+stdout success
+
+# Cleanup
+testctr stop cache
+testctr stop web

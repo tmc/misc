@@ -1,0 +1,18 @@
+# Simple Redis test without conditions
+
+# Start Redis container
+testctr start redis:7-alpine myredis -p 6379
+
+# Test basic Redis operations
+testctr exec myredis redis-cli PING
+stdout PONG
+
+# Set and get a value
+testctr exec myredis redis-cli SET simple test
+stdout OK
+
+testctr exec myredis redis-cli GET simple
+stdout test
+
+# Stop the container
+testctr stop myredis

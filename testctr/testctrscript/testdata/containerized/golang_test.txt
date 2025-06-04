@@ -1,0 +1,49 @@
+echo "Testing Go environment..."
+which go
+go version
+
+# Test environment variables
+echo "CGO_ENABLED=$CGO_ENABLED"
+echo "GOOS=$GOOS" 
+echo "GO_ENV=$GO_ENV"
+
+# Verify Go environment settings
+go env CGO_ENABLED
+go env GOOS
+
+echo "Building and running Go program..."
+go run main.go
+
+echo "Testing go build with environment..."
+go build -o app main.go
+./app
+
+# Test CGO disabled build
+echo "Testing CGO_ENABLED=0 build..."
+if [ "$CGO_ENABLED" = "0" ]; then
+    echo "✅ CGO_ENABLED correctly set to 0"
+    # Test that we can build static binaries
+    go build -ldflags "-w -s" -o static-app main.go
+    ls -la static-app
+else
+    echo "⚠️  CGO_ENABLED not set to 0: $CGO_ENABLED"
+fi
+
+-- main.go --
+package main
+
+import (
+	"fmt"
+	"runtime"
+)
+
+func main() {
+	fmt.Println("Hello from Go!")
+	fmt.Printf("Current Go version: %s\n", runtime.Version())
+	fmt.Printf("Running on: %s/%s\n", runtime.GOOS, runtime.GOARCH)
+}
+
+-- go.mod --
+module test
+
+go 1.21

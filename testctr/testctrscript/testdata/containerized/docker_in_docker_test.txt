@@ -1,0 +1,42 @@
+# Test Docker-in-Docker functionality
+echo "Testing Docker-in-Docker setup..."
+
+# Check if docker is available in the container
+if command -v docker >/dev/null 2>&1; then
+    echo "✅ Docker CLI found in container"
+    docker --version
+    
+    # Try to check if Docker daemon is accessible
+    if docker info >/dev/null 2>&1; then
+        echo "✅ Docker daemon accessible"
+        docker info | head -5
+        
+        # Try to run a simple container inside the container
+        echo "Attempting to run container inside container..."
+        docker run --rm hello-world || echo "⚠️  Docker daemon not accessible for container operations"
+    else
+        echo "⚠️  Docker CLI present but daemon not accessible"
+        echo "This is expected without Docker socket mounting"
+    fi
+else
+    echo "ℹ️  Docker CLI not available - would need docker:dind or similar image"
+fi
+
+# Check if Docker socket exists
+if [ -S /var/run/docker.sock ]; then
+    echo "✅ Docker socket found at /var/run/docker.sock"
+    ls -la /var/run/docker.sock
+else
+    echo "ℹ️  Docker socket not found - would need volume mount"
+fi
+
+echo "Docker-in-Docker test completed"
+
+-- Dockerfile --
+FROM docker:latest
+
+# Install bash and other basic tools
+RUN apk add --no-cache bash curl
+
+# Set working directory
+WORKDIR /app

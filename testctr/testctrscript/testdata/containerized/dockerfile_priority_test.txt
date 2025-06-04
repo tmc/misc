@@ -1,0 +1,50 @@
+# Test that Dockerfile takes priority over WithImage option
+echo "Testing Dockerfile priority over WithImage..."
+
+# This should be running in Python (from Dockerfile), not Ubuntu (from WithImage)
+which python3
+python3 --version
+
+# Test that our custom Python environment is available
+python3 -c "import sys; print(f'Python version: {sys.version}')"
+
+# Test environment variable from WithEnv
+echo "TEST_MODE=$TEST_MODE"
+if [ "$TEST_MODE" = "dockerfile_priority" ]; then
+    echo "✅ Environment variable from WithEnv working"
+else
+    echo "❌ Environment variable incorrect: $TEST_MODE"
+    exit 1
+fi
+
+# Test that we have pip (should be available in Python image)
+which pip3
+pip3 --version
+
+# Verify we're not in Ubuntu (Ubuntu has apt, Python alpine doesn't)
+if command -v apt >/dev/null 2>&1; then
+    echo "❌ ERROR: Found apt command - we're in Ubuntu, not Python!"
+    echo "This means Dockerfile priority is not working correctly"
+    exit 1
+else
+    echo "✅ No apt found - confirmed we're in Python container, not Ubuntu"
+fi
+
+# Test a simple Python script
+python3 -c "
+print('Hello from Python container!')
+print('Dockerfile priority test successful!')
+"
+
+echo "Dockerfile priority test completed - Python image was used instead of Ubuntu!"
+
+-- Dockerfile --
+FROM python:3.9-alpine
+
+# Install basic tools
+RUN apk add --no-cache curl
+
+# Verify this is a Python environment
+RUN python3 --version
+
+WORKDIR /app

@@ -1,0 +1,16 @@
+# Basic test of testctr in scripttest
+
+# Start a Redis container
+testctr start redis:7-alpine redis1 -p 6379
+testctr wait redis1
+
+# Execute a command
+testctr exec redis1 redis-cli PING
+stdout PONG
+
+# Get the endpoint
+testctr endpoint redis1 6379
+stdout 127.0.0.1:
+
+# Stop the container
+testctr stop redis1

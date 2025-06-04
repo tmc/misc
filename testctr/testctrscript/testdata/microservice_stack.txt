@@ -1,0 +1,45 @@
+# Test a complete microservice stack
+echo "Setting up microservice stack..."
+
+# Start backend services
+testctr start redis:7-alpine cache -p 6379
+testctr start postgres:15-alpine db -p 5432 -e POSTGRES_DB=testapp -e POSTGRES_USER=testuser -e POSTGRES_PASSWORD=testpass
+
+# Start application services  
+testctr start node:18-alpine api -p 3000 -e NODE_ENV=test -e DATABASE_URL=postgresql://testuser:testpass@db:5432/testapp --cmd node -e 'console.log("API Server ready"); setTimeout(() => {}, 60000)'
+
+# Wait for all services
+testctr wait cache
+testctr wait db
+testctr wait api
+
+# Verify all containers are running
+[container cache]
+[container db] 
+[container api]
+
+# Test Redis cache
+testctr exec cache redis-cli SET test-key "hello microservices"
+stdout OK
+
+testctr exec cache redis-cli GET test-key
+stdout 'hello microservices'
+
+# Test database
+testctr exec db psql -U testuser -d testapp -c "SELECT version();"
+stdout PostgreSQL
+
+# Test API service logs
+testctr exec api ps aux
+stdout 'node'
+
+# Get service endpoints
+echo "Service endpoints:"
+testctr endpoint cache 6379
+testctr endpoint db 5432  
+testctr endpoint api 3000
+
+# Cleanup stack
+testctr stop api
+testctr stop db
+testctr stop cache

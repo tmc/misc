@@ -1,0 +1,49 @@
+# Test database operations across multiple databases
+echo "Testing multiple database systems..."
+
+# Start MySQL
+testctr start mysql:8 mysql -p 3306 -e MYSQL_ROOT_PASSWORD=rootpass -e MYSQL_DATABASE=testdb -e MYSQL_USER=testuser -e MYSQL_PASSWORD=userpass
+
+# Start PostgreSQL  
+testctr start postgres:15 postgres -p 5432 -e POSTGRES_DB=testdb -e POSTGRES_USER=testuser -e POSTGRES_PASSWORD=userpass
+
+# Start MongoDB
+testctr start mongo:7 mongodb -p 27017 -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=adminpass
+
+# Wait for all databases
+testctr wait mysql
+testctr wait postgres
+testctr wait mongodb
+
+# Verify all databases are running
+[container mysql]
+[container postgres]
+[container mongodb]
+
+echo "Testing MySQL operations..."
+testctr exec mysql mysql -u testuser -puserpass -D testdb -e "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(50));"
+testctr exec mysql mysql -u testuser -puserpass -D testdb -e "INSERT INTO users VALUES (1, 'John Doe');"
+testctr exec mysql mysql -u testuser -puserpass -D testdb -e "SELECT * FROM users;"
+stdout 'John Doe'
+
+echo "Testing PostgreSQL operations..."
+testctr exec postgres psql -U testuser -d testdb -c "CREATE TABLE products (id SERIAL PRIMARY KEY, name TEXT);"
+testctr exec postgres psql -U testuser -d testdb -c "INSERT INTO products (name) VALUES ('Test Product');"
+testctr exec postgres psql -U testuser -d testdb -c "SELECT * FROM products;"
+stdout 'Test Product'
+
+echo "Testing MongoDB operations..."
+testctr exec mongodb mongosh --username admin --password adminpass --eval "db.test.insertOne({name: 'Test Document'})"
+testctr exec mongodb mongosh --username admin --password adminpass --eval "db.test.find()"
+stdout 'Test Document'
+
+# Get database endpoints
+echo "Database endpoints:"
+testctr endpoint mysql 3306
+testctr endpoint postgres 5432
+testctr endpoint mongodb 27017
+
+# Cleanup
+testctr stop mysql
+testctr stop postgres  
+testctr stop mongodb

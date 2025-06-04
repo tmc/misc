@@ -1,0 +1,21 @@
+# Test using default Ubuntu image
+echo "Testing default Ubuntu environment..."
+
+# Check Ubuntu-specific tools
+which apt
+apt --version
+
+# Check basic shell environment
+uname -a
+whoami
+pwd
+
+# Test that we can install packages (but don't actually install to keep test fast)
+apt list --installed | head -5
+
+# Test basic file operations
+echo "Hello Ubuntu!" > test.txt
+cat test.txt
+rm test.txt
+
+echo "Default Ubuntu test completed successfully"

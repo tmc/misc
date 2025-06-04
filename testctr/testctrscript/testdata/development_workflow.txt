@@ -1,0 +1,66 @@
+# Test complete development workflow
+echo "Testing development workflow with multiple languages..."
+
+# Start development stack
+testctr start node:18-alpine nodedev -p 3000 -e NODE_ENV=development --cmd npm init -y
+
+testctr start python:3.11-alpine pythondev -p 8000 -e PYTHONPATH=/app --cmd python -c 'print("Python ready"); import time; time.sleep(60)'
+
+testctr start golang:1.21-alpine godev -e CGO_ENABLED=0 -e GOOS=linux --cmd go version
+
+# Wait for all dev containers
+testctr wait nodedev
+testctr wait pythondev 
+testctr wait godev
+
+# Verify development environments
+[container nodedev]
+[container pythondev]
+[container godev]
+
+echo "Testing Node.js development..."
+testctr exec nodedev node --version
+stdout 'v18'
+
+testctr exec nodedev npm --version
+stdout -count=1 '10'
+
+# Create a simple Node.js app
+testctr exec nodedev sh -c 'echo "console.log(\"Hello Node.js!\");" > app.js'
+testctr exec nodedev node app.js
+stdout 'Hello Node.js!'
+
+echo "Testing Python development..."
+testctr exec pythondev python --version
+stdout 'Python 3.11'
+
+testctr exec pythondev pip --version
+stdout 'pip'
+
+# Create a simple Python app
+testctr exec pythondev sh -c 'echo "print(\"Hello Python!\")" > app.py'
+testctr exec pythondev python app.py
+stdout 'Hello Python!'
+
+echo "Testing Go development..."
+testctr exec godev go version
+stdout 'go1.21'
+
+# Create a simple Go app
+testctr exec godev sh -c 'echo "package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Hello Go!\") }" > main.go'
+testctr exec godev go run main.go
+stdout 'Hello Go!'
+
+testctr exec godev go build -o app main.go
+testctr exec godev ./app
+stdout 'Hello Go!'
+
+# Show development endpoints
+echo "Development servers:"
+testctr endpoint nodedev 3000
+testctr endpoint pythondev 8000
+
+# Cleanup development environment
+testctr stop nodedev
+testctr stop pythondev
+testctr stop godev

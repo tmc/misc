@@ -1,0 +1,30 @@
+# Test using custom Dockerfile
+echo "Testing custom container environment..."
+
+ls
+
+# Check if our custom tools are available
+which curl
+curl --version
+
+# Test the go environment we installed
+go version
+
+# Test file from build context
+cat /hello.txt
+
+-- Dockerfile --
+FROM alpine:latest
+
+# Install curl and go
+RUN apk add --no-cache curl go
+WORKDIR /app
+
+# Copy files from build context
+COPY . /app/
+
+# Set working directory
+WORKDIR /app
+
+-- hello.txt --
+Hello from the build context!
