@@ -1,0 +1,683 @@
+# Basic assert.Equal transformations
+de-minimis-non-curat-lex basic_test.go
+cmp basic_test.go basic_test.go.want
+
+# assert.NotEqual transformations
+de-minimis-non-curat-lex notequal_test.go
+cmp notequal_test.go notequal_test.go.want
+
+# Boolean assertions (True/False)
+de-minimis-non-curat-lex boolean_test.go
+cmp boolean_test.go boolean_test.go.want
+
+# Nil assertions
+de-minimis-non-curat-lex nil_test.go
+cmp nil_test.go nil_test.go.want
+
+# Length and Empty assertions
+de-minimis-non-curat-lex length_test.go
+cmp length_test.go length_test.go.want
+
+# Error assertions
+de-minimis-non-curat-lex error_test.go
+cmp error_test.go error_test.go.want
+
+# Complex struct comparisons using cmp
+de-minimis-non-curat-lex complex_test.go
+cmp complex_test.go complex_test.go.want
+
+# Require package (fatal assertions)
+de-minimis-non-curat-lex require_test.go
+cmp require_test.go require_test.go.want
+
+# Suite testing transformation
+de-minimis-non-curat-lex suite_test.go
+cmp suite_test.go suite_test.go.want
+
+# Contains assertions
+de-minimis-non-curat-lex contains_test.go
+cmp contains_test.go contains_test.go.want
+
+# Numeric comparisons
+de-minimis-non-curat-lex numeric_test.go
+cmp numeric_test.go numeric_test.go.want
+
+# Mock usage (adds TODOs)
+de-minimis-non-curat-lex mock_test.go
+cmp mock_test.go mock_test.go.want
+
+# Import management
+de-minimis-non-curat-lex imports_test.go
+cmp imports_test.go imports_test.go.want
+
+# Dry run mode
+de-minimis-non-curat-lex -dry-run basic_test.go
+cmp basic_test.go basic_test.go
+
+# Multiple files at once
+de-minimis-non-curat-lex basic_test.go error_test.go
+cmp basic_test.go basic_test.go.want
+cmp error_test.go error_test.go.want
+
+-- basic_test.go --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestBasicEqual(t *testing.T) {
+	assert.Equal(t, 42, calculate())
+	assert.Equal(t, "hello", getName())
+	assert.Equal(t, "world", getValue(), "custom message")
+}
+
+-- basic_test.go.want --
+package mypackage
+
+import (
+	"testing"
+)
+
+func TestBasicEqual(t *testing.T) {
+	if got := calculate(); got != 42 {
+		t.Errorf("got %v, want %v", got, 42)
+	}
+	if got := getName(); got != "hello" {
+		t.Errorf("got %v, want %v", got, "hello")
+	}
+	if got := getValue(); got != "world" {
+		t.Errorf("custom message: got %v, want %v", got, "world")
+	}
+}
+
+-- notequal_test.go --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNotEqual(t *testing.T) {
+	assert.NotEqual(t, 0, getUserCount())
+	assert.NotEqual(t, "", getToken(), "token should not be empty")
+}
+
+-- notequal_test.go.want --
+package mypackage
+
+import (
+	"testing"
+)
+
+func TestNotEqual(t *testing.T) {
+	if got := getUserCount(); got == 0 {
+		t.Errorf("got %v, want not %v", got, 0)
+	}
+	if got := getToken(); got == "" {
+		t.Errorf("token should not be empty: got %v, want not %v", got, "")
+	}
+}
+
+-- boolean_test.go --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestBooleans(t *testing.T) {
+	assert.True(t, isValid())
+	assert.True(t, checkCondition(), "condition should be true")
+	assert.False(t, hasErrors())
+	assert.False(t, isDisabled(), "should be enabled")
+}
+
+-- boolean_test.go.want --
+package mypackage
+
+import (
+	"testing"
+)
+
+func TestBooleans(t *testing.T) {
+	if !isValid() {
+		t.Errorf("expected true, got false")
+	}
+	if !checkCondition() {
+		t.Errorf("condition should be true: expected true, got false")
+	}
+	if hasErrors() {
+		t.Errorf("expected false, got true")
+	}
+	if isDisabled() {
+		t.Errorf("should be enabled: expected false, got true")
+	}
+}
+
+-- nil_test.go --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNilValues(t *testing.T) {
+	var ptr *string
+	assert.Nil(t, ptr)
+	assert.Nil(t, getError(), "no error expected")
+
+	value := "test"
+	assert.NotNil(t, &value)
+	assert.NotNil(t, getData(), "data required")
+}
+
+-- nil_test.go.want --
+package mypackage
+
+import (
+	"testing"
+)
+
+func TestNilValues(t *testing.T) {
+	var ptr *string
+	if ptr != nil {
+		t.Errorf("expected nil, got %v", ptr)
+	}
+	if err := getError(); err != nil {
+		t.Errorf("no error expected: expected nil, got %v", err)
+	}
+
+	value := "test"
+	if &value == nil {
+		t.Errorf("expected non-nil value")
+	}
+	if data := getData(); data == nil {
+		t.Errorf("data required: expected non-nil value")
+	}
+}
+
+-- length_test.go --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestLengthAndEmpty(t *testing.T) {
+	assert.Empty(t, getEmptySlice())
+	assert.Empty(t, "", "string should be empty")
+	assert.NotEmpty(t, getUserList())
+	assert.Len(t, getItems(), 5)
+	assert.Len(t, getNames(), 3, "expected 3 names")
+}
+
+-- length_test.go.want --
+package mypackage
+
+import (
+	"testing"
+)
+
+func TestLengthAndEmpty(t *testing.T) {
+	if got := getEmptySlice(); len(got) != 0 {
+		t.Errorf("expected empty, got length %d", len(got))
+	}
+	if got := ""; len(got) != 0 {
+		t.Errorf("string should be empty: expected empty, got length %d", len(got))
+	}
+	if got := getUserList(); len(got) == 0 {
+		t.Errorf("expected non-empty value")
+	}
+	if got := getItems(); len(got) != 5 {
+		t.Errorf("got length %d, want 5", len(got))
+	}
+	if got := getNames(); len(got) != 3 {
+		t.Errorf("expected 3 names: got length %d, want 3", len(got))
+	}
+}
+
+-- error_test.go --
+package mypackage
+
+import (
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+var ErrNotFound = errors.New("not found")
+
+func TestErrors(t *testing.T) {
+	err := doSomething()
+	assert.Error(t, err)
+	assert.NoError(t, validate())
+
+	err = findUser("invalid")
+	assert.ErrorIs(t, err, ErrNotFound)
+
+	var target *ValidationError
+	err = validateInput("")
+	assert.ErrorAs(t, err, &target)
+}
+
+-- error_test.go.want --
+package mypackage
+
+import (
+	"errors"
+	"testing"
+)
+
+var ErrNotFound = errors.New("not found")
+
+func TestErrors(t *testing.T) {
+	err := doSomething()
+	if err == nil {
+		t.Errorf("expected error, got nil")
+	}
+	if err := validate(); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	err = findUser("invalid")
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected error to be %v, got %v", ErrNotFound, err)
+	}
+
+	var target *ValidationError
+	err = validateInput("")
+	if !errors.As(err, &target) {
+		t.Errorf("expected error to be assignable to %T", target)
+	}
+}
+
+-- complex_test.go --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+type User struct {
+	ID    int
+	Name  string
+	Email string
+}
+
+func TestComplexStructs(t *testing.T) {
+	expected := User{ID: 1, Name: "Alice", Email: "alice@example.com"}
+	actual := getUser(1)
+	assert.Equal(t, expected, actual)
+
+	users := []User{
+		{ID: 1, Name: "Alice"},
+		{ID: 2, Name: "Bob"},
+	}
+	assert.Equal(t, users, getAllUsers())
+}
+
+-- complex_test.go.want --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+)
+
+type User struct {
+	ID    int
+	Name  string
+	Email string
+}
+
+func TestComplexStructs(t *testing.T) {
+	expected := User{ID: 1, Name: "Alice", Email: "alice@example.com"}
+	actual := getUser(1)
+	if diff := cmp.Diff(expected, actual); diff != "" {
+		t.Errorf("mismatch (-want +got):\n%s", diff)
+	}
+
+	users := []User{
+		{ID: 1, Name: "Alice"},
+		{ID: 2, Name: "Bob"},
+	}
+	if diff := cmp.Diff(users, getAllUsers()); diff != "" {
+		t.Errorf("users mismatch (-want +got):\n%s", diff)
+	}
+}
+
+-- require_test.go --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestRequireFatal(t *testing.T) {
+	require.NoError(t, setup())
+	require.Equal(t, "admin", getRole())
+	require.True(t, isAuthorized(), "must be authorized")
+	require.NotNil(t, getConfig())
+}
+
+-- require_test.go.want --
+package mypackage
+
+import (
+	"testing"
+)
+
+func TestRequireFatal(t *testing.T) {
+	if err := setup(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := getRole(); got != "admin" {
+		t.Fatalf("got %v, want %v", got, "admin")
+	}
+	if !isAuthorized() {
+		t.Fatalf("must be authorized: expected true, got false")
+	}
+	if config := getConfig(); config == nil {
+		t.Fatalf("expected non-nil value")
+	}
+}
+
+-- suite_test.go --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/suite"
+)
+
+type ExampleTestSuite struct {
+	suite.Suite
+	db *Database
+}
+
+func (suite *ExampleTestSuite) SetupTest() {
+	suite.db = NewDatabase()
+}
+
+func (suite *ExampleTestSuite) TearDownTest() {
+	suite.db.Close()
+}
+
+func (suite *ExampleTestSuite) TestUserCreation() {
+	user := suite.db.CreateUser("test@example.com")
+	suite.Equal("test@example.com", user.Email)
+	suite.NotNil(user.ID)
+}
+
+func TestExampleTestSuite(t *testing.T) {
+	suite.Run(t, new(ExampleTestSuite))
+}
+
+-- suite_test.go.want --
+package mypackage
+
+import (
+	"testing"
+)
+
+type ExampleTestSuite struct {
+	db *Database
+}
+
+func setupExampleTest(t *testing.T) *ExampleTestSuite {
+	suite := &ExampleTestSuite{}
+	suite.db = NewDatabase()
+	t.Cleanup(func() {
+		suite.db.Close()
+	})
+	return suite
+}
+
+func TestUserCreation(t *testing.T) {
+	suite := setupExampleTest(t)
+	user := suite.db.CreateUser("test@example.com")
+	if got := user.Email; got != "test@example.com" {
+		t.Errorf("got %v, want %v", got, "test@example.com")
+	}
+	if user.ID == nil {
+		t.Errorf("expected non-nil value")
+	}
+}
+
+-- contains_test.go --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestContains(t *testing.T) {
+	assert.Contains(t, "hello world", "world")
+	assert.Contains(t, []string{"a", "b", "c"}, "b")
+	assert.NotContains(t, "hello", "goodbye")
+
+	numbers := []int{1, 2, 3, 4, 5}
+	assert.Contains(t, numbers, 3)
+}
+
+-- contains_test.go.want --
+package mypackage
+
+import (
+	"slices"
+	"strings"
+	"testing"
+)
+
+func TestContains(t *testing.T) {
+	if !strings.Contains("hello world", "world") {
+		t.Errorf("expected %q to contain %q", "hello world", "world")
+	}
+	if !slices.Contains([]string{"a", "b", "c"}, "b") {
+		t.Errorf("expected slice to contain %v", "b")
+	}
+	if strings.Contains("hello", "goodbye") {
+		t.Errorf("expected %q not to contain %q", "hello", "goodbye")
+	}
+
+	numbers := []int{1, 2, 3, 4, 5}
+	if !slices.Contains(numbers, 3) {
+		t.Errorf("expected slice to contain %v", 3)
+	}
+}
+
+-- numeric_test.go --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestNumericComparisons(t *testing.T) {
+	assert.Greater(t, 10, 5)
+	assert.GreaterOrEqual(t, 10, 10)
+	assert.Less(t, 5, 10)
+	assert.LessOrEqual(t, 10, 10)
+
+	assert.InDelta(t, 3.14, 3.14159, 0.01)
+	assert.InEpsilon(t, 100.0, 101.0, 0.02)
+}
+
+-- numeric_test.go.want --
+package mypackage
+
+import (
+	"math"
+	"testing"
+)
+
+func TestNumericComparisons(t *testing.T) {
+	if 10 <= 5 {
+		t.Errorf("expected %v > %v", 10, 5)
+	}
+	if 10 < 10 {
+		t.Errorf("expected %v >= %v", 10, 10)
+	}
+	if 5 >= 10 {
+		t.Errorf("expected %v < %v", 5, 10)
+	}
+	if 10 > 10 {
+		t.Errorf("expected %v <= %v", 10, 10)
+	}
+
+	if math.Abs(3.14-3.14159) > 0.01 {
+		t.Errorf("expected %v to be within delta %v of %v", 3.14159, 0.01, 3.14)
+	}
+	if math.Abs(100.0-101.0)/math.Abs(100.0) > 0.02 {
+		t.Errorf("expected %v to be within epsilon %v of %v", 101.0, 0.02, 100.0)
+	}
+}
+
+-- mock_test.go --
+package mypackage
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/mock"
+)
+
+type MockService struct {
+	mock.Mock
+}
+
+func (m *MockService) GetUser(id int) (*User, error) {
+	args := m.Called(id)
+	return args.Get(0).(*User), args.Error(1)
+}
+
+func TestWithMock(t *testing.T) {
+	mockService := new(MockService)
+	mockService.On("GetUser", 1).Return(&User{ID: 1, Name: "Test"}, nil)
+
+	user, err := mockService.GetUser(1)
+	assert.NoError(t, err)
+	assert.Equal(t, "Test", user.Name)
+
+	mockService.AssertExpectations(t)
+}
+
+-- mock_test.go.want --
+package mypackage
+
+import (
+	"testing"
+)
+
+// TODO: Consider replacing MockService with an interface-based test double
+type MockService struct {
+	// TODO: Remove mock.Mock dependency
+	mock.Mock
+}
+
+func (m *MockService) GetUser(id int) (*User, error) {
+	args := m.Called(id)
+	return args.Get(0).(*User), args.Error(1)
+}
+
+func TestWithMock(t *testing.T) {
+	mockService := new(MockService)
+	// TODO: Implement test double behavior without testify/mock
+	mockService.On("GetUser", 1).Return(&User{ID: 1, Name: "Test"}, nil)
+
+	user, err := mockService.GetUser(1)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+	if got := user.Name; got != "Test" {
+		t.Errorf("got %v, want %v", got, "Test")
+	}
+
+	// TODO: Implement expectation verification without testify
+	mockService.AssertExpectations(t)
+}
+
+-- imports_test.go --
+package mypackage
+
+import (
+	"fmt"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestImportManagement(t *testing.T) {
+	// This test uses fmt
+	result := fmt.Sprintf("test-%d", 123)
+	assert.Equal(t, "test-123", result)
+
+	// This will need errors package
+	err := getError()
+	assert.ErrorIs(t, err, ErrNotFound)
+
+	// This will need slices package
+	items := []string{"a", "b", "c"}
+	assert.Contains(t, items, "b")
+
+	// Remove unused require
+	assert.True(t, true)
+}
+
+-- imports_test.go.want --
+package mypackage
+
+import (
+	"errors"
+	"fmt"
+	"slices"
+	"testing"
+)
+
+func TestImportManagement(t *testing.T) {
+	// This test uses fmt
+	result := fmt.Sprintf("test-%d", 123)
+	if got := result; got != "test-123" {
+		t.Errorf("got %v, want %v", got, "test-123")
+	}
+
+	// This will need errors package
+	err := getError()
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected error to be %v, got %v", ErrNotFound, err)
+	}
+
+	// This will need slices package
+	items := []string{"a", "b", "c"}
+	if !slices.Contains(items, "b") {
+		t.Errorf("expected slice to contain %v", "b")
+	}
+
+	// Remove unused require
+	if !true {
+		t.Errorf("expected true, got false")
+	}
+}

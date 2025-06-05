@@ -1,0 +1,16 @@
+# Binary
+de-minimis-non-curat-lex
+
+# Log files
+*.ndjson
+*.log
+
+# Backup files
+*.bak
+
+# Workspace directory (experimental)
+workspace/
+
+# Generated outputs
+cgpt-output.txt
+agent-chat.txt
