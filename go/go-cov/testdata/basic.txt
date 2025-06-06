@@ -1,0 +1,57 @@
+# Test basic go-cov source compilation with restricted PATH
+
+# Set restricted PATH and environment
+env PATH=$GOROOT/bin
+env HOME=$WORK/home
+env PORT=8080
+mkdir $HOME
+mkdir $HOME/sdk
+
+# Start the go-cov server in background
+exec go-cov-server &
+
+# Wait for server to start
+wait-port localhost:8080
+
+# Test module discovery endpoint
+http-get localhost:8080/go-cov1.24.3?go-get=1
+stdout 'meta name="go-import"'
+stdout 'go.tmc.dev/go-cov'
+
+# Test version info endpoint  
+http-get localhost:8080/go-cov1.24.3/@v/latest.info
+stdout '"Version"'
+stdout '"Time"'
+
+# Test go.mod endpoint
+http-get localhost:8080/go-cov1.24.3/@v/latest.mod
+stdout 'module go.tmc.dev/go-cov1.24.3'
+stdout 'go 1.21'
+
+# Test dynamic zip generation
+http-get localhost:8080/go-cov1.24.3/@v/latest.zip
+save-file installer.zip
+
+# Extract the generated installer
+unzip installer.zip
+
+# Verify the generated installer has correct content
+cat main.go
+stdout 'version.*=.*"go1.24.3"'
+stdout 'downloadGoSource'
+stdout 'buildCoverageEnabledGo'
+stdout 'GOEXPERIMENT=coverageredesign'
+stdout 'findBootstrapGo'
+stdout '.src.tar.gz'
+
+# Verify go.mod is correct
+cat go.mod
+stdout 'module go.tmc.dev/go-cov1.24.3'
+stdout 'go 1.21'
+
+# Test that installer compiles with restricted PATH
+go build -o installer main.go
+
+# Test installer execution (should fail gracefully without network)
+! exec ./installer
+stderr 'Failed to download Go source'

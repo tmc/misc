@@ -1,0 +1,8 @@
+# Binaries
+go-cov
+go-cov.test
+server
+
+# Test coverage
+*.out
+*.test

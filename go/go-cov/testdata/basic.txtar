@@ -1,0 +1,498 @@
+# Test basic go-cov installation with restricted PATH
+
+# Start the go-cov server in background
+exec go run cmd/server/main.go &
+wait-port localhost:8080
+
+# Test module discovery endpoint
+http-get localhost:8080/go-cov1.24.3?go-get=1
+stdout 'meta name="go-import"'
+stdout 'go.tmc.dev/go-cov'
+
+# Test version info endpoint
+http-get localhost:8080/go-cov1.24.3/@v/latest.info
+stdout '"Version"'
+stdout '"Time"'
+
+# Test go.mod endpoint
+http-get localhost:8080/go-cov1.24.3/@v/latest.mod
+stdout 'module go.tmc.dev/go-cov1.24.3'
+stdout 'go 1.21'
+
+# Test with restricted PATH - only include Go binary directory
+env PATH=$GOROOT/bin
+env HOME=$WORK/home
+mkdir $HOME
+mkdir $HOME/sdk
+
+# Test the installer (this would normally download and build)
+# For testing, we'll just verify the generated code compiles
+http-get localhost:8080/go-cov1.24.3/@v/latest.zip
+save-file installer.zip
+
+# Extract and test the generated installer
+unzip installer.zip
+cat main.go
+stdout 'version.*=.*"go1.24.3"'
+stdout 'downloadAndInstallGo'
+stdout 'buildCoverageEnabledGo'
+
+# Verify the installer compiles
+go build -o installer main.go
+
+# Test that installer fails gracefully without network (expected)
+! exec ./installer
+stderr 'Failed to download Go'
+
+-- cmd/server/main.go --
+package main
+
+import (
+	"archive/zip"
+	"bytes"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"path"
+	"regexp"
+	"strings"
+	"text/template"
+)
+
+var versionPattern = regexp.MustCompile(`^go1\.\d+(?:\.\d+)?(?:rc\d+|beta\d+)?$`)
+
+func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	http.HandleFunc("/", handleModule)
+	
+	fmt.Printf("Starting go-cov service on port %s\n", port)
+	fmt.Println("Usage: go run go.tmc.dev/go-cov1.24.3@latest")
+	
+	log.Fatal(http.ListenAndServe(":"+port, nil))
+}
+
+func handleModule(w http.ResponseWriter, r *http.Request) {
+	modulePath := strings.TrimPrefix(r.URL.Path, "/")
+	
+	if r.URL.Query().Get("go-get") == "1" {
+		handleGoGet(w, r, modulePath)
+		return
+	}
+	
+	if strings.Contains(r.URL.Path, "/@v/") {
+		handleModuleProxy(w, r, modulePath)
+		return
+	}
+	
+	handleModuleInfo(w, r, modulePath)
+}
+
+func handleGoGet(w http.ResponseWriter, r *http.Request, modulePath string) {
+	version := extractGoVersionFromModule(modulePath)
+	if version == "" {
+		http.Error(w, "Invalid Go version", http.StatusBadRequest)
+		return
+	}
+	
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintf(w, `<!DOCTYPE html>
+<html>
+<head>
+<meta name="go-import" content="go.tmc.dev/go-cov git https://github.com/tmc/misc">
+<meta name="go-source" content="go.tmc.dev/go-cov https://github.com/tmc/misc https://github.com/tmc/misc/tree/master{/dir} https://github.com/tmc/misc/blob/master{/dir}/{file}#L{line}">
+</head>
+<body>
+<p>Coverage-enabled Go installer for %s</p>
+<p>Usage: <code>go run go.tmc.dev/go-cov%s@latest</code></p>
+</body>
+</html>`, version, strings.TrimPrefix(version, "go"))
+}
+
+func handleModuleProxy(w http.ResponseWriter, r *http.Request, modulePath string) {
+	parts := strings.Split(r.URL.Path, "/@v/")
+	if len(parts) != 2 {
+		http.Error(w, "Invalid module proxy request", http.StatusBadRequest)
+		return
+	}
+	
+	version := strings.TrimSuffix(parts[1], ".info")
+	version = strings.TrimSuffix(version, ".mod")
+	version = strings.TrimSuffix(version, ".zip")
+	
+	goVersion := extractGoVersionFromModule(modulePath)
+	if goVersion == "" {
+		http.Error(w, "Invalid Go version in module path", http.StatusBadRequest)
+		return
+	}
+	
+	if strings.HasSuffix(r.URL.Path, ".info") {
+		handleVersionInfo(w, r, version)
+	} else if strings.HasSuffix(r.URL.Path, ".mod") {
+		handleGoMod(w, r, goVersion)
+	} else if strings.HasSuffix(r.URL.Path, ".zip") {
+		handleModuleZip(w, r, goVersion)
+	} else if r.URL.Path == "/@v/list" {
+		handleVersionList(w, r)
+	} else {
+		http.Error(w, "Not found", http.StatusNotFound)
+	}
+}
+
+func handleVersionInfo(w http.ResponseWriter, r *http.Request, version string) {
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{
+  "Version": "%s",
+  "Time": "2024-12-10T10:00:00Z"
+}`, version)
+}
+
+func handleGoMod(w http.ResponseWriter, r *http.Request, goVersion string) {
+	moduleName := extractModuleNameFromPath(r.URL.Path)
+	
+	w.Header().Set("Content-Type", "text/plain")
+	fmt.Fprintf(w, `module %s
+
+go 1.21
+
+require (
+	golang.org/x/mod v0.14.0
+	golang.org/x/sys v0.15.0
+)
+`, moduleName)
+}
+
+func handleModuleZip(w http.ResponseWriter, r *http.Request, goVersion string) {
+	w.Header().Set("Content-Type", "application/zip")
+	
+	moduleName := extractModuleNameFromPath(r.URL.Path)
+	mainGo, err := generateMainGo(goVersion)
+	if err != nil {
+		http.Error(w, "Failed to generate main.go: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	
+	goMod := generateGoMod(moduleName)
+	
+	var buf bytes.Buffer
+	zipWriter := zip.NewWriter(&buf)
+	
+	modFile, err := zipWriter.Create("go.mod")
+	if err != nil {
+		http.Error(w, "Failed to create go.mod in zip", http.StatusInternalServerError)
+		return
+	}
+	if _, err := modFile.Write([]byte(goMod)); err != nil {
+		http.Error(w, "Failed to write go.mod", http.StatusInternalServerError)
+		return
+	}
+	
+	mainFile, err := zipWriter.Create("main.go")
+	if err != nil {
+		http.Error(w, "Failed to create main.go in zip", http.StatusInternalServerError)
+		return
+	}
+	if _, err := mainFile.Write([]byte(mainGo)); err != nil {
+		http.Error(w, "Failed to write main.go", http.StatusInternalServerError)
+		return
+	}
+	
+	if err := zipWriter.Close(); err != nil {
+		http.Error(w, "Failed to close zip", http.StatusInternalServerError)
+		return
+	}
+	
+	w.Write(buf.Bytes())
+}
+
+func handleVersionList(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	versions := []string{
+		"latest",
+	}
+	
+	for _, v := range versions {
+		fmt.Fprintln(w, v)
+	}
+}
+
+func handleModuleInfo(w http.ResponseWriter, r *http.Request, modulePath string) {
+	version := extractGoVersionFromModule(modulePath)
+	if version == "" {
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, `<!DOCTYPE html>
+<html>
+<head><title>go-cov - Coverage-enabled Go installer</title></head>
+<body>
+<h1>go-cov - Coverage-enabled Go installer</h1>
+<p>Install coverage-enabled Go versions:</p>
+<pre>go run go.tmc.dev/go-cov1.24.3@latest</pre>
+<p>Available versions: go1.21.0 through go1.24.3</p>
+</body>
+</html>`)
+		return
+	}
+	
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprintf(w, `<!DOCTYPE html>
+<html>
+<head><title>Coverage-enabled Go %s</title></head>
+<body>
+<h1>Coverage-enabled Go %s</h1>
+<p>Install with:</p>
+<pre>go run go.tmc.dev/go-cov%s@latest</pre>
+</body>
+</html>`, version, version, strings.TrimPrefix(version, "go"))
+}
+
+func extractGoVersionFromModule(modulePath string) string {
+	base := path.Base(modulePath)
+	if strings.HasPrefix(base, "go-cov") {
+		return "go" + strings.TrimPrefix(base, "go-cov")
+	}
+	return ""
+}
+
+func extractModuleNameFromPath(urlPath string) string {
+	parts := strings.Split(urlPath, "/@v/")
+	if len(parts) > 0 {
+		return strings.TrimPrefix(parts[0], "/")
+	}
+	return "go.tmc.dev/go-cov1.24.3"
+}
+
+func generateGoMod(moduleName string) string {
+	return fmt.Sprintf(`module %s
+
+go 1.21
+
+require (
+	golang.org/x/mod v0.14.0
+	golang.org/x/sys v0.15.0
+)
+`, moduleName)
+}
+
+const mainGoTemplate = `package main
+
+import (
+	"archive/tar"
+	"compress/gzip"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+)
+
+const (
+	version       = "{{.Version}}"
+	goDownloadURL = "https://go.dev/dl/"
+	userAgent     = "go-cov/1.0"
+)
+
+func main() {
+	fmt.Printf("Installing coverage-enabled Go %s...\n", version)
+
+	if err := downloadAndInstallGo(version); err != nil {
+		log.Fatalf("Failed to install Go %s: %v", version, err)
+	}
+
+	if err := buildCoverageEnabledGo(version); err != nil {
+		log.Fatalf("Failed to build coverage-enabled Go %s: %v", version, err)
+	}
+
+	fmt.Printf("Coverage-enabled Go %s installed successfully!\n", version)
+	fmt.Printf("Use: export PATH=$HOME/sdk/%s-cov/bin:$PATH\n", version)
+}
+
+func downloadAndInstallGo(version string) error {
+	goos := runtime.GOOS
+	goarch := runtime.GOARCH
+	
+	filename := fmt.Sprintf("%s.%s-%s.tar.gz", version, goos, goarch)
+	url := fmt.Sprintf("%s%s", goDownloadURL, filename)
+	
+	fmt.Printf("Downloading %s...\n", url)
+	
+	sdkDir := filepath.Join(os.Getenv("HOME"), "sdk")
+	if err := os.MkdirAll(sdkDir, 0755); err != nil {
+		return fmt.Errorf("failed to create SDK directory: %%w", err)
+	}
+	
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to download Go: %%w", err)
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download Go: HTTP %%d", resp.StatusCode)
+	}
+	
+	tempDir := filepath.Join(sdkDir, version+"-temp")
+	if err := os.RemoveAll(tempDir); err != nil {
+		return fmt.Errorf("failed to remove temp directory: %%w", err)
+	}
+	
+	if err := os.MkdirAll(tempDir, 0755); err != nil {
+		return fmt.Errorf("failed to create temp directory: %%w", err)
+	}
+	
+	gzr, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to create gzip reader: %%w", err)
+	}
+	defer gzr.Close()
+	
+	tr := tar.NewReader(gzr)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read tar: %%w", err)
+		}
+		
+		path := strings.TrimPrefix(header.Name, "go/")
+		if path == header.Name {
+			continue
+		}
+		
+		target := filepath.Join(tempDir, path)
+		
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, os.FileMode(header.Mode)); err != nil {
+				return fmt.Errorf("failed to create directory: %%w", err)
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+				return fmt.Errorf("failed to create parent directory: %%w", err)
+			}
+			
+			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			if err != nil {
+				return fmt.Errorf("failed to create file: %%w", err)
+			}
+			
+			if _, err := io.Copy(f, tr); err != nil {
+				f.Close()
+				return fmt.Errorf("failed to write file: %%w", err)
+			}
+			f.Close()
+		}
+	}
+	
+	finalDir := filepath.Join(sdkDir, version)
+	if err := os.RemoveAll(finalDir); err != nil {
+		return fmt.Errorf("failed to remove existing directory: %%w", err)
+	}
+	
+	if err := os.Rename(tempDir, finalDir); err != nil {
+		return fmt.Errorf("failed to move to final location: %%w", err)
+	}
+	
+	fmt.Printf("Go %s extracted to %s\n", version, finalDir)
+	return nil
+}
+
+func buildCoverageEnabledGo(version string) error {
+	sdkDir := filepath.Join(os.Getenv("HOME"), "sdk")
+	goDir := filepath.Join(sdkDir, version)
+	covDir := filepath.Join(sdkDir, version+"-cov")
+	
+	fmt.Printf("Building coverage-enabled Go in %s...\n", covDir)
+	
+	if err := copyDir(goDir, covDir); err != nil {
+		return fmt.Errorf("failed to copy Go installation: %%w", err)
+	}
+	
+	srcDir := filepath.Join(covDir, "src")
+	
+	buildScript := ` + "`#!/bin/bash\nset -e\ncd " + `" + srcDir + "` + `\nexport GOROOT_BOOTSTRAP=" + `" + goDir + "` + `\nexport GOROOT=" + `" + covDir + "` + `\nexport GOEXPERIMENT=coverageredesign\n./make.bash\n`" + `
+	
+	scriptPath := filepath.Join(covDir, "build-coverage.sh")
+	if err := os.WriteFile(scriptPath, []byte(buildScript), 0755); err != nil {
+		return fmt.Errorf("failed to write build script: %%w", err)
+	}
+	
+	cmd := exec.Command("/bin/bash", scriptPath)
+	cmd.Env = []string{
+		"GOOS=" + runtime.GOOS,
+		"GOARCH=" + runtime.GOARCH,
+		"GOROOT=" + covDir,
+		"PATH=" + filepath.Join(covDir, "bin") + ":" + os.Getenv("PATH"),
+	}
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to build coverage-enabled Go: %%w", err)
+	}
+	
+	return nil
+}
+
+func copyDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		
+		dstPath := filepath.Join(dst, relPath)
+		
+		if info.IsDir() {
+			return os.MkdirAll(dstPath, info.Mode())
+		}
+		
+		return copyFile(path, dstPath, info.Mode())
+	})
+}
+
+func copyFile(src, dst string, mode os.FileMode) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+	
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return err
+	}
+	
+	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+	
+	_, err = io.Copy(dstFile, srcFile)
+	return err
+}
+`
+
+func generateMainGo(goVersion string) (string, error) {
+	tmpl := template.Must(template.New("main").Parse(mainGoTemplate))
+	
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, struct{ Version string }{Version: goVersion}); err != nil {
+		return "", err
+	}
+	
+	return buf.String(), nil
+}

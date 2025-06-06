@@ -1,0 +1,39 @@
+# Test go-cov source compilation - simplified version
+
+# Set restricted PATH and environment
+env PATH=$GOROOT/bin
+env HOME=$WORK/home
+env PORT=8080
+mkdir $HOME
+mkdir $HOME/sdk
+
+# Start the go-cov server
+exec go-cov-server &
+
+# Give server time to start (simple wait)
+exec sleep 2
+
+# Test that we can generate and build an installer
+exec curl -s 'http://localhost:8080/go-cov1.24.3/@v/latest.zip' -o installer.zip
+exec unzip -q installer.zip
+
+# Check the generated files exist
+exists main.go
+exists go.mod
+
+# Verify content in main.go
+grep 'version.*=.*"go1.24.3"' main.go
+grep 'downloadGoSource' main.go
+grep 'GOEXPERIMENT=coverageredesign' main.go
+grep '.src.tar.gz' main.go
+
+# Verify go.mod content
+grep 'module go.tmc.dev/go-cov1.24.3' go.mod
+
+# Test compilation with restricted PATH
+go build -o installer main.go
+exists installer
+
+# Test execution (should fail without network)
+! exec ./installer
+stderr 'Failed to download Go source'
