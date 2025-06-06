@@ -1,0 +1,54 @@
+```go.doc
+/*
+Package getgo provides functionality to download and install the Go programming language toolchain.
+
+getgo is a simple tool that automates the process of downloading and installing Go on various
+operating systems. It handles platform detection, downloads the appropriate Go distribution,
+and sets up the initial environment.
+
+Usage:
+    getgo [-version=<version>] [-dest=<path>]
+
+Flags:
+    -version  The Go version to install (default: latest stable)
+    -dest     Installation destination path (default: /usr/local/go on *nix, C:\Go on Windows)
+
+The tool will:
+  - Detect the host operating system and architecture
+  - Download the appropriate Go distribution from golang.org
+  - Verify the download checksum
+  - Extract the archive to the destination
+  - Set up initial GOPATH and environment variables
+  - Verify the installation
+
+Example:
+    $ getgo -version=1.20.3
+    $ getgo -dest=/opt/go
+
+The tool supports Linux, macOS, and Windows operating systems on common architectures
+(amd64, arm64, etc).
+
+Environment Variables:
+    GETGO_SKIP_VERIFY  Set to skip checksum verification
+    GETGO_NO_PROMPT    Set to skip confirmation prompts
+    HTTP_PROXY         Proxy settings for downloads
+
+Notes:
+  - Requires root/administrator privileges when installing to system directories
+  - Existing Go installations in the destination path will be overwritten
+  - Creates minimal required directory structure for Go development
+*/
+package getgo
+```
+
+This doc.go file provides a comprehensive overview of the getgo tool, following Go documentation best practices. It includes:
+
+1. Package description
+2. Usage information
+3. Command-line flags
+4. Core functionality
+5. Examples
+6. Environment variables
+7. Important notes/caveats
+
+The documentation uses the standard c-style multi-line comment format and maintains a clear, organized structure that's both readable in source form and when rendered as godoc.
