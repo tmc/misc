@@ -1,4 +1,4 @@
-package ctropts
+package testcontainerbridgeopts
 
 import (
 	"github.com/tmc/misc/testctr"
@@ -13,20 +13,21 @@ type TestcontainersCustomizer func(interface{})
 // configuration object.
 //
 // Example:
-//   container := testctr.New(t, "redis:7",
-//       ctropts.WithBackend("testcontainers"),
-//       ctropts.WithTestcontainersCustomizer(func(cfg interface{}) {
-//           // Apply testcontainers-specific customizations
-//           // cfg will be the testcontainers.GenericContainerRequest
-//       }),
-//   )
+//
+//	container := testctr.New(t, "redis:7",
+//	    ctropts.WithBackend("testcontainers"),
+//	    ctropts.WithTestcontainersCustomizer(func(cfg interface{}) {
+//	        // Apply testcontainers-specific customizations
+//	        // cfg will be the testcontainers.GenericContainerRequest
+//	    }),
+//	)
 func WithTestcontainersCustomizer(customizer TestcontainersCustomizer) testctr.Option {
 	return testctr.OptionFunc(func(cfg interface{}) {
 		type testcontainersCustomizerSetter interface {
-			SetTestcontainersCustomizer(TestcontainersCustomizer)
+			AddTestcontainersCustomizer(interface{})
 		}
 		if tc, ok := cfg.(testcontainersCustomizerSetter); ok {
-			tc.SetTestcontainersCustomizer(customizer)
+			tc.AddTestcontainersCustomizer(customizer)
 		}
 	})
 }
@@ -94,6 +95,21 @@ func WithTestcontainersReaper(skipReaper bool) testctr.Option {
 		}
 		if rs, ok := cfg.(reaperSetter); ok {
 			rs.SetSkipReaper(skipReaper)
+		}
+	})
+}
+
+// WithTestcontainersReuse configures Testcontainers-Go to reuse a container if one
+// with the same configuration and reuseKey is already running. If set to true,
+// it also implies skipping the Ryuk reaper for this container.
+// This option is a no-op for other backends.
+func WithTestcontainersReuse(reuse bool) testctr.Option {
+	return WithTestcontainersCustomizer(func(reqRaw interface{}) {
+		type reuseSetter interface {
+			SetReuse(reuse bool)
+		}
+		if req, ok := reqRaw.(reuseSetter); ok {
+			req.SetReuse(reuse)
 		}
 	})
 }

@@ -1,97 +1,43 @@
-// Package testctr provides a minimal, zero-dependency wrapper for container-based testing in Go.
+// Package testctr provides zero-dependency test containers for Go.
 //
-// testctr uses the Docker CLI directly instead of the Docker API, resulting in:
-//   - Zero external dependencies
-//   - Faster startup times
-//   - Simpler debugging
-//   - Support for multiple container runtimes (Docker, Podman, nerdctl, etc.)
+// testctr runs containers for tests using docker/podman/nerdctl CLIs directly,
+// with automatic cleanup and test isolation. The API is minimal by design.
 //
-// # Basic Usage
+// Quick start:
 //
-// Create a container with automatic cleanup:
+//	func TestRedis(t *testing.T) {
+//	    redis := testctr.New(t, "redis:7-alpine")
 //
-//	func TestMySQL(t *testing.T) {
-//	    mysql := testctr.New(t, "mysql:8")
-//	    dsn := mysql.DSN(t)  // Get test-specific database
-//	    
-//	    db, err := sql.Open("mysql", dsn)
-//	    // ... use database
+//	    client, _ := redis.NewClient(&redis.Options{
+//	        Addr: redis.Endpoint("6379"),
+//	    })
+//
+//	    // Test with Redis...
 //	}
 //
-// # Options
+// Basic options:
 //
-// Configure containers using the options pattern:
-//
-//	redis := testctr.New(t, "redis:7-alpine",
-//	    testctr.WithEnv("REDIS_ARGS", "--maxmemory 256mb"),
-//	    testctr.WithPort("6379"),
+//	container := testctr.New(t, "nginx",
+//	    testctr.WithPort("80"),
+//	    testctr.WithEnv("NGINX_HOST", "localhost"),
+//	    testctr.WithCommand("nginx", "-g", "daemon off;"),
 //	)
 //
-// Use backend-specific options for databases:
+// Advanced options are in the ctropts package.
 //
-//	import "github.com/tmc/misc/testctr/ctropts/mysql"
-//	
-//	mysql := testctr.New(t, "mysql:8",
-//	    mysql.WithPassword("secret"),
-//	    mysql.WithDatabase("myapp"),
-//	)
+// Database testing:
 //
-// Copy files into containers:
+//	import "github.com/tmc/misc/testctr/ctropts/postgres"
 //
-//	c := testctr.New(t, "alpine:latest",
-//	    testctr.WithFile("./config.json", "/app/config.json"),
-//	    testctr.WithFileMode("./script.sh", "/app/script.sh", 0755),
-//	)
+//	pg := testctr.New(t, "postgres:15", postgres.Default())
+//	db, _ := sql.Open("postgres", pg.DSN(t)) // Creates test-isolated database
 //
-// # Container Methods
+// Debugging:
 //
-//	c.Host()           // Get container host (usually 127.0.0.1)
-//	c.Port("3306")     // Get mapped port for container port
-//	c.Endpoint("3306") // Get "host:port" string
-//	c.Exec(ctx, cmd)   // Execute command in container
-//	c.DSN(t)           // Get database connection string (if supported)
+//	-testctr.verbose         Detailed logging
+//	-testctr.keep-failed     Keep failed test containers
+//	TESTCTR_RUNTIME         Force specific runtime
 //
-// # Command-Line Flags
-//
-//	-testctr.verbose         Stream container logs to test output
-//	-testctr.keep-failed     Keep containers when tests fail (for debugging)
-//	-testctr.warn-old        Warn about old testctr containers (default: true)
-//	-testctr.cleanup-old     Clean up old testctr containers
-//	-testctr.cleanup-age     Age threshold for cleanup/warning (default: 5m)
-//	-testctr.max-concurrent  Max containers starting simultaneously (default: 20)
-//	-testctr.create-delay    Delay between container creations (default: 200ms)
-//
-// # Environment Variables
-//
-// All flags can also be set via environment variables:
-//
-//	TESTCTR_VERBOSE=true
-//	TESTCTR_KEEP_FAILED=true
-//	TESTCTR_CLEANUP_OLD=true
-//	TESTCTR_CLEANUP_AGE=10m
-//
-// # Parallel Testing
-//
-// All tests using testctr can safely use t.Parallel(). The library includes:
-//   - Mutex-based coordination for database containers
-//   - Configurable concurrent container limits
-//   - Per-test database isolation via DSN()
-//
-// # Backend Support
-//
-// testctr includes a backend abstraction for pluggable container runtimes.
-// The default implementation uses Docker/Podman CLI directly. A testcontainers-go
-// backend is available as a separate module for those who need it.
-//
-// When using the testcontainers backend, you can access testcontainers-specific features:
-//
-//	import "github.com/tmc/misc/testctr/ctropts"
-//	
-//	c := testctr.New(t, "redis:7",
-//	    ctropts.WithBackend("testcontainers"),
-//	    ctropts.WithTestcontainersPrivileged(),
-//	    ctropts.WithTestcontainersCustomizer(func(req interface{}) {
-//	        // Full access to customize GenericContainerRequest
-//	    }),
-//	)
+// The API is intentionally minimal. Only essential functionality is exported.
+// See the ctropts package for advanced options.
 package testctr

@@ -69,5 +69,6 @@ require (
 
 replace (
 	github.com/tmc/misc/testctr => ../
+	github.com/tmc/misc/testctr/testctr-dockerclient => ../testctr-dockerclient
 	github.com/tmc/misc/testctr/testctr-testcontainers => ../testctr-testcontainers
 )

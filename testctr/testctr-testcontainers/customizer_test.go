@@ -23,20 +23,20 @@ func TestTestcontainersCustomizer(t *testing.T) {
 	c := testctr.New(t, "alpine:latest",
 		// Use testcontainers backend
 		ctropts.WithBackend("testcontainers"),
-		
+
 		// Basic testctr options still work
 		testctr.WithCommand("sleep", "30"),
 		testctr.WithEnv("TEST_ENV", "value"),
-		
+
 		// Testcontainers-specific options
 		ctropts.WithTestcontainersPrivileged(),
 		ctropts.WithTestcontainersAutoRemove(true),
-		
+
 		// Custom wait strategy
 		ctropts.WithTestcontainersWaitStrategy(
 			wait.ForLog("test").WithStartupTimeout(10),
 		),
-		
+
 		// Host config modifier
 		ctropts.WithTestcontainersHostConfigModifier(func(hc interface{}) {
 			if hostConfig, ok := hc.(*container.HostConfig); ok {
@@ -44,7 +44,7 @@ func TestTestcontainersCustomizer(t *testing.T) {
 				hostConfig.CPUShares = 512
 			}
 		}),
-		
+
 		// Generic customizer for full control
 		ctropts.WithTestcontainersCustomizer(func(cfg interface{}) {
 			if gcr, ok := cfg.(*testcontainers.GenericContainerRequest); ok {

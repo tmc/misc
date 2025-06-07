@@ -12,12 +12,12 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
-	"github.com/tmc/misc/testctr"
+	"github.com/tmc/misc/testctr/backend"
 )
 
 func init() {
 	// Register the testcontainers backend
-	testctr.RegisterBackend("testcontainers", &TestcontainersBackend{})
+	backend.Register("testcontainers", &TestcontainersBackend{})
 }
 
 // TestcontainersBackend implements the testctr.Backend interface using testcontainers-go
@@ -77,12 +77,12 @@ func (b *TestcontainersBackend) CreateContainer(t testing.TB, image string, conf
 		if cfg.privileged {
 			req.Privileged = true
 		}
-		
+
 		// Set auto-remove
 		if cfg.autoRemove {
 			req.AutoRemove = true
 		}
-		
+
 		// Use custom wait strategy if provided
 		if cfg.waitStrategy != nil {
 			if ws, ok := cfg.waitStrategy.(wait.Strategy); ok {
@@ -101,12 +101,12 @@ func (b *TestcontainersBackend) CreateContainer(t testing.TB, image string, conf
 				waitStrategy = wait.ForLog("Ready to accept connections").
 					WithStartupTimeout(30 * time.Second)
 			}
-			
+
 			if waitStrategy != nil {
 				req.WaitingFor = waitStrategy
 			}
 		}
-		
+
 		// Apply host config modifier
 		if cfg.hostConfigModifier != nil {
 			req.HostConfigModifier = func(hc *container.HostConfig) {
@@ -126,7 +126,7 @@ func (b *TestcontainersBackend) CreateContainer(t testing.TB, image string, conf
 			waitStrategy = wait.ForLog("Ready to accept connections").
 				WithStartupTimeout(30 * time.Second)
 		}
-		
+
 		if waitStrategy != nil {
 			req.WaitingFor = waitStrategy
 		}
@@ -137,16 +137,18 @@ func (b *TestcontainersBackend) CreateContainer(t testing.TB, image string, conf
 		ContainerRequest: req,
 		Started:          true,
 	}
-	
+
 	// Apply skip reaper setting
 	if cfg != nil && cfg.skipReaper {
 		gcr.Reuse = true // This skips the reaper
 	}
-	
+
 	// Apply custom testcontainers customizers
 	if cfg != nil && len(cfg.testcontainersCustomizers) > 0 {
 		for _, customizer := range cfg.testcontainersCustomizers {
-			customizer(&gcr)
+			if fn, ok := customizer.(func(interface{})); ok {
+				fn(&gcr)
+			}
 		}
 	}
 
@@ -193,7 +195,7 @@ func (b *TestcontainersBackend) RemoveContainer(containerID string) error {
 }
 
 // InspectContainer returns container information
-func (b *TestcontainersBackend) InspectContainer(containerID string) (*testctr.ContainerInfo, error) {
+func (b *TestcontainersBackend) InspectContainer(containerID string) (*backend.ContainerInfo, error) {
 	_, ok := b.containers[containerID]
 	if !ok {
 		return nil, fmt.Errorf("container %s not found", containerID)
@@ -212,17 +214,8 @@ func (b *TestcontainersBackend) InspectContainer(containerID string) (*testctr.C
 		return nil, fmt.Errorf("failed to inspect container: %w", err)
 	}
 
-	// Convert to testctr.ContainerInfo
-	info := &testctr.ContainerInfo{
-		NetworkSettings: struct {
-			Ports map[string][]struct {
-				HostPort string `json:"HostPort"`
-			} `json:"Ports"`
-		}{
-			Ports: make(map[string][]struct {
-				HostPort string `json:"HostPort"`
-			}),
-		},
+	// Convert to backend.ContainerInfo
+	info := &backend.ContainerInfo{
 		State: struct {
 			Running bool   `json:"Running"`
 			Status  string `json:"Status"`
@@ -230,17 +223,20 @@ func (b *TestcontainersBackend) InspectContainer(containerID string) (*testctr.C
 			Running: inspect.State.Running,
 			Status:  inspect.State.Status,
 		},
+		ID:      containerID,
+		Name:    inspect.Name,
+		Created: inspect.Created,
 	}
+
+	// Initialize NetworkSettings
+	info.NetworkSettings.Ports = make(map[string][]backend.PortBinding)
 
 	// Convert port mappings
 	for port, bindings := range inspect.NetworkSettings.Ports {
-		var mappings []struct {
-			HostPort string `json:"HostPort"`
-		}
+		var mappings []backend.PortBinding
 		for _, binding := range bindings {
-			mappings = append(mappings, struct {
-				HostPort string `json:"HostPort"`
-			}{
+			mappings = append(mappings, backend.PortBinding{
+				HostIP:   binding.HostIP,
 				HostPort: binding.HostPort,
 			})
 		}
@@ -326,6 +322,65 @@ func (b *TestcontainersBackend) WaitForLog(containerID string, logLine string, t
 	}
 }
 
+// InternalIP returns the internal IP address of the container
+func (b *TestcontainersBackend) InternalIP(containerID string) (string, error) {
+	tc, ok := b.containers[containerID]
+	if !ok {
+		return "", fmt.Errorf("container %s not found", containerID)
+	}
+
+	// Get container info
+	inspect, err := tc.Inspect(context.Background())
+	if err != nil {
+		return "", fmt.Errorf("failed to inspect container: %w", err)
+	}
+
+	// Return the IP address from the default network
+	if inspect.NetworkSettings != nil && len(inspect.NetworkSettings.Networks) > 0 {
+		// Get the first network's IP address
+		for _, network := range inspect.NetworkSettings.Networks {
+			if network.IPAddress != "" {
+				return network.IPAddress, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("no IP address found for container %s", containerID)
+}
+
+// Commit commits the current state of the container to a new image
+func (b *TestcontainersBackend) Commit(containerID string, imageName string) error {
+	tc, ok := b.containers[containerID]
+	if !ok {
+		return fmt.Errorf("container %s not found", containerID)
+	}
+
+	// Testcontainers doesn't directly expose a commit method, so we need to use the Docker client
+	// Get container info to ensure it exists
+	_, err := tc.Inspect(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to inspect container: %w", err)
+	}
+
+	// Get the underlying Docker client
+	ctx := context.Background()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		return fmt.Errorf("failed to create Docker client: %w", err)
+	}
+	defer cli.Close()
+
+	// Commit the container
+	_, err = cli.ContainerCommit(ctx, containerID, container.CommitOptions{
+		Reference: imageName,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to commit container: %w", err)
+	}
+
+	return nil
+}
+
 // Helper to access unexported fields
 type containerConfig struct {
 	dockerRun      *dockerRun
@@ -337,9 +392,9 @@ type containerConfig struct {
 	waitFunc       interface{}
 	backend        string
 	files          []interface{} // FileEntry type
-	
+
 	// Testcontainers-specific fields
-	testcontainersCustomizers []func(interface{})
+	testcontainersCustomizers []interface{}
 	privileged                bool
 	autoRemove                bool
 	waitStrategy              interface{}
@@ -361,7 +416,7 @@ type dockerRun struct {
 }
 
 // Setter methods for testcontainers customizations
-func (c *containerConfig) SetTestcontainersCustomizer(customizer func(interface{})) {
+func (c *containerConfig) AddTestcontainersCustomizer(customizer interface{}) {
 	c.testcontainersCustomizers = append(c.testcontainersCustomizers, customizer)
 }
 
