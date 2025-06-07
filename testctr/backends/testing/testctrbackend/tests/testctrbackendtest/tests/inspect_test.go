@@ -39,7 +39,7 @@ func TestContainerInspect_Redis(t *testing.T) {
 	t.Parallel()
 
 	c := testctr.New(t, "redis:7-alpine",
-		testctr.WithPort("6379:6379"),
+		testctr.WithPort("6379"),
 	)
 
 	// Inspect should return container details
