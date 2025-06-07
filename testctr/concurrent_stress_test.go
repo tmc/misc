@@ -70,6 +70,7 @@ func TestConcurrentContainersStress(t *testing.T) {
 				if c != nil {
 					successCount++
 				} else if errors[i] == nil {
+					// If container is nil and no panic error was recorded, mark as failed.
 					failedIndices = append(failedIndices, i)
 				}
 			}
@@ -77,16 +78,20 @@ func TestConcurrentContainersStress(t *testing.T) {
 			// Report errors
 			for i, err := range errors {
 				if err != nil {
-					t.Errorf("Container %d failed with error: %v", i, err)
+					t.Errorf("Container %d creation panicked: %v", i, err)
 				}
 			}
 
 			if len(failedIndices) > 0 {
-				t.Errorf("Containers failed without error: %v", failedIndices)
+				t.Errorf("Containers failed to create without panic: indices %v", failedIndices)
 			}
 
 			t.Logf("Created %d/%d containers in %v (%.2f containers/sec)",
 				successCount, tt.count, elapsed, float64(successCount)/elapsed.Seconds())
+
+			if successCount != tt.count {
+				t.Errorf("Expected %d containers, but only %d were successfully created.", tt.count, successCount)
+			}
 		})
 	}
 }
@@ -105,8 +110,10 @@ func TestConcurrentMixedContainers(t *testing.T) {
 	}
 
 	const containersPerImage = 5
+	totalContainers := len(images) * containersPerImage
 	var wg sync.WaitGroup
-	containers := make([]*testctr.Container, len(images)*containersPerImage)
+	containers := make([]*testctr.Container, totalContainers)
+	errors := make(chan error, totalContainers)
 
 	start := time.Now()
 	for i, image := range images {
@@ -114,17 +121,27 @@ func TestConcurrentMixedContainers(t *testing.T) {
 			idx := i*containersPerImage + j
 			img := image
 			wg.Add(1)
-			go func(index int) {
+			go func(index int, imageName string) {
 				defer wg.Done()
-				containers[index] = testctr.New(t, img,
-					testctr.WithCommand("echo", fmt.Sprintf("Container %s-%d", img, index)),
+				defer func() {
+					if r := recover(); r != nil {
+						errors <- fmt.Errorf("panic creating %s (index %d): %v", imageName, index, r)
+					}
+				}()
+				containers[index] = testctr.New(t, imageName,
+					testctr.WithCommand("echo", fmt.Sprintf("Container %s-%d", imageName, index)),
 				)
-			}(idx)
+			}(idx, img)
 		}
 	}
 
 	wg.Wait()
+	close(errors)
 	elapsed := time.Since(start)
+
+	for err := range errors {
+		t.Error(err)
+	}
 
 	// Verify all containers were created
 	successCount := 0
@@ -136,5 +153,8 @@ func TestConcurrentMixedContainers(t *testing.T) {
 		}
 	}
 
-	t.Logf("Created %d/%d mixed containers in %v", successCount, len(containers), elapsed)
+	t.Logf("Created %d/%d mixed containers in %v", successCount, totalContainers, elapsed)
+	if successCount != totalContainers {
+		t.Errorf("Expected %d mixed containers, but only %d were successfully created.", totalContainers, successCount)
+	}
 }

@@ -4,14 +4,17 @@ import (
 	"testing"
 )
 
-// DSN returns a database connection string with an auto-namespaced database based on the test name
-// The database is automatically created and cleaned up after the test
+// DSN creates a test-isolated database and returns its connection string.
+// The database name is derived from the test name. Requires a DSNProvider
+// (configured via database options like postgres.Default()).
+//
+//	pg := testctr.New(t, "postgres:15", postgres.Default())
+//	db, _ := sql.Open("postgres", pg.DSN(t))
 func (c *Container) DSN(t testing.TB) string {
 	t.Helper()
 
-	cfg, ok := c.config.(*containerConfig)
-	if !ok || cfg.dsnProvider == nil {
-		t.Fatalf("DSN() not supported for %s (no DSN provider configured)", c.image)
+	if c.config == nil || c.config.dsnProvider == nil {
+		t.Fatalf("DSN() not supported for image %s (no DSN provider configured via options)", c.image)
 		return ""
 	}
 
@@ -19,15 +22,18 @@ func (c *Container) DSN(t testing.TB) string {
 	dbName := sanitizeDBName(t.Name())
 
 	// Create the database
-	dsn, err := cfg.dsnProvider.CreateDatabase(c, t, dbName)
+	dsn, err := c.config.dsnProvider.CreateDatabase(c, t, dbName)
 	if err != nil {
-		t.Fatalf("Failed to create database %s: %v", dbName, err)
+		t.Fatalf("Failed to create database %q for test %q on image %s: %v", dbName, t.Name(), c.image, err)
+		return "" // Should be unreachable due to t.Fatalf
 	}
 
 	// Register cleanup
 	t.Cleanup(func() {
-		if err := cfg.dsnProvider.DropDatabase(c, dbName); err != nil {
-			t.Logf("Failed to drop database %s: %v", dbName, err)
+		t.Helper()
+		if err := c.config.dsnProvider.DropDatabase(c, dbName); err != nil {
+			// Logf is appropriate here as test might have already failed or passed.
+			t.Logf("Failed to drop database %q for test %q on image %s: %v", dbName, t.Name(), c.image, err)
 		}
 	})
 

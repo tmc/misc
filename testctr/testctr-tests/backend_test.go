@@ -11,7 +11,6 @@ import (
 
 var useTestcontainers = flag.Bool("testcontainers", false, "Use testcontainers backend for tests")
 
-
 // TestWithTestcontainersBackend tests using the testcontainers backend if available
 func TestWithTestcontainersBackend(t *testing.T) {
 	t.Parallel()

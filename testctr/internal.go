@@ -1,228 +1,232 @@
+// Package testctr contains internal types and helpers not meant for direct public use.
+// However, some options in ctropts might need to type-assert to interfaces
+// implemented by containerConfig to set specific fields.
 package testctr
 
 import (
 	"context"
 	"fmt"
-	"os/exec"
+	"strconv"
+	"strings"
 	"time"
 )
 
-// Internal helper functions that are not part of the public API
+// This file contains setter methods for containerConfig that are called by OptionFunc
+// in the ctropts package. These allow ctropts to modify internal configuration
+// without directly exposing containerConfig.
 
-// setWaitForLog sets up waiting for a specific log line
-func setWaitForLog(cfg *containerConfig, logLine string, timeout time.Duration) {
-	prevWait := cfg.waitFunc
-	cfg.waitFunc = func(containerID, runtime string) error {
-		// Chain with previous wait if any
-		if prevWait != nil {
-			if err := prevWait(containerID, runtime); err != nil {
-				return err
-			}
-		}
-		return waitForLog(containerID, logLine, timeout)
+// --- Setters for options from ctropts/options.go ---
+
+func (cc *containerConfig) SetBindMount(hostPath, containerPath string) {
+	if cc.dockerRun != nil { // Relevant for default CLI backend
+		mount := fmt.Sprintf("%s:%s", hostPath, containerPath)
+		cc.dockerRun.mounts = append(cc.dockerRun.mounts, mount)
 	}
 }
 
-// setWaitForExec sets up waiting for a command to succeed
-func setWaitForExec(cfg *containerConfig, cmd []string, timeout time.Duration) {
-	waitFn := func(containerID, runtime string) error {
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+func (cc *containerConfig) SetNetwork(network string) {
+	if cc.dockerRun != nil {
+		cc.dockerRun.network = network
+	}
+}
+
+func (cc *containerConfig) SetUser(user string) {
+	if cc.dockerRun != nil {
+		cc.dockerRun.user = user
+	}
+}
+
+func (cc *containerConfig) SetWorkingDir(dir string) {
+	if cc.dockerRun != nil {
+		cc.dockerRun.workdir = dir
+	}
+}
+
+func (cc *containerConfig) SetPrivileged() { // This is for ctropts.WithPrivileged
+	cc.privileged = true     // Set the general privileged flag on containerConfig
+	if cc.dockerRun != nil { // If using CLI backend, ensure its config reflects this
+		cc.dockerRun.privileged = true
+	}
+}
+
+func (cc *containerConfig) SetLogs() {
+	cc.logStreaming = true
+}
+
+func (cc *containerConfig) SetRuntime(runtime string) { // For ctropts.WithRuntime
+	cc.localRuntime = runtime // This specifies which container runtime to use
+}
+
+func (cc *containerConfig) SetStartupTimeout(timeout time.Duration) {
+	cc.startupTimeout = timeout
+}
+
+func (cc *containerConfig) SetDSNProvider(provider DSNProvider) {
+	cc.dsnProvider = provider
+}
+
+func (cc *containerConfig) SetMemoryLimit(limit string) {
+	if cc.dockerRun != nil {
+		cc.dockerRun.memoryLimit = limit
+	}
+}
+
+func (cc *containerConfig) SetStartupDelay(delay time.Duration) {
+	cc.startupDelay = delay
+}
+
+func (cc *containerConfig) SetLogFilter(filter func(string) bool) {
+	cc.logFilter = filter
+}
+
+// SetWaitForLogOpt is called by ctropts.WithWaitForLog
+func (cc *containerConfig) SetWaitForLogOpt(logLine string, timeout time.Duration) {
+	waitCond := func(ctx context.Context, c *Container) error {
+		// Apply specific timeout for this wait condition
+		waitCtx, cancel := context.WithTimeoutCause(ctx, timeout,
+			fmt.Errorf("timeout (%v) waiting for log line %q in container %s", timeout, logLine, c.id[:12]))
 		defer cancel()
 
-		start := time.Now()
-		attempts := 0
+		// Dispatch to the overridden backend
+		if c.be != nil {
+			// TODO: Update backend interface to accept context
+			return c.be.WaitForLog(c.id, logLine, timeout)
+		}
+		// Fallback to CLI-based wait
+		return waitForLogWithContext(waitCtx, c.id, logLine)
+	}
+	cc.waitConditions = append(cc.waitConditions, waitCond)
+}
+
+// SetWaitForExecOpt is called by ctropts.WithWaitForExec
+func (cc *containerConfig) SetWaitForExecOpt(cmd []string, timeout time.Duration) {
+	waitCond := func(ctx context.Context, c *Container) error {
+		// Apply specific timeout for this wait condition
+		waitCtx, cancel := context.WithTimeoutCause(ctx, timeout,
+			fmt.Errorf("timeout (%v) waiting for exec command %v in container %s", timeout, cmd, c.id[:12]))
+		defer cancel()
+
+		startTime := time.Now()
 		var lastErr error
+		attempts := 0
+		for {
+			select {
+			case <-waitCtx.Done():
+				return fmt.Errorf("failed after %v waiting for exec to succeed (tried %d times, last error: %w): %w",
+					time.Since(startTime), attempts, lastErr, context.Cause(waitCtx))
+			default:
+				attempts++
+				// Use the active backend's ExecInContainer
+				var exitCode int
+				var output string
+				var execErr error
+				if c.be != nil {
+					exitCode, output, execErr = c.be.ExecInContainer(c.id, cmd)
+				} else {
+					// Fallback to CLI exec with context
+					exitCode, output, execErr = c.Exec(waitCtx, cmd)
+				}
+				if execErr == nil && exitCode == 0 {
+					if *verbose {
+						c.t.Logf("Exec wait succeeded for %v in container %s after %d attempts", cmd, c.id[:12], attempts)
+					}
+					return nil // Success
+				}
+
+				errMsg := "exec failed"
+				if execErr != nil {
+					errMsg = fmt.Sprintf("%s: %v", errMsg, execErr)
+				} else {
+					errMsg = fmt.Sprintf("%s with exit code %d", errMsg, exitCode)
+				}
+				lastErr = fmt.Errorf("%s. Output: %s", errMsg, output)
+				time.Sleep(200 * time.Millisecond)
+			}
+		}
+	}
+	cc.waitConditions = append(cc.waitConditions, waitCond)
+}
+
+// SetWaitForHTTPOpt is called by ctropts.WithWaitForHTTP
+func (cc *containerConfig) SetWaitForHTTPOpt(path, internalPort string, expectedStatus int, timeout time.Duration) {
+	waitCond := func(ctx context.Context, c *Container) error {
+		// Apply specific timeout for this wait condition
+		waitCtx, cancel := context.WithTimeoutCause(ctx, timeout,
+			fmt.Errorf("timeout (%v) waiting for HTTP %s:%s to return status %d in container %s",
+				timeout, internalPort, path, expectedStatus, c.id[:12]))
+		defer cancel()
+
+		startTime := time.Now()
+		var lastErr error
+		checkCmd := []string{
+			"sh", "-c",
+			fmt.Sprintf("if command -v curl >/dev/null 2>&1; then "+
+				"curl -s -o /dev/null -w '%%{http_code}' http://127.0.0.1:%s%s; "+
+				"elif command -v wget >/dev/null 2>&1; then "+
+				"wget --spider -S --timeout=5 http://127.0.0.1:%s%s 2>&1 | grep 'HTTP/' | awk '{print $2}' | tail -n1; "+
+				"else echo 0; fi",
+				internalPort, path, internalPort, path),
+		}
 
 		for {
 			select {
-			case <-ctx.Done():
-				return fmt.Errorf("timeout after %v waiting for exec %v to succeed (tried %d times, last error: %v)", time.Since(start), cmd, attempts, lastErr)
+			case <-waitCtx.Done():
+				return fmt.Errorf("failed after %v waiting for HTTP status %d (last error: %w): %w",
+					time.Since(startTime), expectedStatus, lastErr, context.Cause(waitCtx))
 			default:
-				attempts++
-				command := append([]string{"exec", containerID}, cmd...)
-				if err := exec.Command(runtime, command...).Run(); err == nil {
-					return nil
+				// Use a shorter timeout for each individual exec attempt
+				execCtx, execCancel := context.WithTimeout(waitCtx, 5*time.Second)
+				var exitCode int
+				var output string
+				var execErr error
+				if c.be != nil {
+					exitCode, output, execErr = c.be.ExecInContainer(c.id, checkCmd)
 				} else {
-					lastErr = err
+					// Fallback to CLI exec
+					exitCode, output, execErr = c.Exec(execCtx, checkCmd)
 				}
-				time.Sleep(100 * time.Millisecond)
+				execCancel()
+
+				if execErr != nil {
+					lastErr = fmt.Errorf("exec error for HTTP check: %w, output: %s", execErr, output)
+					time.Sleep(500 * time.Millisecond)
+					continue
+				}
+				if exitCode != 0 && output == "" { // Script might have failed (e.g. no curl/wget)
+					lastErr = fmt.Errorf("HTTP check script in %s exited with code %d without output", c.id[:min(12, len(c.id))], exitCode)
+					time.Sleep(500 * time.Millisecond)
+					continue
+				}
+
+				httpCodeStr := strings.TrimSpace(output)
+				httpCode, convErr := strconv.Atoi(httpCodeStr)
+
+				if convErr != nil {
+					lastErr = fmt.Errorf("could not parse HTTP code '%s' from output (container %s): %w. Full output: %s", httpCodeStr, c.id[:min(12, len(c.id))], convErr, output)
+					time.Sleep(500 * time.Millisecond)
+					continue
+				}
+
+				if httpCode == expectedStatus {
+					return nil // Success
+				}
+				lastErr = fmt.Errorf("unexpected HTTP status for 127.0.0.1:%s%s in %s: got %d, want %d. Output: %s", internalPort, path, c.id[:min(12, len(c.id))], httpCode, expectedStatus, output)
+				time.Sleep(500 * time.Millisecond)
 			}
 		}
 	}
-
-	prevWait := cfg.waitFunc
-	cfg.waitFunc = func(containerID, runtime string) error {
-		// Chain with previous wait if any
-		if prevWait != nil {
-			if err := prevWait(containerID, runtime); err != nil {
-				return err
-			}
-		}
-		return waitFn(containerID, runtime)
-	}
+	cc.waitConditions = append(cc.waitConditions, waitCond)
 }
 
-// setBindMount adds a bind mount
-func setBindMount(cfg *containerConfig, hostPath, containerPath string) {
-	if cfg.dockerRun != nil {
-		mount := fmt.Sprintf("%s:%s", hostPath, containerPath)
-		cfg.dockerRun.mounts = append(cfg.dockerRun.mounts, mount)
-	}
+// --- Setter for backend selection (from testctr/option.go) ---
+
+func (cc *containerConfig) SetBackend(name string) {
+	cc.localRuntime = name
 }
 
-// setNetwork sets the network
-func setNetwork(cfg *containerConfig, network string) {
-	if cfg.dockerRun != nil {
-		cfg.dockerRun.network = network
-	}
-}
+// --- Setters for testcontainers-specific options (from ctropts/testcontainers.go) ---
+// These store the customizers on containerConfig. The testcontainers adapter will use them.
 
-// setUser sets the user
-func setUser(cfg *containerConfig, user string) {
-	if cfg.dockerRun != nil {
-		cfg.dockerRun.user = user
-	}
-}
-
-// setWorkingDir sets the working directory
-func setWorkingDir(cfg *containerConfig, dir string) {
-	if cfg.dockerRun != nil {
-		cfg.dockerRun.workdir = dir
-	}
-}
-
-// setPrivileged sets privileged mode
-func setPrivileged(cfg *containerConfig) {
-	// Would add --privileged flag in buildDockerRunArgs
-	// This is a placeholder for now
-}
-
-// setLogs enables log streaming
-func setLogs(cfg *containerConfig) {
-	cfg.logStreaming = true
-}
-
-// setRuntime sets the container runtime
-func setRuntime(cfg *containerConfig, runtime string) {
-	cfg.forceRuntime = runtime
-}
-
-// setStartupTimeout sets the startup timeout
-func setStartupTimeout(cfg *containerConfig, timeout time.Duration) {
-	cfg.startupTimeout = timeout
-}
-
-// setWaitForHTTP sets up HTTP endpoint waiting
-func setWaitForHTTP(cfg *containerConfig, path string) {
-	// For direct implementation, we could implement HTTP checking
-	// This is a no-op but kept for API compatibility
-}
-
-// setDSNProvider sets the DSN provider
-func setDSNProvider(cfg *containerConfig, provider DSNProvider) {
-	cfg.dsnProvider = provider
-}
-
-// setMemoryLimit sets the memory limit
-func setMemoryLimit(cfg *containerConfig, limit string) {
-	if cfg.dockerRun != nil {
-		cfg.dockerRun.memoryLimit = limit
-	}
-}
-
-// setStartupDelay sets the startup delay
-func setStartupDelay(cfg *containerConfig, delay time.Duration) {
-	cfg.startupDelay = delay
-}
-
-// setBackend sets the backend name
-func setBackend(cfg *containerConfig, backend string) {
-	cfg.backend = backend
-}
-
-// Setter methods for containerConfig to implement the interfaces expected by ctropts
-
-func (c *containerConfig) SetBindMount(hostPath, containerPath string) {
-	setBindMount(c, hostPath, containerPath)
-}
-
-func (c *containerConfig) SetNetwork(network string) {
-	setNetwork(c, network)
-}
-
-func (c *containerConfig) SetUser(user string) {
-	setUser(c, user)
-}
-
-func (c *containerConfig) SetWorkingDir(dir string) {
-	setWorkingDir(c, dir)
-}
-
-func (c *containerConfig) SetPrivileged() {
-	setPrivileged(c)
-}
-
-func (c *containerConfig) SetLogs() {
-	setLogs(c)
-}
-
-func (c *containerConfig) SetRuntime(runtime string) {
-	setRuntime(c, runtime)
-}
-
-func (c *containerConfig) SetStartupTimeout(timeout time.Duration) {
-	setStartupTimeout(c, timeout)
-}
-
-func (c *containerConfig) SetWaitForHTTP(path string) {
-	setWaitForHTTP(c, path)
-}
-
-func (c *containerConfig) SetWaitForExec(cmd []string, timeout time.Duration) {
-	setWaitForExec(c, cmd, timeout)
-}
-
-func (c *containerConfig) SetWaitForLog(logLine string, timeout time.Duration) {
-	setWaitForLog(c, logLine, timeout)
-}
-
-func (c *containerConfig) SetDSNProvider(provider DSNProvider) {
-	setDSNProvider(c, provider)
-}
-
-func (c *containerConfig) SetMemoryLimit(limit string) {
-	setMemoryLimit(c, limit)
-}
-
-func (c *containerConfig) SetStartupDelay(delay time.Duration) {
-	setStartupDelay(c, delay)
-}
-
-func (c *containerConfig) SetBackend(backend string) {
-	setBackend(c, backend)
-}
-
-// Testcontainers-specific setters (used by ctropts/testcontainers.go)
-func (c *containerConfig) SetTestcontainersCustomizer(customizer interface{}) {
-	// This is a no-op in the main package, only used by testcontainers backend
-}
-
-func (c *containerConfig) SetTestcontainersPrivileged(privileged bool) {
-	// This is a no-op in the main package, only used by testcontainers backend
-}
-
-func (c *containerConfig) SetAutoRemove(autoRemove bool) {
-	// This is a no-op in the main package, only used by testcontainers backend
-}
-
-func (c *containerConfig) SetWaitStrategy(strategy interface{}) {
-	// This is a no-op in the main package, only used by testcontainers backend
-}
-
-func (c *containerConfig) SetHostConfigModifier(modifier func(interface{})) {
-	// This is a no-op in the main package, only used by testcontainers backend
-}
-
-func (c *containerConfig) SetSkipReaper(skip bool) {
-	// This is a no-op in the main package, only used by testcontainers backend
+func (cc *containerConfig) AddTestcontainersCustomizer(customizer interface{}) {
+	cc.testcontainersCustomizers = append(cc.testcontainersCustomizers, customizer)
 }

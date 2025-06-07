@@ -17,25 +17,25 @@ func TestStressContainerCreation(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping stress test in short mode")
 	}
-	
+
 	t.Parallel()
-	
+
 	const numContainers = 8
 	var wg sync.WaitGroup
 	errors := make(chan error, numContainers)
-	
+
 	// Create containers in rapid succession
 	for i := 0; i < numContainers; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			
+
 			defer func() {
 				if r := recover(); r != nil {
 					errors <- fmt.Errorf("container %d panicked: %v", i, r)
 				}
 			}()
-			
+
 			// Alternate between different container types
 			switch i % 3 {
 			case 0:
@@ -56,7 +56,7 @@ func TestStressContainerCreation(t *testing.T) {
 			}
 		}(i)
 	}
-	
+
 	// Wait for all containers to be created
 	done := make(chan struct{})
 	go func() {
@@ -64,7 +64,7 @@ func TestStressContainerCreation(t *testing.T) {
 		close(done)
 		close(errors)
 	}()
-	
+
 	// Collect any errors
 	var errorList []error
 	go func() {
@@ -72,7 +72,7 @@ func TestStressContainerCreation(t *testing.T) {
 			errorList = append(errorList, err)
 		}
 	}()
-	
+
 	// Timeout after 2 minutes
 	select {
 	case <-done:
@@ -93,35 +93,35 @@ func TestStressResourceLimits(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping stress test in short mode")
 	}
-	
+
 	t.Parallel()
-	
+
 	// Test that our coordination prevents too many containers from starting simultaneously
 	const attemptedContainers = 4
 	var wg sync.WaitGroup
 	startTimes := make([]time.Time, attemptedContainers)
-	
+
 	start := time.Now()
-	
+
 	for i := 0; i < attemptedContainers; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			
+
 			containerStart := time.Now()
 			startTimes[i] = containerStart
-			
+
 			// Create a PostgreSQL container (which should be coordinated)
 			c := testctr.New(t, "postgres:15", postgres.Default())
 			_ = c.Port("5432")
-			
-			t.Logf("Container %d started at %v (after %v)", i, 
+
+			t.Logf("Container %d started at %v (after %v)", i,
 				containerStart.Sub(start), containerStart.Sub(start))
 		}(i)
 	}
-	
+
 	wg.Wait()
-	
+
 	// Verify that containers were created with appropriate delays
 	var delays []time.Duration
 	for i := 1; i < len(startTimes); i++ {
@@ -132,9 +132,9 @@ func TestStressResourceLimits(t *testing.T) {
 			}
 		}
 	}
-	
+
 	t.Logf("Created %d containers with coordination delays: %v", attemptedContainers, delays)
-	
+
 	// At least some containers should have been coordinated (delayed)
 	if len(delays) > 0 {
 		t.Logf("Container coordination is working - observed %d delays", len(delays))
