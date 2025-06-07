@@ -16,7 +16,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"syscall"
-	
+
 	"github.com/tmc/misc/macgo"
 	// Import sandbox for initialization, even though we don't use it directly
 	_ "github.com/tmc/misc/macgo/auto/sandbox"
@@ -32,7 +32,7 @@ func init() {
 func improvedRelaunch(appPath, execPath string, args []string) {
 	// Set environment to prevent relaunching again
 	os.Setenv("MACGO_NO_RELAUNCH", "1")
-	
+
 	// Create pipes for IO redirection
 	pipes := make([]string, 3)
 	for i, name := range []string{"stdin", "stdout", "stderr"} {
@@ -44,7 +44,7 @@ func improvedRelaunch(appPath, execPath string, args []string) {
 		pipes[i] = pipe
 		defer os.Remove(pipe)
 	}
-	
+
 	// We need to replace the args with our own, ignoring what was passed in
 	// This ensures proper pipe IO redirection
 	pipeArgs := []string{
@@ -54,13 +54,13 @@ func improvedRelaunch(appPath, execPath string, args []string) {
 		"--stdout", pipes[1],
 		"--stderr", pipes[2],
 	}
-	
+
 	// Pass original arguments
 	if len(os.Args) > 1 {
 		pipeArgs = append(pipeArgs, "--args")
 		pipeArgs = append(pipeArgs, os.Args[1:]...)
 	}
-	
+
 	// Launch app bundle with more robust approach
 	toolPath, err := exec.LookPath("open")
 	if err != nil {
@@ -69,20 +69,20 @@ func improvedRelaunch(appPath, execPath string, args []string) {
 	}
 
 	toolCmd := &exec.Cmd{
-		Path:   toolPath,
-		Args:   append([]string{toolPath}, pipeArgs...),
+		Path: toolPath,
+		Args: append([]string{toolPath}, pipeArgs...),
 		SysProcAttr: &syscall.SysProcAttr{
 			Setpgid: true,
 			Pgid:    0, // Use the parent's process group
 		},
 	}
-	
+
 	err = toolCmd.Start()
 	if err != nil {
 		macgo.Debug("error starting app bundle: %v", err)
 		return
 	}
-	
+
 	// Set up signal handling
 	c := make(chan os.Signal, 100)
 	signal.Notify(c)
@@ -91,17 +91,17 @@ func improvedRelaunch(appPath, execPath string, args []string) {
 			macgo.Debug("Forwarding signal %v to app bundle process group", sig)
 			// Forward to entire process group using negative PID
 			sigNum := sig.(syscall.Signal)
-			
+
 			// Skip SIGCHLD as we don't need to forward it
 			if sigNum == syscall.SIGCHLD {
 				continue
 			}
-			
+
 			// Using negative PID sends to the entire process group
 			if err := syscall.Kill(-toolCmd.Process.Pid, sigNum); err != nil {
 				macgo.Debug("Error forwarding signal %v: %v", sigNum, err)
 			}
-			
+
 			// Special handling for terminal signals
 			if sigNum == syscall.SIGTSTP || sigNum == syscall.SIGTTIN || sigNum == syscall.SIGTTOU {
 				// Use SIGSTOP for terminal signals
@@ -109,23 +109,23 @@ func improvedRelaunch(appPath, execPath string, args []string) {
 			}
 		}
 	}()
-	
+
 	// Handle stdin
 	go pipeIO(pipes[0], os.Stdin, nil)
-	
+
 	// Handle stdout
 	go pipeIO(pipes[1], nil, os.Stdout)
-	
+
 	// Handle stderr
 	go pipeIO(pipes[2], nil, os.Stderr)
-	
+
 	// Wait for process to finish
 	err = toolCmd.Wait()
-	
+
 	// Clean up signal handling
 	signal.Stop(c)
 	close(c)
-	
+
 	if err != nil {
 		// Only print about the exit status if the command
 		// didn't even run or it didn't exit cleanly
@@ -137,7 +137,7 @@ func improvedRelaunch(appPath, execPath string, args []string) {
 		}
 		os.Exit(1)
 	}
-	
+
 	os.Exit(0)
 }
 

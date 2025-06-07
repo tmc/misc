@@ -19,18 +19,18 @@ import (
 
 var (
 	// Debug flags
-	signalDebugEnabled  = false
-	advancedDebugLevel  = 0
-	debugLogFile        *os.File
-	debugLogger         *log.Logger
-	defaultLogPath      = filepath.Join(os.TempDir(), "macgo-debug.log")
-	pprofEnabled        = false
-	defaultPprofPort    = 6060
-	pprofPortIncrement  = 1
-	pprofBasePort       = defaultPprofPort
-	debugMutex          sync.Mutex
-	isInitialized       bool
-	
+	signalDebugEnabled = false
+	advancedDebugLevel = 0
+	debugLogFile       *os.File
+	debugLogger        *log.Logger
+	defaultLogPath     = filepath.Join(os.TempDir(), "macgo-debug.log")
+	pprofEnabled       = false
+	defaultPprofPort   = 6060
+	pprofPortIncrement = 1
+	pprofBasePort      = defaultPprofPort
+	debugMutex         sync.Mutex
+	isInitialized      bool
+
 	// TraceSignalHandling enables detailed tracing of all signal handling operations
 	TraceSignalHandling = false
 )
@@ -39,29 +39,29 @@ var (
 func initialize() {
 	debugMutex.Lock()
 	defer debugMutex.Unlock()
-	
+
 	if isInitialized {
 		return
 	}
-	
+
 	// Check environment variables
 	signalDebugEnabled = os.Getenv("MACGO_SIGNAL_DEBUG") == "1"
-	
+
 	// Parse advanced debug level
 	if level, err := strconv.Atoi(os.Getenv("MACGO_DEBUG_LEVEL")); err == nil {
 		advancedDebugLevel = level
 	}
-	
+
 	// Set up signal debugging if enabled
 	if signalDebugEnabled {
 		TraceSignalHandling = true
-		
+
 		// Get custom log path if provided
 		logPath := os.Getenv("MACGO_DEBUG_LOG")
 		if logPath == "" {
 			logPath = defaultLogPath
 		}
-		
+
 		// Set up debug log file
 		var err error
 		debugLogFile, err = os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
@@ -73,10 +73,10 @@ func initialize() {
 			multiWriter := io.MultiWriter(os.Stderr, debugLogFile)
 			debugLogger = log.New(multiWriter, "[macgo-debug] ", log.LstdFlags|log.Lmicroseconds)
 		}
-		
+
 		logSystemInfo()
 	}
-	
+
 	// Check if pprof is enabled
 	pprofEnabled = os.Getenv("MACGO_PPROF") == "1"
 	if pprofEnabled {
@@ -84,11 +84,11 @@ func initialize() {
 		if port, err := strconv.Atoi(os.Getenv("MACGO_PPROF_PORT")); err == nil {
 			pprofBasePort = port
 		}
-		
+
 		// Start pprof server on this process
 		go startPprofServer(pprofBasePort)
 	}
-	
+
 	isInitialized = true
 }
 
@@ -104,26 +104,26 @@ func logSystemInfo() {
 	if debugLogger == nil {
 		return
 	}
-	
+
 	debugLogger.Printf("==== macgo debug logging initialized ====")
 	debugLogger.Printf("PID: %d, PPID: %d", os.Getpid(), os.Getppid())
 	debugLogger.Printf("Args: %v", os.Args)
 	debugLogger.Printf("Signal debugging: enabled")
 	debugLogger.Printf("Debug level: %d", advancedDebugLevel)
 	debugLogger.Printf("OS: %s, Arch: %s", runtime.GOOS, runtime.GOARCH)
-	
+
 	// Get current working directory
 	if cwd, err := os.Getwd(); err == nil {
 		debugLogger.Printf("Working directory: %s", cwd)
 	}
-	
+
 	// Log some environment variables
 	debugLogger.Printf("MACGO_DEBUG=%s", os.Getenv("MACGO_DEBUG"))
 	debugLogger.Printf("MACGO_DEBUG_LEVEL=%s", os.Getenv("MACGO_DEBUG_LEVEL"))
 	debugLogger.Printf("MACGO_SIGNAL_DEBUG=%s", os.Getenv("MACGO_SIGNAL_DEBUG"))
 	debugLogger.Printf("MACGO_PPROF=%s", os.Getenv("MACGO_PPROF"))
 	debugLogger.Printf("MACGO_PPROF_PORT=%s", os.Getenv("MACGO_PPROF_PORT"))
-	
+
 	// Log time
 	debugLogger.Printf("Time: %s", time.Now().Format(time.RFC3339))
 	debugLogger.Printf("=======================================")
@@ -134,10 +134,10 @@ func LogSignal(sig syscall.Signal, format string, args ...interface{}) {
 	if !signalDebugEnabled || debugLogger == nil {
 		return
 	}
-	
+
 	// Format the message
 	message := fmt.Sprintf(format, args...)
-	
+
 	// Create stack trace if debug level is high enough
 	var stack string
 	if advancedDebugLevel >= 2 {
@@ -145,7 +145,7 @@ func LogSignal(sig syscall.Signal, format string, args ...interface{}) {
 		n := runtime.Stack(buf, false)
 		stack = string(buf[:n])
 	}
-	
+
 	// Log the message
 	debugLogger.Printf("SIGNAL %v: %s", sig, message)
 	if advancedDebugLevel >= 2 {
@@ -158,7 +158,7 @@ func LogDebug(format string, args ...interface{}) {
 	if !signalDebugEnabled || debugLogger == nil {
 		return
 	}
-	
+
 	debugLogger.Printf(format, args...)
 }
 
@@ -166,7 +166,7 @@ func LogDebug(format string, args ...interface{}) {
 func startPprofServer(port int) {
 	// Increment port for each new server
 	actualPort := port
-	
+
 	// Start the server in a separate goroutine
 	go func() {
 		// Try multiple ports if the default one is in use
@@ -176,14 +176,14 @@ func startPprofServer(port int) {
 				Addr:    addr,
 				Handler: http.DefaultServeMux,
 			}
-			
+
 			// Try to start the server
 			if signalDebugEnabled && debugLogger != nil {
 				debugLogger.Printf("Starting pprof server on %s", addr)
 			} else {
 				fmt.Fprintf(os.Stderr, "[macgo-pprof] Starting server on %s\n", addr)
 			}
-			
+
 			// Set up basic pprof info handler
 			http.HandleFunc("/macgo/info", func(w http.ResponseWriter, r *http.Request) {
 				info := fmt.Sprintf(`
@@ -214,11 +214,11 @@ Environment:
 					os.Getenv("MACGO_PPROF"),
 					os.Getenv("MACGO_PPROF_PORT"),
 				)
-				
+
 				w.Header().Set("Content-Type", "text/plain")
 				w.Write([]byte(info))
 			})
-			
+
 			// Print usage information to make it easier for users
 			if signalDebugEnabled && debugLogger != nil {
 				debugLogger.Printf("pprof endpoints available at:")
@@ -233,7 +233,7 @@ Environment:
 				fmt.Fprintf(os.Stderr, "[macgo-pprof] Server available at http://%s/debug/pprof/\n", addr)
 				fmt.Fprintf(os.Stderr, "[macgo-pprof] Process info: http://%s/macgo/info\n", addr)
 			}
-			
+
 			err := server.ListenAndServe()
 			if err != nil {
 				if signalDebugEnabled && debugLogger != nil {
@@ -245,7 +245,7 @@ Environment:
 				actualPort += pprofPortIncrement
 				continue
 			}
-			
+
 			break
 		}
 	}()
@@ -264,7 +264,7 @@ func getWorkingDir() string {
 func GetNextPprofPort() int {
 	debugMutex.Lock()
 	defer debugMutex.Unlock()
-	
+
 	pprofBasePort += pprofPortIncrement
 	return pprofBasePort
 }
@@ -283,11 +283,11 @@ func IsTraceEnabled() bool {
 func Close() {
 	debugMutex.Lock()
 	defer debugMutex.Unlock()
-	
+
 	if debugLogFile != nil {
 		debugLogFile.Close()
 		debugLogFile = nil
 	}
-	
+
 	debugLogger = nil
 }

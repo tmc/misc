@@ -1,6 +1,7 @@
 package macgo
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -322,6 +323,12 @@ func relaunch(appPath, execPath string) {
 
 // pipeIO copies data between a pipe and stdin/stdout/stderr.
 func pipeIO(pipe string, in io.Reader, out io.Writer) {
+	pipeIOContext(context.Background(), pipe, in, out)
+}
+
+// pipeIOContext copies data between a pipe and stdin/stdout/stderr with context support.
+// The context allows for cancellation of long-running I/O operations.
+func pipeIOContext(ctx context.Context, pipe string, in io.Reader, out io.Writer) {
 	mode := os.O_RDONLY
 	if in != nil {
 		mode = os.O_WRONLY
@@ -334,10 +341,26 @@ func pipeIO(pipe string, in io.Reader, out io.Writer) {
 	}
 	defer f.Close()
 
-	if in != nil {
-		io.Copy(f, in)
-	} else {
-		io.Copy(out, f)
+	// Create a channel to signal completion
+	done := make(chan struct{})
+
+	go func() {
+		if in != nil {
+			io.Copy(f, in)
+		} else {
+			io.Copy(out, f)
+		}
+		close(done)
+	}()
+
+	// Wait for either completion or context cancellation
+	select {
+	case <-done:
+		// Normal completion
+	case <-ctx.Done():
+		debugf("pipeIO cancelled due to context: %v", ctx.Err())
+		// Close the file to interrupt the copy operation
+		f.Close()
 	}
 }
 
@@ -680,7 +703,7 @@ func checkDeveloperEnvironment() {
 	if !isDebugEnabled() {
 		return
 	}
-	
+
 	// Check Xcode developer directory
 	devDir := os.Getenv("DEVELOPER_DIR")
 	if devDir == "" {
@@ -693,9 +716,9 @@ func checkDeveloperEnvironment() {
 		}
 		devDir = strings.TrimSpace(string(output))
 	}
-	
+
 	debugf("Xcode developer directory: %s", devDir)
-	
+
 	// Check if Platforms directory exists (required for 'open' command)
 	platformsDir := filepath.Join(devDir, "Platforms")
 	if _, err := os.Stat(platformsDir); err != nil {
@@ -706,12 +729,12 @@ func checkDeveloperEnvironment() {
 		debugf("  2. sudo xcode-select --switch /Library/Developer/CommandLineTools")
 		debugf("  3. xcode-select --install (to reinstall Command Line Tools)")
 		debugf("Note: Full Xcode is NOT required - this is a Command Line Tools config issue")
-		
+
 		// Try to auto-detect if we can suggest a specific fix
 		if _, err := os.Stat("/Applications/Xcode.app"); err == nil {
 			debugf("  Alternative: Use Xcode path: sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer")
 		}
-		
+
 		// Check if Command Line Tools are properly installed
 		if _, err := os.Stat("/Library/Developer/CommandLineTools/usr/bin"); err != nil {
 			debugf("  Command Line Tools may not be properly installed")

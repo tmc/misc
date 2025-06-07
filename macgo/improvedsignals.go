@@ -1,6 +1,7 @@
 package macgo
 
 import (
+	"context"
 	"io"
 	"os"
 	"os/exec"
@@ -35,11 +36,16 @@ func EnableLegacySignalHandling() {
 // This approach is inspired by the Go tools implementation and works better
 // in many scenarios, especially with Ctrl+C handling
 func relaunchWithRobustSignalHandling(appPath, execPath string, args []string) {
+	relaunchWithRobustSignalHandlingContext(context.Background(), appPath, execPath, args)
+}
+
+// relaunchWithRobustSignalHandlingContext relaunches the app with robust signal handling and context support
+func relaunchWithRobustSignalHandlingContext(ctx context.Context, appPath, execPath string, args []string) {
 	debugf("=== relaunchWithRobustSignalHandling START ===")
 	debugf("appPath: %s", appPath)
 	debugf("execPath: %s", execPath)
 	debugf("args: %v", args)
-	
+
 	// Set environment to prevent relaunching again
 	os.Setenv("MACGO_NO_RELAUNCH", "1")
 	debugf("Set MACGO_NO_RELAUNCH=1")
@@ -74,31 +80,40 @@ func relaunchWithRobustSignalHandling(appPath, execPath string, args []string) {
 	}
 	debugf("Command started successfully, PID: %d", toolCmd.Process.Pid)
 
-	// Set up robust signal handling
+	// Set up robust signal handling with context awareness
 	debugf("Setting up signal handling...")
 	c := make(chan os.Signal, 100)
 	signal.Notify(c)
 	go func() {
-		for sig := range c {
-			debugf("Forwarding signal %v to app bundle process group", sig)
+		for {
+			select {
+			case <-ctx.Done():
+				debugf("Context cancelled, stopping signal forwarding")
+				return
+			case sig, ok := <-c:
+				if !ok {
+					return
+				}
+				debugf("Forwarding signal %v to app bundle process group", sig)
 
-			// Forward to entire process group using negative PID
-			sigNum := sig.(syscall.Signal)
+				// Forward to entire process group using negative PID
+				sigNum := sig.(syscall.Signal)
 
-			// Skip SIGCHLD as we don't need to forward it
-			if sigNum == syscall.SIGCHLD {
-				continue
-			}
+				// Skip SIGCHLD as we don't need to forward it
+				if sigNum == syscall.SIGCHLD {
+					continue
+				}
 
-			// Using negative PID sends to the entire process group
-			if err := syscall.Kill(-toolCmd.Process.Pid, sigNum); err != nil {
-				debugf("Error forwarding signal %v: %v", sigNum, err)
-			}
+				// Using negative PID sends to the entire process group
+				if err := syscall.Kill(-toolCmd.Process.Pid, sigNum); err != nil {
+					debugf("Error forwarding signal %v: %v", sigNum, err)
+				}
 
-			// Special handling for terminal signals
-			if sigNum == syscall.SIGTSTP || sigNum == syscall.SIGTTIN || sigNum == syscall.SIGTTOU {
-				// Use SIGSTOP for these terminal signals
-				syscall.Kill(syscall.Getpid(), syscall.SIGSTOP)
+				// Special handling for terminal signals
+				if sigNum == syscall.SIGTSTP || sigNum == syscall.SIGTTIN || sigNum == syscall.SIGTTOU {
+					// Use SIGSTOP for these terminal signals
+					syscall.Kill(syscall.Getpid(), syscall.SIGSTOP)
+				}
 			}
 		}
 	}()
@@ -106,14 +121,18 @@ func relaunchWithRobustSignalHandling(appPath, execPath string, args []string) {
 
 	// Wait for process to finish and exit with its status code
 	debugf("Waiting for command to finish...")
-	
-	// Add a timeout to detect hangs
+
+	// Add a timeout to detect hangs with context support
 	done := make(chan error, 1)
 	go func() {
 		done <- toolCmd.Wait()
 	}()
-	
+
 	select {
+	case <-ctx.Done():
+		debugf("Context cancelled, killing process...")
+		toolCmd.Process.Kill()
+		err = <-done
 	case err = <-done:
 		debugf("Command finished with error: %v", err)
 	case <-time.After(5 * time.Second):
@@ -123,10 +142,10 @@ func relaunchWithRobustSignalHandling(appPath, execPath string, args []string) {
 		toolCmd.Process.Kill()
 		err = <-done // wait for the kill to complete
 		debugf("Process killed, error: %v", err)
-		
+
 		// Fall back to direct execution
 		debugf("FALLBACK: Attempting direct execution of binary...")
-		fallbackDirectExecution(appPath, execPath)
+		fallbackDirectExecutionContext(ctx, appPath, execPath)
 	}
 
 	// Clean up signal handling
@@ -156,6 +175,11 @@ func relaunchWithRobustSignalHandling(appPath, execPath string, args []string) {
 // relaunchWithIORedirection relaunches the app with IO redirection through named pipes
 // and uses robust signal handling by default
 func relaunchWithIORedirection(appPath, execPath string) {
+	relaunchWithIORedirectionContext(context.Background(), appPath, execPath)
+}
+
+// relaunchWithIORedirectionContext relaunches the app with IO redirection and context support
+func relaunchWithIORedirectionContext(ctx context.Context, appPath, execPath string) {
 	debugf("=== Starting relaunchWithIORedirection ===")
 	debugf("appPath: %s", appPath)
 	debugf("execPath: %s", execPath)
@@ -189,10 +213,10 @@ func relaunchWithIORedirection(appPath, execPath string) {
 		args = append(args, os.Args[1:]...)
 	}
 
-	// Launch app bundle with robust signal handling
-	debugf("About to call relaunchWithRobustSignalHandling")
-	relaunchWithRobustSignalHandling(appPath, execPath, args)
-	debugf("Returned from relaunchWithRobustSignalHandling")
+	// Launch app bundle with robust signal handling and context
+	debugf("About to call relaunchWithRobustSignalHandlingContext")
+	relaunchWithRobustSignalHandlingContext(ctx, appPath, execPath, args)
+	debugf("Returned from relaunchWithRobustSignalHandlingContext")
 
 	// Create debug log files for stdout/stderr if debug is enabled
 	var stdoutTee, stderrTee io.Writer = os.Stdout, os.Stderr
@@ -212,41 +236,46 @@ func relaunchWithIORedirection(appPath, execPath string) {
 		}
 	}
 
-	// Handle stdin
-	go pipeIO(pipes[0], os.Stdin, nil)
+	// Handle stdin with context
+	go pipeIOContext(ctx, pipes[0], os.Stdin, nil)
 
-	// Handle stdout
-	go pipeIO(pipes[1], nil, stdoutTee)
+	// Handle stdout with context
+	go pipeIOContext(ctx, pipes[1], nil, stdoutTee)
 
-	// Handle stderr
-	go pipeIO(pipes[2], nil, stderrTee)
+	// Handle stderr with context
+	go pipeIOContext(ctx, pipes[2], nil, stderrTee)
 }
 
 // fallbackDirectExecution directly executes the binary when 'open' command fails
 func fallbackDirectExecution(appPath, execPath string) {
+	fallbackDirectExecutionContext(context.Background(), appPath, execPath)
+}
+
+// fallbackDirectExecutionContext directly executes the binary with context support
+func fallbackDirectExecutionContext(ctx context.Context, appPath, execPath string) {
 	debugf("=== FALLBACK DIRECT EXECUTION ===")
-	
+
 	// Find the actual executable in the app bundle
 	bundleExecName := filepath.Base(execPath)
 	bundleExecPath := filepath.Join(appPath, "Contents", "MacOS", bundleExecName)
-	
+
 	debugf("Looking for bundle executable at: %s", bundleExecPath)
 	if _, err := os.Stat(bundleExecPath); err != nil {
 		debugf("Bundle executable not found: %v", err)
 		debugf("Falling back to original executable: %s", execPath)
 		bundleExecPath = execPath
 	}
-	
+
 	debugf("Executing directly: %s", bundleExecPath)
-	
-	// Set up the command with the same environment
-	cmd := exec.Command(bundleExecPath)
+
+	// Set up the command with the same environment and context
+	cmd := exec.CommandContext(ctx, bundleExecPath)
 	cmd.Args = os.Args // Pass through original arguments
 	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout  
+	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), "MACGO_NO_RELAUNCH=1") // Prevent recursive relaunching
-	
+
 	// Execute and replace current process
 	debugf("Starting direct execution...")
 	err := cmd.Run()
@@ -254,7 +283,7 @@ func fallbackDirectExecution(appPath, execPath string) {
 		debugf("Direct execution failed: %v", err)
 		os.Exit(1)
 	}
-	
+
 	debugf("Direct execution completed successfully")
 	os.Exit(0)
 }

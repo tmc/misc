@@ -23,17 +23,17 @@ func init() {
 		fmt.Fprintf(os.Stderr, "Error getting executable path: %v\n", err)
 		return
 	}
-	
+
 	// Try to get the real path if it's a symlink
 	realPath, err := filepath.EvalSymlinks(execPath)
 	if err == nil {
 		execPath = realPath
 	}
-	
+
 	// Get the command name from os.Args[0], which preserves symlink names
 	cmdName := filepath.Base(os.Args[0])
 	cmdName = strings.TrimSuffix(cmdName, filepath.Ext(cmdName))
-	
+
 	// Use the command name for the app name
 	appName := cmdName
 	if appName == "" {
@@ -51,7 +51,7 @@ func init() {
 		macgo.EntAppSandbox,
 		macgo.EntNetworkClient,
 	)
-	
+
 	// Add AppleEvents entitlement manually - required for osascript
 	cfg.AddEntitlement(macgo.Entitlement("com.apple.security.automation.apple-events"))
 
@@ -60,12 +60,12 @@ func init() {
 
 	// Apply the configuration
 	macgo.Configure(cfg)
-	
+
 	// Enable debug logging if requested
 	if os.Getenv("MACGO_DEBUG") == "1" {
 		macgo.EnableDebug()
 	}
-	
+
 	// Start macgo
 	macgo.Start()
 }
@@ -73,10 +73,10 @@ func init() {
 func main() {
 	// Skip the program name (first argument)
 	args := os.Args[1:]
-	
+
 	// Default timeout (0 means no timeout)
 	var timeout time.Duration
-	
+
 	// Check for timeout flag
 	for i := 0; i < len(args); i++ {
 		if args[i] == "--timeout" && i+1 < len(args) {
@@ -109,7 +109,7 @@ func main() {
 	// Prepare osascript command with all arguments
 	fmt.Fprintf(os.Stderr, "[DEBUG] Creating command: osascript %v\n", args)
 	cmd := exec.Command("osascript", args...)
-	
+
 	// Connect standard I/O
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -153,7 +153,7 @@ func main() {
 				fmt.Fprintf(os.Stderr, "[DEBUG] Command failed with exit code: %d\n", exitCode)
 				os.Exit(exitCode)
 			}
-			
+
 			// Otherwise exit with a generic error code
 			fmt.Fprintf(os.Stderr, "Error running osascript: %v\n", err)
 			os.Exit(1)
@@ -161,13 +161,13 @@ func main() {
 		fmt.Fprintf(os.Stderr, "[DEBUG] Command completed successfully\n")
 	case sig := <-sigChan:
 		// Received termination signal, pass it to the child process
-		fmt.Fprintf(os.Stderr, "[DEBUG] Received signal: %v (type %T), forwarding to PID %d\n", 
+		fmt.Fprintf(os.Stderr, "[DEBUG] Received signal: %v (type %T), forwarding to PID %d\n",
 			sig, sig, cmd.Process.Pid)
-		
+
 		// Just log the PID and process status
 		fmt.Fprintf(os.Stderr, "[DEBUG] Process PID: %d\n", cmd.Process.Pid)
 		// We can't call Wait() here as it's already being called in the goroutine
-		
+
 		// Try to forward the signal
 		if err := cmd.Process.Signal(sig); err != nil {
 			fmt.Fprintf(os.Stderr, "[DEBUG] Failed to send signal to osascript: %v\n", err)
@@ -179,29 +179,29 @@ func main() {
 			}
 		} else {
 			fmt.Fprintf(os.Stderr, "[DEBUG] Signal forwarded successfully\n")
-			
+
 			// Give the process a moment to handle the signal
 			fmt.Fprintf(os.Stderr, "[DEBUG] Waiting briefly for process to handle signal\n")
 			time.Sleep(500 * time.Millisecond)
-			
+
 			// We can't check process state here since we're already waiting in the goroutine
 			// Just add a log message
 			fmt.Fprintf(os.Stderr, "[DEBUG] Waiting for process to exit after signal\n")
 		}
-		
+
 		fmt.Fprintf(os.Stderr, "[DEBUG] Exiting with code 1 due to signal\n")
 		os.Exit(1)
 	case <-timeoutChan:
 		// Timeout reached, kill the process
-		fmt.Fprintf(os.Stderr, "[DEBUG] Timeout of %s reached, terminating osascript (PID: %d)\n", 
+		fmt.Fprintf(os.Stderr, "[DEBUG] Timeout of %s reached, terminating osascript (PID: %d)\n",
 			timeout, cmd.Process.Pid)
-		
+
 		if killErr := cmd.Process.Kill(); killErr != nil {
 			fmt.Fprintf(os.Stderr, "[DEBUG] Kill failed: %v\n", killErr)
 		} else {
 			fmt.Fprintf(os.Stderr, "[DEBUG] Process killed successfully\n")
 		}
-		
+
 		fmt.Fprintf(os.Stderr, "[DEBUG] Exiting with code 1 due to timeout\n")
 		os.Exit(1)
 	}

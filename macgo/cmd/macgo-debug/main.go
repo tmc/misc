@@ -199,7 +199,7 @@ func startPprofServer(port int) {
 	for i := 0; i < 10; i++ {
 		addr := fmt.Sprintf("localhost:%d", port)
 		fmt.Printf("Starting pprof server on %s\n", addr)
-		
+
 		// Add custom handler for process info
 		http.HandleFunc("/macgo/info", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/plain")
@@ -208,12 +208,12 @@ func startPprofServer(port int) {
 			fmt.Fprintf(w, "Target PID: %d\n", *flagPid)
 			fmt.Fprintf(w, "Time: %s\n", time.Now().Format(time.RFC3339))
 		})
-		
+
 		// Print usage info
 		fmt.Printf("pprof endpoints available at:\n")
 		fmt.Printf("  http://%s/debug/pprof/\n", addr)
 		fmt.Printf("  Process info: http://%s/macgo/info\n", addr)
-		
+
 		err := http.ListenAndServe(addr, nil)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to start pprof server on port %d: %v\n", port, err)

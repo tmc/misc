@@ -25,7 +25,7 @@ func EnableAutoInit() {
 //	func init() {
 //	    // Enable improved signal handling
 //	    macgo.EnableImprovedSignalHandling()
-//	    
+//
 //	    // Configure macgo with your desired permissions
 //	    macgo.RequestEntitlements(macgo.EntCamera, macgo.EntMicrophone)
 //	}

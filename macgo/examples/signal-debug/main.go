@@ -18,10 +18,10 @@ func init() {
 	// Set up basic configuration
 	macgo.SetAppName("SignalDebugApp")
 	macgo.SetBundleID("com.example.macgo.signaldebug")
-	
+
 	// Enable improved signal handling for testing
 	macgo.EnableImprovedSignalHandling()
-	
+
 	// Enable debug output to see what's happening
 	macgo.EnableDebug()
 }
@@ -35,13 +35,13 @@ func main() {
 
 	// Start macgo - this creates the app bundle and relaunches if needed
 	macgo.Start()
-	
+
 	fmt.Println("Signal Debugging Utility")
 	fmt.Println("=======================")
 	fmt.Println("This utility helps diagnose signal handling issues")
 	fmt.Println("Parent PID:", os.Getpid())
 	fmt.Println()
-	
+
 	// Set up a signal monitor to log all signals received
 	allSignals := make(chan os.Signal, 100)
 	signal.Notify(allSignals)
@@ -50,7 +50,7 @@ func main() {
 			fmt.Printf("[Parent] Received signal: %v\n", sig)
 		}
 	}()
-	
+
 	// Launch a child process
 	cmd := exec.Command(os.Args[0], "child")
 	cmd.Stdout = os.Stdout
@@ -58,12 +58,12 @@ func main() {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}
-	
+
 	if err := cmd.Start(); err != nil {
 		fmt.Printf("Error starting child: %v\n", err)
 		return
 	}
-	
+
 	fmt.Printf("Started child process with PID: %d\n", cmd.Process.Pid)
 	fmt.Println("Process hierarchy:")
 	fmt.Printf("  - Parent (this process): PID %d\n", os.Getpid())
@@ -74,7 +74,7 @@ func main() {
 	fmt.Println("2. Run 'kill -TERM <parent-pid>' to test SIGTERM")
 	fmt.Println("3. Run 'kill -STOP <parent-pid>' to test SIGTSTP")
 	fmt.Println()
-	
+
 	// Wait for signals or timeout
 	done := make(chan struct{})
 	go func() {
@@ -82,7 +82,7 @@ func main() {
 		fmt.Println("Child process exited")
 		close(done)
 	}()
-	
+
 	// Run for 60 seconds or until done
 	select {
 	case <-done:
@@ -95,16 +95,16 @@ func main() {
 // Child process - just waits for signals
 func runChild() {
 	fmt.Printf("[Child] Started with PID: %d\n", os.Getpid())
-	
+
 	// Set up signal handling
 	allSignals := make(chan os.Signal, 100)
 	signal.Notify(allSignals)
-	
+
 	// Process signal info
 	go func() {
 		for sig := range allSignals {
 			fmt.Printf("[Child] Received signal: %v\n", sig)
-			
+
 			// Exit on termination signals
 			if sig == syscall.SIGINT || sig == syscall.SIGTERM {
 				fmt.Println("[Child] Exiting due to termination signal")
@@ -112,7 +112,7 @@ func runChild() {
 			}
 		}
 	}()
-	
+
 	// Print process group info
 	pgid, err := syscall.Getpgid(os.Getpid())
 	if err != nil {
@@ -120,11 +120,11 @@ func runChild() {
 	} else {
 		fmt.Printf("[Child] Process Group ID: %d\n", pgid)
 	}
-	
+
 	// Print parent process info
 	ppid := os.Getppid()
 	fmt.Printf("[Child] Parent PID: %d\n", ppid)
-	
+
 	// Run ps to show process hierarchy
 	cmd := exec.Command("ps", "-o", "pid,ppid,pgid,command", "-p", fmt.Sprintf("%d,%d", os.Getpid(), ppid))
 	output, err := cmd.CombinedOutput()
@@ -134,7 +134,7 @@ func runChild() {
 		fmt.Println("[Child] Process hierarchy:")
 		fmt.Println(strings.TrimSpace(string(output)))
 	}
-	
+
 	// Wait for signals until terminated
 	fmt.Println("[Child] Waiting for signals...")
 	select {}

@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	// Import sandboxed macgo package 
+	// Import sandboxed macgo package
 	_ "github.com/tmc/misc/macgo/auto/sandbox" // --
 )
 
@@ -18,7 +18,7 @@ func main() {
 	// Attempt to read files from home directory (will be blocked in sandbox)
 	homeDir, _ := os.UserHomeDir()
 	fmt.Printf("Home directory: %s\n", homeDir)
-	
+
 	// Try to read various home dir locations
 	dirsToTry := []string{
 		homeDir,
@@ -61,15 +61,15 @@ func main() {
 
 	for _, cmdStr := range cmdsToTry {
 		fmt.Printf("Executing: %s - ", cmdStr)
-		
+
 		cmd := exec.Command("bash", "-c", cmdStr)
 		output, err := cmd.CombinedOutput()
-		
+
 		if err != nil {
 			fmt.Printf("ERROR: %v\n", err)
 			continue
 		}
-		
+
 		fmt.Printf("SUCCESS!\n")
 		if len(output) > 100 {
 			fmt.Printf("  Output: %s...\n", output[:100])

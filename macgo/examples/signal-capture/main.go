@@ -37,8 +37,8 @@ func main() {
 
 	// Set up signal handling
 	sigCh := make(chan os.Signal, 10)
-	signal.Notify(sigCh, 
-		syscall.SIGINT, 
+	signal.Notify(sigCh,
+		syscall.SIGINT,
 		syscall.SIGTERM,
 		syscall.SIGHUP,
 		syscall.SIGQUIT,
@@ -51,14 +51,14 @@ func main() {
 	for sig := range sigCh {
 		now := time.Now().Format(time.RFC3339Nano)
 		sigMessage := fmt.Sprintf("[%s] Received signal: %v\n", now, sig)
-		
+
 		// Log to file
 		fmt.Fprint(logFile, sigMessage)
 		logFile.Sync()
-		
+
 		// Output to console
 		fmt.Print(sigMessage)
-		
+
 		// Exit on termination signals
 		if sig == syscall.SIGINT || sig == syscall.SIGTERM {
 			fmt.Fprintf(logFile, "[%s] Exiting due to signal: %v\n", now, sig)
