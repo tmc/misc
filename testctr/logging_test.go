@@ -33,7 +33,7 @@ func TestLogging_VerboseOnly(t *testing.T) {
 	// testctr: [redis:7-alpine] container ... port mapping: 6379/tcp -> ...
 
 	c := testctr.New(t, "redis:7-alpine",
-		testctr.WithPort("6379:6379"),
+		testctr.WithPort("6379"),
 	)
 
 	// Inspect will log verbose details only when -testctr.verbose is set
