@@ -1,5 +1,5 @@
 /*
-Gocmddoc generates Markdown documentation from Go package documentation
+gocmddoc generates Markdown documentation from Go package documentation
 comments.
 
 The tool extracts package documentation and formats it as clean, readable
@@ -12,43 +12,26 @@ by default.
 
 	gocmddoc [flags] [package]
 
+	  -a	Include all declarations for main packages
+	  -add-install-section
+			Add installation instructions section (default true)
+	  -all
+			Include all declarations for main packages
+	  -badge
+			Add pkg.go.dev badge for library packages (default true)
+	  -o string
+			Output file path (default: stdout)
+	  -output string
+			Output file path (default: stdout)
+	  -shields string
+			Add shields: all, version, license, build, report (comma-separated)
+	  -toc
+			Generate table of contents
+
 The package argument can be:
   - A relative path (e.g., ./mypackage)
   - An import path (e.g., github.com/user/repo/pkg)
   - Empty (defaults to current directory)
-
-# Flags
-
-The following flags control the tool's behavior:
-
-	-o, -output string
-		Output file path. If not specified, writes to stdout.
-
-	-a, -all
-		Include all declarations for main packages (default: false).
-		By default, main packages only show package documentation.
-
-	-toc
-		Generate table of contents (default: false).
-		Use -toc to enable.
-
-	-badge
-		Add pkg.go.dev badge for packages (default: true).
-		Use -badge=false to disable.
-
-	-add-install-section
-		Add installation instructions section (default: true).
-		Shows go install/run commands for tools and go get for libraries.
-		Use -add-install-section=false to disable.
-
-	-shields string
-		Add GitHub shields/badges. Options: all, version, license, build, report.
-		Use comma-separated values (e.g., -shields=version,license).
-		Use -shields=all to include all available shields.
-		Only works for GitHub-hosted packages.
-
-	-h, -help
-		Show usage information.
 
 # Examples
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go/ast"
 	"go/doc"
+	"go/doc/comment"
 	"go/format"
 	"go/parser"
 	"go/token"
@@ -182,9 +183,10 @@ func generateMarkdown(pkgPath string, showAll, genTOC, genBadge, genInstall bool
 			if isMain {
 				// Command installation
 				// Go installation prerequisites
+				goVersion := getGoVersion(pkgPath)
 				installSection.WriteString("<details>\n")
 				installSection.WriteString("<summary><b>Prerequisites: Go Installation</b></summary>\n\n")
-				installSection.WriteString("You'll need Go 1.21 or later. [Install Go](https://go.dev/doc/install) if you haven't already.\n\n")
+				installSection.WriteString(fmt.Sprintf("You'll need Go %s or later. [Install Go](https://go.dev/doc/install) if you haven't already.\n\n", goVersion))
 				installSection.WriteString("<details>\n")
 				installSection.WriteString("<summary><b>Setting up your PATH</b></summary>\n\n")
 				installSection.WriteString("After installing Go, ensure that `$HOME/go/bin` is in your PATH:\n\n")
@@ -213,17 +215,18 @@ func generateMarkdown(pkgPath string, showAll, genTOC, genBadge, genInstall bool
 				installSection.WriteString("</details>\n\n")
 				installSection.WriteString("</details>\n\n")
 				installSection.WriteString("### Install\n\n")
-				installSection.WriteString("```bash\n")
+				installSection.WriteString("```console\n")
 				installSection.WriteString(fmt.Sprintf("go install %s@latest\n", importPath))
 				installSection.WriteString("```\n\n")
 				installSection.WriteString("### Run directly\n\n")
-				installSection.WriteString("```bash\n")
+				installSection.WriteString("```console\n")
 				installSection.WriteString(fmt.Sprintf("go run %s@latest [arguments]\n", importPath))
 				installSection.WriteString("```\n\n")
 			} else {
 				// Library installation
-				installSection.WriteString("To use this package in your Go project, you'll need [Go](https://go.dev/doc/install) installed on your system.\n\n")
-				installSection.WriteString("```bash\n")
+				goVersion := getGoVersion(pkgPath)
+				installSection.WriteString(fmt.Sprintf("To use this package in your Go project, you'll need [Go](https://go.dev/doc/install) %s or later installed on your system.\n\n", goVersion))
+				installSection.WriteString("```console\n")
 				installSection.WriteString(fmt.Sprintf("go get %s\n", importPath))
 				installSection.WriteString("```\n\n")
 				installSection.WriteString("Then import it in your code:\n\n")
@@ -284,53 +287,183 @@ func generateMarkdown(pkgPath string, showAll, genTOC, genBadge, genInstall bool
 	return out.String(), nil
 }
 
-// formatDoc converts doc comments to markdown
+// formatDoc converts doc comments to markdown using go/doc/comment
 func formatDoc(doc string) string {
-	var out strings.Builder
-	lines := strings.Split(doc, "\n")
+	// Pre-process to handle literal shell-like blocks
+	doc = preprocessConsoleBlocks(doc)
+
+	p := &comment.Parser{}
+	parsed := p.Parse(doc)
+
+	pr := &comment.Printer{
+		HeadingLevel: 2, // Use ## instead of ###
+		HeadingID: func(h *comment.Heading) string {
+			// Return empty string to disable anchor links
+			return ""
+		},
+	}
+	markdown := string(pr.Markdown(parsed))
+
+	// Post-process to restore console blocks and add language hints
+	return postprocessConsoleBlocks(markdown)
+}
+
+// preprocessConsoleBlocks converts shell-like blocks to placeholders before parsing
+func preprocessConsoleBlocks(doc string) string {
+	// Support multiple shell-like language types
+	shellLanguages := []string{"console", "sh-session", "bash", "shell", "ShellSession"}
+
+	counter := 0
+	result := doc
+
+	for _, lang := range shellLanguages {
+		re := regexp.MustCompile(fmt.Sprintf("```%s\n((?:.*\n)*?)```", regexp.QuoteMeta(lang)))
+		result = re.ReplaceAllStringFunc(result, func(match string) string {
+			counter++
+			// Convert to indented code block with special marker
+			lines := strings.Split(match, "\n")
+			var output strings.Builder
+			output.WriteString(fmt.Sprintf("SHELLMARKERSTART%dLANG%s\n", counter, lang))
+			for i, line := range lines[1 : len(lines)-1] { // Skip ```lang and ```
+				if i == 0 || line != "" {
+					output.WriteString("\t" + line + "\n")
+				}
+			}
+			output.WriteString(fmt.Sprintf("SHELLMARKEREND%dLANG%s", counter, lang))
+			return output.String()
+		})
+	}
+
+	return result
+}
+
+// postprocessConsoleBlocks restores shell blocks from placeholders
+func postprocessConsoleBlocks(markdown string) string {
+	// More flexible regex to handle various shell language types
+	re := regexp.MustCompile(`SHELLMARKERSTART(\d+)LANG([^_\s]+)\s*((?:.*\n)*?)\s*SHELLMARKEREND\d+LANG([^_\s]+)`)
+	markdown = re.ReplaceAllStringFunc(markdown, func(match string) string {
+		// Extract the language and content
+		lines := strings.Split(match, "\n")
+		var result strings.Builder
+
+		// Find start marker to extract language
+		var lang string
+		startIdx := -1
+		endIdx := -1
+
+		for i, line := range lines {
+			if strings.Contains(line, "SHELLMARKERSTART") {
+				startIdx = i
+				// Extract language from marker: SHELLMARKERSTART1LANGconsole -> console
+				parts := strings.Split(line, "LANG")
+				if len(parts) >= 2 {
+					lang = parts[1]
+				}
+			} else if strings.Contains(line, "SHELLMARKEREND") {
+				endIdx = i
+				break
+			}
+		}
+
+		// Default to console if no language found
+		if lang == "" {
+			lang = "console"
+		}
+
+		result.WriteString("```" + lang + "\n")
+
+		// Extract content between markers
+		if startIdx >= 0 && endIdx >= 0 {
+			for _, line := range lines[startIdx+1 : endIdx] {
+				// Remove leading tab that was added for indentation
+				if strings.HasPrefix(line, "\t") {
+					result.WriteString(line[1:] + "\n")
+				} else if strings.HasPrefix(line, "    ") {
+					// Handle 4-space indentation too
+					result.WriteString(line[4:] + "\n")
+				} else {
+					result.WriteString(line + "\n")
+				}
+			}
+		}
+		result.WriteString("```")
+		return result.String()
+	})
+
+	// Then add shell language hints to other code blocks
+	return addShellLanguageHints(markdown)
+}
+
+// addShellLanguageHints detects shell commands and adds language hints to code blocks
+func addShellLanguageHints(markdown string) string {
+	lines := strings.Split(markdown, "\n")
+	var result strings.Builder
 
 	inCodeBlock := false
+	codeBlockContent := []string{}
+	codeBlockStart := ""
+
+	for _, line := range lines {
+		// Check for code block start (with or without language)
+		if strings.HasPrefix(line, "```") {
+			if !inCodeBlock {
+				// Starting a code block
+				inCodeBlock = true
+				codeBlockStart = line
+				codeBlockContent = []string{}
+			} else {
+				// Ending a code block - analyze content
+				if codeBlockStart == "```" && isShellCodeBlock(codeBlockContent) {
+					// Only add shell hint to plain code blocks
+					result.WriteString("```shell\n")
+					for _, codeLine := range codeBlockContent {
+						result.WriteString(codeLine + "\n")
+					}
+					result.WriteString("```\n")
+				} else {
+					// Keep existing language hint or plain block
+					result.WriteString(codeBlockStart + "\n")
+					for _, codeLine := range codeBlockContent {
+						result.WriteString(codeLine + "\n")
+					}
+					result.WriteString("```\n")
+				}
+				inCodeBlock = false
+			}
+		} else if inCodeBlock {
+			codeBlockContent = append(codeBlockContent, line)
+		} else {
+			result.WriteString(line + "\n")
+		}
+	}
+
+	return strings.TrimRight(result.String(), "\n")
+}
+
+// isShellCodeBlock detects if a code block contains shell commands
+func isShellCodeBlock(lines []string) bool {
+	shellIndicators := []string{
+		"go install", "go run", "go build", "go get",
+		"npm install", "npm run", "yarn",
+		"docker", "kubectl", "curl", "wget",
+		"mkdir", "cd ", "ls ", "cp ", "mv ", "rm ",
+		"export ", "echo ", "./", "bash", "sh ",
+	}
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-
-		// Check if we're in a code block (indented line)
-		inCodeBlock = strings.HasPrefix(line, "\t") || strings.HasPrefix(line, "    ")
-
-		// Don't process headers inside code blocks
-		if inCodeBlock {
-			out.WriteString("    " + strings.TrimPrefix(strings.TrimPrefix(line, "\t"), "    ") + "\n")
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue
 		}
 
-		// Check for headers (# Header or ALL-CAPS) only outside code blocks
-		if strings.HasPrefix(trimmed, "# ") {
-			fmt.Fprintf(&out, "## %s\n\n", trimmed[2:])
-			continue
-		}
-		if isAllCaps(trimmed) && len(trimmed) > 1 {
-			fmt.Fprintf(&out, "## %s\n\n", trimmed)
-			continue
-		}
-
-		// Normal text
-		out.WriteString(line + "\n")
-	}
-
-	return strings.TrimRight(out.String(), "\n")
-}
-
-// isAllCaps checks if a string is all uppercase letters
-func isAllCaps(s string) bool {
-	if s == "" {
-		return false
-	}
-	for _, r := range s {
-		if (r < 'A' || r > 'Z') && r != ' ' && r != '-' && r != '_' {
-			return false
+		for _, indicator := range shellIndicators {
+			if strings.Contains(trimmed, indicator) {
+				return true
+			}
 		}
 	}
-	return strings.ContainsAny(s, "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+	return false
 }
 
 // funcSig returns a formatted function signature
@@ -383,45 +516,38 @@ type header struct {
 
 // formatDocWithHeaders is like formatDoc but also collects headers and splits content
 func formatDocWithHeaders(doc string, headers *[]header) (beforeFirstHeader, afterFirstHeader string) {
-	var before, after strings.Builder
-	lines := strings.Split(doc, "\n")
+	// Pre-process to handle literal shell-like blocks
+	doc = preprocessConsoleBlocks(doc)
 
-	inCodeBlock := false
+	p := &comment.Parser{}
+	parsed := p.Parse(doc)
+
+	pr := &comment.Printer{
+		HeadingLevel: 2, // Use ## instead of ###
+		HeadingID: func(h *comment.Heading) string {
+			// Return empty string to disable anchor links
+			return ""
+		},
+	}
+	markdown := string(pr.Markdown(parsed))
+	formatted := postprocessConsoleBlocks(markdown)
+
+	// Parse the formatted markdown to extract headers
+	lines := strings.Split(formatted, "\n")
+	var before, after strings.Builder
 	foundFirstHeader := false
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		// Check if we're in a code block (indented line)
-		inCodeBlock = strings.HasPrefix(line, "\t") || strings.HasPrefix(line, "    ")
-
-		// Don't process headers inside code blocks
-		if inCodeBlock {
-			formattedLine := "    " + strings.TrimPrefix(strings.TrimPrefix(line, "\t"), "    ") + "\n"
-			if foundFirstHeader {
-				after.WriteString(formattedLine)
-			} else {
-				before.WriteString(formattedLine)
-			}
-			continue
-		}
-
-		// Check for headers (# Header or ALL-CAPS) only outside code blocks
-		if strings.HasPrefix(trimmed, "# ") {
+		// Check for markdown headers (now ## without anchors)
+		if strings.HasPrefix(trimmed, "## ") {
 			foundFirstHeader = true
-			headerText := trimmed[2:]
+			headerText := trimmed[3:]
 			id := makeHeaderID(headerText)
 			*headers = append(*headers, header{level: 2, text: headerText, id: id})
 
-			fmt.Fprintf(&after, "## %s\n\n", headerText)
-			continue
-		}
-		if isAllCaps(trimmed) && len(trimmed) > 1 {
-			foundFirstHeader = true
-			id := makeHeaderID(trimmed)
-			*headers = append(*headers, header{level: 2, text: trimmed, id: id})
-
-			fmt.Fprintf(&after, "## %s\n\n", trimmed)
+			after.WriteString(line + "\n")
 			continue
 		}
 
@@ -511,6 +637,35 @@ func writeTypesContent(out *strings.Builder, types []*doc.Type, fset *token.File
 			}
 		}
 	}
+}
+
+// getGoVersion tries to determine the Go version from go.mod
+func getGoVersion(pkgPath string) string {
+	dir := pkgPath
+	for {
+		modPath := filepath.Join(dir, "go.mod")
+		data, err := os.ReadFile(modPath)
+		if err == nil {
+			modFile, err := modfile.Parse(modPath, data, nil)
+			if err == nil && modFile.Go != nil {
+				version := modFile.Go.Version
+				// Trim to major.minor format (e.g., "1.24.3" -> "1.24")
+				if major, rest, found := strings.Cut(version, "."); found {
+					if minor, _, _ := strings.Cut(rest, "."); minor != "" {
+						return major + "." + minor
+					}
+				}
+				return version
+			}
+		}
+
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return "1.21" // fallback
 }
 
 // getModulePath tries to determine the module path from go.mod
