@@ -17,8 +17,11 @@ func copyFilesToContainerCLI(containerID, runtime string, files []fileEntry, t t
 	for _, entry := range files {
 		if *verbose { // global verbose flag from testctr package
 			sourceType := "path"
-			if _, ok := entry.Source.(io.Reader); ok {
+			switch entry.Source.(type) {
+			case io.Reader:
 				sourceType = "reader"
+			case []byte:
+				sourceType = "bytes"
 			}
 			t.Logf("CLI: Copying file (source: %s, target: %s, mode: %04o) into container %s",
 				sourceType, entry.Target, entry.Mode, containerID)
@@ -64,8 +67,24 @@ func copyFileToContainerCLI(containerID, runtime string, entry fileEntry, t test
 			return fmt.Errorf("CLI: failed to close temp file: %w", err)
 		}
 		srcPathForCp = tempFileToRemove
+	case []byte:
+		tmpFile, err := os.CreateTemp("", "testctr-cp-*")
+		if err != nil {
+			return fmt.Errorf("CLI: failed to create temp file for byte source: %w", err)
+		}
+		tempFileToRemove = tmpFile.Name()
+		if _, err := tmpFile.Write(src); err != nil {
+			tmpFile.Close()
+			os.Remove(tempFileToRemove)
+			return fmt.Errorf("CLI: failed to write bytes to temp file: %w", err)
+		}
+		if err := tmpFile.Close(); err != nil {
+			os.Remove(tempFileToRemove)
+			return fmt.Errorf("CLI: failed to close temp file: %w", err)
+		}
+		srcPathForCp = tempFileToRemove
 	default:
-		return fmt.Errorf("CLI: invalid source type: must be string or io.Reader, got %T", entry.Source)
+		return fmt.Errorf("CLI: invalid source type: must be string, io.Reader, or []byte, got %T", entry.Source)
 	}
 
 	if tempFileToRemove != "" {

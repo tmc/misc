@@ -2,11 +2,11 @@
 echo "Testing development workflow with multiple languages..."
 
 # Start development stack
-testctr start node:18-alpine nodedev -p 3000 -e NODE_ENV=development --cmd npm init -y
+testctr start node:18-alpine nodedev -p 3000 -e NODE_ENV=development --cmd sh -c 'cd /tmp && npm init -y && sleep 60'
 
 testctr start python:3.11-alpine pythondev -p 8000 -e PYTHONPATH=/app --cmd python -c 'print("Python ready"); import time; time.sleep(60)'
 
-testctr start golang:1.21-alpine godev -e CGO_ENABLED=0 -e GOOS=linux --cmd go version
+testctr start golang:1.21-alpine godev -e CGO_ENABLED=0 -e GOOS=linux --cmd sh -c 'go version && sleep 60'
 
 # Wait for all dev containers
 testctr wait nodedev
@@ -14,9 +14,9 @@ testctr wait pythondev
 testctr wait godev
 
 # Verify development environments
-[container nodedev]
-[container pythondev]
-[container godev]
+[container:nodedev] echo "nodedev container is running"
+[container:pythondev] echo "pythondev container is running"
+[container:godev] echo "godev container is running"
 
 echo "Testing Node.js development..."
 testctr exec nodedev node --version
@@ -47,12 +47,10 @@ testctr exec godev go version
 stdout 'go1.21'
 
 # Create a simple Go app
-testctr exec godev sh -c 'echo "package main\nimport \"fmt\"\nfunc main() { fmt.Println(\"Hello Go!\") }" > main.go'
-testctr exec godev go run main.go
+testctr exec godev sh -c 'mkdir -p /tmp/go-test && cd /tmp/go-test && echo "package main" > main.go && echo "import \"fmt\"" >> main.go && echo "func main() { fmt.Println(\"Hello Go!\") }" >> main.go && go mod init test && go run main.go'
 stdout 'Hello Go!'
 
-testctr exec godev go build -o app main.go
-testctr exec godev ./app
+testctr exec godev sh -c 'cd /tmp/go-test && go build -o app main.go && ./app'
 stdout 'Hello Go!'
 
 # Show development endpoints

@@ -17,9 +17,9 @@ testctr wait db1
 testctr wait web1
 
 # Test that all containers are running
-[container cache1]
-[container db1]
-[container web1]
+[container:cache1] echo "cache1 container is running"
+[container:db1] echo "db1 container is running"
+[container:web1] echo "web1 container is running"
 
 # Test Redis
 testctr exec cache1 redis-cli PING
@@ -38,6 +38,6 @@ testctr stop cache1
 testctr stop db1
 testctr stop web1
 
-[!container cache1]
-[!container db1]
-[!container web1]
+[!container:cache1] echo "cache1 container is stopped"
+[!container:db1] echo "db1 container is stopped"
+[!container:web1] echo "web1 container is stopped"

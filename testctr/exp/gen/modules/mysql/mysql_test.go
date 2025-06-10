@@ -18,14 +18,14 @@ func TestMysqlContainer(t *testing.T) {
 		t.Fatal("container ID should not be empty")
 	}
 
-	port := container.Port()
+	port := container.Port("3306")
 	if port == "" {
 		t.Fatal("container port should not be empty")
 	}
 
-	addr := container.Addr("3306")
-	if addr == "" {
-		t.Fatalf("failed to get address for port 3306")
+	endpoint := container.Endpoint("3306")
+	if endpoint == "" {
+		t.Fatalf("failed to get endpoint for port 3306")
 	}
 }
 

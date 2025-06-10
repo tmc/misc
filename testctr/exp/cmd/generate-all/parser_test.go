@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"generate-all/parser"
@@ -14,6 +15,11 @@ func TestParseModules(t *testing.T) {
 		Cmds: map[string]script.Cmd{
 			"parse-tc-module": createParseTCModuleCommand(),
 		},
+	}
+	
+	// Add default script commands
+	for name, cmd := range script.DefaultCmds() {
+		engine.Cmds[name] = cmd
 	}
 	
 	scripttest.Test(t, context.Background(), engine, nil, "testdata/*.txt")
@@ -48,10 +54,14 @@ func createParseTCModuleCommand() script.Cmd {
 			}
 			
 			// Use our parser package to generate the module files
-			err := parser.GenerateModuleFiles(moduleName, outputPath)
+			fullOutputPath := filepath.Join(s.Getwd(), outputPath)
+			err := parser.GenerateModuleFiles(moduleName, fullOutputPath)
 			if err != nil {
 				return nil, err
 			}
+			
+			// Print debug information
+			s.Logf("Generated files for module %s in %s", moduleName, fullOutputPath)
 			
 			return nil, nil
 		},

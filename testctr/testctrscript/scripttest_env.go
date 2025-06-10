@@ -14,6 +14,21 @@ import (
 	"rsc.io/script"
 )
 
+// Global container manager for sharing state across script commands
+var (
+	globalContainerMgr *containerManager
+	globalMgrOnce      sync.Once
+)
+
+func getGlobalContainerManager() *containerManager {
+	globalMgrOnce.Do(func() {
+		globalContainerMgr = &containerManager{
+			containers: make(map[string]*testctr.Container),
+		}
+	})
+	return globalContainerMgr
+}
+
 // containerManager manages containers using environment variables for state sharing
 type containerManager struct {
 	t          *testing.T
@@ -121,10 +136,15 @@ func (m *containerManager) startEnv(s *script.State, args []string) (script.Wait
 		return func(s *script.State) (stdout, stderr string, err error) {
 			container := testctr.New(m.t, image, opts...)
 			
-			// Store in cache and environment
+			// Store in both local and global cache
 			m.mu.Lock()
 			m.containers[name] = container
 			m.mu.Unlock()
+			
+			globalMgr := getGlobalContainerManager()
+			globalMgr.mu.Lock()
+			globalMgr.containers[name] = container
+			globalMgr.mu.Unlock()
 			
 			s.Setenv(containerEnvKey(name), container.ID())
 			return fmt.Sprintf("started container %s asynchronously\n", name), "", nil
@@ -134,10 +154,15 @@ func (m *containerManager) startEnv(s *script.State, args []string) (script.Wait
 	// Synchronous start
 	container := testctr.New(m.t, image, opts...)
 	
-	// Store in cache and environment
+	// Store in both local and global cache
 	m.mu.Lock()
 	m.containers[name] = container
 	m.mu.Unlock()
+	
+	globalMgr := getGlobalContainerManager()
+	globalMgr.mu.Lock()
+	globalMgr.containers[name] = container
+	globalMgr.mu.Unlock()
 	
 	s.Setenv(containerEnvKey(name), container.ID())
 	s.Logf("started container %s\n", name)
@@ -180,7 +205,20 @@ func (m *containerManager) getContainer(s *script.State, name string) (*testctr.
 	m.mu.RUnlock()
 	
 	if !ok {
-		return nil, fmt.Errorf("container %s not in cache (may have been created by another command)", name)
+		// Check if we can find it in the global cache via environment
+		globalMgr := getGlobalContainerManager()
+		globalMgr.mu.RLock()
+		container, ok = globalMgr.containers[name]
+		globalMgr.mu.RUnlock()
+		
+		if ok {
+			// Cache it locally for future use
+			m.mu.Lock()
+			m.containers[name] = container
+			m.mu.Unlock()
+		} else {
+			return nil, fmt.Errorf("container %s not in cache (may have been created by another command)", name)
+		}
 	}
 	
 	return container, nil

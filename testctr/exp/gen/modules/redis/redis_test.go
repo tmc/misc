@@ -18,14 +18,14 @@ func TestRedisContainer(t *testing.T) {
 		t.Fatal("container ID should not be empty")
 	}
 
-	port := container.Port()
+	port := container.Port("6379")
 	if port == "" {
 		t.Fatal("container port should not be empty")
 	}
 
-	addr := container.Addr("6379")
-	if addr == "" {
-		t.Fatalf("failed to get address for port 6379")
+	endpoint := container.Endpoint("6379")
+	if endpoint == "" {
+		t.Fatalf("failed to get endpoint for port 6379")
 	}
 }
 

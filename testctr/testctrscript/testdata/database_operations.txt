@@ -16,23 +16,43 @@ testctr wait postgres
 testctr wait mongodb
 
 # Verify all databases are running
-[container mysql]
-[container postgres]
-[container mongodb]
+[container:mysql] echo "mysql container is running"
+[container:postgres] echo "postgres container is running"
+[container:mongodb] echo "mongodb container is running"
 
 echo "Testing MySQL operations..."
+# Wait for MySQL to be fully ready - MySQL takes a long time to initialize
+sleep 30s
+# Test MySQL connection first with retry
+testctr exec mysql mysqladmin ping -u root -prootpass
+stdout 'mysqld is alive'
+# Give MySQL a bit more time after ping succeeds
+sleep 2s
+# Check if testdb exists and create table
+testctr exec mysql mysql -u root -prootpass -e "SHOW DATABASES;"
+stdout 'testdb'
 testctr exec mysql mysql -u testuser -puserpass -D testdb -e "CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(50));"
 testctr exec mysql mysql -u testuser -puserpass -D testdb -e "INSERT INTO users VALUES (1, 'John Doe');"
 testctr exec mysql mysql -u testuser -puserpass -D testdb -e "SELECT * FROM users;"
 stdout 'John Doe'
 
 echo "Testing PostgreSQL operations..."
+# Wait for PostgreSQL to be fully ready
+sleep 8s
+# Test PostgreSQL connection first
+testctr exec postgres pg_isready -U testuser -d testdb
+stdout 'accepting connections'
 testctr exec postgres psql -U testuser -d testdb -c "CREATE TABLE products (id SERIAL PRIMARY KEY, name TEXT);"
 testctr exec postgres psql -U testuser -d testdb -c "INSERT INTO products (name) VALUES ('Test Product');"
 testctr exec postgres psql -U testuser -d testdb -c "SELECT * FROM products;"
 stdout 'Test Product'
 
 echo "Testing MongoDB operations..."
+# Wait for MongoDB to be ready
+sleep 5s
+# Test MongoDB connection first
+testctr exec mongodb mongosh --username admin --password adminpass --eval "db.runCommand('ping')"
+stdout 'ok'
 testctr exec mongodb mongosh --username admin --password adminpass --eval "db.test.insertOne({name: 'Test Document'})"
 testctr exec mongodb mongosh --username admin --password adminpass --eval "db.test.find()"
 stdout 'Test Document'

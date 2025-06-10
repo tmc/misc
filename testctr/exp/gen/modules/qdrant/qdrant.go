@@ -13,6 +13,6 @@ import (
 func Default() testctr.Option {
 	return testctr.Options(
 		testctr.WithPort("6333"),
-		ctropts.WithWaitForLog("Qdrant is ready", 30*time.Second),
+		ctropts.WithWaitForLog("Qdrant HTTP listening on", 30*time.Second),
 	)
 }
