@@ -1,6 +1,3 @@
-//go:build skip
-// +build skip
-
 package testctr_test
 
 import (
@@ -12,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/tmc/misc/testctr"
-	"github.com/tmc/misc/testctr/ctropts"
 )
 
 func TestWithFile(t *testing.T) {
@@ -38,7 +34,7 @@ func TestWithFile(t *testing.T) {
 
 	// Create container with file
 	c := testctr.New(t, "alpine:latest",
-		ctropts.WithFile(fileName, "/test.txt"),
+		testctr.WithFile(fileName, "/test.txt"),
 		testctr.WithCommand("sleep", "infinity"), // Keep container running
 	)
 
@@ -77,7 +73,7 @@ func TestWithFileMode(t *testing.T) {
 
 	// Create container with executable file
 	c := testctr.New(t, "alpine:latest",
-		ctropts.WithFileMode(fileName, "/test.sh", 0755),
+		testctr.WithFileMode(fileName, "/test.sh", 0755),
 		testctr.WithCommand("sleep", "infinity"),
 	)
 
@@ -128,7 +124,7 @@ func TestWithFileReader(t *testing.T) {
 
 	// Create container with file from reader
 	c := testctr.New(t, "alpine:latest",
-		ctropts.WithFileReader(reader, "/from-reader.txt"),
+		testctr.WithFileReader(reader, "/from-reader.txt"),
 		testctr.WithCommand("sleep", "infinity"),
 	)
 
@@ -148,29 +144,16 @@ func TestWithFileReader(t *testing.T) {
 func TestWithFiles(t *testing.T) {
 	t.Parallel()
 
-	// Create multiple files
-	tmpDir := t.TempDir()
-	file1Path := filepath.Join(tmpDir, "file1.txt")
-	file2Path := filepath.Join(tmpDir, "file2.script.sh")
-
+	// Define file contents
 	content1 := "Content 1"
 	content2 := "#!/bin/sh\necho 'Script Content 2'"
 
-	if err := os.WriteFile(file1Path, []byte(content1), 0644); err != nil {
-		t.Fatalf("failed to write file1: %v", err)
-	}
-	if err := os.WriteFile(file2Path, []byte(content2), 0644); err != nil { // Host perms don't matter as much
-		t.Fatalf("failed to write file2: %v", err)
-	}
-	// defer os.Remove(file1Path)
-	// defer os.Remove(file2Path)
-
 	// Create container with multiple files
 	c := testctr.New(t, "alpine:latest",
-		ctropts.WithFiles(
-			ctropts.FileEntry{Source: file1Path, Target: "/data/file1.txt", Mode: 0600}, // Test specific mode
-			ctropts.FileEntry{Source: file2Path, Target: "/data/script.sh", Mode: 0755}, // Executable
-		),
+		testctr.WithFiles(map[string]testctr.FileContent{
+			"/data/file1.txt": {Content: []byte(content1), Mode: 0600},
+			"/data/script.sh":  {Content: []byte(content2), Mode: 0755},
+		}),
 		testctr.WithCommand("sleep", "infinity"),
 	)
 

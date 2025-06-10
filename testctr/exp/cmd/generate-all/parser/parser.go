@@ -8,6 +8,11 @@ import (
 
 // GenerateModuleFiles generates the testctr module files for the given module
 func GenerateModuleFiles(moduleName, outputPath string) error {
+	// Create output directory if it doesn't exist
+	if err := os.MkdirAll(outputPath, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %v", err)
+	}
+	
 	// Create the main module file
 	mainFile := filepath.Join(outputPath, moduleName+".go")
 	mainContent := generateMainFileContent(moduleName)
@@ -179,7 +184,6 @@ func WithPassword(password string) testctr.Option {
 package mongodb
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/tmc/misc/testctr"
@@ -314,14 +318,14 @@ func Test%sContainer(t *testing.T) {
 		t.Fatal("container ID should not be empty")
 	}
 
-	port := container.Port()
+	port := container.Port("%s")
 	if port == "" {
 		t.Fatal("container port should not be empty")
 	}
 
-	addr := container.Addr("%s")
-	if addr == "" {
-		t.Fatalf("failed to get address for port %s")
+	endpoint := container.Endpoint("%s")
+	if endpoint == "" {
+		t.Fatalf("failed to get endpoint for port %s")
 	}
 }
 
@@ -341,6 +345,7 @@ func Test%sWithOptions(t *testing.T) {
 		capitalize(moduleName),
 		moduleInfo.image,
 		moduleName,
+		moduleInfo.port,
 		moduleInfo.port,
 		moduleInfo.port,
 		capitalize(moduleName),
@@ -728,7 +733,6 @@ func WithDSN() testctr.Option {
 package redis
 
 import (
-	"context"
 	"fmt"
 	"testing"
 

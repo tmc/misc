@@ -18,14 +18,14 @@ func TestPostgresContainer(t *testing.T) {
 		t.Fatal("container ID should not be empty")
 	}
 
-	port := container.Port()
+	port := container.Port("5432")
 	if port == "" {
 		t.Fatal("container port should not be empty")
 	}
 
-	addr := container.Addr("5432")
-	if addr == "" {
-		t.Fatalf("failed to get address for port 5432")
+	endpoint := container.Endpoint("5432")
+	if endpoint == "" {
+		t.Fatalf("failed to get endpoint for port 5432")
 	}
 }
 

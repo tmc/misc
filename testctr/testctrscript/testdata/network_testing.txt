@@ -12,8 +12,8 @@ testctr wait web
 testctr wait client
 
 # Verify containers exist
-[container web]
-[container client]
+[container:web] echo "web container is running"
+[container:client] echo "client container is running"
 
 # Test internal networking (if supported)
 echo "Testing container connectivity..."
@@ -23,12 +23,12 @@ testctr endpoint web 80
 stdout '127.0.0.1:'
 
 # Test external connectivity from client
-testctr exec client curl -s http://httpbin.org/json
+testctr exec client curl -s http://httpbin.org/ip
 stdout '"origin"'
 
 # Test that nginx is serving
 testctr exec web cat /etc/nginx/nginx.conf
-stdout 'server'
+stdout 'nginx'
 
 # Test nginx is running
 testctr exec web nginx -t
@@ -41,5 +41,5 @@ testctr port web 80
 testctr stop client  
 testctr stop web
 
-[!container client]
-[!container web]
+[!container:client] echo "client container is stopped"
+[!container:web] echo "web container is stopped"

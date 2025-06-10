@@ -217,11 +217,13 @@ func (b *TestcontainersBackend) InspectContainer(containerID string) (*backend.C
 	// Convert to backend.ContainerInfo
 	info := &backend.ContainerInfo{
 		State: struct {
-			Running bool   `json:"Running"`
-			Status  string `json:"Status"`
+			Running  bool   `json:"Running"`
+			Status   string `json:"Status"`
+			ExitCode int    `json:"ExitCode"`
 		}{
-			Running: inspect.State.Running,
-			Status:  inspect.State.Status,
+			Running:  inspect.State.Running,
+			Status:   inspect.State.Status,
+			ExitCode: inspect.State.ExitCode,
 		},
 		ID:      containerID,
 		Name:    inspect.Name,

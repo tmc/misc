@@ -3,7 +3,6 @@
 package mongodb
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/tmc/misc/testctr"

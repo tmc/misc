@@ -18,14 +18,14 @@ func TestMongodbContainer(t *testing.T) {
 		t.Fatal("container ID should not be empty")
 	}
 
-	port := container.Port()
+	port := container.Port("27017")
 	if port == "" {
 		t.Fatal("container port should not be empty")
 	}
 
-	addr := container.Addr("27017")
-	if addr == "" {
-		t.Fatalf("failed to get address for port 27017")
+	endpoint := container.Endpoint("27017")
+	if endpoint == "" {
+		t.Fatalf("failed to get endpoint for port 27017")
 	}
 }
 

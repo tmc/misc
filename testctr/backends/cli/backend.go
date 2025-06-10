@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"reflect"
@@ -548,15 +549,60 @@ func (b *Backend) CopyFilesToContainer(containerID string, files []FileEntry, t 
 		}
 		
 		// Copy the file
+		var srcPath string
+		var tempFile string
+		
 		switch src := file.Source.(type) {
 		case string:
 			// Copy from file path
-			cpCmd := exec.Command(runtime, "cp", src, fmt.Sprintf("%s:%s", containerID, file.Target))
-			if err := cpCmd.Run(); err != nil {
-				return fmt.Errorf("failed to copy file %s to %s: %w", src, file.Target, err)
+			srcPath = src
+		case io.Reader:
+			// Create temp file from reader
+			tmpFile, err := os.CreateTemp("", "testctr-cp-*")
+			if err != nil {
+				return fmt.Errorf("failed to create temp file for reader source: %w", err)
 			}
+			tempFile = tmpFile.Name()
+			if _, err := io.Copy(tmpFile, src); err != nil {
+				tmpFile.Close()
+				os.Remove(tempFile)
+				return fmt.Errorf("failed to write to temp file from reader: %w", err)
+			}
+			if err := tmpFile.Close(); err != nil {
+				os.Remove(tempFile)
+				return fmt.Errorf("failed to close temp file: %w", err)
+			}
+			srcPath = tempFile
+		case []byte:
+			// Create temp file from byte content
+			tmpFile, err := os.CreateTemp("", "testctr-cp-*")
+			if err != nil {
+				return fmt.Errorf("failed to create temp file for byte source: %w", err)
+			}
+			tempFile = tmpFile.Name()
+			if _, err := tmpFile.Write(src); err != nil {
+				tmpFile.Close()
+				os.Remove(tempFile)
+				return fmt.Errorf("failed to write bytes to temp file: %w", err)
+			}
+			if err := tmpFile.Close(); err != nil {
+				os.Remove(tempFile)
+				return fmt.Errorf("failed to close temp file: %w", err)
+			}
+			srcPath = tempFile
 		default:
 			return fmt.Errorf("unsupported file source type: %T", src)
+		}
+		
+		// Clean up temp file if created
+		if tempFile != "" {
+			defer os.Remove(tempFile)
+		}
+		
+		// Copy the file
+		cpCmd := exec.Command(runtime, "cp", srcPath, fmt.Sprintf("%s:%s", containerID, file.Target))
+		if err := cpCmd.Run(); err != nil {
+			return fmt.Errorf("failed to copy file %s to %s: %w", srcPath, file.Target, err)
 		}
 		
 		// Set file permissions if specified
