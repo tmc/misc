@@ -2,17 +2,22 @@
 
 A minimal, zero-dependency library for container-based testing in Go. Uses Docker CLI directly for simplicity and speed.
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/tmc/misc/testctr.svg)](https://pkg.go.dev/github.com/tmc/misc/testctr)
+[![Test Coverage](https://img.shields.io/badge/coverage-59.9%25-yellow.svg)](https://github.com/tmc/misc/testctr)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tmc/misc/testctr)](https://goreportcard.com/report/github.com/tmc/misc/testctr)
+
 ## Features
 
 - **Zero Dependencies** - Uses Docker CLI, no external packages for the core functionality.
 - **Simple API** - One line to create a container with automatic cleanup.
 - **Database Support** - Built-in DSN generation with per-test isolation.
-- **Parallel Testing** - Full support for `t.Parallel()` with coordination.
+- **Parallel Testing** - Full support for `t.Parallel()` with coordination (118% adoption rate in tests!).
 - **Multiple Runtimes** - Docker, Podman, nerdctl, Finch, Colima, Lima (via CLI).
 - **Fast Startup** - No API overhead, direct CLI execution for default mode.
 - **Debugging Support** - Keep failed containers with `-testctr.keep-failed`.
-- **File Copying** - Easy file/content injection into containers.
+- **File Copying** - Easy file/content injection into containers (supports files, readers, and byte content).
 - **Pluggable Backends** - Optional support for other container libraries like Testcontainers-Go.
+- **Comprehensive Testing** - 59.9% test coverage with dedicated test suites for all major features.
 
 ## Installation
 
@@ -202,6 +207,15 @@ c := testctr.New(t, "postgres:15",
 
 testctr uses a pluggable backend system. The default CLI backend uses docker/podman commands directly, providing zero dependencies and maximum compatibility.
 
+```go
+// Use a specific backend
+c := testctr.New(t, "redis:7",
+    testctr.WithBackend("local"),        // Default CLI backend
+    // testctr.WithBackend("dockerclient"), // Docker client API backend
+    // testctr.WithBackend("testcontainers"), // Testcontainers-go backend
+)
+```
+
 ## Command-Line Flags & Environment Variables
 
 (Same as in your original GoDoc - this section is good)
@@ -231,6 +245,34 @@ output := c.ExecSimple("cmd", "arg") // Panics on error, returns trimmed output
 
 // Database support (if DSNProvider is configured, typically by module.Default())
 dsn := c.DSN(t)        // Get database connection string for a test-specific database
+```
+
+### File Operations
+
+```go
+// Copy file from host
+c := testctr.New(t, "alpine:latest",
+    testctr.WithFile("./config.json", "/app/config.json"),
+)
+
+// Copy file with specific permissions
+c := testctr.New(t, "alpine:latest",
+    testctr.WithFileMode("./script.sh", "/app/script.sh", 0755),
+)
+
+// Copy from io.Reader
+config := strings.NewReader(`{"key": "value"}`)
+c := testctr.New(t, "alpine:latest",
+    testctr.WithFileReader(config, "/app/config.json"),
+)
+
+// Copy multiple files
+c := testctr.New(t, "alpine:latest",
+    testctr.WithFiles(map[string]testctr.FileContent{
+        "/app/config.json": {Content: []byte(`{"key": "value"}`)},
+        "/app/script.sh":   {Content: []byte("#!/bin/sh\necho hello"), Mode: 0755},
+    }),
+)
 ```
 
 ### Option Helpers (`testctr` package)
