@@ -15,6 +15,7 @@ type Options struct {
 	ProfileName   string
 	CookieDomains []string
 	Verbose       bool
+	ChromeFlags   []string
 
 	// Navigation settings
 	NavigationTimeout int
@@ -135,6 +136,14 @@ func WithStableTimeout(timeout int) Option {
 			return errors.New("stable timeout must be positive")
 		}
 		o.StableTimeout = timeout
+		return nil
+	}
+}
+
+// WithChromeFlags adds custom Chrome command line flags
+func WithChromeFlags(flags []string) Option {
+	return func(o *Options) error {
+		o.ChromeFlags = append(o.ChromeFlags, flags...)
 		return nil
 	}
 }

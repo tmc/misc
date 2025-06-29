@@ -113,6 +113,11 @@ func (b *Browser) Launch(ctx context.Context) error {
 		chromeLaunchOpts = append(chromeLaunchOpts, chromedp.CombinedOutput(os.Stdout))
 	}
 
+	// Add custom Chrome flags
+	for _, flag := range b.opts.ChromeFlags {
+		chromeLaunchOpts = append(chromeLaunchOpts, chromedp.Flag(flag, true))
+	}
+
 	// Create the allocator context
 	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, chromeLaunchOpts...)
 	allocCtx, allocCancel = context.WithTimeout(allocCtx, time.Duration(b.opts.Timeout)*time.Second)
