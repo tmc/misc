@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { width: 400px; padding: 15px; font-family: Arial, sans-serif; font-size: 14px; }
+    .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+    .available { background: #d4edda; color: #155724; }
+    .unavailable { background: #f8d7da; color: #721c24; }
+    .warning { background: #fff3cd; color: #856404; }
+    button { padding: 8px 16px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    button:disabled { background: #6c757d; cursor: not-allowed; }
+    .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px; font-family: monospace; font-size: 11px; max-height: 200px; overflow-y: auto; }
+    .setup-link { color: #007bff; text-decoration: underline; cursor: pointer; margin: 5px 0; }
+    .diagnostic { font-size: 12px; color: #6c757d; margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h3>AI API Bridge</h3>
+  
+  <div id="status" class="status unavailable">
+    Checking AI API availability...
+  </div>
+  
+  <div id="diagnostics" class="diagnostic" style="display: none;"></div>
+  
+  <div id="setup-help" style="display: none;">
+    <div class="warning">
+      <strong>Setup Required:</strong><br>
+      <div class="setup-link" id="openFlags">1. Enable chrome://flags</div>
+      <div class="setup-link" id="openComponents">2. Check chrome://components</div>
+      <div style="margin-top: 10px; font-size: 12px;">
+        Enable: prompt-api-for-gemini-nano<br>
+        Enable: optimization-guide-on-device-model
+      </div>
+    </div>
+  </div>
+  
+  <div id="controls" style="display: none;">
+    <button id="testGenerate">Test Generation</button>
+    <button id="testAvailability">Test Availability</button>
+    <button id="checkStatus">Refresh Status</button>
+  </div>
+  
+  <div id="result" class="result" style="display: none;"></div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>

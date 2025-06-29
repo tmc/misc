@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "AI API Bridge",
+  "version": "1.0",
+  "description": "Bridge Chrome AI APIs to external applications",
+  "permissions": [
+    "activeTab",
+    "storage", 
+    "nativeMessaging",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "AI API Bridge"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["injected.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
