@@ -1,0 +1,13 @@
+{
+  "name": "com.github.tmc.chrome_ai_bridge",
+  "description": "Native messaging host for Chrome AI API bridge",
+  "path": "/Volumes/tmc/go/src/github.com/tmc/misc/chrome-to-har/cmd/native-host/native-host",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://*/",
+    "chrome-extension://chrome-extension://*/"
+  ],
+  "allowed_extensions": [
+    "*"
+  ]
+}
