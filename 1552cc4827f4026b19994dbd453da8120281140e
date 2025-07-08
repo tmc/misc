@@ -1,0 +1,11 @@
+Commit: 1552cc4
+Date: Tue Jul  8 14:28:40 CEST 2025
+TTY: not a tty
+not available
+PID: 32775
+Version: Claude Code
+Component: Critical Security Fixes
+- Path traversal vulnerability protection
+- Command injection prevention
+- Race condition elimination in temporary file operations
+- Secure cleanup manager implementation
