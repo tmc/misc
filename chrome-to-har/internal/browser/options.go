@@ -28,6 +28,10 @@ type Options struct {
 	WaitNetworkIdle   bool
 	WaitSelector      string
 	StableTimeout     int
+
+	// Script injection settings
+	ScriptBefore []string // Scripts to execute before page load
+	ScriptAfter  []string // Scripts to execute after page load
 }
 
 // Option is a function that modifies Options
@@ -174,6 +178,76 @@ func WithRemoteTab(tabID string) Option {
 			return errors.New("tab ID cannot be empty")
 		}
 		o.RemoteTabID = tabID
+		return nil
+	}
+}
+
+// WithWaitForNetworkIdle makes the browser wait for network activity to become idle (compatibility)
+func WithWaitForNetworkIdle(wait bool) Option {
+	return WithWaitNetworkIdle(wait)
+}
+
+// WithRemoteTabConnection specifies connection to a specific tab in remote Chrome
+func WithRemoteTabConnection(host string, port int, tabID string) Option {
+	return func(o *Options) error {
+		if port <= 0 {
+			return errors.New("remote port must be positive")
+		}
+		if tabID == "" {
+			return errors.New("tab ID cannot be empty")
+		}
+		o.UseRemote = true
+		o.RemoteHost = host
+		o.RemotePort = port
+		o.RemoteTabID = tabID
+		return nil
+	}
+}
+
+// WithScriptBefore adds a script to execute before page load
+func WithScriptBefore(script string) Option {
+	return func(o *Options) error {
+		if script == "" {
+			return errors.New("script cannot be empty")
+		}
+		o.ScriptBefore = append(o.ScriptBefore, script)
+		return nil
+	}
+}
+
+// WithScriptAfter adds a script to execute after page load
+func WithScriptAfter(script string) Option {
+	return func(o *Options) error {
+		if script == "" {
+			return errors.New("script cannot be empty")
+		}
+		o.ScriptAfter = append(o.ScriptAfter, script)
+		return nil
+	}
+}
+
+// WithScriptsBefore adds multiple scripts to execute before page load
+func WithScriptsBefore(scripts []string) Option {
+	return func(o *Options) error {
+		for _, script := range scripts {
+			if script == "" {
+				return errors.New("script cannot be empty")
+			}
+		}
+		o.ScriptBefore = append(o.ScriptBefore, scripts...)
+		return nil
+	}
+}
+
+// WithScriptsAfter adds multiple scripts to execute after page load
+func WithScriptsAfter(scripts []string) Option {
+	return func(o *Options) error {
+		for _, script := range scripts {
+			if script == "" {
+				return errors.New("script cannot be empty")
+			}
+		}
+		o.ScriptAfter = append(o.ScriptAfter, scripts...)
 		return nil
 	}
 }
