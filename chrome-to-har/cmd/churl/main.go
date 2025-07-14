@@ -59,6 +59,12 @@ type options struct {
 	// Authentication
 	username string
 	password string
+
+	// Script injection
+	scriptBefore     stringSlice
+	scriptAfter      stringSlice
+	scriptFileBefore stringSlice
+	scriptFileAfter  stringSlice
 }
 
 // headerSlice allows multiple -H flags
@@ -70,6 +76,18 @@ func (h *headerSlice) String() string {
 
 func (h *headerSlice) Set(value string) error {
 	*h = append(*h, value)
+	return nil
+}
+
+// stringSlice allows multiple string flags
+type stringSlice []string
+
+func (s *stringSlice) String() string {
+	return strings.Join(*s, ", ")
+}
+
+func (s *stringSlice) Set(value string) error {
+	*s = append(*s, value)
 	return nil
 }
 
@@ -107,6 +125,12 @@ func main() {
 
 	// Authentication
 	flag.StringVar(&opts.username, "u", "", "Username for basic auth (user:password)")
+
+	// Script injection
+	flag.Var(&opts.scriptBefore, "script-before", "JavaScript to execute before page load (can be used multiple times)")
+	flag.Var(&opts.scriptAfter, "script-after", "JavaScript to execute after page load (can be used multiple times)")
+	flag.Var(&opts.scriptFileBefore, "script-file-before", "JavaScript file to execute before page load (can be used multiple times)")
+	flag.Var(&opts.scriptFileAfter, "script-file-after", "JavaScript file to execute after page load (can be used multiple times)")
 
 	// Custom usage message
 	flag.Usage = func() {
@@ -213,7 +237,11 @@ func main() {
 	// Run the churl command
 	if err := run(ctx, pm, url, opts); err != nil {
 		if err == context.DeadlineExceeded {
-			log.Fatal("Operation timed out. Try increasing the timeout value.")
+			log.Fatal("Operation timed out. Try increasing the timeout value with --timeout flag.")
+		} else if err == context.Canceled {
+			log.Fatal("Operation was canceled. This might indicate an internal timeout issue.")
+		} else if strings.Contains(err.Error(), "context canceled") {
+			log.Fatal("Operation was canceled due to context timeout. Try increasing the timeout value with --timeout flag.")
 		} else {
 			log.Fatal(err)
 		}
@@ -221,6 +249,25 @@ func main() {
 }
 
 func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts options) error {
+	if opts.verbose {
+		log.Printf("Starting run function with URL: %s", url)
+	}
+	
+	// Load script files and combine with inline scripts
+	scriptsBefore, err := loadScripts(opts.scriptBefore, opts.scriptFileBefore, opts.verbose)
+	if err != nil {
+		return errors.Wrap(err, "loading before scripts")
+	}
+	
+	scriptsAfter, err := loadScripts(opts.scriptAfter, opts.scriptFileAfter, opts.verbose)
+	if err != nil {
+		return errors.Wrap(err, "loading after scripts")
+	}
+	
+	if opts.verbose && (len(scriptsBefore) > 0 || len(scriptsAfter) > 0) {
+		log.Printf("Loaded %d before scripts and %d after scripts", len(scriptsBefore), len(scriptsAfter))
+	}
+	
 	// Parse request headers
 	headers := make(map[string]string)
 	for _, h := range opts.headers {
@@ -278,6 +325,14 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		browserOpts = append(browserOpts, browser.WithProfile(opts.profileDir))
 	}
 
+	// Add script injection options
+	if len(scriptsBefore) > 0 {
+		browserOpts = append(browserOpts, browser.WithScriptsBefore(scriptsBefore))
+	}
+	if len(scriptsAfter) > 0 {
+		browserOpts = append(browserOpts, browser.WithScriptsAfter(scriptsAfter))
+	}
+
 	// Add remote Chrome options if specified
 	if opts.remoteHost != "" {
 		browserOpts = append(browserOpts, browser.WithRemoteChrome(opts.remoteHost, opts.remotePort))
@@ -331,8 +386,23 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 			return errors.Wrap(err, "creating recorder")
 		}
 
-		// Enable network monitoring
-		if err := network.Enable().Do(b.Context()); err != nil {
+		// Enable network monitoring with proper timeout handling
+		if opts.verbose {
+			log.Printf("Enabling network monitoring for HAR output...")
+		}
+		
+		// Check if browser context is working
+		select {
+		case <-b.Context().Done():
+			return errors.Wrap(b.Context().Err(), "browser context is done before enabling network monitoring")
+		default:
+			// Context is active
+		}
+		
+		enableCtx, enableCancel := context.WithTimeout(b.Context(), 10*time.Second)
+		defer enableCancel()
+		
+		if err := chromedp.Run(enableCtx, network.Enable()); err != nil {
 			return errors.Wrap(err, "enabling network monitoring")
 		}
 
@@ -340,9 +410,17 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		chromedp.ListenTarget(b.Context(), rec.HandleNetworkEvent(b.Context()))
 	}
 
-	// Navigate to the URL
-	if err := b.Navigate(url); err != nil {
-		return errors.Wrap(err, "navigating to URL")
+	// Navigate to the URL or make custom HTTP request
+	if opts.method != "GET" || opts.data != "" {
+		// Use HTTPRequest for custom methods or when data is provided
+		if err := b.HTTPRequest(opts.method, url, opts.data, headers); err != nil {
+			return errors.Wrap(err, "making HTTP request")
+		}
+	} else {
+		// Use regular navigation for GET requests without data
+		if err := b.Navigate(url); err != nil {
+			return errors.Wrap(err, "navigating to URL")
+		}
 	}
 
 	// Get the output based on the requested format
@@ -569,4 +647,91 @@ func detectChromePath() (string, bool) {
 	}
 
 	return "", false
+}
+
+// loadScripts combines inline scripts and file-based scripts into a single slice
+func loadScripts(inlineScripts []string, scriptFiles []string, verbose bool) ([]string, error) {
+	var allScripts []string
+	
+	// Add inline scripts first
+	allScripts = append(allScripts, inlineScripts...)
+	
+	// Load and add file-based scripts
+	for _, scriptFile := range scriptFiles {
+		if verbose {
+			log.Printf("Loading script file: %s", scriptFile)
+		}
+		
+		content, err := os.ReadFile(scriptFile)
+		if err != nil {
+			return nil, errors.Wrapf(err, "reading script file %s", scriptFile)
+		}
+		
+		script := string(content)
+		if script == "" {
+			if verbose {
+				log.Printf("Warning: script file %s is empty", scriptFile)
+			}
+			continue
+		}
+		
+		// Basic validation for JavaScript syntax
+		if err := validateJavaScript(script); err != nil {
+			return nil, errors.Wrapf(err, "validating script file %s", scriptFile)
+		}
+		
+		allScripts = append(allScripts, script)
+		
+		if verbose {
+			log.Printf("Successfully loaded script file %s (%d characters)", scriptFile, len(script))
+		}
+	}
+	
+	return allScripts, nil
+}
+
+// validateJavaScript performs basic validation of JavaScript content
+func validateJavaScript(script string) error {
+	// Trim whitespace and check for empty content
+	script = strings.TrimSpace(script)
+	if script == "" {
+		return errors.New("script is empty")
+	}
+	
+	// Basic checks for potentially dangerous patterns
+	// This is a simple validation - more sophisticated validation could be added
+	
+	// Check for balanced braces (basic syntax check)
+	braceCount := 0
+	parenCount := 0
+	bracketCount := 0
+	
+	for _, char := range script {
+		switch char {
+		case '{':
+			braceCount++
+		case '}':
+			braceCount--
+		case '(':
+			parenCount++
+		case ')':
+			parenCount--
+		case '[':
+			bracketCount++
+		case ']':
+			bracketCount--
+		}
+	}
+	
+	if braceCount != 0 {
+		return errors.New("unbalanced braces in script")
+	}
+	if parenCount != 0 {
+		return errors.New("unbalanced parentheses in script")
+	}
+	if bracketCount != 0 {
+		return errors.New("unbalanced brackets in script")
+	}
+	
+	return nil
 }
