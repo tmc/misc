@@ -8,12 +8,75 @@
     .available { background: #d4edda; color: #155724; }
     .unavailable { background: #f8d7da; color: #721c24; }
     .warning { background: #fff3cd; color: #856404; }
+    .retrying { background: #cce5ff; color: #004085; }
     button { padding: 8px 16px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
     button:hover { background: #0056b3; }
     button:disabled { background: #6c757d; cursor: not-allowed; }
     .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px; font-family: monospace; font-size: 11px; max-height: 200px; overflow-y: auto; }
     .setup-link { color: #007bff; text-decoration: underline; cursor: pointer; margin: 5px 0; }
     .diagnostic { font-size: 12px; color: #6c757d; margin: 5px 0; }
+    
+    /* Mode indicator styles */
+    .mode-indicator { 
+      position: fixed; 
+      top: 5px; 
+      right: 5px; 
+      font-size: 10px; 
+      padding: 3px 6px; 
+      border-radius: 3px; 
+      background: transparent; 
+      color: #666; 
+      font-weight: bold;
+      z-index: 1000;
+    }
+    .mode-indicator.warning { background: #fff3cd; color: #856404; }
+    .mode-indicator.fallback { background: #ffeaa7; color: #d63031; }
+    .mode-indicator.offline { background: #f8d7da; color: #721c24; }
+    
+    /* Progressive enhancement for error states */
+    .error-recovery { 
+      background: #fff3cd; 
+      border: 1px solid #ffeaa7; 
+      padding: 8px; 
+      margin: 5px 0; 
+      border-radius: 3px; 
+      font-size: 12px; 
+    }
+    
+    .recovery-actions { 
+      margin-top: 10px; 
+    }
+    
+    .recovery-actions button { 
+      background: #28a745; 
+      font-size: 12px; 
+      padding: 5px 10px; 
+    }
+    
+    .recovery-actions button:hover { 
+      background: #218838; 
+    }
+    
+    /* Health indicator */
+    .health-indicator {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #28a745;
+    }
+    
+    .health-indicator.degraded { background: #ffc107; }
+    .health-indicator.failed { background: #dc3545; }
+    
+    /* Accessibility improvements */
+    @media (prefers-reduced-motion: reduce) {
+      .mode-indicator, .health-indicator { 
+        transition: none; 
+      }
+    }
   </style>
 </head>
 <body>

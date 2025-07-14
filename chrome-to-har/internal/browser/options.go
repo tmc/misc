@@ -17,6 +17,12 @@ type Options struct {
 	Verbose       bool
 	ChromeFlags   []string
 
+	// Remote connection settings
+	RemoteHost    string
+	RemotePort    int
+	RemoteTabID   string
+	UseRemote     bool
+
 	// Navigation settings
 	NavigationTimeout int
 	WaitNetworkIdle   bool
@@ -144,6 +150,30 @@ func WithStableTimeout(timeout int) Option {
 func WithChromeFlags(flags []string) Option {
 	return func(o *Options) error {
 		o.ChromeFlags = append(o.ChromeFlags, flags...)
+		return nil
+	}
+}
+
+// WithRemoteChrome configures connection to a running Chrome instance
+func WithRemoteChrome(host string, port int) Option {
+	return func(o *Options) error {
+		if port <= 0 {
+			return errors.New("remote port must be positive")
+		}
+		o.UseRemote = true
+		o.RemoteHost = host
+		o.RemotePort = port
+		return nil
+	}
+}
+
+// WithRemoteTab specifies a specific tab ID to connect to
+func WithRemoteTab(tabID string) Option {
+	return func(o *Options) error {
+		if tabID == "" {
+			return errors.New("tab ID cannot be empty")
+		}
+		o.RemoteTabID = tabID
 		return nil
 	}
 }

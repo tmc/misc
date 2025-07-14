@@ -44,8 +44,23 @@ func New(ctx context.Context, profileMgr chromeprofiles.ProfileManager, opts ...
 	return browser, nil
 }
 
-// Launch starts the browser
+// Launch starts the browser or connects to a running instance
 func (b *Browser) Launch(ctx context.Context) error {
+	// If using remote Chrome, connect to it instead of launching
+	if b.opts.UseRemote {
+		if b.opts.RemoteHost == "" {
+			b.opts.RemoteHost = "localhost"
+		}
+		
+		if b.opts.RemoteTabID != "" {
+			// Connect to specific tab
+			return b.ConnectToTab(ctx, b.opts.RemoteHost, b.opts.RemotePort, b.opts.RemoteTabID)
+		} else {
+			// Connect to browser instance
+			return b.ConnectToRunningChrome(ctx, b.opts.RemoteHost, b.opts.RemotePort)
+		}
+	}
+
 	// Set up the profile directory if needed
 	if b.opts.UseProfile && b.profileMgr != nil {
 		if err := b.profileMgr.SetupWorkdir(); err != nil {
@@ -256,6 +271,25 @@ func (b *Browser) GetHTML() (string, error) {
 	}
 
 	return html, nil
+}
+
+// GetCurrentPage returns a Page wrapper for the current browser context
+// This is useful when connected to a remote tab
+func (b *Browser) GetCurrentPage() *Page {
+	if b.ctx == nil {
+		return nil
+	}
+	
+	return &Page{
+		ctx:     b.ctx,
+		cancel:  func() {}, // Browser owns the context
+		browser: b,
+	}
+}
+
+// Context returns the browser's context
+func (b *Browser) Context() context.Context {
+	return b.ctx
 }
 
 // Close shuts down the browser

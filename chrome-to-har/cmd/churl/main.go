@@ -39,6 +39,12 @@ type options struct {
 	chromePath string
 	verbose    bool
 
+	// Remote Chrome options
+	remoteHost string
+	remotePort int
+	remoteTab  string
+	listTabs   bool
+
 	// Wait options
 	waitNetworkIdle bool
 	waitSelector    string
@@ -81,6 +87,12 @@ func main() {
 	flag.IntVar(&opts.timeout, "timeout", 180, "Global timeout in seconds")
 	flag.StringVar(&opts.chromePath, "chrome-path", "", "Path to Chrome executable")
 	flag.BoolVar(&opts.verbose, "verbose", false, "Enable verbose logging")
+
+	// Remote Chrome options
+	flag.StringVar(&opts.remoteHost, "remote-host", "", "Connect to remote Chrome at this host")
+	flag.IntVar(&opts.remotePort, "remote-port", 9222, "Remote Chrome debugging port")
+	flag.StringVar(&opts.remoteTab, "remote-tab", "", "Connect to specific tab ID or URL")
+	flag.BoolVar(&opts.listTabs, "list-tabs", false, "List available tabs on remote Chrome")
 
 	// Wait options
 	flag.BoolVar(&opts.waitNetworkIdle, "wait-network-idle", true, "Wait until network activity becomes idle")
@@ -129,6 +141,23 @@ func main() {
 	}
 
 	flag.Parse()
+
+	// Handle --list-tabs separately
+	if opts.listTabs && opts.remoteHost != "" {
+		tabs, err := browser.ListTabs(opts.remoteHost, opts.remotePort)
+		if err != nil {
+			log.Fatalf("Failed to list tabs: %v", err)
+		}
+		
+		fmt.Printf("Available tabs on %s:%d:\n\n", opts.remoteHost, opts.remotePort)
+		for i, tab := range tabs {
+			fmt.Printf("[%d] %s\n", i, tab.Title)
+			fmt.Printf("    URL: %s\n", tab.URL)
+			fmt.Printf("    Type: %s\n", tab.Type)
+			fmt.Printf("    ID: %s\n\n", tab.ID)
+		}
+		return
+	}
 
 	// Check for URL argument
 	if flag.NArg() != 1 {
@@ -247,6 +276,21 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 
 	if opts.profileDir != "" {
 		browserOpts = append(browserOpts, browser.WithProfile(opts.profileDir))
+	}
+
+	// Add remote Chrome options if specified
+	if opts.remoteHost != "" {
+		browserOpts = append(browserOpts, browser.WithRemoteChrome(opts.remoteHost, opts.remotePort))
+		if opts.remoteTab != "" {
+			browserOpts = append(browserOpts, browser.WithRemoteTab(opts.remoteTab))
+		}
+		
+		if opts.verbose {
+			log.Printf("Connecting to remote Chrome at %s:%d", opts.remoteHost, opts.remotePort)
+			if opts.remoteTab != "" {
+				log.Printf("Connecting to tab: %s", opts.remoteTab)
+			}
+		}
 	}
 
 	// Create and launch browser
