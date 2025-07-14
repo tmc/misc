@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
+	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
@@ -16,12 +19,30 @@ import (
 	"github.com/tmc/misc/chrome-to-har/internal/chromeprofiles"
 )
 
+// HTTPRequestData represents data for HTTP requests
+type HTTPRequestData struct {
+	Method      string
+	URL         string
+	Data        string
+	Headers     map[string]string
+	ContentType string
+}
+
+// requestInterceptor handles request interception and modification
+type requestInterceptor struct {
+	mu           sync.RWMutex
+	targetURL    string
+	requestData  *HTTPRequestData
+	intercepting bool
+}
+
 // Browser represents a managed Chrome browser instance
 type Browser struct {
-	ctx        context.Context
-	cancelFunc context.CancelFunc
-	opts       *Options
-	profileMgr chromeprofiles.ProfileManager
+	ctx         context.Context
+	cancelFunc  context.CancelFunc
+	opts        *Options
+	profileMgr  chromeprofiles.ProfileManager
+	interceptor *requestInterceptor
 }
 
 // New creates a new Browser with the provided options
@@ -39,6 +60,7 @@ func New(ctx context.Context, profileMgr chromeprofiles.ProfileManager, opts ...
 	browser := &Browser{
 		opts:       options,
 		profileMgr: profileMgr,
+		interceptor: &requestInterceptor{},
 	}
 
 	return browser, nil
@@ -135,7 +157,6 @@ func (b *Browser) Launch(ctx context.Context) error {
 
 	// Create the allocator context
 	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, chromeLaunchOpts...)
-	allocCtx, allocCancel = context.WithTimeout(allocCtx, time.Duration(b.opts.Timeout)*time.Second)
 
 	// Create the browser context
 	var browserCtx context.Context
@@ -187,24 +208,59 @@ func (b *Browser) Navigate(url string) error {
 		log.Printf("Navigating to: %s", url)
 	}
 
-	navCtx, navCancel := context.WithTimeout(b.ctx, time.Duration(b.opts.NavigationTimeout)*time.Second)
-	defer navCancel()
+	// Use the browser's context directly for navigation
+	navCtx := b.ctx
 
 	// Enable network events if we need to wait for network idle
+	if b.opts.Verbose {
+		log.Printf("WaitNetworkIdle setting: %v", b.opts.WaitNetworkIdle)
+	}
 	if b.opts.WaitNetworkIdle {
+		if b.opts.Verbose {
+			log.Printf("Enabling network events...")
+		}
 		if err := chromedp.Run(navCtx, network.Enable()); err != nil {
 			return errors.Wrap(err, "enabling network events")
 		}
 	}
 
+	// Execute pre-navigation scripts first
+	if err := b.executeScriptsBefore(); err != nil {
+		if b.opts.Verbose {
+			log.Printf("Pre-navigation script error: %v", err)
+		}
+		return errors.Wrap(err, "executing pre-navigation scripts")
+	}
+
 	// Navigate to the URL
+	if b.opts.Verbose {
+		select {
+		case <-navCtx.Done():
+			log.Printf("Navigation context is already done: %v", navCtx.Err())
+		default:
+			log.Printf("Navigation context is active")
+		}
+		
+		select {
+		case <-b.ctx.Done():
+			log.Printf("Browser context is already done: %v", b.ctx.Err())
+		default:
+			log.Printf("Browser context is active")
+		}
+	}
+	
 	if err := chromedp.Run(navCtx, chromedp.Navigate(url)); err != nil {
+		if b.opts.Verbose {
+			log.Printf("Navigation error: %v", err)
+		}
 		return errors.Wrap(err, "navigating to URL")
 	}
 
 	// If waiting for network idle is requested
 	if b.opts.WaitNetworkIdle {
-		waitCtx, waitCancel := context.WithTimeout(b.ctx, time.Duration(b.opts.StableTimeout)*time.Second)
+		// Use a reasonable wait timeout, but don't exceed the browser context
+		waitTimeout := time.Duration(b.opts.StableTimeout) * time.Second
+		waitCtx, waitCancel := context.WithTimeout(b.ctx, waitTimeout)
 		defer waitCancel()
 
 		if err := chromedp.Run(waitCtx, chromedp.ActionFunc(func(ctx context.Context) error {
@@ -248,12 +304,21 @@ func (b *Browser) Navigate(url string) error {
 
 	// If waiting for a specific CSS selector
 	if b.opts.WaitSelector != "" {
-		waitCtx, waitCancel := context.WithTimeout(b.ctx, time.Duration(b.opts.StableTimeout)*time.Second)
+		selectorTimeout := time.Duration(b.opts.StableTimeout) * time.Second
+		waitCtx, waitCancel := context.WithTimeout(b.ctx, selectorTimeout)
 		defer waitCancel()
 
 		if err := chromedp.Run(waitCtx, chromedp.WaitVisible(b.opts.WaitSelector, chromedp.ByQuery)); err != nil {
 			return errors.Wrap(err, "waiting for selector: "+b.opts.WaitSelector)
 		}
+	}
+
+	// Execute post-navigation scripts
+	if err := b.executeScriptsAfter(); err != nil {
+		if b.opts.Verbose {
+			log.Printf("Post-navigation script error: %v", err)
+		}
+		return errors.Wrap(err, "executing post-navigation scripts")
 	}
 
 	return nil
@@ -307,11 +372,6 @@ func (b *Browser) Close() error {
 	return nil
 }
 
-// Context returns the browser's context
-func (b *Browser) Context() context.Context {
-	return b.ctx
-}
-
 // WaitForSelector waits for a CSS selector to be visible
 func (b *Browser) WaitForSelector(selector string, timeout time.Duration) error {
 	if b.ctx == nil {
@@ -337,6 +397,133 @@ func (b *Browser) ExecuteScript(script string) (interface{}, error) {
 	}
 
 	return result, nil
+}
+
+// ExecuteScriptWithTimeout runs JavaScript with a custom timeout
+func (b *Browser) ExecuteScriptWithTimeout(script string, timeout time.Duration) (interface{}, error) {
+	if b.ctx == nil {
+		return nil, errors.New("browser not launched, call Launch() first")
+	}
+
+	ctx, cancel := context.WithTimeout(b.ctx, timeout)
+	defer cancel()
+
+	var result interface{}
+	err := chromedp.Run(ctx, chromedp.Evaluate(script, &result))
+	if err != nil {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, errors.Wrapf(err, "script execution timed out after %v", timeout)
+		}
+		return nil, errors.Wrap(err, "executing script")
+	}
+
+	return result, nil
+}
+
+// ExecuteScripts runs multiple JavaScript scripts in sequence
+func (b *Browser) ExecuteScripts(scripts []string) ([]interface{}, error) {
+	if b.ctx == nil {
+		return nil, errors.New("browser not launched, call Launch() first")
+	}
+
+	if len(scripts) == 0 {
+		return []interface{}{}, nil
+	}
+
+	results := make([]interface{}, len(scripts))
+	
+	for i, script := range scripts {
+		if b.opts.Verbose {
+			log.Printf("Executing script %d/%d", i+1, len(scripts))
+		}
+		
+		result, err := b.ExecuteScript(script)
+		if err != nil {
+			return results, errors.Wrapf(err, "executing script %d", i+1)
+		}
+		
+		results[i] = result
+	}
+
+	return results, nil
+}
+
+// ExecuteScriptsWithTimeout runs multiple JavaScript scripts with individual timeouts
+func (b *Browser) ExecuteScriptsWithTimeout(scripts []string, timeout time.Duration) ([]interface{}, error) {
+	if b.ctx == nil {
+		return nil, errors.New("browser not launched, call Launch() first")
+	}
+
+	if len(scripts) == 0 {
+		return []interface{}{}, nil
+	}
+
+	results := make([]interface{}, len(scripts))
+	
+	for i, script := range scripts {
+		if b.opts.Verbose {
+			log.Printf("Executing script %d/%d with timeout %v", i+1, len(scripts), timeout)
+		}
+		
+		result, err := b.ExecuteScriptWithTimeout(script, timeout)
+		if err != nil {
+			return results, errors.Wrapf(err, "executing script %d", i+1)
+		}
+		
+		results[i] = result
+	}
+
+	return results, nil
+}
+
+// executeScriptsBefore executes all pre-navigation scripts
+func (b *Browser) executeScriptsBefore() error {
+	if len(b.opts.ScriptBefore) == 0 {
+		return nil
+	}
+
+	if b.opts.Verbose {
+		log.Printf("Executing %d pre-navigation scripts", len(b.opts.ScriptBefore))
+	}
+
+	// Use a shorter timeout for pre-navigation scripts to avoid blocking navigation
+	timeout := 5 * time.Second
+	
+	_, err := b.ExecuteScriptsWithTimeout(b.opts.ScriptBefore, timeout)
+	if err != nil {
+		return errors.Wrap(err, "executing pre-navigation scripts")
+	}
+
+	if b.opts.Verbose {
+		log.Printf("Successfully executed all pre-navigation scripts")
+	}
+
+	return nil
+}
+
+// executeScriptsAfter executes all post-navigation scripts
+func (b *Browser) executeScriptsAfter() error {
+	if len(b.opts.ScriptAfter) == 0 {
+		return nil
+	}
+
+	if b.opts.Verbose {
+		log.Printf("Executing %d post-navigation scripts", len(b.opts.ScriptAfter))
+	}
+
+	// Use a longer timeout for post-navigation scripts as they may interact with content
+	timeout := 10 * time.Second
+	
+	_, err := b.ExecuteScriptsWithTimeout(b.opts.ScriptAfter, timeout)
+	if err != nil {
+		return errors.Wrap(err, "executing post-navigation scripts")
+	}
+
+	if b.opts.Verbose {
+		log.Printf("Successfully executed all post-navigation scripts")
+	}
+
+	return nil
 }
 
 // GetTitle returns the page title
@@ -389,4 +576,310 @@ func (b *Browser) SetBasicAuth(username, password string) error {
 	return b.SetRequestHeaders(map[string]string{
 		"Authorization": "Basic " + encodedAuth,
 	})
+}
+
+// detectContentType attempts to detect the content type based on the data
+func detectContentType(data string, headers map[string]string) string {
+	// Check if Content-Type is already set in headers
+	for k, v := range headers {
+		if strings.ToLower(k) == "content-type" {
+			return v
+		}
+	}
+
+	// Auto-detect based on data format
+	data = strings.TrimSpace(data)
+	if data == "" {
+		return "text/plain"
+	}
+
+	// Check for JSON
+	if (strings.HasPrefix(data, "{") && strings.HasSuffix(data, "}")) ||
+		(strings.HasPrefix(data, "[") && strings.HasSuffix(data, "]")) {
+		return "application/json"
+	}
+
+	// Check for URL-encoded form data
+	if strings.Contains(data, "=") && (strings.Contains(data, "&") || !strings.Contains(data, " ")) {
+		return "application/x-www-form-urlencoded"
+	}
+
+	// Default to plain text
+	return "text/plain"
+}
+
+// HTTPRequest performs an HTTP request with the specified method and data
+func (b *Browser) HTTPRequest(method, url, data string, headers map[string]string) error {
+	if b.ctx == nil {
+		return errors.New("browser not launched, call Launch() first")
+	}
+
+	if b.opts.Verbose {
+		log.Printf("Making %s request to: %s", method, url)
+		if data != "" {
+			log.Printf("Request data: %s", data)
+		}
+	}
+
+	// Normalize method to uppercase
+	method = strings.ToUpper(method)
+
+	// For GET requests without data, use the regular Navigate method
+	if method == "GET" && data == "" {
+		return b.Navigate(url)
+	}
+
+	// Set up request interception for POST/PUT requests
+	requestData := &HTTPRequestData{
+		Method:      method,
+		URL:         url,
+		Data:        data,
+		Headers:     headers,
+		ContentType: detectContentType(data, headers),
+	}
+
+	// Enable request interception
+	if err := b.enableRequestInterception(requestData); err != nil {
+		return errors.Wrap(err, "enabling request interception")
+	}
+
+	// Execute pre-navigation scripts before making the request
+	if err := b.executeScriptsBefore(); err != nil {
+		if b.opts.Verbose {
+			log.Printf("Pre-navigation script error: %v", err)
+		}
+		return errors.Wrap(err, "executing pre-navigation scripts")
+	}
+
+	// Navigate to the URL (this will trigger our interceptor)
+	navCtx := b.ctx
+	if err := chromedp.Run(navCtx, chromedp.Navigate(url)); err != nil {
+		return errors.Wrap(err, "navigating with custom method")
+	}
+
+	// Wait for network idle if requested (similar to Navigate method)
+	if b.opts.WaitNetworkIdle {
+		waitTimeout := time.Duration(b.opts.StableTimeout) * time.Second
+		waitCtx, waitCancel := context.WithTimeout(b.ctx, waitTimeout)
+		defer waitCancel()
+
+		if err := chromedp.Run(waitCtx, chromedp.ActionFunc(func(ctx context.Context) error {
+			// This will wait until there are no more than 2 network connections for at least 500ms
+			ch := make(chan struct{})
+			lctx, cancel := context.WithCancel(ctx)
+			chromedp.ListenTarget(lctx, func(ev interface{}) {
+				switch ev.(type) {
+				case *network.EventLoadingFinished, *network.EventLoadingFailed:
+					select {
+					case ch <- struct{}{}:
+					default:
+					}
+				}
+			})
+
+			// Wait for idle using a timer
+			idleTimer := time.NewTimer(500 * time.Millisecond)
+			defer cancel()
+
+			for {
+				select {
+				case <-waitCtx.Done():
+					return waitCtx.Err()
+				case <-idleTimer.C:
+					// We've been idle for 500ms
+					return nil
+				case <-ch:
+					// Reset the timer when any network event occurs
+					if !idleTimer.Stop() {
+						<-idleTimer.C
+					}
+					idleTimer.Reset(500 * time.Millisecond)
+				}
+			}
+		})); err != nil {
+			if b.opts.Verbose {
+				log.Printf("Warning: failed to wait for network idle: %v", err)
+			}
+		}
+	}
+
+	// Wait for specific selector if requested
+	if b.opts.WaitSelector != "" {
+		selectorTimeout := time.Duration(b.opts.StableTimeout) * time.Second
+		waitCtx, waitCancel := context.WithTimeout(b.ctx, selectorTimeout)
+		defer waitCancel()
+
+		if err := chromedp.Run(waitCtx, chromedp.WaitVisible(b.opts.WaitSelector, chromedp.ByQuery)); err != nil {
+			if b.opts.Verbose {
+				log.Printf("Warning: failed to wait for selector: %v", err)
+			}
+		}
+	}
+
+	// Execute post-navigation scripts
+	if err := b.executeScriptsAfter(); err != nil {
+		if b.opts.Verbose {
+			log.Printf("Post-navigation script error: %v", err)
+		}
+		return errors.Wrap(err, "executing post-navigation scripts")
+	}
+
+	// Disable request interception after the request
+	if err := b.disableRequestInterception(); err != nil {
+		// Log the error but don't fail the request
+		if b.opts.Verbose {
+			log.Printf("Warning: failed to disable request interception: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// enableRequestInterception sets up request interception for custom HTTP methods
+func (b *Browser) enableRequestInterception(requestData *HTTPRequestData) error {
+	b.interceptor.mu.Lock()
+	b.interceptor.targetURL = requestData.URL
+	b.interceptor.requestData = requestData
+	b.interceptor.intercepting = true
+	b.interceptor.mu.Unlock()
+
+	// Enable network events
+	if err := chromedp.Run(b.ctx, network.Enable()); err != nil {
+		return errors.Wrap(err, "enabling network events")
+	}
+
+	// Enable fetch domain for request interception
+	if err := chromedp.Run(b.ctx, fetch.Enable()); err != nil {
+		return errors.Wrap(err, "enabling fetch domain")
+	}
+
+	// Set up the request interceptor
+	chromedp.ListenTarget(b.ctx, func(ev interface{}) {
+		switch e := ev.(type) {
+		case *fetch.EventRequestPaused:
+			go b.handleInterceptedRequest(e)
+		}
+	})
+
+	if b.opts.Verbose {
+		log.Printf("Request interception enabled for %s", requestData.URL)
+	}
+
+	return nil
+}
+
+// disableRequestInterception disables request interception
+func (b *Browser) disableRequestInterception() error {
+	b.interceptor.mu.Lock()
+	b.interceptor.intercepting = false
+	b.interceptor.targetURL = ""
+	b.interceptor.requestData = nil
+	b.interceptor.mu.Unlock()
+
+	// Disable fetch domain
+	if err := chromedp.Run(b.ctx, fetch.Disable()); err != nil {
+		return errors.Wrap(err, "disabling fetch domain")
+	}
+
+	if b.opts.Verbose {
+		log.Printf("Request interception disabled")
+	}
+
+	return nil
+}
+
+// handleInterceptedRequest processes intercepted requests
+func (b *Browser) handleInterceptedRequest(ev *fetch.EventRequestPaused) {
+	b.interceptor.mu.RLock()
+	intercepting := b.interceptor.intercepting
+	targetURL := b.interceptor.targetURL
+	requestData := b.interceptor.requestData
+	b.interceptor.mu.RUnlock()
+
+	if !intercepting || requestData == nil {
+		// Continue the request as-is
+		if err := chromedp.Run(b.ctx, fetch.ContinueRequest(ev.RequestID)); err != nil && b.opts.Verbose {
+			log.Printf("Error continuing unmodified request: %v", err)
+		}
+		return
+	}
+
+	// Check if this is the request we want to modify
+	requestURL := ev.Request.URL
+	if !b.shouldInterceptRequest(requestURL, targetURL) {
+		// Continue the request as-is
+		if err := chromedp.Run(b.ctx, fetch.ContinueRequest(ev.RequestID)); err != nil && b.opts.Verbose {
+			log.Printf("Error continuing request: %v", err)
+		}
+		return
+	}
+
+	if b.opts.Verbose {
+		log.Printf("Intercepting request to %s, modifying to %s %s", requestURL, requestData.Method, requestData.URL)
+	}
+
+	// Build the modified request using fetch.ContinueRequest with modifications
+	continueParams := fetch.ContinueRequest(ev.RequestID)
+	
+	// Set method
+	continueParams = continueParams.WithMethod(requestData.Method)
+
+	// Set headers if we have data
+	if requestData.Data != "" {
+		headers := []*fetch.HeaderEntry{}
+		
+		// Copy existing headers
+		if ev.Request.Headers != nil {
+			for k, v := range ev.Request.Headers {
+				headers = append(headers, &fetch.HeaderEntry{
+					Name:  k,
+					Value: fmt.Sprintf("%v", v),
+				})
+			}
+		}
+
+		// Add/override content-type header
+		headers = append(headers, &fetch.HeaderEntry{
+			Name:  "Content-Type",
+			Value: requestData.ContentType,
+		})
+
+		// Add custom headers
+		for k, v := range requestData.Headers {
+			headers = append(headers, &fetch.HeaderEntry{
+				Name:  k,
+				Value: v,
+			})
+		}
+
+		continueParams = continueParams.WithHeaders(headers)
+		continueParams = continueParams.WithPostData(requestData.Data)
+	}
+
+	// Continue with the modified request
+	if err := chromedp.Run(b.ctx, continueParams); err != nil {
+		if b.opts.Verbose {
+			log.Printf("Error continuing modified request: %v", err)
+		}
+		// Fall back to continuing without modification
+		if fallbackErr := chromedp.Run(b.ctx, fetch.ContinueRequest(ev.RequestID)); fallbackErr != nil && b.opts.Verbose {
+			log.Printf("Error in fallback continue: %v", fallbackErr)
+		}
+	}
+}
+
+// shouldInterceptRequest determines if a request should be intercepted and modified
+func (b *Browser) shouldInterceptRequest(requestURL, targetURL string) bool {
+	// Simple URL matching - exact match or base URL match
+	if requestURL == targetURL {
+		return true
+	}
+
+	// Check if the request URL starts with the target URL (for redirects)
+	if strings.HasPrefix(requestURL, targetURL) {
+		return true
+	}
+
+	// For more sophisticated matching, we could add URL parsing here
+	return false
 }
