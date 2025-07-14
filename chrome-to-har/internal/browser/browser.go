@@ -224,15 +224,8 @@ func (b *Browser) Navigate(url string) error {
 		}
 	}
 
-	// Execute pre-navigation scripts first
-	if err := b.executeScriptsBefore(); err != nil {
-		if b.opts.Verbose {
-			log.Printf("Pre-navigation script error: %v", err)
-		}
-		return errors.Wrap(err, "executing pre-navigation scripts")
-	}
-
-	// Navigate to the URL
+	// Navigate to the URL first, then execute pre-navigation scripts
+	// (Pre-navigation scripts are executed after basic navigation but before waiting for network idle)
 	if b.opts.Verbose {
 		select {
 		case <-navCtx.Done():
@@ -254,6 +247,14 @@ func (b *Browser) Navigate(url string) error {
 			log.Printf("Navigation error: %v", err)
 		}
 		return errors.Wrap(err, "navigating to URL")
+	}
+
+	// Execute pre-navigation scripts after basic navigation but before waiting for network idle
+	if err := b.executeScriptsBefore(); err != nil {
+		if b.opts.Verbose {
+			log.Printf("Pre-navigation script error: %v", err)
+		}
+		return errors.Wrap(err, "executing pre-navigation scripts")
 	}
 
 	// If waiting for network idle is requested
