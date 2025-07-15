@@ -89,7 +89,7 @@ func WithTypeTimeout(timeout time.Duration) TypeOption {
 
 // WaitOptions configures wait behavior
 type WaitOptions struct {
-	State   string        // "attached", "detached", "visible", "hidden"
+	State   string // "attached", "detached", "visible", "hidden"
 	Timeout time.Duration
 }
 
@@ -166,9 +166,49 @@ func WithScreenshotClip(x, y, width, height float64) ScreenshotOption {
 	}
 }
 
+// Compatibility functions for existing tests
+
+// NavigateWithTimeout creates a navigate option with timeout (compatibility)
+func NavigateWithTimeout(timeout time.Duration) NavigateOption {
+	return WithNavigateTimeout(timeout)
+}
+
+// ClickWithTimeout creates a click option with timeout (compatibility)
+func ClickWithTimeout(timeout time.Duration) ClickOption {
+	return WithClickTimeout(timeout)
+}
+
+// TypeWithTimeout creates a type option with timeout (compatibility)
+func TypeWithTimeout(timeout time.Duration) TypeOption {
+	return WithTypeTimeout(timeout)
+}
+
+// WaitWithTimeout creates a wait option with timeout (compatibility)
+func WaitWithTimeout(timeout time.Duration) WaitOption {
+	return WithWaitTimeout(timeout)
+}
+
+// WaitWithState creates a wait option with state (compatibility)
+func WaitWithState(state string) WaitOption {
+	return WithWaitState(state)
+}
+
+// ScreenshotFullPage creates a screenshot option for full page (compatibility)
+func ScreenshotFullPage(fullPage bool) ScreenshotOption {
+	if fullPage {
+		return WithFullPage()
+	}
+	return func(*ScreenshotOptions) {} // No-op if false
+}
+
+// ScreenshotSelector creates a screenshot option for element selector (compatibility)
+func ScreenshotSelector(selector string) ScreenshotOption {
+	return WithScreenshotSelector(selector)
+}
+
 // PDFOptions configures PDF generation
 type PDFOptions struct {
-	Format          string  // A4, Letter, etc
+	Format          string // A4, Letter, etc
 	Landscape       bool
 	Scale           float64
 	PrintBackground bool

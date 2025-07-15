@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    volumes:
+      - ./coverage:/app/coverage
+    environment:
+      - HEADLESS=true
+      - CI=true
+    command: all
+    
+  test-unit:
+    extends: test
+    command: unit
+    
+  test-integration:
+    extends: test
+    command: integration
+    
+  test-coverage:
+    extends: test
+    command: coverage
+    volumes:
+      - ./coverage:/app/coverage
+      
+  # Development environment with shell access
+  test-dev:
+    extends: test
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+      - go-mod-cache:/go/pkg/mod
+      
+volumes:
+  go-mod-cache:

@@ -1,3 +1,4 @@
+//go:build nomock
 // +build nomock
 
 // Command churl is like curl but runs through Chrome and can handle JavaScript/SPAs.
@@ -67,8 +68,8 @@ func (h *headerSlice) Set(value string) error {
 }
 
 func main() {
-	fmt.Println("   WARNING: Running churl in MOCK MODE - Chrome features are simulated")
-	
+	fmt.Println("âš   WARNING: Running churl in MOCK MODE - Chrome features are simulated")
+
 	opts := options{}
 
 	// Output options

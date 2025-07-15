@@ -205,8 +205,8 @@ func (l *Locator) GetText() (string, error) {
 
 // Element finds the element matching the locator
 func (l *Locator) Element() (*ElementHandle, error) {
-	selector, queryOpt := l.selector.ToChromedpSelector()
-	
+	selector, _ := l.selector.ToChromedpSelector()
+
 	// Apply additional filters if needed
 	if l.options.HasText != "" {
 		// Modify selector to include text filter
@@ -214,22 +214,22 @@ func (l *Locator) Element() (*ElementHandle, error) {
 			selector = fmt.Sprintf("%s:contains('%s')", selector, l.options.HasText)
 		}
 	}
-	
+
 	// Find all matching elements
 	elements, err := l.page.QuerySelectorAll(selector)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if len(elements) == 0 {
 		return nil, fmt.Errorf("no element found matching %s", selector)
 	}
-	
+
 	// Apply index filter
 	if l.options.Index >= 0 && l.options.Index < len(elements) {
 		return elements[l.options.Index], nil
 	}
-	
+
 	return elements[0], nil
 }
 

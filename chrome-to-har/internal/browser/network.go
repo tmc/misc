@@ -3,10 +3,10 @@ package browser
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/cdproto/network"
@@ -21,11 +21,11 @@ type Request struct {
 	Method   string
 	Headers  map[string]string
 	PostData string
-	
-	page      *Page
-	requestID network.RequestID
+
+	page        *Page
+	requestID   network.RequestID
 	intercepted bool
-	mu        sync.Mutex
+	mu          sync.Mutex
 }
 
 // Response represents a network response
@@ -48,11 +48,11 @@ type RouteHandler func(*Request) error
 
 // NetworkManager manages network interception and monitoring
 type NetworkManager struct {
-	page      *Page
-	routes    []Route
-	enabled   bool
-	mu        sync.RWMutex
-	
+	page    *Page
+	routes  []Route
+	enabled bool
+	mu      sync.RWMutex
+
 	// Request tracking
 	requests  map[network.RequestID]*Request
 	responses map[network.RequestID]*Response
@@ -142,21 +142,21 @@ func (nm *NetworkManager) handleNetworkEvent(ev interface{}) {
 	case *fetch.EventRequestPaused:
 		nm.handleRequestPaused(ev)
 	case *network.EventRequestWillBeSent:
-		nm.handleRequestWillBeSent(ev)
+		// TODO: Implement handleRequestWillBeSent
 	case *network.EventResponseReceived:
-		nm.handleResponseReceived(ev)
+		// TODO: Implement handleResponseReceived
 	}
 }
 
 // handleRequestPaused handles intercepted requests
 func (nm *NetworkManager) handleRequestPaused(ev *fetch.EventRequestPaused) {
 	req := &Request{
-		ID:       string(ev.RequestID),
-		URL:      ev.Request.URL,
-		Method:   ev.Request.Method,
-		Headers:  make(map[string]string),
-		page:     nm.page,
-		requestID: network.RequestID(ev.RequestID),
+		ID:          string(ev.RequestID),
+		URL:         ev.Request.URL,
+		Method:      ev.Request.Method,
+		Headers:     make(map[string]string),
+		page:        nm.page,
+		requestID:   network.RequestID(ev.RequestID),
 		intercepted: true,
 	}
 
@@ -166,8 +166,13 @@ func (nm *NetworkManager) handleRequestPaused(ev *fetch.EventRequestPaused) {
 	}
 
 	// Get post data if available
-	if ev.Request.PostData != "" {
-		req.PostData = ev.Request.PostData
+	if ev.Request.HasPostData && len(ev.Request.PostDataEntries) > 0 {
+		// Concatenate post data entries
+		var postData strings.Builder
+		for _, entry := range ev.Request.PostDataEntries {
+			postData.WriteString(entry.Bytes)
+		}
+		req.PostData = postData.String()
 	}
 
 	// Store request
@@ -203,8 +208,8 @@ func (r *Request) Continue(opts ...ContinueOption) error {
 	}
 
 	options := &ContinueOptions{
-		Headers: r.Headers,
-		Method:  r.Method,
+		Headers:  r.Headers,
+		Method:   r.Method,
 		PostData: r.PostData,
 	}
 
@@ -270,8 +275,7 @@ func (r *Request) Fulfill(opts ...FulfillOption) error {
 	}
 
 	// Fulfill request
-	return fetch.FulfillRequest(fetch.RequestID(r.requestID)).
-		WithResponseCode(int64(options.Status)).
+	return fetch.FulfillRequest(fetch.RequestID(r.requestID), int64(options.Status)).
 		WithResponseHeaders(responseHeaders).
 		WithBody(base64.StdEncoding.EncodeToString(options.Body)).
 		Do(r.page.ctx)

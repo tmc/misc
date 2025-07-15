@@ -17,7 +17,7 @@ func main() {
 
 	// Connect to Chrome with extension loaded
 	fmt.Println("Connecting to Chrome with extension...")
-	
+
 	ctx, cancel := chromedp.NewRemoteAllocator(context.Background(), "http://localhost:9230")
 	defer cancel()
 
@@ -29,7 +29,7 @@ func main() {
 
 	// First, check if our extension is loaded
 	fmt.Println("Checking if extension is loaded...")
-	
+
 	var extensionCheck map[string]interface{}
 	err := chromedp.Run(ctx,
 		chromedp.Navigate("chrome://extensions/"),
@@ -53,7 +53,7 @@ func main() {
 
 	// Navigate to a test page where we can use the extension
 	fmt.Println("Navigating to test page...")
-	
+
 	err = chromedp.Run(ctx,
 		chromedp.Navigate("https://example.com"),
 		chromedp.Sleep(4*time.Second),
@@ -66,7 +66,7 @@ func main() {
 
 	// Test if our extension injected content script is working
 	fmt.Println("Testing extension content script...")
-	
+
 	var contentScriptResult map[string]interface{}
 	err = chromedp.Run(ctx,
 		chromedp.Evaluate(`
@@ -121,7 +121,7 @@ func main() {
 
 	fmt.Println("\nManual testing instructions:")
 	fmt.Println("1. Click the 'AI API Bridge' extension icon in Chrome")
-	fmt.Println("2. Check if it shows 'AI API Available'") 
+	fmt.Println("2. Check if it shows 'AI API Available'")
 	fmt.Println("3. Try the 'Test Generation' button")
 	fmt.Println("4. Report back what you see!")
 }
@@ -131,7 +131,7 @@ func extensionWorking(result map[string]interface{}) bool {
 	if chromeExt, ok := result["chromeExtension"].(bool); ok && chromeExt {
 		return true
 	}
-	
+
 	// Check if any AI APIs are directly available (extension might expose them)
 	if directAI, ok := result["directAI"].(map[string]interface{}); ok {
 		for _, available := range directAI {
@@ -140,13 +140,13 @@ func extensionWorking(result map[string]interface{}) bool {
 			}
 		}
 	}
-	
+
 	return false
 }
 
 func testExtensionAI(ctx context.Context) {
 	fmt.Println("Testing AI API through extension bridge...")
-	
+
 	var testResult interface{}
 	err := chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 		// Try to communicate with our extension

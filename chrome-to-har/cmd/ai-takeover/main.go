@@ -33,27 +33,27 @@ func main() {
 	fmt.Println()
 	fmt.Println("Step 2: In Chrome, navigate to any website (e.g., https://example.com)")
 	fmt.Println("Step 3: Press Enter here when Chrome is ready...")
-	
+
 	// Wait for user
 	bufio.NewScanner(os.Stdin).Scan()
-	
+
 	fmt.Println("Attempting to connect to your Chrome session...")
-	
+
 	// Connect to user's Chrome
 	ctx, cancel := chromedp.NewRemoteAllocator(context.Background(), "http://localhost:9227")
 	defer cancel()
-	
+
 	// Get list of available targets
 	targets, err := chromedp.Targets(ctx)
 	if err != nil {
 		log.Fatalf("Failed to get targets: %v", err)
 	}
-	
+
 	fmt.Printf("Found %d Chrome targets:\n", len(targets))
 	for i, target := range targets {
 		fmt.Printf("  %d: %s (%s)\n", i, target.Title, target.URL)
 	}
-	
+
 	// Connect to first available page target
 	var pageTarget *chromedp.Target
 	for _, target := range targets {
@@ -62,23 +62,23 @@ func main() {
 			break
 		}
 	}
-	
+
 	if pageTarget == nil {
 		log.Fatal("No suitable page target found. Please navigate to a regular webpage in Chrome.")
 	}
-	
+
 	fmt.Printf("Connecting to: %s (%s)\n", pageTarget.Title, pageTarget.URL)
-	
+
 	// Create context for the specific target
 	ctx, cancel = chromedp.NewContext(ctx, chromedp.WithTargetID(pageTarget.TargetID))
 	defer cancel()
-	
+
 	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
-	
+
 	// Test AI API access
 	fmt.Println("Testing AI API access in user-initiated Chrome...")
-	
+
 	var result map[string]interface{}
 	err = chromedp.Run(ctx,
 		chromedp.Sleep(2*time.Second),
@@ -112,14 +112,14 @@ func main() {
 			})
 		`, &result),
 	)
-	
+
 	if err != nil {
 		log.Fatalf("Error testing AI API: %v", err)
 	}
-	
+
 	resultJSON, _ := json.MarshalIndent(result, "", "  ")
 	fmt.Printf("User-Initiated Chrome Test Result:\n%s\n", resultJSON)
-	
+
 	// If AI API is found, test it
 	if hasAI(result) {
 		fmt.Println("\n🎉 AI API detected! Testing functionality...")
@@ -128,11 +128,11 @@ func main() {
 		fmt.Println("\n❌ No AI API found even in user-initiated Chrome")
 		fmt.Println("This suggests the API may not be available in this Chrome version")
 		fmt.Println("or the required chrome://flags may not be set.")
-		
+
 		// Provide troubleshooting
 		fmt.Println("\nTroubleshooting:")
 		fmt.Println("1. Check chrome://flags/#prompt-api-for-gemini-nano")
-		fmt.Println("2. Check chrome://flags/#optimization-guide-on-device-model") 
+		fmt.Println("2. Check chrome://flags/#optimization-guide-on-device-model")
 		fmt.Println("3. Restart Chrome after enabling flags")
 		fmt.Println("4. Check chrome://components/ for 'Optimization Guide On Device Model'")
 	}
@@ -154,7 +154,7 @@ func hasAI(result map[string]interface{}) bool {
 func testAIFunctionality(ctx context.Context) {
 	// Test API availability
 	fmt.Println("Testing API availability...")
-	
+
 	var availability interface{}
 	err := chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 		script := `
@@ -178,19 +178,19 @@ func testAIFunctionality(ctx context.Context) {
 		`
 		return chromedp.Evaluate(script, &availability).Do(ctx)
 	}))
-	
+
 	if err != nil {
 		fmt.Printf("Availability test error: %v\n", err)
 		return
 	}
-	
+
 	availJSON, _ := json.MarshalIndent(availability, "", "  ")
 	fmt.Printf("Availability result:\n%s\n", availJSON)
-	
+
 	// If available, test text generation
 	if !strings.Contains(fmt.Sprintf("%v", availability), "error") {
 		fmt.Println("Testing text generation...")
-		
+
 		var genResult interface{}
 		err = chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 			script := `
@@ -214,7 +214,7 @@ func testAIFunctionality(ctx context.Context) {
 			`
 			return chromedp.Evaluate(script, &genResult).Do(ctx)
 		}))
-		
+
 		if err != nil {
 			fmt.Printf("Generation test error: %v\n", err)
 		} else {

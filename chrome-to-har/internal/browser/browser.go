@@ -58,8 +58,8 @@ func New(ctx context.Context, profileMgr chromeprofiles.ProfileManager, opts ...
 	}
 
 	browser := &Browser{
-		opts:       options,
-		profileMgr: profileMgr,
+		opts:        options,
+		profileMgr:  profileMgr,
 		interceptor: &requestInterceptor{},
 	}
 
@@ -73,7 +73,7 @@ func (b *Browser) Launch(ctx context.Context) error {
 		if b.opts.RemoteHost == "" {
 			b.opts.RemoteHost = "localhost"
 		}
-		
+
 		if b.opts.RemoteTabID != "" {
 			// Connect to specific tab
 			return b.ConnectToTab(ctx, b.opts.RemoteHost, b.opts.RemotePort, b.opts.RemoteTabID)
@@ -233,7 +233,7 @@ func (b *Browser) Navigate(url string) error {
 		default:
 			log.Printf("Navigation context is active")
 		}
-		
+
 		select {
 		case <-b.ctx.Done():
 			log.Printf("Browser context is already done: %v", b.ctx.Err())
@@ -241,7 +241,7 @@ func (b *Browser) Navigate(url string) error {
 			log.Printf("Browser context is active")
 		}
 	}
-	
+
 	if err := chromedp.Run(navCtx, chromedp.Navigate(url)); err != nil {
 		if b.opts.Verbose {
 			log.Printf("Navigation error: %v", err)
@@ -345,7 +345,7 @@ func (b *Browser) GetCurrentPage() *Page {
 	if b.ctx == nil {
 		return nil
 	}
-	
+
 	return &Page{
 		ctx:     b.ctx,
 		cancel:  func() {}, // Browser owns the context
@@ -432,17 +432,17 @@ func (b *Browser) ExecuteScripts(scripts []string) ([]interface{}, error) {
 	}
 
 	results := make([]interface{}, len(scripts))
-	
+
 	for i, script := range scripts {
 		if b.opts.Verbose {
 			log.Printf("Executing script %d/%d", i+1, len(scripts))
 		}
-		
+
 		result, err := b.ExecuteScript(script)
 		if err != nil {
 			return results, errors.Wrapf(err, "executing script %d", i+1)
 		}
-		
+
 		results[i] = result
 	}
 
@@ -460,17 +460,17 @@ func (b *Browser) ExecuteScriptsWithTimeout(scripts []string, timeout time.Durat
 	}
 
 	results := make([]interface{}, len(scripts))
-	
+
 	for i, script := range scripts {
 		if b.opts.Verbose {
 			log.Printf("Executing script %d/%d with timeout %v", i+1, len(scripts), timeout)
 		}
-		
+
 		result, err := b.ExecuteScriptWithTimeout(script, timeout)
 		if err != nil {
 			return results, errors.Wrapf(err, "executing script %d", i+1)
 		}
-		
+
 		results[i] = result
 	}
 
@@ -489,7 +489,7 @@ func (b *Browser) executeScriptsBefore() error {
 
 	// Use a shorter timeout for pre-navigation scripts to avoid blocking navigation
 	timeout := 5 * time.Second
-	
+
 	_, err := b.ExecuteScriptsWithTimeout(b.opts.ScriptBefore, timeout)
 	if err != nil {
 		return errors.Wrap(err, "executing pre-navigation scripts")
@@ -514,7 +514,7 @@ func (b *Browser) executeScriptsAfter() error {
 
 	// Use a longer timeout for post-navigation scripts as they may interact with content
 	timeout := 10 * time.Second
-	
+
 	_, err := b.ExecuteScriptsWithTimeout(b.opts.ScriptAfter, timeout)
 	if err != nil {
 		return errors.Wrap(err, "executing post-navigation scripts")
@@ -821,14 +821,14 @@ func (b *Browser) handleInterceptedRequest(ev *fetch.EventRequestPaused) {
 
 	// Build the modified request using fetch.ContinueRequest with modifications
 	continueParams := fetch.ContinueRequest(ev.RequestID)
-	
+
 	// Set method
 	continueParams = continueParams.WithMethod(requestData.Method)
 
 	// Set headers if we have data
 	if requestData.Data != "" {
 		headers := []*fetch.HeaderEntry{}
-		
+
 		// Copy existing headers
 		if ev.Request.Headers != nil {
 			for k, v := range ev.Request.Headers {

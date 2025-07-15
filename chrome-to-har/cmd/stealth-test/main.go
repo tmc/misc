@@ -15,14 +15,14 @@ import (
 
 func main() {
 	fmt.Println("=== Stealth Mode AI Access Test ===")
-	
+
 	// Create Chrome policy directory and file
 	policyDir := "/tmp/chrome-policies/managed"
 	err := os.MkdirAll(policyDir, 0755)
 	if err != nil {
 		log.Printf("Warning: Could not create policy directory: %v", err)
 	}
-	
+
 	// Create enterprise policy to disable automation warnings
 	policyContent := `{
 		"CommandLineFlagSecurityWarningsEnabled": false,
@@ -37,36 +37,36 @@ func main() {
 		"TranslateEnabled": false,
 		"DefaultSearchProviderEnabled": false
 	}`
-	
+
 	policyFile := policyDir + "/managed_policies.json"
 	err = os.WriteFile(policyFile, []byte(policyContent), 0644)
 	if err != nil {
 		log.Printf("Warning: Could not write policy file: %v", err)
 	}
-	
+
 	fmt.Printf("Created policy file at: %s\n", policyFile)
-	
+
 	// Kill existing Chrome processes
 	exec.Command("pkill", "-f", "remote-debugging-port=9228").Run()
 	time.Sleep(2 * time.Second)
-	
+
 	// Launch Chrome with maximum stealth flags
 	fmt.Println("Launching Chrome with stealth configuration...")
-	
+
 	cmd := exec.Command(
 		"/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
 		"--remote-debugging-port=9228",
 		"--user-data-dir=/tmp/chrome-stealth-test",
 		"--no-first-run",
 		"--no-default-browser-check",
-		
+
 		// AI API flags
 		"--enable-features=Gemini,AILanguageModelService,BuiltInAIAPI",
 		"--enable-ai-language-model-service",
 		"--optimization-guide-on-device-model=enabled",
 		"--prompt-api-for-gemini-nano=enabled",
 		"--prompt-api-for-gemini-nano-multimodal-input=enabled",
-		
+
 		// Anti-detection flags
 		"--disable-blink-features=AutomationControlled",
 		"--exclude-switches=enable-automation",
@@ -83,43 +83,43 @@ func main() {
 		"--disable-backgrounding-occluded-windows",
 		"--disable-renderer-backgrounding",
 		"--disable-field-trial-config",
-		
+
 		// Policy flags
 		fmt.Sprintf("--policy-directory=%s", policyDir),
 		"--force-fieldtrials=*BackgroundTracing/default/",
-		
+
 		// User agent spoofing preparation
 		"--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Regular",
 	)
-	
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	if err := cmd.Start(); err != nil {
 		log.Fatalf("Failed to start Chrome: %v", err)
 	}
-	
+
 	fmt.Println("Waiting for Chrome to initialize...")
 	time.Sleep(8 * time.Second)
-	
+
 	// Connect with additional stealth measures
 	ctx, cancel := chromedp.NewRemoteAllocator(context.Background(), "http://localhost:9228")
 	defer cancel()
-	
+
 	ctx, cancel = chromedp.NewContext(ctx)
 	defer cancel()
-	
+
 	ctx, cancel = context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
-	
+
 	// Apply stealth JavaScript modifications
 	fmt.Println("Applying stealth JavaScript modifications...")
-	
+
 	var result map[string]interface{}
 	err = chromedp.Run(ctx,
 		chromedp.Navigate("about:blank"),
 		chromedp.Sleep(2*time.Second),
-		
+
 		// Remove webdriver flag and automation indicators
 		chromedp.Evaluate(`
 			// Remove webdriver flag
@@ -146,9 +146,9 @@ func main() {
 			
 			'stealth_applied'
 		`, nil),
-		
+
 		chromedp.Sleep(1*time.Second),
-		
+
 		// Test AI API availability
 		chromedp.Evaluate(`
 			({
@@ -176,20 +176,20 @@ func main() {
 			})
 		`, &result),
 	)
-	
+
 	if err != nil {
 		log.Printf("Error: %v", err)
 	} else {
 		resultJSON, _ := json.MarshalIndent(result, "", "  ")
 		fmt.Printf("Stealth Test Result:\n%s\n", resultJSON)
-		
+
 		// Check if stealth worked
 		if webdriver, ok := result["webdriver"]; ok && webdriver != nil {
 			fmt.Println("⚠️  Webdriver flag still detected")
 		} else {
 			fmt.Println("✅ Webdriver flag successfully hidden")
 		}
-		
+
 		// Test AI APIs if found
 		if hasAnyAI(result) {
 			fmt.Println("\n🎉 AI API detected with stealth mode!")
@@ -198,13 +198,13 @@ func main() {
 			fmt.Println("\n❌ AI API still not accessible with stealth mode")
 		}
 	}
-	
+
 	// Cleanup
 	fmt.Println("\nCleaning up...")
 	if err := cmd.Process.Kill(); err != nil {
 		log.Printf("Failed to kill Chrome: %v", err)
 	}
-	
+
 	// Remove policy file
 	os.Remove(policyFile)
 }
@@ -221,7 +221,7 @@ func hasAnyAI(result map[string]interface{}) bool {
 
 func testStealthAI(ctx context.Context) {
 	fmt.Println("Testing stealth AI functionality...")
-	
+
 	var testResult interface{}
 	err := chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 		script := `
@@ -251,7 +251,7 @@ func testStealthAI(ctx context.Context) {
 		`
 		return chromedp.Evaluate(script, &testResult).Do(ctx)
 	}))
-	
+
 	if err != nil {
 		fmt.Printf("Stealth AI test error: %v\n", err)
 	} else {

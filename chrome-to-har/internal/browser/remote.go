@@ -37,7 +37,7 @@ type ChromeTab struct {
 // GetRemoteDebuggingInfo retrieves Chrome's remote debugging information
 func GetRemoteDebuggingInfo(host string, port int) (*RemoteDebuggingInfo, error) {
 	url := fmt.Sprintf("http://%s:%d/json/version", host, port)
-	
+
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
@@ -65,7 +65,7 @@ func GetRemoteDebuggingInfo(host string, port int) (*RemoteDebuggingInfo, error)
 // ListTabs returns a list of all open tabs in Chrome
 func ListTabs(host string, port int) ([]ChromeTab, error) {
 	url := fmt.Sprintf("http://%s:%d/json", host, port)
-	
+
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
@@ -118,7 +118,7 @@ func (b *Browser) ConnectToTab(ctx context.Context, host string, port int, tabID
 func (b *Browser) ConnectToWebSocket(ctx context.Context, wsURL string) error {
 	// Create a new context with the WebSocket URL
 	allocCtx, allocCancel := chromedp.NewRemoteAllocator(ctx, wsURL)
-	
+
 	// Create the browser context
 	var browserCtx context.Context
 	var browserCancel context.CancelFunc

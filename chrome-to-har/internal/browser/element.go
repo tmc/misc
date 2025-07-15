@@ -2,6 +2,7 @@ package browser
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/chromedp/cdproto/cdp"
@@ -14,7 +15,7 @@ import (
 // ElementHandle represents a handle to a DOM element
 type ElementHandle struct {
 	ctx      context.Context
-	nodeID   cdp.NodeID
+	node     *cdp.Node
 	objectID runtime.RemoteObjectID
 	page     *Page
 }
@@ -33,7 +34,7 @@ func (p *Page) QuerySelector(selector string) (*ElementHandle, error) {
 	}
 
 	node := nodes[0]
-	
+
 	// Get the remote object for the node
 	objID, err := dom.ResolveNode().WithNodeID(node.NodeID).Do(p.ctx)
 	if err != nil {
@@ -42,7 +43,7 @@ func (p *Page) QuerySelector(selector string) (*ElementHandle, error) {
 
 	return &ElementHandle{
 		ctx:      p.ctx,
-		nodeID:   node.NodeID,
+		node:     node,
 		objectID: objID.ObjectID,
 		page:     p,
 	}, nil
@@ -66,7 +67,7 @@ func (p *Page) QuerySelectorAll(selector string) ([]*ElementHandle, error) {
 
 		elements = append(elements, &ElementHandle{
 			ctx:      p.ctx,
-			nodeID:   node.NodeID,
+			node:     node,
 			objectID: objID.ObjectID,
 			page:     p,
 		})
@@ -87,7 +88,7 @@ func (e *ElementHandle) Click(opts ...ClickOption) error {
 	}
 
 	return chromedp.Run(e.ctx,
-		chromedp.MouseClickNode(e.nodeID),
+		chromedp.MouseClickNode(e.node),
 	)
 }
 
@@ -106,21 +107,21 @@ func (e *ElementHandle) Type(text string, opts ...TypeOption) error {
 
 	// Clear and type
 	return chromedp.Run(e.ctx,
-		chromedp.SendKeys(e.nodeID, text, chromedp.ByNodeID),
+		chromedp.SendKeys(e.node.NodeID, text, chromedp.ByNodeID),
 	)
 }
 
 // Clear clears the element's value
 func (e *ElementHandle) Clear() error {
 	return chromedp.Run(e.ctx,
-		chromedp.Clear(e.nodeID, chromedp.ByNodeID),
+		chromedp.Clear(e.node.NodeID, chromedp.ByNodeID),
 	)
 }
 
 // Focus focuses the element
 func (e *ElementHandle) Focus() error {
 	return chromedp.Run(e.ctx,
-		chromedp.Focus(e.nodeID, chromedp.ByNodeID),
+		chromedp.Focus(e.node.NodeID, chromedp.ByNodeID),
 	)
 }
 
@@ -128,7 +129,7 @@ func (e *ElementHandle) Focus() error {
 func (e *ElementHandle) GetText() (string, error) {
 	var text string
 	if err := chromedp.Run(e.ctx,
-		chromedp.Text(e.nodeID, &text, chromedp.ByNodeID),
+		chromedp.Text(e.node.NodeID, &text, chromedp.ByNodeID),
 	); err != nil {
 		return "", errors.Wrap(err, "getting text")
 	}
@@ -140,22 +141,22 @@ func (e *ElementHandle) GetAttribute(name string) (string, error) {
 	var value string
 	var exists bool
 	if err := chromedp.Run(e.ctx,
-		chromedp.AttributeValue(e.nodeID, name, &value, &exists, chromedp.ByNodeID),
+		chromedp.AttributeValue(e.node.NodeID, name, &value, &exists, chromedp.ByNodeID),
 	); err != nil {
 		return "", errors.Wrap(err, "getting attribute")
 	}
-	
+
 	if !exists {
 		return "", nil
 	}
-	
+
 	return value, nil
 }
 
 // SetAttribute sets an attribute value
 func (e *ElementHandle) SetAttribute(name, value string) error {
 	return chromedp.Run(e.ctx,
-		chromedp.SetAttributeValue(e.nodeID, name, value, chromedp.ByNodeID),
+		chromedp.SetAttributeValue(e.node.NodeID, name, value, chromedp.ByNodeID),
 	)
 }
 
@@ -166,7 +167,7 @@ func (e *ElementHandle) GetProperty(property string) (interface{}, error) {
 		chromedp.Evaluate(
 			fmt.Sprintf(
 				`(() => { const el = document.querySelector('[data-nodeid="%d"]'); return el ? el.%s : null; })()`,
-				e.nodeID, property,
+				e.node.NodeID, property,
 			),
 			&result,
 		),
@@ -179,8 +180,7 @@ func (e *ElementHandle) GetProperty(property string) (interface{}, error) {
 
 // IsVisible checks if the element is visible
 func (e *ElementHandle) IsVisible() (bool, error) {
-	var visible bool
-	err := runtime.CallFunctionOn(`
+	result, _, err := runtime.CallFunctionOn(`
 		function() {
 			const style = window.getComputedStyle(this);
 			return style.display !== 'none' && 
@@ -188,19 +188,30 @@ func (e *ElementHandle) IsVisible() (bool, error) {
 			       style.opacity !== '0';
 		}
 	`).WithObjectID(e.objectID).Do(e.ctx)
-	
+
 	if err != nil {
 		return false, errors.Wrap(err, "checking visibility")
 	}
-	
+
+	if result == nil || len(result.Value) == 0 {
+		return false, nil
+	}
+
+	// Parse the JSON value
+	var visible bool
+	if err := json.Unmarshal(result.Value, &visible); err != nil {
+		return false, errors.Wrap(err, "parsing visibility result")
+	}
+
 	return visible, nil
 }
 
 // ScrollIntoView scrolls the element into view
 func (e *ElementHandle) ScrollIntoView() error {
-	return runtime.CallFunctionOn(`
+	_, _, err := runtime.CallFunctionOn(`
 		function() { this.scrollIntoView({behavior: 'smooth', block: 'center'}); }
 	`).WithObjectID(e.objectID).Do(e.ctx)
+	return err
 }
 
 // Hover hovers over the element
@@ -222,9 +233,7 @@ func (e *ElementHandle) Hover() error {
 
 // GetBoundingBox gets the element's bounding box
 func (e *ElementHandle) GetBoundingBox() (*BoundingBox, error) {
-	var box BoundingBox
-	
-	err := runtime.CallFunctionOn(`
+	result, _, err := runtime.CallFunctionOn(`
 		function() {
 			const rect = this.getBoundingClientRect();
 			return {
@@ -235,20 +244,30 @@ func (e *ElementHandle) GetBoundingBox() (*BoundingBox, error) {
 			};
 		}
 	`).WithObjectID(e.objectID).Do(e.ctx)
-	
+
 	if err != nil {
 		return nil, errors.Wrap(err, "getting bounding box")
 	}
-	
+
+	if result == nil || len(result.Value) == 0 {
+		return nil, errors.New("no bounding box returned")
+	}
+
+	// Parse the JSON result
+	var box BoundingBox
+	if err := json.Unmarshal(result.Value, &box); err != nil {
+		return nil, errors.Wrap(err, "parsing bounding box")
+	}
+
 	return &box, nil
 }
 
 // BoundingBox represents element dimensions
 type BoundingBox struct {
-	X      float64
-	Y      float64
-	Width  float64
-	Height float64
+	X      float64 `json:"x"`
+	Y      float64 `json:"y"`
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
 }
 
 // Screenshot takes a screenshot of the element
@@ -264,7 +283,7 @@ func (e *ElementHandle) Screenshot(opts ...ScreenshotOption) ([]byte, error) {
 
 	var buf []byte
 	if err := chromedp.Run(e.ctx,
-		chromedp.Screenshot(e.nodeID, &buf, chromedp.ByNodeID),
+		chromedp.Screenshot(e.node.NodeID, &buf, chromedp.ByNodeID),
 	); err != nil {
 		return nil, errors.Wrap(err, "taking element screenshot")
 	}
@@ -285,8 +304,8 @@ func (e *ElementHandle) WaitForSelector(selector string, opts ...WaitOption) (*E
 
 	// Build a selector that's relative to this element
 	// This is a simplified version - real implementation would need proper selector handling
-	fullSelector := fmt.Sprintf(`[data-nodeid="%d"] %s`, e.nodeID, selector)
-	
+	fullSelector := fmt.Sprintf(`[data-nodeid="%d"] %s`, e.node.NodeID, selector)
+
 	if err := e.page.WaitForSelector(fullSelector, opts...); err != nil {
 		return nil, err
 	}
@@ -296,7 +315,13 @@ func (e *ElementHandle) WaitForSelector(selector string, opts ...WaitOption) (*E
 
 // Evaluate evaluates JavaScript in the context of this element
 func (e *ElementHandle) Evaluate(expression string, result interface{}) error {
-	return runtime.CallFunctionOn(
-		fmt.Sprintf("function() { return (%s); }", expression),
-	).WithObjectID(e.objectID).Do(e.ctx)
+	return chromedp.Run(e.ctx,
+		chromedp.Evaluate(fmt.Sprintf(`
+			(() => {
+				const el = document.querySelector('[data-nodeid="%d"]');
+				if (!el) return null;
+				return (function() { return (%s); }).call(el);
+			})()
+		`, e.node.NodeID, expression), result),
+	)
 }

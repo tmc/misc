@@ -2,14 +2,12 @@ package browser
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/input"
-	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/cdproto/target"
@@ -19,10 +17,10 @@ import (
 
 // Page represents a browser page/tab with high-level interaction methods
 type Page struct {
-	ctx      context.Context
-	cancel   context.CancelFunc
-	targetID target.ID
-	browser  *Browser
+	ctx            context.Context
+	cancel         context.CancelFunc
+	targetID       target.ID
+	browser        *Browser
 	networkManager *NetworkManager
 }
 
@@ -34,7 +32,7 @@ func (b *Browser) NewPage() (*Page, error) {
 
 	// Create new tab
 	newCtx, cancel := chromedp.NewContext(b.ctx)
-	
+
 	p := &Page{
 		ctx:     newCtx,
 		cancel:  cancel,
@@ -128,8 +126,8 @@ func (p *Page) Close() error {
 // Navigate navigates to a URL
 func (p *Page) Navigate(url string, opts ...NavigateOption) error {
 	options := &NavigateOptions{
-		Timeout:         30 * time.Second,
-		WaitUntil:       "load",
+		Timeout:   30 * time.Second,
+		WaitUntil: "load",
 	}
 
 	for _, opt := range opts {
@@ -189,10 +187,10 @@ func (p *Page) Content() (string, error) {
 // Click clicks an element
 func (p *Page) Click(selector string, opts ...ClickOption) error {
 	options := &ClickOptions{
-		Button:   "left",
-		Count:    1,
-		Delay:    0,
-		Timeout:  30 * time.Second,
+		Button:  "left",
+		Count:   1,
+		Delay:   0,
+		Timeout: 30 * time.Second,
 	}
 
 	for _, opt := range opts {
@@ -318,9 +316,9 @@ func (p *Page) Screenshot(opts ...ScreenshotOption) ([]byte, error) {
 // PDF generates a PDF
 func (p *Page) PDF(opts ...PDFOption) ([]byte, error) {
 	options := &PDFOptions{
-		Format:      "A4",
-		Landscape:   false,
-		Scale:       1.0,
+		Format:          "A4",
+		Landscape:       false,
+		Scale:           1.0,
 		PrintBackground: true,
 	}
 
@@ -393,10 +391,47 @@ func (p *Page) Focus(selector string) error {
 
 // Hover hovers over an element
 func (p *Page) Hover(selector string) error {
-	return chromedp.Run(p.ctx,
+	// Get element position first
+	var nodes []*cdp.Node
+	if err := chromedp.Run(p.ctx,
 		chromedp.WaitVisible(selector),
-		chromedp.MouseClickNode(selector, chromedp.ButtonNone),
+		chromedp.Nodes(selector, &nodes),
+	); err != nil {
+		return err
+	}
+
+	if len(nodes) == 0 {
+		return fmt.Errorf("element not found: %s", selector)
+	}
+
+	// Get box model to find element center
+	box, err := p.getElementBox(nodes[0].NodeID)
+	if err != nil {
+		return err
+	}
+
+	// Move mouse to element center
+	centerX := box.Content[0] + (box.Content[4]-box.Content[0])/2
+	centerY := box.Content[1] + (box.Content[5]-box.Content[1])/2
+
+	return chromedp.Run(p.ctx,
+		chromedp.MouseEvent(input.MouseMoved, centerX, centerY),
 	)
+}
+
+// getElementBox gets the box model for an element
+func (p *Page) getElementBox(nodeID cdp.NodeID) (*dom.BoxModel, error) {
+	var box *dom.BoxModel
+	if err := chromedp.Run(p.ctx,
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var err error
+			box, err = dom.GetBoxModel().WithNodeID(nodeID).Do(ctx)
+			return err
+		}),
+	); err != nil {
+		return nil, err
+	}
+	return box, nil
 }
 
 // SelectOption selects options in a select element

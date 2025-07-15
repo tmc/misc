@@ -20,15 +20,15 @@ const (
 
 // HealthCheck represents a single health check
 type HealthCheck struct {
-	Name        string
-	CheckFunc   func(context.Context) HealthResult
-	Interval    time.Duration
-	Timeout     time.Duration
-	Critical    bool // If true, failure affects overall health
-	Enabled     bool
-	lastResult  HealthResult
-	lastCheck   time.Time
-	mu          sync.RWMutex
+	Name       string
+	CheckFunc  func(context.Context) HealthResult
+	Interval   time.Duration
+	Timeout    time.Duration
+	Critical   bool // If true, failure affects overall health
+	Enabled    bool
+	lastResult HealthResult
+	lastCheck  time.Time
+	mu         sync.RWMutex
 }
 
 // HealthResult represents the result of a health check
@@ -61,11 +61,11 @@ func NewHealthManager() *HealthManager {
 func (hm *HealthManager) RegisterCheck(name string, checkFunc func(context.Context) HealthResult, interval, timeout time.Duration, critical bool) error {
 	hm.mu.Lock()
 	defer hm.mu.Unlock()
-	
+
 	if _, exists := hm.checks[name]; exists {
 		return fmt.Errorf("health check %s already registered", name)
 	}
-	
+
 	hm.checks[name] = &HealthCheck{
 		Name:      name,
 		CheckFunc: checkFunc,
@@ -74,7 +74,7 @@ func (hm *HealthManager) RegisterCheck(name string, checkFunc func(context.Conte
 		Critical:  critical,
 		Enabled:   true,
 	}
-	
+
 	return nil
 }
 
@@ -82,12 +82,12 @@ func (hm *HealthManager) RegisterCheck(name string, checkFunc func(context.Conte
 func (hm *HealthManager) EnableCheck(name string) error {
 	hm.mu.Lock()
 	defer hm.mu.Unlock()
-	
+
 	check, exists := hm.checks[name]
 	if !exists {
 		return fmt.Errorf("health check %s not found", name)
 	}
-	
+
 	check.Enabled = true
 	return nil
 }
@@ -96,12 +96,12 @@ func (hm *HealthManager) EnableCheck(name string) error {
 func (hm *HealthManager) DisableCheck(name string) error {
 	hm.mu.Lock()
 	defer hm.mu.Unlock()
-	
+
 	check, exists := hm.checks[name]
 	if !exists {
 		return fmt.Errorf("health check %s not found", name)
 	}
-	
+
 	check.Enabled = false
 	return nil
 }
@@ -110,7 +110,7 @@ func (hm *HealthManager) DisableCheck(name string) error {
 func (hm *HealthManager) Start() {
 	hm.mu.RLock()
 	defer hm.mu.RUnlock()
-	
+
 	for name, check := range hm.checks {
 		if check.Enabled {
 			hm.wg.Add(1)
@@ -128,13 +128,13 @@ func (hm *HealthManager) Stop() {
 // runCheck runs a single health check in a loop
 func (hm *HealthManager) runCheck(name string, check *HealthCheck) {
 	defer hm.wg.Done()
-	
+
 	ticker := time.NewTicker(check.Interval)
 	defer ticker.Stop()
-	
+
 	// Run initial check
 	hm.executeCheck(name, check)
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -149,15 +149,15 @@ func (hm *HealthManager) runCheck(name string, check *HealthCheck) {
 func (hm *HealthManager) executeCheck(name string, check *HealthCheck) {
 	check.mu.Lock()
 	defer check.mu.Unlock()
-	
+
 	start := time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), check.Timeout)
 	defer cancel()
-	
+
 	result := check.CheckFunc(ctx)
 	result.Duration = time.Since(start)
 	result.Timestamp = time.Now()
-	
+
 	check.lastResult = result
 	check.lastCheck = time.Now()
 }
@@ -166,15 +166,15 @@ func (hm *HealthManager) executeCheck(name string, check *HealthCheck) {
 func (hm *HealthManager) GetStatus(name string) (HealthResult, error) {
 	hm.mu.RLock()
 	defer hm.mu.RUnlock()
-	
+
 	check, exists := hm.checks[name]
 	if !exists {
 		return HealthResult{}, fmt.Errorf("health check %s not found", name)
 	}
-	
+
 	check.mu.RLock()
 	defer check.mu.RUnlock()
-	
+
 	if check.lastCheck.IsZero() {
 		return HealthResult{
 			Status:    StatusUnknown,
@@ -182,7 +182,7 @@ func (hm *HealthManager) GetStatus(name string) (HealthResult, error) {
 			Timestamp: time.Now(),
 		}, nil
 	}
-	
+
 	return check.lastResult, nil
 }
 
@@ -190,26 +190,26 @@ func (hm *HealthManager) GetStatus(name string) (HealthResult, error) {
 func (hm *HealthManager) GetOverallStatus() HealthResult {
 	hm.mu.RLock()
 	defer hm.mu.RUnlock()
-	
+
 	overallStatus := StatusHealthy
 	details := make(map[string]string)
 	var messages []string
-	
+
 	for name, check := range hm.checks {
 		if !check.Enabled {
 			continue
 		}
-		
+
 		check.mu.RLock()
 		result := check.lastResult
 		check.mu.RUnlock()
-		
+
 		details[name] = string(result.Status)
-		
+
 		if result.Message != "" {
 			messages = append(messages, fmt.Sprintf("%s: %s", name, result.Message))
 		}
-		
+
 		// Update overall status based on individual check results
 		if check.Critical {
 			if result.Status == StatusUnhealthy {
@@ -219,12 +219,12 @@ func (hm *HealthManager) GetOverallStatus() HealthResult {
 			}
 		}
 	}
-	
+
 	message := ""
 	if len(messages) > 0 {
 		message = fmt.Sprintf("%d checks completed", len(messages))
 	}
-	
+
 	return HealthResult{
 		Status:    overallStatus,
 		Message:   message,
@@ -237,9 +237,9 @@ func (hm *HealthManager) GetOverallStatus() HealthResult {
 func (hm *HealthManager) GetAllStatuses() map[string]HealthResult {
 	hm.mu.RLock()
 	defer hm.mu.RUnlock()
-	
+
 	results := make(map[string]HealthResult)
-	
+
 	for name, check := range hm.checks {
 		check.mu.RLock()
 		if check.lastCheck.IsZero() {
@@ -253,7 +253,7 @@ func (hm *HealthManager) GetAllStatuses() map[string]HealthResult {
 		}
 		check.mu.RUnlock()
 	}
-	
+
 	return results
 }
 

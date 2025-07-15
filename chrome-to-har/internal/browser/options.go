@@ -18,10 +18,10 @@ type Options struct {
 	ChromeFlags   []string
 
 	// Remote connection settings
-	RemoteHost    string
-	RemotePort    int
-	RemoteTabID   string
-	UseRemote     bool
+	RemoteHost  string
+	RemotePort  int
+	RemoteTabID string
+	UseRemote   bool
 
 	// Navigation settings
 	NavigationTimeout int

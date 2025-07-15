@@ -1,0 +1,58 @@
+# Dockerfile for running tests with Chrome
+FROM golang:1.21-bookworm
+
+# Install Chrome dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    unzip \
+    xvfb \
+    libgconf-2-4 \
+    libnss3 \
+    libxss1 \
+    libasound2 \
+    libxtst6 \
+    libgtk-3-0 \
+    libgbm1 \
+    libxkbcommon0 \
+    libx11-xcb1 \
+    libxcb-dri3-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Chrome
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Chrome path
+ENV CHROME_PATH=/usr/bin/google-chrome-stable
+ENV CHROME_BIN=/usr/bin/google-chrome-stable
+
+# Create non-root user for Chrome
+RUN groupadd -r chrome && useradd -r -g chrome -G audio,video chrome \
+    && mkdir -p /home/chrome && chown -R chrome:chrome /home/chrome
+
+# Set up working directory
+WORKDIR /app
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the project
+RUN go build -o chrome-to-har .
+RUN go build -o churl ./cmd/churl
+RUN go build -o cdp ./cmd/cdp
+
+# Set up test environment
+ENV HEADLESS=true
+ENV CI=true
+ENV DISPLAY=:99
+
+# Entry point for running tests
+ENTRYPOINT ["./docker-test-entrypoint.sh"]

@@ -1,0 +1,154 @@
+name: Tests
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go: ['1.19', '1.20', '1.21']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go }}
+    
+    - name: Install Chrome (Ubuntu)
+      if: runner.os == 'Linux'
+      run: |
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+        google-chrome --version
+    
+    - name: Install Chrome (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        brew install --cask google-chrome
+        /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --version
+    
+    - name: Install Chrome (Windows)
+      if: runner.os == 'Windows'
+      uses: browser-actions/setup-chrome@latest
+      with:
+        chrome-version: stable
+    
+    - name: Set Chrome Path (Linux)
+      if: runner.os == 'Linux'
+      run: echo "CHROME_PATH=/usr/bin/google-chrome-stable" >> $GITHUB_ENV
+    
+    - name: Set Chrome Path (macOS)
+      if: runner.os == 'macOS'
+      run: echo "CHROME_PATH=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" >> $GITHUB_ENV
+    
+    - name: Set Chrome Path (Windows)
+      if: runner.os == 'Windows'
+      run: echo "CHROME_PATH=C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" >> $GITHUB_OUTPUT
+    
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-go-${{ matrix.go }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ matrix.go }}-
+    
+    - name: Install dependencies
+      run: go mod download
+    
+    - name: Run Unit Tests
+      run: go test -v -short -coverprofile=coverage.out ./...
+      env:
+        CI: true
+        SKIP_BROWSER_TESTS: true
+    
+    - name: Run Integration Tests (Linux/macOS)
+      if: runner.os != 'Windows'
+      run: |
+        # Start Xvfb on Linux for headless testing
+        if [ "$RUNNER_OS" == "Linux" ]; then
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+        fi
+        
+        # Run integration tests
+        go test -v -run TestIntegration -timeout 10m ./...
+      env:
+        CI: true
+        HEADLESS: true
+        CHROME_PATH: ${{ env.CHROME_PATH }}
+    
+    - name: Run Integration Tests (Windows)
+      if: runner.os == 'Windows'
+      run: go test -v -run TestIntegration -timeout 10m ./...
+      env:
+        CI: true
+        HEADLESS: true
+        CHROME_PATH: ${{ env.CHROME_PATH }}
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.out
+        flags: unittests
+        name: codecov-${{ matrix.os }}-go${{ matrix.go }}
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+    
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        args: --timeout=5m
+
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+    
+    - name: Build chrome-to-har
+      run: go build -v -o chrome-to-har${{ runner.os == 'Windows' && '.exe' || '' }} .
+    
+    - name: Build churl
+      run: go build -v -o churl${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/churl
+    
+    - name: Build cdp
+      run: go build -v -o cdp${{ runner.os == 'Windows' && '.exe' || '' }} ./cmd/cdp
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: binaries-${{ matrix.os }}
+        path: |
+          chrome-to-har${{ runner.os == 'Windows' && '.exe' || '' }}
+          churl${{ runner.os == 'Windows' && '.exe' || '' }}
+          cdp${{ runner.os == 'Windows' && '.exe' || '' }}

@@ -17,20 +17,20 @@ func main() {
 	fmt.Println("2. Navigate to any webpage")
 	fmt.Println("3. Press Enter when ready...")
 	fmt.Scanln()
-	
+
 	// Connect to Chrome with the extension loaded
 	ctx, cancel := chromedp.NewRemoteAllocator(context.Background(), "http://localhost:9222")
 	defer cancel()
-	
+
 	ctx, cancel = chromedp.NewContext(ctx)
 	defer cancel()
-	
+
 	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
-	
+
 	// Test extension communication
 	fmt.Println("Testing extension communication...")
-	
+
 	var result interface{}
 	err := chromedp.Run(ctx,
 		chromedp.Navigate("https://example.com"),
@@ -56,7 +56,7 @@ func main() {
 			})
 		`, &result),
 	)
-	
+
 	if err != nil {
 		log.Printf("Error: %v", err)
 	} else {

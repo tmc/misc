@@ -16,10 +16,10 @@ import (
 
 // Message represents a native messaging message
 type Message struct {
-	Type   string      `json:"type"`
-	Data   interface{} `json:"data,omitempty"`
-	ID     string      `json:"id,omitempty"`
-	Error  string      `json:"error,omitempty"`
+	Type  string      `json:"type"`
+	Data  interface{} `json:"data,omitempty"`
+	ID    string      `json:"id,omitempty"`
+	Error string      `json:"error,omitempty"`
 }
 
 // AIRequest represents an AI operation request
@@ -78,19 +78,19 @@ func (mp *MessageProcessor) CalculateDelay(attempt int) time.Duration {
 	if attempt <= 0 {
 		return 0
 	}
-	
+
 	delay := float64(mp.retryConfig.BaseDelay) * math.Pow(mp.retryConfig.Multiplier, float64(attempt-1))
-	
+
 	if delay > float64(mp.retryConfig.MaxDelay) {
 		delay = float64(mp.retryConfig.MaxDelay)
 	}
-	
+
 	// Add jitter to prevent thundering herd
 	if mp.retryConfig.JitterEnabled {
 		jitter := delay * 0.1 * (0.5 - rand.Float64()) // ±10% jitter
 		delay += jitter
 	}
-	
+
 	return time.Duration(delay)
 }
 
@@ -98,14 +98,14 @@ func (mp *MessageProcessor) CalculateDelay(attempt int) time.Duration {
 func (mp *MessageProcessor) ProcessWithRetry(message Message, processFn func(Message) (Message, error)) Message {
 	var lastErr error
 	var response Message
-	
+
 	for attempt := 0; attempt <= mp.retryConfig.MaxRetries; attempt++ {
 		if attempt > 0 {
 			delay := mp.CalculateDelay(attempt)
 			log.Printf("Retrying message %s (attempt %d/%d) after %v", message.ID, attempt+1, mp.retryConfig.MaxRetries+1, delay)
 			time.Sleep(delay)
 		}
-		
+
 		response, lastErr = processFn(message)
 		if lastErr == nil {
 			// Success
@@ -115,14 +115,14 @@ func (mp *MessageProcessor) ProcessWithRetry(message Message, processFn func(Mes
 			}
 			return response
 		}
-		
+
 		log.Printf("Message %s failed (attempt %d/%d): %v", message.ID, attempt+1, mp.retryConfig.MaxRetries+1, lastErr)
 	}
-	
+
 	// All retries failed
 	log.Printf("Message %s failed after all retries: %v", message.ID, lastErr)
 	mp.updateStats(message.Type, mp.retryConfig.MaxRetries+1)
-	
+
 	return Message{
 		Type:  "error",
 		ID:    message.ID,
@@ -157,7 +157,7 @@ func main() {
 	}
 
 	log.Println("Native messaging host started")
-	
+
 	// Initialize message processor with retry logic
 	processor := NewMessageProcessor()
 
@@ -183,7 +183,7 @@ func main() {
 			}
 			return result, nil
 		})
-		
+
 		if err := writeMessageWithRetry(response); err != nil {
 			log.Printf("Error writing response after retries: %v", err)
 			break
@@ -231,27 +231,27 @@ func readMessage() (Message, error) {
 func readMessageWithRetry() (Message, error) {
 	var message Message
 	var err error
-	
+
 	for attempt := 0; attempt < 3; attempt++ {
 		if attempt > 0 {
 			delay := time.Duration(100*attempt) * time.Millisecond
 			log.Printf("Retrying message read (attempt %d) after %v", attempt+1, delay)
 			time.Sleep(delay)
 		}
-		
+
 		message, err = readMessage()
 		if err == nil {
 			return message, nil
 		}
-		
+
 		if err == io.EOF {
 			// Don't retry on EOF
 			return message, err
 		}
-		
+
 		log.Printf("Message read failed (attempt %d): %v", attempt+1, err)
 	}
-	
+
 	return message, fmt.Errorf("failed to read message after retries: %v", err)
 }
 
@@ -280,22 +280,22 @@ func writeMessage(message Message) error {
 // writeMessageWithRetry writes a message with retry logic
 func writeMessageWithRetry(message Message) error {
 	var err error
-	
+
 	for attempt := 0; attempt < 3; attempt++ {
 		if attempt > 0 {
 			delay := time.Duration(100*attempt) * time.Millisecond
 			log.Printf("Retrying message write (attempt %d) after %v", attempt+1, delay)
 			time.Sleep(delay)
 		}
-		
+
 		err = writeMessage(message)
 		if err == nil {
 			return nil
 		}
-		
+
 		log.Printf("Message write failed (attempt %d): %v", attempt+1, err)
 	}
-	
+
 	return fmt.Errorf("failed to write message after retries: %v", err)
 }
 
@@ -350,7 +350,7 @@ func handleAIRequest(message Message) Message {
 				Error: fmt.Sprintf("Failed to marshal request: %v", err),
 			}
 		}
-		
+
 		if err := json.Unmarshal(requestBytes, &request); err != nil {
 			return Message{
 				Type:  "ai_response",
@@ -382,7 +382,7 @@ func handleAIRequest(message Message) Message {
 	// 1. Validate the request
 	// 2. Call the actual AI service
 	// 3. Return the response
-	
+
 	response := AIResponse{
 		Success:  true,
 		Response: fmt.Sprintf("Simulated AI response to: %s", request.Prompt),

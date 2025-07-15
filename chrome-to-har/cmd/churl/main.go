@@ -172,7 +172,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to list tabs: %v", err)
 		}
-		
+
 		fmt.Printf("Available tabs on %s:%d:\n\n", opts.remoteHost, opts.remotePort)
 		for i, tab := range tabs {
 			fmt.Printf("[%d] %s\n", i, tab.Title)
@@ -252,22 +252,22 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 	if opts.verbose {
 		log.Printf("Starting run function with URL: %s", url)
 	}
-	
+
 	// Load script files and combine with inline scripts
 	scriptsBefore, err := loadScripts(opts.scriptBefore, opts.scriptFileBefore, opts.verbose)
 	if err != nil {
 		return errors.Wrap(err, "loading before scripts")
 	}
-	
+
 	scriptsAfter, err := loadScripts(opts.scriptAfter, opts.scriptFileAfter, opts.verbose)
 	if err != nil {
 		return errors.Wrap(err, "loading after scripts")
 	}
-	
+
 	if opts.verbose && (len(scriptsBefore) > 0 || len(scriptsAfter) > 0) {
 		log.Printf("Loaded %d before scripts and %d after scripts", len(scriptsBefore), len(scriptsAfter))
 	}
-	
+
 	// Parse request headers
 	headers := make(map[string]string)
 	for _, h := range opts.headers {
@@ -339,7 +339,7 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		if opts.remoteTab != "" {
 			browserOpts = append(browserOpts, browser.WithRemoteTab(opts.remoteTab))
 		}
-		
+
 		if opts.verbose {
 			log.Printf("Connecting to remote Chrome at %s:%d", opts.remoteHost, opts.remotePort)
 			if opts.remoteTab != "" {
@@ -390,7 +390,7 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		if opts.verbose {
 			log.Printf("Enabling network monitoring for HAR output...")
 		}
-		
+
 		// Check if browser context is working
 		select {
 		case <-b.Context().Done():
@@ -398,10 +398,10 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		default:
 			// Context is active
 		}
-		
+
 		enableCtx, enableCancel := context.WithTimeout(b.Context(), 10*time.Second)
 		defer enableCancel()
-		
+
 		if err := chromedp.Run(enableCtx, network.Enable()); err != nil {
 			return errors.Wrap(err, "enabling network monitoring")
 		}
@@ -532,7 +532,7 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 func detectChromePath() (string, bool) {
 	// Try to find browsers in PATH first (ordered by preference)
 	for _, browser := range []string{
-		"google-chrome", "chrome", "chromium", "chromium-browser", 
+		"google-chrome", "chrome", "chromium", "chromium-browser",
 		"brave", "brave-browser", "msedge", "edge", "vivaldi", "opera"} {
 		if path, err := exec.LookPath(browser); err == nil {
 			return path, true
@@ -546,22 +546,22 @@ func detectChromePath() (string, bool) {
 			// Chrome variants
 			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 			"/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
-			
+
 			// Chromium variants
 			"/Applications/Chromium.app/Contents/MacOS/Chromium",
-			
+
 			// Brave
 			"/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-			
+
 			// Microsoft Edge
 			"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-			
+
 			// Opera
 			"/Applications/Opera.app/Contents/MacOS/Opera",
-			
+
 			// Vivaldi
 			"/Applications/Vivaldi.app/Contents/MacOS/Vivaldi",
-			
+
 			// User-level installations
 			"~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
 			"~/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
@@ -585,19 +585,19 @@ func detectChromePath() (string, bool) {
 			// Chrome
 			`C:\Program Files\Google\Chrome\Application\chrome.exe`,
 			`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
-			
+
 			// Edge
 			`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
 			`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
-			
+
 			// Brave
 			`C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe`,
 			`C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe`,
-			
+
 			// Vivaldi
 			`C:\Program Files\Vivaldi\Application\vivaldi.exe`,
 			`C:\Program Files (x86)\Vivaldi\Application\vivaldi.exe`,
-			
+
 			// Opera
 			`C:\Program Files\Opera\launcher.exe`,
 			`C:\Program Files (x86)\Opera\launcher.exe`,
@@ -613,28 +613,28 @@ func detectChromePath() (string, bool) {
 			"/usr/bin/google-chrome",
 			"/usr/bin/google-chrome-stable",
 			"/opt/google/chrome/chrome",
-			
+
 			// Chromium
 			"/usr/bin/chromium",
 			"/usr/bin/chromium-browser",
 			"/snap/bin/chromium",
-			
+
 			// Brave
 			"/usr/bin/brave-browser",
 			"/usr/bin/brave",
 			"/opt/brave.com/brave/brave",
 			"/snap/bin/brave",
-			
+
 			// Edge
 			"/usr/bin/microsoft-edge",
 			"/usr/bin/microsoft-edge-stable",
 			"/opt/microsoft/msedge/msedge",
-			
+
 			// Vivaldi
 			"/usr/bin/vivaldi",
 			"/usr/bin/vivaldi-stable",
 			"/opt/vivaldi/vivaldi",
-			
+
 			// Opera
 			"/usr/bin/opera",
 			"/usr/bin/opera-stable",
@@ -652,21 +652,21 @@ func detectChromePath() (string, bool) {
 // loadScripts combines inline scripts and file-based scripts into a single slice
 func loadScripts(inlineScripts []string, scriptFiles []string, verbose bool) ([]string, error) {
 	var allScripts []string
-	
+
 	// Add inline scripts first
 	allScripts = append(allScripts, inlineScripts...)
-	
+
 	// Load and add file-based scripts
 	for _, scriptFile := range scriptFiles {
 		if verbose {
 			log.Printf("Loading script file: %s", scriptFile)
 		}
-		
+
 		content, err := os.ReadFile(scriptFile)
 		if err != nil {
 			return nil, errors.Wrapf(err, "reading script file %s", scriptFile)
 		}
-		
+
 		script := string(content)
 		if script == "" {
 			if verbose {
@@ -674,19 +674,19 @@ func loadScripts(inlineScripts []string, scriptFiles []string, verbose bool) ([]
 			}
 			continue
 		}
-		
+
 		// Basic validation for JavaScript syntax
 		if err := validateJavaScript(script); err != nil {
 			return nil, errors.Wrapf(err, "validating script file %s", scriptFile)
 		}
-		
+
 		allScripts = append(allScripts, script)
-		
+
 		if verbose {
 			log.Printf("Successfully loaded script file %s (%d characters)", scriptFile, len(script))
 		}
 	}
-	
+
 	return allScripts, nil
 }
 
@@ -697,15 +697,15 @@ func validateJavaScript(script string) error {
 	if script == "" {
 		return errors.New("script is empty")
 	}
-	
+
 	// Basic checks for potentially dangerous patterns
 	// This is a simple validation - more sophisticated validation could be added
-	
+
 	// Check for balanced braces (basic syntax check)
 	braceCount := 0
 	parenCount := 0
 	bracketCount := 0
-	
+
 	for _, char := range script {
 		switch char {
 		case '{':
@@ -722,7 +722,7 @@ func validateJavaScript(script string) error {
 			bracketCount--
 		}
 	}
-	
+
 	if braceCount != 0 {
 		return errors.New("unbalanced braces in script")
 	}
@@ -732,6 +732,6 @@ func validateJavaScript(script string) error {
 	if bracketCount != 0 {
 		return errors.New("unbalanced brackets in script")
 	}
-	
+
 	return nil
 }

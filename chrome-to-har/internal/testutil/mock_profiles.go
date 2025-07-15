@@ -7,16 +7,16 @@ import (
 
 // MockProfileManager provides a test implementation of profile management
 type MockProfileManager struct {
-	Profiles []string
-	Verbose  bool
-	workDir  string
+	Profiles    []string
+	Verbose     bool
+	WorkDirPath string // Export this field for test access
 }
 
 // NewMockProfileManager creates a new mock profile manager
 func NewMockProfileManager() *MockProfileManager {
 	return &MockProfileManager{
-		Profiles: []string{"Test Profile 1", "Test Profile 2"},
-		workDir:  "/tmp/mock-chrome-profile",
+		Profiles:    []string{"Test Profile 1", "Test Profile 2"},
+		WorkDirPath: "/tmp/mock-chrome-profile",
 	}
 }
 
@@ -33,7 +33,7 @@ func (m *MockProfileManager) ListProfiles() ([]string, error) {
 // SetupWorkdir simulates setting up a working directory
 func (m *MockProfileManager) SetupWorkdir() error {
 	if m.Verbose {
-		log.Printf("Setting up mock working directory: %s", m.workDir)
+		log.Printf("Setting up mock working directory: %s", m.WorkDirPath)
 	}
 	return nil
 }
@@ -41,7 +41,7 @@ func (m *MockProfileManager) SetupWorkdir() error {
 // Cleanup simulates cleanup operations
 func (m *MockProfileManager) Cleanup() error {
 	if m.Verbose {
-		log.Printf("Cleaning up mock working directory: %s", m.workDir)
+		log.Printf("Cleaning up mock working directory: %s", m.WorkDirPath)
 	}
 	return nil
 }
@@ -66,5 +66,5 @@ func (m *MockProfileManager) CopyProfile(name string, cookieDomains []string) er
 
 // WorkDir returns the mock working directory
 func (m *MockProfileManager) WorkDir() string {
-	return m.workDir
+	return m.WorkDirPath
 }

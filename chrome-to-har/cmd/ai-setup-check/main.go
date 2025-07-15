@@ -24,11 +24,11 @@ func min(a, b int) int {
 }
 
 type ValidationResult struct {
-	Step    string `json:"step"`
-	Success bool   `json:"success"`
-	Message string `json:"message"`
+	Step    string      `json:"step"`
+	Success bool        `json:"success"`
+	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
-	Error   string `json:"error,omitempty"`
+	Error   string      `json:"error,omitempty"`
 }
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 	fmt.Println()
 
 	results := []ValidationResult{}
-	
+
 	// Step 1: System prerequisites
 	fmt.Println("🔧 Step 1: Checking system prerequisites...")
 	result1 := checkSystemPrerequisites()
@@ -110,7 +110,7 @@ func checkSystemPrerequisites() ValidationResult {
 		"os":   runtime.GOOS,
 		"arch": runtime.GOARCH,
 	}
-	
+
 	// Check available disk space, memory, etc.
 	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" && runtime.GOOS != "windows" {
 		return ValidationResult{
@@ -121,7 +121,7 @@ func checkSystemPrerequisites() ValidationResult {
 			Data:    data,
 		}
 	}
-	
+
 	return ValidationResult{
 		Step:    "System Prerequisites",
 		Success: true,
@@ -140,7 +140,7 @@ func checkChromeVersion() ValidationResult {
 	case "windows":
 		chromePath = "chrome.exe" // Should be in PATH
 	}
-	
+
 	cmd := exec.Command(chromePath, "--version")
 	output, err := cmd.Output()
 	if err != nil {
@@ -152,18 +152,18 @@ func checkChromeVersion() ValidationResult {
 			Data:    map[string]string{"path": chromePath},
 		}
 	}
-	
+
 	version := strings.TrimSpace(string(output))
 	data := map[string]string{
 		"version": version,
 		"path":    chromePath,
 	}
-	
+
 	// Check version number for AI support
-	supportsAI := strings.Contains(version, "139.") || 
-	             strings.Contains(version, "140.") || 
-	             strings.Contains(version, "141.")
-	
+	supportsAI := strings.Contains(version, "139.") ||
+		strings.Contains(version, "140.") ||
+		strings.Contains(version, "141.")
+
 	if supportsAI {
 		return ValidationResult{
 			Step:    "Chrome Version Check",
@@ -218,7 +218,7 @@ func launchChromeWithAIFlags() (*exec.Cmd, ValidationResult) {
 	// Capture output for debugging
 	var startErr error
 	startTime := time.Now()
-	
+
 	if err := cmd.Start(); err != nil {
 		return nil, ValidationResult{
 			Step:    "Chrome Launch",
@@ -234,25 +234,25 @@ func launchChromeWithAIFlags() (*exec.Cmd, ValidationResult) {
 
 	// Wait for Chrome to initialize
 	time.Sleep(10 * time.Second)
-	
+
 	// Test if Chrome is responsive
 	testCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	
+
 	allocCtx, allocCancel := chromedp.NewRemoteAllocator(testCtx, "http://localhost:9231")
 	defer allocCancel()
-	
+
 	ctx, ctxCancel := chromedp.NewContext(allocCtx)
 	defer ctxCancel()
-	
+
 	var title string
 	err := chromedp.Run(ctx,
 		chromedp.Navigate("about:blank"),
 		chromedp.Title(&title),
 	)
-	
+
 	launchTime := time.Since(startTime)
-	
+
 	if err != nil {
 		cmd.Process.Kill()
 		return nil, ValidationResult{
@@ -309,22 +309,22 @@ func checkChromeFlags() ValidationResult {
 
 	// Check for key AI flags
 	requiredFlags := map[string]string{
-		"prompt-api-for-gemini-nano":           "Prompt API for Gemini Nano",
-		"optimization-guide-on-device-model":   "Optimization Guide On Device Model",
-		"built-in-ai-api":                      "Built-in AI API",
+		"prompt-api-for-gemini-nano":         "Prompt API for Gemini Nano",
+		"optimization-guide-on-device-model": "Optimization Guide On Device Model",
+		"built-in-ai-api":                    "Built-in AI API",
 	}
-	
+
 	optionalFlags := map[string]string{
-		"ai-language-model-service":            "AI Language Model Service",
-		"experimental-web-platform-features":   "Experimental Web Platform Features",
+		"ai-language-model-service":          "AI Language Model Service",
+		"experimental-web-platform-features": "Experimental Web Platform Features",
 	}
 
 	flagResults := make(map[string]bool)
 	foundFlags := 0
 	totalFlags := len(requiredFlags)
-	
+
 	flagsLower := strings.ToLower(flagsContent)
-	
+
 	for flagName, description := range requiredFlags {
 		found := strings.Contains(flagsLower, flagName)
 		flagResults[description] = found
@@ -332,7 +332,7 @@ func checkChromeFlags() ValidationResult {
 			foundFlags++
 		}
 	}
-	
+
 	for flagName, description := range optionalFlags {
 		found := strings.Contains(flagsLower, flagName)
 		flagResults[description+" (optional)"] = found
@@ -340,23 +340,23 @@ func checkChromeFlags() ValidationResult {
 
 	success := foundFlags >= 2 // At least 2 core flags should be present
 	message := fmt.Sprintf("Found %d/%d required AI flags", foundFlags, totalFlags)
-	
+
 	result := ValidationResult{
 		Step:    "Chrome Flags Check",
 		Success: success,
 		Message: message,
 		Data: map[string]interface{}{
-			"flagResults":   flagResults,
-			"foundFlags":    foundFlags,
-			"totalFlags":    totalFlags,
-			"flagsContent":  flagsContent[:min(1000, len(flagsContent))], // Truncate for readability
+			"flagResults":  flagResults,
+			"foundFlags":   foundFlags,
+			"totalFlags":   totalFlags,
+			"flagsContent": flagsContent[:min(1000, len(flagsContent))], // Truncate for readability
 		},
 	}
-	
+
 	if !success {
 		result.Error = "Critical AI flags not found in chrome://flags"
 	}
-	
+
 	return result
 }
 
@@ -387,11 +387,11 @@ func checkChromeComponents() ValidationResult {
 	}
 
 	componentsLower := strings.ToLower(componentsContent)
-	
+
 	// Check for AI model components
 	hasOptimizationGuide := strings.Contains(componentsLower, "optimization guide")
 	isModelDownloaded := hasOptimizationGuide && !strings.Contains(componentsContent, "0.0.0.0")
-	
+
 	// Extract version info if available
 	var modelVersion string
 	if hasOptimizationGuide {
@@ -409,14 +409,14 @@ func checkChromeComponents() ValidationResult {
 			}
 		}
 	}
-	
+
 	data := map[string]interface{}{
 		"hasOptimizationGuide": hasOptimizationGuide,
 		"isModelDownloaded":    isModelDownloaded,
 		"modelVersion":         modelVersion,
 		"componentsContent":    componentsContent[:min(2000, len(componentsContent))],
 	}
-	
+
 	if !hasOptimizationGuide {
 		return ValidationResult{
 			Step:    "Chrome Components Check",
@@ -426,7 +426,7 @@ func checkChromeComponents() ValidationResult {
 			Data:    data,
 		}
 	}
-	
+
 	if !isModelDownloaded {
 		return ValidationResult{
 			Step:    "Chrome Components Check",
@@ -436,7 +436,7 @@ func checkChromeComponents() ValidationResult {
 			Data:    data,
 		}
 	}
-	
+
 	return ValidationResult{
 		Step:    "Chrome Components Check",
 		Success: true,
@@ -457,7 +457,7 @@ func testAIAvailability() ValidationResult {
 
 	var result map[string]interface{}
 	startTime := time.Now()
-	
+
 	err := chromedp.Run(ctx,
 		chromedp.Navigate("about:blank"),
 		chromedp.Sleep(3*time.Second),
@@ -492,7 +492,7 @@ func testAIAvailability() ValidationResult {
 	)
 
 	testTime := time.Since(startTime)
-	
+
 	if err != nil {
 		return ValidationResult{
 			Step:    "AI API Availability Test",
@@ -509,12 +509,12 @@ func testAIAvailability() ValidationResult {
 	hasAPI := hasAnyAPI(result)
 	result["testDuration"] = testTime.String()
 	result["testTimestamp"] = time.Now().Format(time.RFC3339)
-	
+
 	if hasAPI {
 		// Test API functionality if available
 		funcResult := testAPIFunctionality(ctx)
 		result["functionalityTest"] = funcResult
-		
+
 		return ValidationResult{
 			Step:    "AI API Availability Test",
 			Success: true,
@@ -544,7 +544,7 @@ func hasAnyAPI(result map[string]interface{}) bool {
 func testAPIFunctionality(ctx context.Context) map[string]interface{} {
 	var testResult interface{}
 	startTime := time.Now()
-	
+
 	err := chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 		script := `
 			new Promise(async (resolve) => {
@@ -570,13 +570,13 @@ func testAPIFunctionality(ctx context.Context) map[string]interface{} {
 		"duration": time.Since(startTime).String(),
 		"success":  err == nil,
 	}
-	
+
 	if err != nil {
 		result["error"] = err.Error()
 	} else {
 		result["data"] = testResult
 	}
-	
+
 	return result
 }
 
@@ -585,16 +585,16 @@ func checkExtensionCompatibility() ValidationResult {
 	extensionPath := "extension"
 	requiredFiles := []string{
 		"manifest.json",
-		"background.js", 
+		"background.js",
 		"popup.html",
 		"popup.js",
 		"content.js",
 		"injected.js",
 	}
-	
+
 	missingFiles := []string{}
 	existingFiles := []string{}
-	
+
 	for _, file := range requiredFiles {
 		filePath := fmt.Sprintf("%s/%s", extensionPath, file)
 		if _, err := os.Stat(filePath); err != nil {
@@ -603,16 +603,16 @@ func checkExtensionCompatibility() ValidationResult {
 			existingFiles = append(existingFiles, file)
 		}
 	}
-	
+
 	data := map[string]interface{}{
-		"extensionPath":  extensionPath,
-		"requiredFiles":  requiredFiles,
-		"existingFiles":  existingFiles,
-		"missingFiles":   missingFiles,
-		"totalFiles":     len(requiredFiles),
-		"foundFiles":     len(existingFiles),
+		"extensionPath": extensionPath,
+		"requiredFiles": requiredFiles,
+		"existingFiles": existingFiles,
+		"missingFiles":  missingFiles,
+		"totalFiles":    len(requiredFiles),
+		"foundFiles":    len(existingFiles),
 	}
-	
+
 	if len(missingFiles) > 0 {
 		return ValidationResult{
 			Step:    "Extension Compatibility Check",
@@ -622,7 +622,7 @@ func checkExtensionCompatibility() ValidationResult {
 			Data:    data,
 		}
 	}
-	
+
 	return ValidationResult{
 		Step:    "Extension Compatibility Check",
 		Success: true,
@@ -643,7 +643,7 @@ func measurePerformanceBaseline() ValidationResult {
 
 	startTime := time.Now()
 	var perfResult map[string]interface{}
-	
+
 	err := chromedp.Run(ctx,
 		chromedp.Navigate("about:blank"),
 		chromedp.Sleep(2*time.Second),
@@ -672,9 +672,9 @@ func measurePerformanceBaseline() ValidationResult {
 			})
 		`, &perfResult),
 	)
-	
+
 	testDuration := time.Since(startTime)
-	
+
 	if err != nil {
 		return ValidationResult{
 			Step:    "Performance Baseline",
@@ -686,10 +686,10 @@ func measurePerformanceBaseline() ValidationResult {
 			},
 		}
 	}
-	
+
 	perfResult["testDuration"] = testDuration.String()
 	perfResult["timestamp"] = time.Now().Format(time.RFC3339)
-	
+
 	return ValidationResult{
 		Step:    "Performance Baseline",
 		Success: true,
@@ -712,16 +712,16 @@ func logResult(result ValidationResult) {
 func printSummary(results []ValidationResult) {
 	totalSteps := len(results)
 	successCount := 0
-	
+
 	for _, result := range results {
 		if result.Success {
 			successCount++
 		}
 	}
-	
+
 	fmt.Printf("\n📈 VALIDATION RESULTS: %d/%d steps passed\n", successCount, totalSteps)
 	fmt.Println("\nDetailed Results:")
-	
+
 	for _, result := range results {
 		status := "❌ FAIL"
 		if result.Success {
@@ -732,7 +732,7 @@ func printSummary(results []ValidationResult) {
 			fmt.Printf("      Error: %s\n", result.Error)
 		}
 	}
-	
+
 	if successCount == totalSteps {
 		fmt.Println("\n🎉 ALL VALIDATIONS PASSED!")
 		fmt.Println("✅ Chrome AI setup appears to be working correctly")
@@ -745,20 +745,20 @@ func printSummary(results []ValidationResult) {
 }
 
 func saveResults(results []ValidationResult) {
-	filename := fmt.Sprintf("ai-setup-check-results-%s.json", 
+	filename := fmt.Sprintf("ai-setup-check-results-%s.json",
 		time.Now().Format("2006-01-02-15-04-05"))
-	
+
 	data, err := json.MarshalIndent(results, "", "  ")
 	if err != nil {
 		fmt.Printf("Failed to marshal results: %v\n", err)
 		return
 	}
-	
+
 	err = os.WriteFile(filename, data, 0644)
 	if err != nil {
 		fmt.Printf("Failed to save results: %v\n", err)
 		return
 	}
-	
+
 	fmt.Printf("\n💾 Detailed results saved to: %s\n", filename)
 }

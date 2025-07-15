@@ -15,83 +15,83 @@ import (
 
 func main() {
 	fmt.Println("=== Ultimate Evasion Test ===")
-	
+
 	// Phase 1: Launch Chrome with a delay to appear more natural
 	fmt.Println("Phase 1: Natural Chrome launch simulation...")
-	
+
 	exec.Command("pkill", "-f", "remote-debugging-port=9229").Run()
 	time.Sleep(3 * time.Second) // Natural delay
-	
+
 	cmd := exec.Command(
 		"/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
 		"--remote-debugging-port=9229",
 		"--user-data-dir=/tmp/chrome-ultimate-test",
 		"--no-first-run",
 		"--no-default-browser-check",
-		
+
 		// AI flags
 		"--enable-features=Gemini,AILanguageModelService,BuiltInAIAPI",
-		"--optimization-guide-on-device-model=enabled", 
+		"--optimization-guide-on-device-model=enabled",
 		"--prompt-api-for-gemini-nano=enabled",
-		
+
 		// Maximum evasion
 		"--disable-blink-features=AutomationControlled",
 		"--exclude-switches=enable-automation",
 		"--disable-dev-shm-usage",
 		"--disable-background-timer-throttling",
-		"--disable-backgrounding-occluded-windows", 
+		"--disable-backgrounding-occluded-windows",
 		"--disable-renderer-backgrounding",
 		"--disable-features=TranslateUI,BlinkGenPropertyTrees",
 		"--disable-ipc-flooding-protection",
 		"--password-store=basic",
 		"--use-mock-keychain",
-		
+
 		// Appear more like regular Chrome
 		"--disable-extensions-except=/System/Library/Extensions",
 		"--load-extension=/System/Library/Extensions", // Dummy path
 		"--start-maximized",
 	)
-	
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	if err := cmd.Start(); err != nil {
 		log.Fatalf("Failed to start Chrome: %v", err)
 	}
-	
+
 	// Phase 2: Wait with realistic timing
 	fmt.Println("Phase 2: Waiting for natural Chrome startup...")
 	time.Sleep(12 * time.Second) // Longer natural delay
-	
+
 	// Phase 3: Connect with timing simulation
 	fmt.Println("Phase 3: Establishing connection with natural timing...")
-	
+
 	ctx, cancel := chromedp.NewRemoteAllocator(context.Background(), "http://localhost:9229")
 	defer cancel()
-	
+
 	// Simulate human-like connection timing
 	time.Sleep(2 * time.Second)
-	
+
 	ctx, cancel = chromedp.NewContext(ctx)
 	defer cancel()
-	
+
 	ctx, cancel = context.WithTimeout(ctx, 120*time.Second)
 	defer cancel()
-	
+
 	// Phase 4: Multi-stage stealth application
 	fmt.Println("Phase 4: Applying multi-stage stealth techniques...")
-	
+
 	// Stage 1: Basic navigation with delay
 	err := chromedp.Run(ctx,
 		chromedp.Navigate("about:blank"),
 		chromedp.Sleep(3*time.Second), // Human-like pause
 	)
-	
+
 	if err != nil {
 		log.Printf("Stage 1 error: %v", err)
 		return
 	}
-	
+
 	// Stage 2: Advanced stealth JavaScript injection
 	err = chromedp.Run(ctx,
 		chromedp.ActionFunc(func(ctx context.Context) error {
@@ -150,18 +150,18 @@ func main() {
 				
 				console.log('Advanced stealth applied');
 			`
-			
+
 			var result interface{}
 			return chromedp.Evaluate(script, &result).Do(ctx)
 		}),
 		chromedp.Sleep(2*time.Second), // Let stealth settle
 	)
-	
+
 	if err != nil {
 		log.Printf("Stage 2 error: %v", err)
 		return
 	}
-	
+
 	// Stage 3: Human-like interaction simulation
 	err = chromedp.Run(ctx,
 		chromedp.ActionFunc(func(ctx context.Context) error {
@@ -181,21 +181,21 @@ func main() {
 				
 				'human_simulation_complete'
 			`
-			
+
 			var result interface{}
 			return chromedp.Evaluate(script, &result).Do(ctx)
 		}),
 		chromedp.Sleep(1*time.Second),
 	)
-	
+
 	if err != nil {
 		log.Printf("Stage 3 error: %v", err)
 		return
 	}
-	
+
 	// Phase 5: Ultimate AI API test
 	fmt.Println("Phase 5: Testing AI API with ultimate evasion...")
-	
+
 	var finalResult map[string]interface{}
 	err = chromedp.Run(ctx,
 		chromedp.Evaluate(`
@@ -243,34 +243,34 @@ func main() {
 			})
 		`, &finalResult),
 	)
-	
+
 	if err != nil {
 		log.Printf("Final test error: %v", err)
 		return
 	}
-	
+
 	resultJSON, _ := json.MarshalIndent(finalResult, "", "  ")
 	fmt.Printf("🔬 Ultimate Evasion Result:\n%s\n", resultJSON)
-	
+
 	// Analyze results
 	fmt.Println("\n📊 Analysis:")
-	
+
 	if automationFlags, ok := finalResult["automationFlags"].(map[string]interface{}); ok {
 		if webdriver := automationFlags["webdriver"]; webdriver == nil {
 			fmt.Println("✅ Webdriver successfully hidden")
 		} else {
 			fmt.Println("❌ Webdriver still detected")
 		}
-		
+
 		if plugins, ok := automationFlags["plugins"].(float64); ok && plugins > 0 {
 			fmt.Println("✅ Plugin fingerprint spoofed")
 		}
-		
+
 		if chromeRuntime, ok := automationFlags["chromeRuntime"].(bool); ok && !chromeRuntime {
 			fmt.Println("✅ Chrome runtime indicators removed")
 		}
 	}
-	
+
 	if aiAPIs, ok := finalResult["aiAPIs"].(map[string]interface{}); ok {
 		hasAnyAPI := false
 		for api, exists := range aiAPIs {
@@ -279,7 +279,7 @@ func main() {
 				hasAnyAPI = true
 			}
 		}
-		
+
 		if hasAnyAPI {
 			fmt.Println("\n🚀 Testing ultimate stealth AI functionality...")
 			testUltimateAI(ctx)
@@ -288,7 +288,7 @@ func main() {
 			fmt.Println("This confirms the restriction is at a deeper level than automation detection")
 		}
 	}
-	
+
 	// Cleanup
 	fmt.Println("\nCleaning up...")
 	if err := cmd.Process.Kill(); err != nil {
@@ -351,7 +351,7 @@ func testUltimateAI(ctx context.Context) {
 		`
 		return chromedp.Evaluate(script, &result).Do(ctx)
 	}))
-	
+
 	if err != nil {
 		fmt.Printf("Ultimate AI test error: %v\n", err)
 	} else {

@@ -43,7 +43,7 @@ var commands = map[string]Command{
 			return page.Navigate(page.URL())
 		},
 	},
-	
+
 	// Page info
 	"title": {
 		Name:        "title",
@@ -69,7 +69,7 @@ var commands = map[string]Command{
 			return nil
 		},
 	},
-	
+
 	// Element interaction
 	"click": {
 		Name:        "click",
@@ -101,7 +101,7 @@ var commands = map[string]Command{
 			return page.Hover(args[0])
 		},
 	},
-	
+
 	// Content extraction
 	"text": {
 		Name:        "text",
@@ -130,7 +130,7 @@ var commands = map[string]Command{
 			return nil
 		},
 	},
-	
+
 	// Wait commands
 	"wait": {
 		Name:        "wait",
@@ -155,7 +155,7 @@ var commands = map[string]Command{
 			return nil
 		},
 	},
-	
+
 	// Screenshot
 	"screenshot": {
 		Name:        "screenshot",
@@ -165,26 +165,26 @@ var commands = map[string]Command{
 			if len(args) > 0 {
 				filename = args[0]
 			}
-			
+
 			opts := []browser.ScreenshotOption{}
 			if len(args) > 1 && args[1] == "fullpage" {
 				opts = append(opts, browser.WithFullPage())
 			}
-			
+
 			buf, err := page.Screenshot(opts...)
 			if err != nil {
 				return err
 			}
-			
+
 			if err := os.WriteFile(filename, buf, 0644); err != nil {
 				return err
 			}
-			
+
 			fmt.Println("Screenshot saved to:", filename)
 			return nil
 		},
 	},
-	
+
 	// JavaScript evaluation
 	"eval": {
 		Name:        "eval",
@@ -193,12 +193,12 @@ var commands = map[string]Command{
 			if len(args) < 1 {
 				return errors.New("expression required")
 			}
-			
+
 			var result interface{}
 			if err := page.Evaluate(args[0], &result); err != nil {
 				return err
 			}
-			
+
 			// Pretty print result
 			if result != nil {
 				if data, err := json.MarshalIndent(result, "", "  "); err == nil {
@@ -210,7 +210,7 @@ var commands = map[string]Command{
 			return nil
 		},
 	},
-	
+
 	// Locator-based commands
 	"find": {
 		Name:        "find",
@@ -219,12 +219,12 @@ var commands = map[string]Command{
 			if len(args) < 1 {
 				return errors.New("selector required")
 			}
-			
+
 			elements, err := page.QuerySelectorAll(args[0])
 			if err != nil {
 				return err
 			}
-			
+
 			fmt.Printf("Found %d element(s)\n", len(elements))
 			for i, el := range elements {
 				text, _ := el.GetText()
@@ -233,7 +233,7 @@ var commands = map[string]Command{
 			return nil
 		},
 	},
-	
+
 	// Network commands
 	"route": {
 		Name:        "route",
@@ -242,13 +242,13 @@ var commands = map[string]Command{
 			if len(args) < 2 {
 				return errors.New("pattern and action required")
 			}
-			
+
 			pattern := args[0]
 			action := args[1]
-			
+
 			return page.Route(pattern, func(req *browser.Request) error {
 				fmt.Printf("Intercepted: %s %s\n", req.Method, req.URL)
-				
+
 				switch action {
 				case "abort":
 					return req.Abort("aborted")
@@ -273,7 +273,7 @@ func main() {
 		timeout    int
 		verbose    bool
 	)
-	
+
 	flag.StringVar(&remoteHost, "remote-host", "", "Connect to remote Chrome at this host")
 	flag.IntVar(&remotePort, "remote-port", 9222, "Remote Chrome debugging port")
 	flag.StringVar(&remoteTab, "remote-tab", "", "Connect to specific tab ID")
@@ -281,13 +281,13 @@ func main() {
 	flag.BoolVar(&headless, "headless", false, "Run Chrome in headless mode")
 	flag.IntVar(&timeout, "timeout", 60, "Timeout in seconds")
 	flag.BoolVar(&verbose, "verbose", false, "Enable verbose logging")
-	
+
 	flag.Parse()
-	
+
 	// Create context
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
 	defer cancel()
-	
+
 	// Create profile manager
 	pm, err := chromeprofiles.NewProfileManager(
 		chromeprofiles.WithVerbose(verbose),
@@ -295,34 +295,34 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	// Create browser options
 	browserOpts := []browser.Option{
 		browser.WithHeadless(headless),
 		browser.WithTimeout(timeout),
 		browser.WithVerbose(verbose),
 	}
-	
+
 	if remoteHost != "" {
 		browserOpts = append(browserOpts, browser.WithRemoteChrome(remoteHost, remotePort))
 		if remoteTab != "" {
 			browserOpts = append(browserOpts, browser.WithRemoteTab(remoteTab))
 		}
 	}
-	
+
 	// Create browser
 	b, err := browser.New(ctx, pm, browserOpts...)
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	// Handle list tabs
 	if listTabs && remoteHost != "" {
 		tabs, err := browser.ListTabs(remoteHost, remotePort)
 		if err != nil {
 			log.Fatal(err)
 		}
-		
+
 		fmt.Printf("Available tabs on %s:%d:\n\n", remoteHost, remotePort)
 		for i, tab := range tabs {
 			fmt.Printf("[%d] %s\n", i, tab.Title)
@@ -332,13 +332,13 @@ func main() {
 		}
 		return
 	}
-	
+
 	// Launch browser
 	if err := b.Launch(ctx); err != nil {
 		log.Fatal(err)
 	}
 	defer b.Close()
-	
+
 	// Get page
 	var page *browser.Page
 	if remoteTab != "" {
@@ -357,43 +357,43 @@ func main() {
 			page = pages[0]
 		}
 	}
-	
+
 	// Interactive REPL
 	fmt.Println("Enhanced CDP - Chrome DevTools Protocol CLI")
 	fmt.Println("Type 'help' for available commands")
 	fmt.Println()
-	
+
 	scanner := bufio.NewScanner(os.Stdin)
-	
+
 	for {
 		fmt.Print("cdp> ")
 		if !scanner.Scan() {
 			break
 		}
-		
+
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
 			continue
 		}
-		
+
 		if line == "exit" || line == "quit" {
 			break
 		}
-		
+
 		if line == "help" {
 			printHelp()
 			continue
 		}
-		
+
 		// Parse command
 		parts := strings.Fields(line)
 		if len(parts) == 0 {
 			continue
 		}
-		
+
 		cmdName := parts[0]
 		args := parts[1:]
-		
+
 		// Execute command
 		if cmd, ok := commands[cmdName]; ok {
 			if err := cmd.Handler(ctx, page, args); err != nil {
@@ -404,7 +404,7 @@ func main() {
 			fmt.Println("Type 'help' for available commands")
 		}
 	}
-	
+
 	fmt.Println("\nGoodbye!")
 }
 
@@ -413,38 +413,38 @@ func printHelp() {
 	fmt.Println("\nNavigation:")
 	fmt.Println("  goto <url>          Navigate to URL")
 	fmt.Println("  reload              Reload the page")
-	
+
 	fmt.Println("\nPage Info:")
 	fmt.Println("  title               Get page title")
 	fmt.Println("  url                 Get current URL")
 	fmt.Println("  html                Get page HTML")
-	
+
 	fmt.Println("\nElement Interaction:")
 	fmt.Println("  click <selector>    Click an element")
 	fmt.Println("  type <sel> <text>   Type text into element")
 	fmt.Println("  hover <selector>    Hover over element")
 	fmt.Println("  text <selector>     Get element text")
-	
+
 	fmt.Println("\nWaiting:")
 	fmt.Println("  wait <selector>     Wait for element")
 	fmt.Println("  waitfor <ms>        Wait for milliseconds")
-	
+
 	fmt.Println("\nJavaScript:")
 	fmt.Println("  eval <expression>   Evaluate JavaScript")
-	
+
 	fmt.Println("\nScreenshot:")
 	fmt.Println("  screenshot [file] [fullpage]  Take screenshot")
-	
+
 	fmt.Println("\nSearch:")
 	fmt.Println("  find <selector>     Find all matching elements")
-	
+
 	fmt.Println("\nNetwork:")
 	fmt.Println("  route <pattern> <action>  Intercept requests (actions: abort, log)")
-	
+
 	fmt.Println("\nOther:")
 	fmt.Println("  help                Show this help")
 	fmt.Println("  exit/quit           Exit the program")
-	
+
 	fmt.Println("\nSelector Examples:")
 	fmt.Println("  css=.class          CSS selector")
 	fmt.Println("  xpath=//div         XPath selector")
