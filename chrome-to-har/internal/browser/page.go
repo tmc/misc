@@ -17,11 +17,12 @@ import (
 
 // Page represents a browser page/tab with high-level interaction methods
 type Page struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	targetID       target.ID
-	browser        *Browser
-	networkManager *NetworkManager
+	ctx               context.Context
+	cancel            context.CancelFunc
+	targetID          target.ID
+	browser           *Browser
+	networkManager    *NetworkManager
+	stabilityDetector *StabilityDetector
 }
 
 // NewPage creates a new page in the browser
@@ -148,8 +149,15 @@ func (p *Page) Navigate(url string, opts ...NavigateOption) error {
 			return errors.Wrap(err, "waiting for DOM")
 		}
 	case "networkidle":
-		// TODO: Implement network idle wait
-		time.Sleep(2 * time.Second)
+		// Use the new stability detector for network idle
+		if err := p.WaitForLoadState(ctx, LoadStateNetworkIdle); err != nil {
+			return errors.Wrap(err, "waiting for network idle")
+		}
+	case "stable":
+		// Wait for full page stability (network, DOM, resources)
+		if err := p.WaitForStability(ctx, nil); err != nil {
+			return errors.Wrap(err, "waiting for page stability")
+		}
 	default: // "load"
 		// Default chromedp behavior
 	}
@@ -501,4 +509,84 @@ func (p *Page) WaitForFunction(expression string, timeout time.Duration) error {
 			}
 		}
 	}
+}
+
+// LoadState represents different page load states
+type LoadState string
+
+const (
+	LoadStateLoad             LoadState = "load"
+	LoadStateDOMContentLoaded LoadState = "domcontentloaded"
+	LoadStateNetworkIdle      LoadState = "networkidle"
+	LoadStateNetworkIdle0     LoadState = "networkidle0" // No network requests for 500ms
+	LoadStateNetworkIdle2     LoadState = "networkidle2" // At most 2 network requests for 500ms
+)
+
+// WaitForLoadState waits for a specific load state
+func (p *Page) WaitForLoadState(ctx context.Context, state LoadState) error {
+	switch state {
+	case LoadStateDOMContentLoaded:
+		return chromedp.Run(ctx, chromedp.WaitReady("body"))
+	
+	case LoadStateNetworkIdle, LoadStateNetworkIdle0:
+		config := DefaultStabilityConfig()
+		config.NetworkIdleThreshold = 0
+		config.DOMStableThreshold = -1 // Disable DOM check for network idle
+		config.WaitForImages = false
+		config.WaitForFonts = false
+		config.WaitForStylesheets = false
+		config.WaitForScripts = false
+		config.WaitForAnimationFrame = false
+		config.WaitForIdleCallback = false
+		
+		detector := NewStabilityDetector(p, config)
+		return detector.WaitForStability(ctx)
+	
+	case LoadStateNetworkIdle2:
+		config := DefaultStabilityConfig()
+		config.NetworkIdleThreshold = 2
+		config.DOMStableThreshold = -1 // Disable DOM check for network idle
+		config.WaitForImages = false
+		config.WaitForFonts = false
+		config.WaitForStylesheets = false
+		config.WaitForScripts = false
+		config.WaitForAnimationFrame = false
+		config.WaitForIdleCallback = false
+		
+		detector := NewStabilityDetector(p, config)
+		return detector.WaitForStability(ctx)
+	
+	default: // LoadStateLoad
+		// Default chromedp behavior - waits for load event
+		return nil
+	}
+}
+
+// WaitForStability waits for the page to reach a stable state using custom configuration
+func (p *Page) WaitForStability(ctx context.Context, config *StabilityConfig) error {
+	if p.stabilityDetector == nil {
+		p.stabilityDetector = NewStabilityDetector(p, config)
+	}
+	
+	return p.stabilityDetector.WaitForStability(ctx)
+}
+
+// ConfigureStability configures stability detection options
+func (p *Page) ConfigureStability(opts ...StabilityOption) {
+	config := DefaultStabilityConfig()
+	for _, opt := range opts {
+		opt(config)
+	}
+	
+	p.stabilityDetector = NewStabilityDetector(p, config)
+}
+
+// GetStabilityMetrics returns current stability metrics
+func (p *Page) GetStabilityMetrics() *StabilityMetrics {
+	if p.stabilityDetector == nil {
+		return nil
+	}
+	
+	metrics := p.stabilityDetector.GetMetrics()
+	return &metrics
 }

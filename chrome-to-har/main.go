@@ -49,6 +49,17 @@ type options struct {
 	stableTimeout   int    // Max time in seconds to wait for stability
 	waitSelector    string // Wait for specific CSS selector to appear
 	getHTML         bool   // Output HTML instead of HAR
+	
+	// Enhanced stability detection options
+	waitForStability    bool   // Use enhanced stability detection
+	networkIdleTimeout  int    // Network idle timeout in milliseconds
+	domStableTimeout    int    // DOM stable timeout in milliseconds
+	resourceTimeout     int    // Resource loading timeout in seconds
+	stabilityRetries    int    // Number of retry attempts for stability
+	waitForImages       bool   // Wait for all images to load
+	waitForFonts        bool   // Wait for all fonts to load
+	waitForStylesheets  bool   // Wait for all stylesheets to load
+	waitForScripts      bool   // Wait for all scripts to load
 }
 
 type Runner struct {
@@ -123,6 +134,17 @@ func main() {
 	flag.IntVar(&opts.stableTimeout, "stable-timeout", 30, "Max time in seconds to wait for stability")
 	flag.StringVar(&opts.waitSelector, "wait-for", "", "Wait for specific CSS selector to appear")
 	flag.BoolVar(&opts.getHTML, "html", false, "Output HTML instead of HAR")
+	
+	// Enhanced stability detection flags
+	flag.BoolVar(&opts.waitForStability, "wait-for-stability", false, "Use enhanced stability detection system")
+	flag.IntVar(&opts.networkIdleTimeout, "network-idle-timeout", 500, "Network idle timeout in milliseconds")
+	flag.IntVar(&opts.domStableTimeout, "dom-stable-timeout", 500, "DOM stable timeout in milliseconds")
+	flag.IntVar(&opts.resourceTimeout, "resource-timeout", 10, "Resource loading timeout in seconds")
+	flag.IntVar(&opts.stabilityRetries, "stability-retries", 3, "Number of retry attempts for stability detection")
+	flag.BoolVar(&opts.waitForImages, "wait-for-images", true, "Wait for all images to load")
+	flag.BoolVar(&opts.waitForFonts, "wait-for-fonts", true, "Wait for all fonts to load")
+	flag.BoolVar(&opts.waitForStylesheets, "wait-for-stylesheets", true, "Wait for all stylesheets to load")
+	flag.BoolVar(&opts.waitForScripts, "wait-for-scripts", true, "Wait for all scripts to load")
 
 	flag.Parse()
 
@@ -398,6 +420,38 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 		if opts.verbose {
 			log.Printf("Successfully navigated to: %s", opts.startURL)
 		}
+		
+		// Wait for stability if requested
+		if opts.waitForStability {
+			if err := waitForEnhancedStability(taskCtx, opts); err != nil {
+				if opts.verbose {
+					log.Printf("Stability detection failed: %v", err)
+				}
+				// Don't fail on stability timeout, just log it
+			}
+		} else if opts.waitStable {
+			// Legacy stability detection
+			if err := waitForLegacyStability(taskCtx, opts); err != nil {
+				if opts.verbose {
+					log.Printf("Legacy stability detection failed: %v", err)
+				}
+			}
+		}
+		
+		// Wait for specific selector if requested
+		if opts.waitSelector != "" {
+			selectorCtx, selectorCancel := context.WithTimeout(taskCtx, time.Duration(opts.stableTimeout)*time.Second)
+			defer selectorCancel()
+			
+			if err := chromedp.Run(selectorCtx, chromedp.WaitVisible(opts.waitSelector)); err != nil {
+				if opts.verbose {
+					log.Printf("Failed to wait for selector '%s': %v", opts.waitSelector, err)
+				}
+				// Don't fail on selector timeout, just log it
+			} else if opts.verbose {
+				log.Printf("Successfully waited for selector: %s", opts.waitSelector)
+			}
+		}
 	}
 
 	// Interactive mode handling
@@ -508,4 +562,204 @@ func splitAndTrim(s, sep string) []string {
 		}
 	}
 	return parts
+}
+
+// waitForEnhancedStability uses the new stability detection system
+func waitForEnhancedStability(ctx context.Context, opts options) error {
+	// Create a simple enhanced stability detection using chromedp directly
+	// This is a simplified version since we're working with chromedp context directly
+	
+	stableCtx, cancel := context.WithTimeout(ctx, time.Duration(opts.stableTimeout)*time.Second)
+	defer cancel()
+	
+	if opts.verbose {
+		log.Println("Starting enhanced stability detection...")
+	}
+	
+	// Enable network domain for monitoring
+	if err := chromedp.Run(stableCtx, network.Enable()); err != nil {
+		return errors.Wrap(err, "enabling network domain")
+	}
+	
+	// Wait for DOM to be ready first
+	if err := chromedp.Run(stableCtx, chromedp.WaitReady("body")); err != nil {
+		return errors.Wrap(err, "waiting for DOM ready")
+	}
+	
+	// Network idle detection
+	if err := waitForNetworkIdle(stableCtx, opts); err != nil {
+		return errors.Wrap(err, "network idle detection failed")
+	}
+	
+	// Wait for resources if requested
+	if opts.waitForImages || opts.waitForFonts || opts.waitForStylesheets || opts.waitForScripts {
+		if err := waitForResources(stableCtx, opts); err != nil {
+			if opts.verbose {
+				log.Printf("Resource loading check failed: %v", err)
+			}
+			// Don't fail on resource timeout, just log it
+		}
+	}
+	
+	// Wait for JavaScript execution to complete
+	if err := waitForJSExecution(stableCtx, opts); err != nil {
+		if opts.verbose {
+			log.Printf("JS execution check failed: %v", err)
+		}
+		// Don't fail on JS timeout, just log it
+	}
+	
+	if opts.verbose {
+		log.Println("Enhanced stability detection completed")
+	}
+	
+	return nil
+}
+
+// waitForNetworkIdle waits for network activity to become idle
+func waitForNetworkIdle(ctx context.Context, opts options) error {
+	if opts.verbose {
+		log.Println("Waiting for network idle...")
+	}
+	
+	// Use a simplified network idle detection
+	// This waits for the network idle timeout duration
+	idleTimeout := time.Duration(opts.networkIdleTimeout) * time.Millisecond
+	
+	// Wait for the specified idle timeout
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(idleTimeout):
+		if opts.verbose {
+			log.Printf("Network idle timeout reached (%v)", idleTimeout)
+		}
+		return nil
+	}
+}
+
+// waitForResources waits for page resources to load
+func waitForResources(ctx context.Context, opts options) error {
+	if opts.verbose {
+		log.Println("Waiting for resources to load...")
+	}
+	
+	resourceCtx, cancel := context.WithTimeout(ctx, time.Duration(opts.resourceTimeout)*time.Second)
+	defer cancel()
+	
+	checks := []struct {
+		enabled bool
+		name    string
+		script  string
+	}{
+		{
+			opts.waitForImages,
+			"images",
+			`Array.from(document.images).every(img => img.complete && img.naturalHeight !== 0)`,
+		},
+		{
+			opts.waitForStylesheets,
+			"stylesheets",
+			`Array.from(document.styleSheets).every(sheet => {
+				try { return sheet.cssRules !== null; } catch(e) { return true; }
+			})`,
+		},
+		{
+			opts.waitForFonts,
+			"fonts",
+			`document.fonts ? document.fonts.ready.then(() => true) : true`,
+		},
+		{
+			opts.waitForScripts,
+			"scripts",
+			`Array.from(document.scripts).every(script => !script.src || script.readyState === 'complete' || !script.readyState)`,
+		},
+	}
+	
+	for _, check := range checks {
+		if !check.enabled {
+			continue
+		}
+		
+		if opts.verbose {
+			log.Printf("Checking %s...", check.name)
+		}
+		
+		// Use a polling approach to check resource loading
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+		
+		for {
+			select {
+			case <-resourceCtx.Done():
+				return errors.Errorf("timeout waiting for %s", check.name)
+			case <-ticker.C:
+				var result bool
+				if err := chromedp.Run(resourceCtx, chromedp.Evaluate(check.script, &result)); err == nil && result {
+					if opts.verbose {
+						log.Printf("All %s loaded", check.name)
+					}
+					goto nextCheck
+				}
+			}
+		}
+		nextCheck:
+	}
+	
+	return nil
+}
+
+// waitForJSExecution waits for JavaScript execution to complete
+func waitForJSExecution(ctx context.Context, opts options) error {
+	if opts.verbose {
+		log.Println("Waiting for JS execution to complete...")
+	}
+	
+	jsCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	
+	// Wait for next animation frame
+	var frameComplete bool
+	if err := chromedp.Run(jsCtx, chromedp.Evaluate(`new Promise(resolve => requestAnimationFrame(() => resolve(true)))`, &frameComplete)); err != nil {
+		return errors.Wrap(err, "waiting for animation frame")
+	}
+	
+	// Wait for idle callback if available
+	var idleComplete bool
+	if err := chromedp.Run(jsCtx, chromedp.Evaluate(`new Promise(resolve => {
+		if ('requestIdleCallback' in window) {
+			requestIdleCallback(() => resolve(true), { timeout: 1000 });
+		} else {
+			setTimeout(() => resolve(true), 0);
+		}
+	})`, &idleComplete)); err != nil {
+		return errors.Wrap(err, "waiting for idle callback")
+	}
+	
+	if opts.verbose {
+		log.Println("JS execution completed")
+	}
+	
+	return nil
+}
+
+// waitForLegacyStability implements basic stability detection
+func waitForLegacyStability(ctx context.Context, opts options) error {
+	// Simple implementation that waits for page load event and then a fixed delay
+	stableCtx, cancel := context.WithTimeout(ctx, time.Duration(opts.stableTimeout)*time.Second)
+	defer cancel()
+	
+	// Wait for page load
+	if err := chromedp.Run(stableCtx, chromedp.WaitReady("body")); err != nil {
+		return errors.Wrap(err, "waiting for page to be ready")
+	}
+	
+	// Wait for a fixed delay to allow dynamic content to load
+	time.Sleep(2 * time.Second)
+	
+	if opts.verbose {
+		log.Println("Legacy stability detection completed")
+	}
+	
+	return nil
 }

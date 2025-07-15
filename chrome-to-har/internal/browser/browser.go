@@ -155,6 +155,16 @@ func (b *Browser) Launch(ctx context.Context) error {
 		chromeLaunchOpts = append(chromeLaunchOpts, chromedp.Flag(flag, true))
 	}
 
+	// Apply proxy settings if configured
+	if b.opts.ProxyServer != "" {
+		chromeLaunchOpts = append(chromeLaunchOpts, chromedp.ProxyServer(b.opts.ProxyServer))
+		
+		// Add proxy bypass list if specified
+		if b.opts.ProxyBypassList != "" {
+			chromeLaunchOpts = append(chromeLaunchOpts, chromedp.Flag("proxy-bypass-list", b.opts.ProxyBypassList))
+		}
+	}
+
 	// Create the allocator context
 	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, chromeLaunchOpts...)
 
@@ -193,6 +203,14 @@ func (b *Browser) Launch(ctx context.Context) error {
 
 	if b.opts.Verbose {
 		log.Printf("Successfully launched Chrome browser")
+	}
+
+	// Set up proxy authentication if credentials are provided
+	if b.opts.ProxyServer != "" && b.opts.ProxyUsername != "" && b.opts.ProxyPassword != "" {
+		if err := b.setupProxyAuthentication(); err != nil {
+			b.cancelFunc()
+			return errors.Wrap(err, "setting up proxy authentication")
+		}
 	}
 
 	return nil
@@ -300,6 +318,62 @@ func (b *Browser) Navigate(url string) error {
 			}
 		})); err != nil {
 			return errors.Wrap(err, "waiting for network idle")
+		}
+	}
+
+	// If waiting for full page stability
+	if b.opts.WaitForStability {
+		// Use the new stability detection system
+		pages, err := b.Pages()
+		if err != nil || len(pages) == 0 {
+			// If we can't get pages, fall back to creating a page context
+			if b.opts.Verbose {
+				log.Println("Creating page context for stability detection")
+			}
+			
+			// Create a temporary page wrapper
+			page := &Page{ctx: b.ctx, browser: b}
+			
+			// Configure stability detection
+			if b.opts.StabilityConfig != nil {
+				page.stabilityDetector = NewStabilityDetector(page, b.opts.StabilityConfig)
+			} else {
+				page.ConfigureStability(WithVerboseLogging(b.opts.Verbose))
+			}
+			
+			// Wait for stability
+			waitTimeout := time.Duration(b.opts.StableTimeout) * time.Second
+			waitCtx, waitCancel := context.WithTimeout(b.ctx, waitTimeout)
+			defer waitCancel()
+			
+			if err := page.WaitForStability(waitCtx, b.opts.StabilityConfig); err != nil {
+				if b.opts.Verbose {
+					log.Printf("Stability detection failed: %v", err)
+				}
+				// Don't fail navigation on stability timeout, just log it
+			}
+		} else {
+			// Use the first page (main tab)
+			page := pages[0]
+			
+			// Configure stability detection
+			if b.opts.StabilityConfig != nil {
+				page.stabilityDetector = NewStabilityDetector(page, b.opts.StabilityConfig)
+			} else {
+				page.ConfigureStability(WithVerboseLogging(b.opts.Verbose))
+			}
+			
+			// Wait for stability
+			waitTimeout := time.Duration(b.opts.StableTimeout) * time.Second
+			waitCtx, waitCancel := context.WithTimeout(b.ctx, waitTimeout)
+			defer waitCancel()
+			
+			if err := page.WaitForStability(waitCtx, b.opts.StabilityConfig); err != nil {
+				if b.opts.Verbose {
+					log.Printf("Stability detection failed: %v", err)
+				}
+				// Don't fail navigation on stability timeout, just log it
+			}
 		}
 	}
 
@@ -883,4 +957,64 @@ func (b *Browser) shouldInterceptRequest(requestURL, targetURL string) bool {
 
 	// For more sophisticated matching, we could add URL parsing here
 	return false
+}
+
+// setupProxyAuthentication configures proxy authentication using Fetch domain
+func (b *Browser) setupProxyAuthentication() error {
+	if b.opts.Verbose {
+		log.Printf("Setting up proxy authentication for user: %s", b.opts.ProxyUsername)
+	}
+
+	// Enable network domain to intercept auth challenges
+	if err := chromedp.Run(b.ctx, network.Enable()); err != nil {
+		return errors.Wrap(err, "enabling network domain for proxy auth")
+	}
+
+	// Enable fetch domain for handling authentication
+	if err := chromedp.Run(b.ctx, fetch.Enable()); err != nil {
+		return errors.Wrap(err, "enabling fetch domain for proxy auth")
+	}
+
+	// Listen for auth required events
+	chromedp.ListenTarget(b.ctx, func(ev interface{}) {
+		switch e := ev.(type) {
+		case *fetch.EventAuthRequired:
+			go b.handleProxyAuthChallenge(e)
+		}
+	})
+
+	return nil
+}
+
+// handleProxyAuthChallenge responds to proxy authentication challenges
+func (b *Browser) handleProxyAuthChallenge(ev *fetch.EventAuthRequired) {
+	if b.opts.Verbose {
+		log.Printf("Handling proxy auth challenge for %s", ev.AuthChallenge.Origin)
+	}
+
+	// Only handle proxy auth challenges
+	if ev.AuthChallenge.Source != fetch.AuthChallengeSourceProxy {
+		// Continue without providing credentials for non-proxy challenges
+		if err := chromedp.Run(b.ctx, fetch.ContinueWithAuth(ev.RequestID, &fetch.AuthChallengeResponse{
+			Response: fetch.AuthChallengeResponseResponseDefault,
+		})); err != nil && b.opts.Verbose {
+			log.Printf("Error continuing without auth: %v", err)
+		}
+		return
+	}
+
+	// Provide proxy credentials
+	authResponse := &fetch.AuthChallengeResponse{
+		Response: fetch.AuthChallengeResponseResponseProvideCredentials,
+		Username: b.opts.ProxyUsername,
+		Password: b.opts.ProxyPassword,
+	}
+
+	if err := chromedp.Run(b.ctx, fetch.ContinueWithAuth(ev.RequestID, authResponse)); err != nil {
+		if b.opts.Verbose {
+			log.Printf("Error providing proxy credentials: %v", err)
+		}
+	} else if b.opts.Verbose {
+		log.Printf("Successfully provided proxy credentials")
+	}
 }

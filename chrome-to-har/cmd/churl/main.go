@@ -60,6 +60,14 @@ type options struct {
 	username string
 	password string
 
+	// Proxy options
+	proxy         string // HTTP/HTTPS proxy server
+	socks5Proxy   string // SOCKS5 proxy server
+	proxyUser     string // Proxy authentication (user:password)
+	proxyBypass   string // Comma-separated list of hosts to bypass proxy
+	proxyUsername string // Parsed proxy username
+	proxyPassword string // Parsed proxy password
+
 	// Script injection
 	scriptBefore     stringSlice
 	scriptAfter      stringSlice
@@ -125,6 +133,12 @@ func main() {
 
 	// Authentication
 	flag.StringVar(&opts.username, "u", "", "Username for basic auth (user:password)")
+
+	// Proxy options
+	flag.StringVar(&opts.proxy, "proxy", "", "HTTP/HTTPS proxy server (e.g., http://proxy.example.com:8080)")
+	flag.StringVar(&opts.socks5Proxy, "socks5-proxy", "", "SOCKS5 proxy server (e.g., socks5://proxy.example.com:1080)")
+	flag.StringVar(&opts.proxyUser, "proxy-user", "", "Proxy authentication (user:password)")
+	flag.StringVar(&opts.proxyBypass, "proxy-bypass", "", "Comma-separated list of hosts to bypass proxy")
 
 	// Script injection
 	flag.Var(&opts.scriptBefore, "script-before", "JavaScript to execute before page load (can be used multiple times)")
@@ -201,6 +215,27 @@ func main() {
 		}
 	}
 
+	// Validate proxy options
+	if opts.proxy != "" && opts.socks5Proxy != "" {
+		fmt.Println("Error: Cannot specify both --proxy and --socks5-proxy")
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	// Parse proxy authentication if provided
+	var proxyUsername, proxyPassword string
+	if opts.proxyUser != "" {
+		parts := strings.SplitN(opts.proxyUser, ":", 2)
+		proxyUsername = parts[0]
+		if len(parts) > 1 {
+			proxyPassword = parts[1]
+		} else {
+			fmt.Println("Error: --proxy-user must be in format user:password")
+			flag.Usage()
+			os.Exit(1)
+		}
+	}
+
 	// Create a context with the user-specified timeout
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(opts.timeout)*time.Second)
 	defer cancel()
@@ -233,6 +268,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Store parsed proxy credentials in opts
+	opts.proxyUsername = proxyUsername
+	opts.proxyPassword = proxyPassword
 
 	// Run the churl command
 	if err := run(ctx, pm, url, opts); err != nil {
@@ -344,6 +383,34 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 			log.Printf("Connecting to remote Chrome at %s:%d", opts.remoteHost, opts.remotePort)
 			if opts.remoteTab != "" {
 				log.Printf("Connecting to tab: %s", opts.remoteTab)
+			}
+		}
+	}
+
+	// Add proxy options if specified
+	if opts.proxy != "" || opts.socks5Proxy != "" {
+		proxyServer := opts.proxy
+		if opts.socks5Proxy != "" {
+			proxyServer = opts.socks5Proxy
+		}
+		
+		browserOpts = append(browserOpts, browser.WithProxy(proxyServer))
+		
+		if opts.proxyBypass != "" {
+			browserOpts = append(browserOpts, browser.WithProxyBypassList(opts.proxyBypass))
+		}
+		
+		if opts.proxyUsername != "" && opts.proxyPassword != "" {
+			browserOpts = append(browserOpts, browser.WithProxyAuth(opts.proxyUsername, opts.proxyPassword))
+		}
+		
+		if opts.verbose {
+			log.Printf("Using proxy server: %s", proxyServer)
+			if opts.proxyBypass != "" {
+				log.Printf("Proxy bypass list: %s", opts.proxyBypass)
+			}
+			if opts.proxyUsername != "" {
+				log.Printf("Proxy authentication enabled for user: %s", opts.proxyUsername)
 			}
 		}
 	}

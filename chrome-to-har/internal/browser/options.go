@@ -28,6 +28,16 @@ type Options struct {
 	WaitNetworkIdle   bool
 	WaitSelector      string
 	StableTimeout     int
+	
+	// Stability detection settings
+	StabilityConfig   *StabilityConfig
+	WaitForStability  bool
+
+	// Proxy settings
+	ProxyServer       string // HTTP/HTTPS or SOCKS5 proxy
+	ProxyBypassList   string // Comma-separated list of hosts to bypass
+	ProxyUsername     string // Proxy authentication username
+	ProxyPassword     string // Proxy authentication password
 
 	// Script injection settings
 	ScriptBefore []string // Scripts to execute before page load
@@ -248,6 +258,74 @@ func WithScriptsAfter(scripts []string) Option {
 			}
 		}
 		o.ScriptAfter = append(o.ScriptAfter, scripts...)
+		return nil
+	}
+}
+
+// WithProxy configures proxy settings
+func WithProxy(proxyServer string) Option {
+	return func(o *Options) error {
+		if proxyServer == "" {
+			return errors.New("proxy server cannot be empty")
+		}
+		o.ProxyServer = proxyServer
+		return nil
+	}
+}
+
+// WithProxyBypassList sets hosts to bypass proxy
+func WithProxyBypassList(bypassList string) Option {
+	return func(o *Options) error {
+		o.ProxyBypassList = bypassList
+		return nil
+	}
+}
+
+// WithProxyAuth sets proxy authentication credentials
+func WithProxyAuth(username, password string) Option {
+	return func(o *Options) error {
+		if username == "" {
+			return errors.New("proxy username cannot be empty")
+		}
+		o.ProxyUsername = username
+		o.ProxyPassword = password
+		return nil
+	}
+}
+
+// WithStabilityConfig sets custom stability detection configuration
+func WithStabilityConfig(config *StabilityConfig) Option {
+	return func(o *Options) error {
+		if config == nil {
+			return errors.New("stability config cannot be nil")
+		}
+		o.StabilityConfig = config
+		o.WaitForStability = true
+		return nil
+	}
+}
+
+// WithWaitForStability enables full page stability detection
+func WithWaitForStability(wait bool) Option {
+	return func(o *Options) error {
+		o.WaitForStability = wait
+		if wait && o.StabilityConfig == nil {
+			o.StabilityConfig = DefaultStabilityConfig()
+		}
+		return nil
+	}
+}
+
+// WithStabilityOptions configures stability detection with specific options
+func WithStabilityOptions(opts ...StabilityOption) Option {
+	return func(o *Options) error {
+		if o.StabilityConfig == nil {
+			o.StabilityConfig = DefaultStabilityConfig()
+		}
+		for _, opt := range opts {
+			opt(o.StabilityConfig)
+		}
+		o.WaitForStability = true
 		return nil
 	}
 }
