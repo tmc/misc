@@ -23,6 +23,7 @@ type Page struct {
 	browser           *Browser
 	networkManager    *NetworkManager
 	stabilityDetector *StabilityDetector
+	webSocketMonitor  *WebSocketMonitor
 }
 
 // NewPage creates a new page in the browser
@@ -527,7 +528,7 @@ func (p *Page) WaitForLoadState(ctx context.Context, state LoadState) error {
 	switch state {
 	case LoadStateDOMContentLoaded:
 		return chromedp.Run(ctx, chromedp.WaitReady("body"))
-	
+
 	case LoadStateNetworkIdle, LoadStateNetworkIdle0:
 		config := DefaultStabilityConfig()
 		config.NetworkIdleThreshold = 0
@@ -538,10 +539,10 @@ func (p *Page) WaitForLoadState(ctx context.Context, state LoadState) error {
 		config.WaitForScripts = false
 		config.WaitForAnimationFrame = false
 		config.WaitForIdleCallback = false
-		
+
 		detector := NewStabilityDetector(p, config)
 		return detector.WaitForStability(ctx)
-	
+
 	case LoadStateNetworkIdle2:
 		config := DefaultStabilityConfig()
 		config.NetworkIdleThreshold = 2
@@ -552,10 +553,10 @@ func (p *Page) WaitForLoadState(ctx context.Context, state LoadState) error {
 		config.WaitForScripts = false
 		config.WaitForAnimationFrame = false
 		config.WaitForIdleCallback = false
-		
+
 		detector := NewStabilityDetector(p, config)
 		return detector.WaitForStability(ctx)
-	
+
 	default: // LoadStateLoad
 		// Default chromedp behavior - waits for load event
 		return nil
@@ -567,7 +568,7 @@ func (p *Page) WaitForStability(ctx context.Context, config *StabilityConfig) er
 	if p.stabilityDetector == nil {
 		p.stabilityDetector = NewStabilityDetector(p, config)
 	}
-	
+
 	return p.stabilityDetector.WaitForStability(ctx)
 }
 
@@ -577,7 +578,7 @@ func (p *Page) ConfigureStability(opts ...StabilityOption) {
 	for _, opt := range opts {
 		opt(config)
 	}
-	
+
 	p.stabilityDetector = NewStabilityDetector(p, config)
 }
 
@@ -586,7 +587,91 @@ func (p *Page) GetStabilityMetrics() *StabilityMetrics {
 	if p.stabilityDetector == nil {
 		return nil
 	}
-	
+
 	metrics := p.stabilityDetector.GetMetrics()
 	return &metrics
+}
+
+// EnableWebSocketMonitoring enables WebSocket monitoring on this page
+func (p *Page) EnableWebSocketMonitoring() error {
+	if p.webSocketMonitor == nil {
+		p.webSocketMonitor = NewWebSocketMonitor(p)
+	}
+	return p.webSocketMonitor.Enable()
+}
+
+// DisableWebSocketMonitoring disables WebSocket monitoring on this page
+func (p *Page) DisableWebSocketMonitoring() error {
+	if p.webSocketMonitor == nil {
+		return nil
+	}
+	return p.webSocketMonitor.Disable()
+}
+
+// GetWebSocketConnections returns all WebSocket connections on this page
+func (p *Page) GetWebSocketConnections() map[string]*WebSocketConnection {
+	if p.webSocketMonitor == nil {
+		return make(map[string]*WebSocketConnection)
+	}
+	return p.webSocketMonitor.GetConnections()
+}
+
+// GetWebSocketConnection returns a specific WebSocket connection by ID
+func (p *Page) GetWebSocketConnection(id string) (*WebSocketConnection, bool) {
+	if p.webSocketMonitor == nil {
+		return nil, false
+	}
+	return p.webSocketMonitor.GetConnection(id)
+}
+
+// WaitForWebSocketConnection waits for a WebSocket connection to a specific URL
+func (p *Page) WaitForWebSocketConnection(urlPattern string, timeout time.Duration) (*WebSocketConnection, error) {
+	if p.webSocketMonitor == nil {
+		if err := p.EnableWebSocketMonitoring(); err != nil {
+			return nil, err
+		}
+	}
+	return p.webSocketMonitor.WaitForConnection(urlPattern, timeout)
+}
+
+// SendWebSocketMessage sends a message through a WebSocket connection
+func (p *Page) SendWebSocketMessage(connectionID string, message interface{}) error {
+	if p.webSocketMonitor == nil {
+		return errors.New("WebSocket monitoring not enabled")
+	}
+	return p.webSocketMonitor.SendMessage(connectionID, message)
+}
+
+// GetWebSocketStats returns statistics for all WebSocket connections
+func (p *Page) GetWebSocketStats() map[string]interface{} {
+	if p.webSocketMonitor == nil {
+		return make(map[string]interface{})
+	}
+	return p.webSocketMonitor.GetStats()
+}
+
+// SetWebSocketFrameHandler sets a callback for WebSocket frames
+func (p *Page) SetWebSocketFrameHandler(
+	onFrameReceived func(*WebSocketConnection, *WebSocketFrame),
+	onFrameSent func(*WebSocketConnection, *WebSocketFrame),
+) {
+	if p.webSocketMonitor == nil {
+		p.webSocketMonitor = NewWebSocketMonitor(p)
+	}
+	p.webSocketMonitor.SetOnFrameReceived(onFrameReceived)
+	p.webSocketMonitor.SetOnFrameSent(onFrameSent)
+}
+
+// SetWebSocketConnectionHandler sets callbacks for WebSocket connection events
+func (p *Page) SetWebSocketConnectionHandler(
+	onConnect func(*WebSocketConnection),
+	onDisconnect func(*WebSocketConnection),
+	onError func(*WebSocketConnection, error),
+) {
+	if p.webSocketMonitor == nil {
+		p.webSocketMonitor = NewWebSocketMonitor(p)
+	}
+	p.webSocketMonitor.SetOnConnect(onConnect)
+	p.webSocketMonitor.SetOnDisconnect(onDisconnect)
+	p.webSocketMonitor.SetOnError(onError)
 }

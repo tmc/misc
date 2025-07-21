@@ -16,7 +16,9 @@ import (
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
+	"github.com/tmc/misc/chrome-to-har/internal/blocking"
 	"github.com/tmc/misc/chrome-to-har/internal/chromeprofiles"
+	chromeErrors "github.com/tmc/misc/chrome-to-har/internal/errors"
 )
 
 // HTTPRequestData represents data for HTTP requests
@@ -38,11 +40,12 @@ type requestInterceptor struct {
 
 // Browser represents a managed Chrome browser instance
 type Browser struct {
-	ctx         context.Context
-	cancelFunc  context.CancelFunc
-	opts        *Options
-	profileMgr  chromeprofiles.ProfileManager
-	interceptor *requestInterceptor
+	ctx            context.Context
+	cancelFunc     context.CancelFunc
+	opts           *Options
+	profileMgr     chromeprofiles.ProfileManager
+	interceptor    *requestInterceptor
+	blockingEngine *blocking.BlockingEngine
 }
 
 // New creates a new Browser with the provided options
@@ -61,6 +64,44 @@ func New(ctx context.Context, profileMgr chromeprofiles.ProfileManager, opts ...
 		opts:        options,
 		profileMgr:  profileMgr,
 		interceptor: &requestInterceptor{},
+	}
+
+	// Initialize blocking engine if blocking is enabled
+	if options.BlockingEnabled {
+		blockingConfig := &blocking.Config{
+			Verbose:       options.BlockingVerbose,
+			Enabled:       options.BlockingEnabled,
+			URLPatterns:   options.BlockedURLPatterns,
+			Domains:       options.BlockedDomains,
+			RegexPatterns: options.BlockedRegexPatterns,
+			AllowURLs:     options.AllowedURLs,
+			AllowDomains:  options.AllowedDomains,
+			RuleFile:      options.BlockingRuleFile,
+		}
+
+		blockingEngine, err := blocking.NewBlockingEngine(blockingConfig)
+		if err != nil {
+			return nil, errors.Wrap(err, "creating blocking engine")
+		}
+
+		// Add common blocking rules if requested
+		if options.BlockCommonAds {
+			if err := blockingEngine.AddCommonAdBlockRules(); err != nil {
+				return nil, errors.Wrap(err, "adding common ad blocking rules")
+			}
+		}
+
+		if options.BlockCommonTracking {
+			if err := blockingEngine.AddCommonTrackingBlockRules(); err != nil {
+				return nil, errors.Wrap(err, "adding common tracking blocking rules")
+			}
+		}
+
+		browser.blockingEngine = blockingEngine
+
+		if options.Verbose {
+			log.Printf("Blocking engine initialized with %d rules", len(blockingEngine.ListRules()))
+		}
 	}
 
 	return browser, nil
@@ -94,35 +135,8 @@ func (b *Browser) Launch(ctx context.Context) error {
 		}
 	}
 
-	// Set up the Chrome options
-	chromeLaunchOpts := []chromedp.ExecAllocatorOption{
-		chromedp.NoFirstRun,
-		chromedp.NoDefaultBrowserCheck,
-		chromedp.DisableGPU,
-		// Stability flags
-		chromedp.Flag("disable-background-networking", true),
-		chromedp.Flag("enable-features", "NetworkService,NetworkServiceInProcess"),
-		chromedp.Flag("disable-background-timer-throttling", true),
-		chromedp.Flag("disable-backgrounding-occluded-windows", true),
-		chromedp.Flag("disable-breakpad", true),
-		chromedp.Flag("disable-client-side-phishing-detection", true),
-		chromedp.Flag("disable-default-apps", true),
-		chromedp.Flag("disable-dev-shm-usage", true),
-		chromedp.Flag("disable-extensions", true),
-		chromedp.Flag("disable-hang-monitor", true),
-		chromedp.Flag("disable-ipc-flooding-protection", true),
-		chromedp.Flag("disable-popup-blocking", true),
-		chromedp.Flag("disable-prompt-on-repost", true),
-		chromedp.Flag("disable-renderer-backgrounding", true),
-		chromedp.Flag("disable-sync", true),
-		chromedp.Flag("force-color-profile", "srgb"),
-		chromedp.Flag("metrics-recording-only", true),
-		chromedp.Flag("no-first-run", true),
-		chromedp.Flag("safebrowsing-disable-auto-update", true),
-		chromedp.Flag("password-store", "basic"),
-		chromedp.Flag("use-mock-keychain", true),
-		chromedp.WSURLReadTimeout(180 * time.Second),
-	}
+	// Set up the Chrome options with security hardening
+	chromeLaunchOpts := b.getSecureChromeOptions()
 
 	// If headless mode is enabled
 	if b.opts.Headless {
@@ -158,7 +172,7 @@ func (b *Browser) Launch(ctx context.Context) error {
 	// Apply proxy settings if configured
 	if b.opts.ProxyServer != "" {
 		chromeLaunchOpts = append(chromeLaunchOpts, chromedp.ProxyServer(b.opts.ProxyServer))
-		
+
 		// Add proxy bypass list if specified
 		if b.opts.ProxyBypassList != "" {
 			chromeLaunchOpts = append(chromeLaunchOpts, chromedp.Flag("proxy-bypass-list", b.opts.ProxyBypassList))
@@ -210,6 +224,14 @@ func (b *Browser) Launch(ctx context.Context) error {
 		if err := b.setupProxyAuthentication(); err != nil {
 			b.cancelFunc()
 			return errors.Wrap(err, "setting up proxy authentication")
+		}
+	}
+
+	// Set up network interception for blocking if blocking engine is present
+	if b.blockingEngine != nil {
+		if err := b.setupNetworkBlocking(); err != nil {
+			b.cancelFunc()
+			return errors.Wrap(err, "setting up network blocking")
 		}
 	}
 
@@ -317,7 +339,10 @@ func (b *Browser) Navigate(url string) error {
 				}
 			}
 		})); err != nil {
-			return errors.Wrap(err, "waiting for network idle")
+			return chromeErrors.WithContext(
+				chromeErrors.Wrap(err, chromeErrors.NetworkIdleError, "failed to wait for network idle"),
+				"url", url,
+			)
 		}
 	}
 
@@ -330,22 +355,22 @@ func (b *Browser) Navigate(url string) error {
 			if b.opts.Verbose {
 				log.Println("Creating page context for stability detection")
 			}
-			
+
 			// Create a temporary page wrapper
 			page := &Page{ctx: b.ctx, browser: b}
-			
+
 			// Configure stability detection
 			if b.opts.StabilityConfig != nil {
 				page.stabilityDetector = NewStabilityDetector(page, b.opts.StabilityConfig)
 			} else {
 				page.ConfigureStability(WithVerboseLogging(b.opts.Verbose))
 			}
-			
+
 			// Wait for stability
 			waitTimeout := time.Duration(b.opts.StableTimeout) * time.Second
 			waitCtx, waitCancel := context.WithTimeout(b.ctx, waitTimeout)
 			defer waitCancel()
-			
+
 			if err := page.WaitForStability(waitCtx, b.opts.StabilityConfig); err != nil {
 				if b.opts.Verbose {
 					log.Printf("Stability detection failed: %v", err)
@@ -355,19 +380,19 @@ func (b *Browser) Navigate(url string) error {
 		} else {
 			// Use the first page (main tab)
 			page := pages[0]
-			
+
 			// Configure stability detection
 			if b.opts.StabilityConfig != nil {
 				page.stabilityDetector = NewStabilityDetector(page, b.opts.StabilityConfig)
 			} else {
 				page.ConfigureStability(WithVerboseLogging(b.opts.Verbose))
 			}
-			
+
 			// Wait for stability
 			waitTimeout := time.Duration(b.opts.StableTimeout) * time.Second
 			waitCtx, waitCancel := context.WithTimeout(b.ctx, waitTimeout)
 			defer waitCancel()
-			
+
 			if err := page.WaitForStability(waitCtx, b.opts.StabilityConfig); err != nil {
 				if b.opts.Verbose {
 					log.Printf("Stability detection failed: %v", err)
@@ -402,12 +427,12 @@ func (b *Browser) Navigate(url string) error {
 // GetHTML returns the current page's HTML content
 func (b *Browser) GetHTML() (string, error) {
 	if b.ctx == nil {
-		return "", errors.New("browser not launched, call Launch() first")
+		return "", chromeErrors.New(chromeErrors.ChromeConnectionError, "browser not launched, call Launch() first")
 	}
 
 	var html string
 	if err := chromedp.Run(b.ctx, chromedp.OuterHTML("html", &html)); err != nil {
-		return "", errors.Wrap(err, "getting page HTML")
+		return "", chromeErrors.Wrap(err, chromeErrors.ChromeScriptError, "failed to get page HTML")
 	}
 
 	return html, nil
@@ -440,35 +465,213 @@ func (b *Browser) Close() error {
 
 	if b.profileMgr != nil {
 		if err := b.profileMgr.Cleanup(); err != nil {
-			return errors.Wrap(err, "cleaning up profile")
+			return chromeErrors.Wrap(err, chromeErrors.ProfileSetupError, "failed to clean up profile")
 		}
 	}
 
 	return nil
 }
 
+// getSecureChromeOptions returns Chrome options with security hardening enabled
+func (b *Browser) getSecureChromeOptions() []chromedp.ExecAllocatorOption {
+	securityProfile := b.opts.SecurityProfile
+	if securityProfile == "" {
+		securityProfile = "balanced" // Default to balanced security
+	}
+
+	// Base options for all security profiles
+	baseOpts := []chromedp.ExecAllocatorOption{
+		chromedp.NoFirstRun,
+		chromedp.NoDefaultBrowserCheck,
+		chromedp.WSURLReadTimeout(180 * time.Second),
+	}
+
+	// Security-focused options based on profile
+	switch securityProfile {
+	case "strict":
+		return append(baseOpts, b.getStrictSecurityOptions()...)
+	case "balanced":
+		return append(baseOpts, b.getBalancedSecurityOptions()...)
+	case "permissive":
+		if b.opts.Verbose {
+			log.Println("WARNING: Running with permissive security settings. This should only be used for testing!")
+		}
+		return append(baseOpts, b.getPermissiveSecurityOptions()...)
+	default:
+		if b.opts.Verbose {
+			log.Printf("Unknown security profile '%s', defaulting to balanced", securityProfile)
+		}
+		return append(baseOpts, b.getBalancedSecurityOptions()...)
+	}
+}
+
+// getStrictSecurityOptions returns the most secure Chrome options
+func (b *Browser) getStrictSecurityOptions() []chromedp.ExecAllocatorOption {
+	return []chromedp.ExecAllocatorOption{
+		// Enable sandboxing (CRITICAL SECURITY FIX)
+		chromedp.Flag("no-sandbox", false), // Ensure sandbox is NOT disabled
+		chromedp.Flag("disable-setuid-sandbox", false), // Keep setuid sandbox enabled
+		
+		// Enable site isolation and process isolation
+		chromedp.Flag("site-per-process", true),
+		chromedp.Flag("enable-features", "SitePerProcess,NetworkServiceSandbox,StrictOriginIsolation"),
+		
+		// Security-focused flags
+		chromedp.Flag("disable-web-security", false), // Keep web security enabled
+		chromedp.Flag("disable-features", "TranslateUI,MediaRouter"), // Only disable non-security features
+		chromedp.Flag("enable-strict-mixed-content-checking", true),
+		chromedp.Flag("enable-strict-powerful-feature-restrictions", true),
+		
+		// Block dangerous content
+		chromedp.Flag("block-new-web-contents", true),
+		chromedp.Flag("disable-plugins", true),
+		chromedp.Flag("disable-java", true),
+		chromedp.Flag("disable-3d-apis", true),
+		chromedp.Flag("disable-webgl", true),
+		
+		// Disable extensions for security
+		chromedp.Flag("disable-extensions", true),
+		chromedp.Flag("disable-default-apps", true),
+		
+		// Essential stability flags (security-neutral)
+		chromedp.Flag("disable-background-networking", true),
+		chromedp.Flag("disable-background-timer-throttling", true),
+		chromedp.Flag("disable-backgrounding-occluded-windows", true),
+		chromedp.Flag("disable-renderer-backgrounding", true),
+		chromedp.Flag("disable-sync", true),
+		chromedp.Flag("metrics-recording-only", true),
+		chromedp.Flag("no-first-run", true),
+		
+		// GPU handling - keep enabled for security
+		chromedp.Flag("disable-gpu", false),
+		chromedp.Flag("gpu-sandbox-failures-fatal", true),
+		
+		// Memory management
+		chromedp.Flag("disable-dev-shm-usage", false), // Only disable if absolutely necessary
+		chromedp.Flag("memory-pressure-off", false),
+		
+		// Secure defaults
+		chromedp.Flag("force-color-profile", "srgb"),
+		chromedp.Flag("password-store", "basic"),
+		chromedp.Flag("use-mock-keychain", true),
+	}
+}
+
+// getBalancedSecurityOptions returns moderate security options with good compatibility
+func (b *Browser) getBalancedSecurityOptions() []chromedp.ExecAllocatorOption {
+	return []chromedp.ExecAllocatorOption{
+		// Enable core sandboxing
+		chromedp.Flag("no-sandbox", false),
+		chromedp.Flag("disable-setuid-sandbox", false),
+		
+		// Enable site isolation
+		chromedp.Flag("site-per-process", true),
+		chromedp.Flag("enable-features", "SitePerProcess,NetworkServiceSandbox"),
+		
+		// Essential security
+		chromedp.Flag("disable-web-security", false),
+		chromedp.Flag("block-new-web-contents", true),
+		
+		// Disable risky features
+		chromedp.Flag("disable-extensions", true),
+		chromedp.Flag("disable-default-apps", true),
+		chromedp.Flag("disable-plugins", true),
+		
+		// Stability flags
+		chromedp.Flag("disable-background-networking", true),
+		chromedp.Flag("disable-background-timer-throttling", true),
+		chromedp.Flag("disable-backgrounding-occluded-windows", true),
+		chromedp.Flag("disable-renderer-backgrounding", true),
+		chromedp.Flag("disable-sync", true),
+		chromedp.Flag("disable-breakpad", true),
+		chromedp.Flag("disable-hang-monitor", true),
+		chromedp.Flag("disable-ipc-flooding-protection", true),
+		chromedp.Flag("disable-prompt-on-repost", true),
+		chromedp.Flag("metrics-recording-only", true),
+		chromedp.Flag("no-first-run", true),
+		
+		// GPU - disable for headless stability
+		chromedp.DisableGPU,
+		
+		// Memory management
+		chromedp.Flag("disable-dev-shm-usage", true),
+		
+		// Defaults
+		chromedp.Flag("force-color-profile", "srgb"),
+		chromedp.Flag("password-store", "basic"),
+		chromedp.Flag("use-mock-keychain", true),
+	}
+}
+
+// getPermissiveSecurityOptions returns less secure options for compatibility (TESTING ONLY)
+func (b *Browser) getPermissiveSecurityOptions() []chromedp.ExecAllocatorOption {
+	return []chromedp.ExecAllocatorOption{
+		// WARNING: These options reduce security and should only be used for testing
+		chromedp.Flag("disable-web-security", true),
+		chromedp.Flag("disable-features", "VizDisplayCompositor"),
+		chromedp.Flag("disable-client-side-phishing-detection", true),
+		chromedp.Flag("disable-popup-blocking", true),
+		chromedp.Flag("safebrowsing-disable-auto-update", true),
+		
+		// Still maintain some basic security
+		chromedp.Flag("disable-extensions", true),
+		chromedp.Flag("disable-default-apps", true),
+		
+		// Stability flags
+		chromedp.Flag("disable-background-networking", true),
+		chromedp.Flag("disable-background-timer-throttling", true),
+		chromedp.Flag("disable-backgrounding-occluded-windows", true),
+		chromedp.Flag("disable-renderer-backgrounding", true),
+		chromedp.Flag("disable-sync", true),
+		chromedp.Flag("disable-breakpad", true),
+		chromedp.Flag("disable-hang-monitor", true),
+		chromedp.Flag("disable-ipc-flooding-protection", true),
+		chromedp.Flag("disable-prompt-on-repost", true),
+		chromedp.Flag("metrics-recording-only", true),
+		chromedp.Flag("no-first-run", true),
+		
+		// GPU and memory
+		chromedp.DisableGPU,
+		chromedp.Flag("disable-dev-shm-usage", true),
+		
+		// Defaults
+		chromedp.Flag("force-color-profile", "srgb"),
+		chromedp.Flag("password-store", "basic"),
+		chromedp.Flag("use-mock-keychain", true),
+	}
+}
+
 // WaitForSelector waits for a CSS selector to be visible
 func (b *Browser) WaitForSelector(selector string, timeout time.Duration) error {
 	if b.ctx == nil {
-		return errors.New("browser not launched, call Launch() first")
+		return chromeErrors.New(chromeErrors.ChromeConnectionError, "browser not launched, call Launch() first")
 	}
 
 	waitCtx, waitCancel := context.WithTimeout(b.ctx, timeout)
 	defer waitCancel()
 
-	return chromedp.Run(waitCtx, chromedp.WaitVisible(selector, chromedp.ByQuery))
+	if err := chromedp.Run(waitCtx, chromedp.WaitVisible(selector, chromedp.ByQuery)); err != nil {
+		return chromeErrors.WithContext(
+			chromeErrors.Wrap(err, chromeErrors.ChromeTimeoutError, "failed to wait for selector"),
+			"selector", selector,
+		)
+	}
+	return nil
 }
 
 // ExecuteScript runs JavaScript in the browser and returns the result
 func (b *Browser) ExecuteScript(script string) (interface{}, error) {
 	if b.ctx == nil {
-		return nil, errors.New("browser not launched, call Launch() first")
+		return nil, chromeErrors.New(chromeErrors.ChromeConnectionError, "browser not launched, call Launch() first")
 	}
 
 	var result interface{}
 	err := chromedp.Run(b.ctx, chromedp.Evaluate(script, &result))
 	if err != nil {
-		return nil, errors.Wrap(err, "executing script")
+		return nil, chromeErrors.WithContext(
+			chromeErrors.Wrap(err, chromeErrors.ChromeScriptError, "failed to execute script"),
+			"script", script,
+		)
 	}
 
 	return result, nil
@@ -477,7 +680,7 @@ func (b *Browser) ExecuteScript(script string) (interface{}, error) {
 // ExecuteScriptWithTimeout runs JavaScript with a custom timeout
 func (b *Browser) ExecuteScriptWithTimeout(script string, timeout time.Duration) (interface{}, error) {
 	if b.ctx == nil {
-		return nil, errors.New("browser not launched, call Launch() first")
+		return nil, chromeErrors.New(chromeErrors.ChromeConnectionError, "browser not launched, call Launch() first")
 	}
 
 	ctx, cancel := context.WithTimeout(b.ctx, timeout)
@@ -487,9 +690,15 @@ func (b *Browser) ExecuteScriptWithTimeout(script string, timeout time.Duration)
 	err := chromedp.Run(ctx, chromedp.Evaluate(script, &result))
 	if err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			return nil, errors.Wrapf(err, "script execution timed out after %v", timeout)
+			return nil, chromeErrors.WithContext(
+				chromeErrors.Wrap(err, chromeErrors.ChromeTimeoutError, "script execution timed out"),
+				"script", script,
+			)
 		}
-		return nil, errors.Wrap(err, "executing script")
+		return nil, chromeErrors.WithContext(
+			chromeErrors.Wrap(err, chromeErrors.ChromeScriptError, "failed to execute script"),
+			"script", script,
+		)
 	}
 
 	return result, nil
@@ -498,7 +707,7 @@ func (b *Browser) ExecuteScriptWithTimeout(script string, timeout time.Duration)
 // ExecuteScripts runs multiple JavaScript scripts in sequence
 func (b *Browser) ExecuteScripts(scripts []string) ([]interface{}, error) {
 	if b.ctx == nil {
-		return nil, errors.New("browser not launched, call Launch() first")
+		return nil, chromeErrors.New(chromeErrors.ChromeConnectionError, "browser not launched, call Launch() first")
 	}
 
 	if len(scripts) == 0 {
@@ -514,7 +723,10 @@ func (b *Browser) ExecuteScripts(scripts []string) ([]interface{}, error) {
 
 		result, err := b.ExecuteScript(script)
 		if err != nil {
-			return results, errors.Wrapf(err, "executing script %d", i+1)
+			return results, chromeErrors.WithContext(
+				chromeErrors.Wrapf(err, chromeErrors.ChromeScriptError, "failed to execute script %d", i+1),
+				"script_index", i+1,
+			)
 		}
 
 		results[i] = result
@@ -526,7 +738,7 @@ func (b *Browser) ExecuteScripts(scripts []string) ([]interface{}, error) {
 // ExecuteScriptsWithTimeout runs multiple JavaScript scripts with individual timeouts
 func (b *Browser) ExecuteScriptsWithTimeout(scripts []string, timeout time.Duration) ([]interface{}, error) {
 	if b.ctx == nil {
-		return nil, errors.New("browser not launched, call Launch() first")
+		return nil, chromeErrors.New(chromeErrors.ChromeConnectionError, "browser not launched, call Launch() first")
 	}
 
 	if len(scripts) == 0 {
@@ -542,7 +754,10 @@ func (b *Browser) ExecuteScriptsWithTimeout(scripts []string, timeout time.Durat
 
 		result, err := b.ExecuteScriptWithTimeout(script, timeout)
 		if err != nil {
-			return results, errors.Wrapf(err, "executing script %d", i+1)
+			return results, chromeErrors.WithContext(
+				chromeErrors.Wrapf(err, chromeErrors.ChromeScriptError, "failed to execute script %d with timeout", i+1),
+				"script_index", i+1,
+			)
 		}
 
 		results[i] = result
@@ -566,7 +781,7 @@ func (b *Browser) executeScriptsBefore() error {
 
 	_, err := b.ExecuteScriptsWithTimeout(b.opts.ScriptBefore, timeout)
 	if err != nil {
-		return errors.Wrap(err, "executing pre-navigation scripts")
+		return chromeErrors.Wrap(err, chromeErrors.ChromeScriptError, "failed to execute pre-navigation scripts")
 	}
 
 	if b.opts.Verbose {
@@ -591,7 +806,7 @@ func (b *Browser) executeScriptsAfter() error {
 
 	_, err := b.ExecuteScriptsWithTimeout(b.opts.ScriptAfter, timeout)
 	if err != nil {
-		return errors.Wrap(err, "executing post-navigation scripts")
+		return chromeErrors.Wrap(err, chromeErrors.ChromeScriptError, "failed to execute post-navigation scripts")
 	}
 
 	if b.opts.Verbose {
@@ -604,12 +819,12 @@ func (b *Browser) executeScriptsAfter() error {
 // GetTitle returns the page title
 func (b *Browser) GetTitle() (string, error) {
 	if b.ctx == nil {
-		return "", errors.New("browser not launched, call Launch() first")
+		return "", chromeErrors.New(chromeErrors.ChromeConnectionError, "browser not launched, call Launch() first")
 	}
 
 	var title string
 	if err := chromedp.Run(b.ctx, chromedp.Title(&title)); err != nil {
-		return "", errors.Wrap(err, "getting page title")
+		return "", chromeErrors.Wrap(err, chromeErrors.ChromeScriptError, "failed to get page title")
 	}
 
 	return title, nil
@@ -618,12 +833,12 @@ func (b *Browser) GetTitle() (string, error) {
 // GetURL returns the current page URL
 func (b *Browser) GetURL() (string, error) {
 	if b.ctx == nil {
-		return "", errors.New("browser not launched, call Launch() first")
+		return "", chromeErrors.New(chromeErrors.ChromeConnectionError, "browser not launched, call Launch() first")
 	}
 
 	var url string
 	if err := chromedp.Run(b.ctx, chromedp.Location(&url)); err != nil {
-		return "", errors.Wrap(err, "getting page URL")
+		return "", chromeErrors.Wrap(err, chromeErrors.ChromeScriptError, "failed to get page URL")
 	}
 
 	return url, nil
@@ -632,7 +847,7 @@ func (b *Browser) GetURL() (string, error) {
 // SetRequestHeaders sets custom headers for all subsequent requests
 func (b *Browser) SetRequestHeaders(headers map[string]string) error {
 	if b.ctx == nil {
-		return errors.New("browser not launched, call Launch() first")
+		return chromeErrors.New(chromeErrors.ChromeConnectionError, "browser not launched, call Launch() first")
 	}
 
 	// Convert to the format expected by CDP
@@ -641,7 +856,10 @@ func (b *Browser) SetRequestHeaders(headers map[string]string) error {
 		cdpHeaders[k] = v
 	}
 
-	return chromedp.Run(b.ctx, network.SetExtraHTTPHeaders(network.Headers(cdpHeaders)))
+	if err := chromedp.Run(b.ctx, network.SetExtraHTTPHeaders(network.Headers(cdpHeaders))); err != nil {
+		return chromeErrors.Wrap(err, chromeErrors.NetworkError, "failed to set request headers")
+	}
+	return nil
 }
 
 // SetBasicAuth sets basic authentication headers
@@ -686,7 +904,7 @@ func detectContentType(data string, headers map[string]string) string {
 // HTTPRequest performs an HTTP request with the specified method and data
 func (b *Browser) HTTPRequest(method, url, data string, headers map[string]string) error {
 	if b.ctx == nil {
-		return errors.New("browser not launched, call Launch() first")
+		return chromeErrors.New(chromeErrors.ChromeConnectionError, "browser not launched, call Launch() first")
 	}
 
 	if b.opts.Verbose {
@@ -715,7 +933,10 @@ func (b *Browser) HTTPRequest(method, url, data string, headers map[string]strin
 
 	// Enable request interception
 	if err := b.enableRequestInterception(requestData); err != nil {
-		return errors.Wrap(err, "enabling request interception")
+		return chromeErrors.WithContext(
+			chromeErrors.Wrap(err, chromeErrors.NetworkError, "failed to enable request interception"),
+			"method", method,
+		)
 	}
 
 	// Execute pre-navigation scripts before making the request
@@ -729,7 +950,10 @@ func (b *Browser) HTTPRequest(method, url, data string, headers map[string]strin
 	// Navigate to the URL (this will trigger our interceptor)
 	navCtx := b.ctx
 	if err := chromedp.Run(navCtx, chromedp.Navigate(url)); err != nil {
-		return errors.Wrap(err, "navigating with custom method")
+		return chromeErrors.WithContext(
+			chromeErrors.Wrap(err, chromeErrors.ChromeNavigationError, "failed to navigate with custom method"),
+			"method", method,
+		)
 	}
 
 	// Wait for network idle if requested (similar to Navigate method)
@@ -820,12 +1044,12 @@ func (b *Browser) enableRequestInterception(requestData *HTTPRequestData) error 
 
 	// Enable network events
 	if err := chromedp.Run(b.ctx, network.Enable()); err != nil {
-		return errors.Wrap(err, "enabling network events")
+		return chromeErrors.Wrap(err, chromeErrors.NetworkError, "failed to enable network events")
 	}
 
 	// Enable fetch domain for request interception
 	if err := chromedp.Run(b.ctx, fetch.Enable()); err != nil {
-		return errors.Wrap(err, "enabling fetch domain")
+		return chromeErrors.Wrap(err, chromeErrors.NetworkError, "failed to enable fetch domain")
 	}
 
 	// Set up the request interceptor
@@ -853,7 +1077,7 @@ func (b *Browser) disableRequestInterception() error {
 
 	// Disable fetch domain
 	if err := chromedp.Run(b.ctx, fetch.Disable()); err != nil {
-		return errors.Wrap(err, "disabling fetch domain")
+		return chromeErrors.Wrap(err, chromeErrors.NetworkError, "failed to disable fetch domain")
 	}
 
 	if b.opts.Verbose {
@@ -967,12 +1191,12 @@ func (b *Browser) setupProxyAuthentication() error {
 
 	// Enable network domain to intercept auth challenges
 	if err := chromedp.Run(b.ctx, network.Enable()); err != nil {
-		return errors.Wrap(err, "enabling network domain for proxy auth")
+		return chromeErrors.Wrap(err, chromeErrors.NetworkError, "failed to enable network domain for proxy auth")
 	}
 
 	// Enable fetch domain for handling authentication
 	if err := chromedp.Run(b.ctx, fetch.Enable()); err != nil {
-		return errors.Wrap(err, "enabling fetch domain for proxy auth")
+		return chromeErrors.Wrap(err, chromeErrors.NetworkError, "failed to enable fetch domain for proxy auth")
 	}
 
 	// Listen for auth required events
@@ -1017,4 +1241,65 @@ func (b *Browser) handleProxyAuthChallenge(ev *fetch.EventAuthRequired) {
 	} else if b.opts.Verbose {
 		log.Printf("Successfully provided proxy credentials")
 	}
+}
+
+// setupNetworkBlocking configures network interception for blocking requests
+func (b *Browser) setupNetworkBlocking() error {
+	if b.opts.Verbose {
+		log.Printf("Setting up network blocking...")
+	}
+
+	// Enable network domain
+	if err := chromedp.Run(b.ctx, network.Enable()); err != nil {
+		return errors.Wrap(err, "enabling network domain for blocking")
+	}
+
+	// Enable fetch domain for request interception
+	if err := chromedp.Run(b.ctx, fetch.Enable()); err != nil {
+		return errors.Wrap(err, "enabling fetch domain for blocking")
+	}
+
+	// Set up the request interceptor
+	chromedp.ListenTarget(b.ctx, func(ev interface{}) {
+		switch e := ev.(type) {
+		case *fetch.EventRequestPaused:
+			go b.handleBlockingRequest(e)
+		}
+	})
+
+	if b.opts.Verbose {
+		log.Printf("Network blocking enabled")
+	}
+
+	return nil
+}
+
+// handleBlockingRequest processes intercepted requests for blocking
+func (b *Browser) handleBlockingRequest(ev *fetch.EventRequestPaused) {
+	// Check if the request should be blocked
+	if b.blockingEngine != nil && b.blockingEngine.ShouldBlock(ev.Request.URL) {
+		// Block the request
+		if err := chromedp.Run(b.ctx, fetch.FailRequest(ev.RequestID, network.ErrorReasonAccessDenied)); err != nil && b.opts.Verbose {
+			log.Printf("Error blocking request %s: %v", ev.Request.URL, err)
+		}
+		return
+	}
+
+	// Continue the request as normal
+	if err := chromedp.Run(b.ctx, fetch.ContinueRequest(ev.RequestID)); err != nil && b.opts.Verbose {
+		log.Printf("Error continuing request %s: %v", ev.Request.URL, err)
+	}
+}
+
+// GetBlockingStats returns blocking statistics
+func (b *Browser) GetBlockingStats() (processed, blocked int64) {
+	if b.blockingEngine == nil {
+		return 0, 0
+	}
+	return b.blockingEngine.GetStats()
+}
+
+// BlockingEngine returns the blocking engine (if any)
+func (b *Browser) BlockingEngine() *blocking.BlockingEngine {
+	return b.blockingEngine
 }

@@ -28,26 +28,72 @@ type Options struct {
 	WaitNetworkIdle   bool
 	WaitSelector      string
 	StableTimeout     int
-	
+
 	// Stability detection settings
-	StabilityConfig   *StabilityConfig
-	WaitForStability  bool
+	StabilityConfig  *StabilityConfig
+	WaitForStability bool
 
 	// Proxy settings
-	ProxyServer       string // HTTP/HTTPS or SOCKS5 proxy
-	ProxyBypassList   string // Comma-separated list of hosts to bypass
-	ProxyUsername     string // Proxy authentication username
-	ProxyPassword     string // Proxy authentication password
+	ProxyServer     string // HTTP/HTTPS or SOCKS5 proxy
+	ProxyBypassList string // Comma-separated list of hosts to bypass
+	ProxyUsername   string // Proxy authentication username
+	ProxyPassword   string // Proxy authentication password
 
 	// Script injection settings
 	ScriptBefore []string // Scripts to execute before page load
 	ScriptAfter  []string // Scripts to execute after page load
+
+	// Blocking settings
+	BlockingEnabled       bool     // Enable URL/domain blocking
+	BlockingVerbose       bool     // Enable verbose blocking logging
+	BlockedURLPatterns    []string // URL patterns to block
+	BlockedDomains        []string // Domains to block
+	BlockedRegexPatterns  []string // Regex patterns to block
+	AllowedURLs           []string // URLs to allow (whitelist)
+	AllowedDomains        []string // Domains to allow (whitelist)
+	BlockingRuleFile      string   // File containing blocking rules
+	BlockCommonAds        bool     // Block common ad domains
+	BlockCommonTracking   bool     // Block common tracking domains
+	
+	// Security settings
+	SecurityProfile       string   // Security profile: strict, balanced, permissive
+	AllowedRemoteHosts    []string // Allowed remote hosts for connections
+	RemoteAuthToken       string   // Authentication token for remote connections
+	RemoteUseTLS          bool     // Use TLS for remote connections
+	RemoteCACert          string   // Path to CA certificate for remote TLS
+	MaxMemoryMB           uint64   // Maximum memory usage in MB
+	MaxConcurrentReqs     int      // Maximum concurrent requests
+	EnableResourceLimits  bool     // Enable resource limiting
+	ScriptValidation      bool     // Enable script validation
+	AllowDangerousScripts bool     // Allow potentially dangerous scripts
+
+	// File upload settings
+	UploadFiles           []FileUpload // Files to upload
+	UploadFormSelector    string       // Form selector for file uploads
+	UploadInputSelector   string       // File input selector
+	UploadMethod          string       // Upload method: form, ajax, drop
+	UploadProgressReport  bool         // Enable upload progress reporting
+	UploadChunkSize       int64        // Chunk size for chunked uploads (0 = no chunking)
+	UploadMaxFileSize     int64        // Maximum file size allowed (0 = no limit)
+	UploadTimeout         int          // Upload timeout in seconds
+	UploadRetryAttempts   int          // Number of retry attempts for failed uploads
+	UploadValidateTypes   []string     // Allowed file types (empty = all types)
+	UploadCompressFiles   bool         // Compress files before upload
+}
+
+// FileUpload represents a file to be uploaded
+type FileUpload struct {
+	Path        string            // Local file path
+	FieldName   string            // Form field name (for form uploads)
+	FileName    string            // Override filename (optional)
+	ContentType string            // Override content type (optional)
+	Metadata    map[string]string // Additional metadata
 }
 
 // Option is a function that modifies Options
 type Option func(*Options) error
 
-// defaultOptions returns the default browser options
+// defaultOptions returns the default browser options with secure defaults
 func defaultOptions() *Options {
 	return &Options{
 		Headless:          true,
@@ -56,6 +102,15 @@ func defaultOptions() *Options {
 		StableTimeout:     30,
 		UseProfile:        false,
 		CookieDomains:     []string{},
+		
+		// Secure defaults
+		SecurityProfile:       "balanced",
+		AllowedRemoteHosts:    []string{"localhost", "127.0.0.1"},
+		EnableResourceLimits:  true,
+		MaxMemoryMB:           1024, // 1GB default
+		MaxConcurrentReqs:     10,
+		ScriptValidation:      true,
+		AllowDangerousScripts: false,
 	}
 }
 
@@ -326,6 +381,214 @@ func WithStabilityOptions(opts ...StabilityOption) Option {
 			opt(o.StabilityConfig)
 		}
 		o.WaitForStability = true
+		return nil
+	}
+}
+
+// WithBlocking enables URL/domain blocking
+func WithBlocking(enabled bool) Option {
+	return func(o *Options) error {
+		o.BlockingEnabled = enabled
+		return nil
+	}
+}
+
+// WithBlockingVerbose enables verbose logging for blocking
+func WithBlockingVerbose(verbose bool) Option {
+	return func(o *Options) error {
+		o.BlockingVerbose = verbose
+		return nil
+	}
+}
+
+// WithBlockedURLPatterns sets URL patterns to block
+func WithBlockedURLPatterns(patterns []string) Option {
+	return func(o *Options) error {
+		o.BlockedURLPatterns = append(o.BlockedURLPatterns, patterns...)
+		return nil
+	}
+}
+
+// WithBlockedURLPattern adds a single URL pattern to block
+func WithBlockedURLPattern(pattern string) Option {
+	return func(o *Options) error {
+		if pattern == "" {
+			return errors.New("URL pattern cannot be empty")
+		}
+		o.BlockedURLPatterns = append(o.BlockedURLPatterns, pattern)
+		return nil
+	}
+}
+
+// WithBlockedDomains sets domains to block
+func WithBlockedDomains(domains []string) Option {
+	return func(o *Options) error {
+		o.BlockedDomains = append(o.BlockedDomains, domains...)
+		return nil
+	}
+}
+
+// WithBlockedDomain adds a single domain to block
+func WithBlockedDomain(domain string) Option {
+	return func(o *Options) error {
+		if domain == "" {
+			return errors.New("domain cannot be empty")
+		}
+		o.BlockedDomains = append(o.BlockedDomains, domain)
+		return nil
+	}
+}
+
+// WithBlockedRegexPatterns sets regex patterns to block
+func WithBlockedRegexPatterns(patterns []string) Option {
+	return func(o *Options) error {
+		o.BlockedRegexPatterns = append(o.BlockedRegexPatterns, patterns...)
+		return nil
+	}
+}
+
+// WithBlockedRegexPattern adds a single regex pattern to block
+func WithBlockedRegexPattern(pattern string) Option {
+	return func(o *Options) error {
+		if pattern == "" {
+			return errors.New("regex pattern cannot be empty")
+		}
+		o.BlockedRegexPatterns = append(o.BlockedRegexPatterns, pattern)
+		return nil
+	}
+}
+
+// WithAllowedURLs sets URLs to allow (whitelist)
+func WithAllowedURLs(urls []string) Option {
+	return func(o *Options) error {
+		o.AllowedURLs = append(o.AllowedURLs, urls...)
+		return nil
+	}
+}
+
+// WithAllowedURL adds a single URL to allow
+func WithAllowedURL(url string) Option {
+	return func(o *Options) error {
+		if url == "" {
+			return errors.New("URL cannot be empty")
+		}
+		o.AllowedURLs = append(o.AllowedURLs, url)
+		return nil
+	}
+}
+
+// WithAllowedDomains sets domains to allow (whitelist)
+func WithAllowedDomains(domains []string) Option {
+	return func(o *Options) error {
+		o.AllowedDomains = append(o.AllowedDomains, domains...)
+		return nil
+	}
+}
+
+// WithAllowedDomain adds a single domain to allow
+func WithAllowedDomain(domain string) Option {
+	return func(o *Options) error {
+		if domain == "" {
+			return errors.New("domain cannot be empty")
+		}
+		o.AllowedDomains = append(o.AllowedDomains, domain)
+		return nil
+	}
+}
+
+// WithBlockingRuleFile sets the file containing blocking rules
+func WithBlockingRuleFile(filename string) Option {
+	return func(o *Options) error {
+		if filename == "" {
+			return errors.New("rule file name cannot be empty")
+		}
+		o.BlockingRuleFile = filename
+		return nil
+	}
+}
+
+// WithBlockCommonAds enables blocking of common ad domains
+func WithBlockCommonAds(enabled bool) Option {
+	return func(o *Options) error {
+		o.BlockCommonAds = enabled
+		return nil
+	}
+}
+
+// WithBlockCommonTracking enables blocking of common tracking domains
+func WithBlockCommonTracking(enabled bool) Option {
+	return func(o *Options) error {
+		o.BlockCommonTracking = enabled
+		return nil
+	}
+}
+
+// WithSecurityProfile sets the security profile (strict, balanced, permissive)
+func WithSecurityProfile(profile string) Option {
+	return func(o *Options) error {
+		switch profile {
+		case "strict", "balanced", "permissive":
+			o.SecurityProfile = profile
+		default:
+			return errors.New("invalid security profile: must be strict, balanced, or permissive")
+		}
+		return nil
+	}
+}
+
+// WithAllowedRemoteHosts sets the allowed remote hosts for connections
+func WithAllowedRemoteHosts(hosts []string) Option {
+	return func(o *Options) error {
+		o.AllowedRemoteHosts = hosts
+		return nil
+	}
+}
+
+// WithRemoteAuthToken sets the authentication token for remote connections
+func WithRemoteAuthToken(token string) Option {
+	return func(o *Options) error {
+		o.RemoteAuthToken = token
+		return nil
+	}
+}
+
+// WithRemoteTLS enables TLS for remote connections
+func WithRemoteTLS(enabled bool, caCertPath string) Option {
+	return func(o *Options) error {
+		o.RemoteUseTLS = enabled
+		o.RemoteCACert = caCertPath
+		return nil
+	}
+}
+
+// WithResourceLimits enables resource limiting with specified limits
+func WithResourceLimits(maxMemoryMB uint64, maxConcurrentReqs int) Option {
+	return func(o *Options) error {
+		if maxMemoryMB <= 0 {
+			return errors.New("max memory must be positive")
+		}
+		if maxConcurrentReqs <= 0 {
+			return errors.New("max concurrent requests must be positive")
+		}
+		o.EnableResourceLimits = true
+		o.MaxMemoryMB = maxMemoryMB
+		o.MaxConcurrentReqs = maxConcurrentReqs
+		return nil
+	}
+}
+
+// WithScriptValidation enables validation of JavaScript scripts
+func WithScriptValidation(enabled bool) Option {
+	return func(o *Options) error {
+		o.ScriptValidation = enabled
+		return nil
+	}
+}
+
+// WithAllowDangerousScripts allows potentially dangerous JavaScript patterns
+func WithAllowDangerousScripts(allow bool) Option {
+	return func(o *Options) error {
+		o.AllowDangerousScripts = allow
 		return nil
 	}
 }
