@@ -28,37 +28,37 @@ type StabilityDetector struct {
 // StabilityConfig configures stability detection behavior
 type StabilityConfig struct {
 	// Network idle configuration
-	NetworkIdleThreshold    int           // Number of concurrent network requests to consider idle (default: 0)
-	NetworkIdleTimeout      time.Duration // Time to wait with network at idle threshold (default: 500ms)
-	NetworkIdleWatchWindow  time.Duration // Time window to monitor network activity (default: 5s)
-	
+	NetworkIdleThreshold   int           // Number of concurrent network requests to consider idle (default: 0)
+	NetworkIdleTimeout     time.Duration // Time to wait with network at idle threshold (default: 500ms)
+	NetworkIdleWatchWindow time.Duration // Time window to monitor network activity (default: 5s)
+
 	// DOM stability configuration
-	DOMStableThreshold      int           // Number of DOM mutations to consider stable (default: 0)
-	DOMStableTimeout        time.Duration // Time to wait with DOM at stable threshold (default: 500ms)
-	DOMWatchWindow          time.Duration // Time window to monitor DOM mutations (default: 3s)
-	
+	DOMStableThreshold int           // Number of DOM mutations to consider stable (default: 0)
+	DOMStableTimeout   time.Duration // Time to wait with DOM at stable threshold (default: 500ms)
+	DOMWatchWindow     time.Duration // Time window to monitor DOM mutations (default: 3s)
+
 	// Resource loading configuration
-	WaitForImages           bool          // Wait for all images to load (default: true)
-	WaitForFonts            bool          // Wait for all fonts to load (default: true)
-	WaitForStylesheets      bool          // Wait for all stylesheets to load (default: true)
-	WaitForScripts          bool          // Wait for all scripts to load (default: true)
-	ResourceTimeout         time.Duration // Max time to wait for resources (default: 10s)
-	
+	WaitForImages      bool          // Wait for all images to load (default: true)
+	WaitForFonts       bool          // Wait for all fonts to load (default: true)
+	WaitForStylesheets bool          // Wait for all stylesheets to load (default: true)
+	WaitForScripts     bool          // Wait for all scripts to load (default: true)
+	ResourceTimeout    time.Duration // Max time to wait for resources (default: 10s)
+
 	// JavaScript execution configuration
-	WaitForAnimationFrame   bool          // Wait for animation frame to complete (default: true)
-	WaitForIdleCallback     bool          // Wait for request idle callback (default: true)
-	JSExecutionTimeout      time.Duration // Max time to wait for JS execution (default: 5s)
-	
+	WaitForAnimationFrame bool          // Wait for animation frame to complete (default: true)
+	WaitForIdleCallback   bool          // Wait for request idle callback (default: true)
+	JSExecutionTimeout    time.Duration // Max time to wait for JS execution (default: 5s)
+
 	// Overall stability configuration
-	MaxStabilityWait        time.Duration // Maximum time to wait for stability (default: 30s)
-	RetryAttempts           int           // Number of retry attempts if stability check fails (default: 3)
-	RetryDelay              time.Duration // Delay between retry attempts (default: 1s)
-	
+	MaxStabilityWait time.Duration // Maximum time to wait for stability (default: 30s)
+	RetryAttempts    int           // Number of retry attempts if stability check fails (default: 3)
+	RetryDelay       time.Duration // Delay between retry attempts (default: 1s)
+
 	// Custom stability checks
-	CustomChecks            []StabilityCheck // Custom JavaScript stability checks
-	
+	CustomChecks []StabilityCheck // Custom JavaScript stability checks
+
 	// Logging
-	Verbose                 bool          // Enable verbose logging
+	Verbose bool // Enable verbose logging
 }
 
 // StabilityCheck represents a custom JavaScript stability check
@@ -70,13 +70,12 @@ type StabilityCheck struct {
 
 // StabilityMetrics tracks stability detection metrics
 type StabilityMetrics struct {
-	NetworkRequests      int32
-	PendingRequests      map[network.RequestID]time.Time
-	DOMModifications     int32
-	LastDOMModification  time.Time
-	LoadedResources      map[string]bool
-	StabilityChecks      map[string]bool
-	mu                   sync.RWMutex
+	NetworkRequests     int32
+	PendingRequests     map[network.RequestID]time.Time
+	DOMModifications    int32
+	LastDOMModification time.Time
+	LoadedResources     map[string]bool
+	StabilityChecks     map[string]bool
 }
 
 // DefaultStabilityConfig returns a default stability configuration
@@ -85,27 +84,27 @@ func DefaultStabilityConfig() *StabilityConfig {
 		NetworkIdleThreshold:   0,
 		NetworkIdleTimeout:     500 * time.Millisecond,
 		NetworkIdleWatchWindow: 5 * time.Second,
-		
-		DOMStableThreshold:     0,
-		DOMStableTimeout:       500 * time.Millisecond,
-		DOMWatchWindow:         3 * time.Second,
-		
-		WaitForImages:          true,
-		WaitForFonts:           true,
-		WaitForStylesheets:     true,
-		WaitForScripts:         true,
-		ResourceTimeout:        10 * time.Second,
-		
-		WaitForAnimationFrame:  true,
-		WaitForIdleCallback:    true,
-		JSExecutionTimeout:     5 * time.Second,
-		
-		MaxStabilityWait:       30 * time.Second,
-		RetryAttempts:          3,
-		RetryDelay:             1 * time.Second,
-		
-		CustomChecks:           []StabilityCheck{},
-		Verbose:                false,
+
+		DOMStableThreshold: 0,
+		DOMStableTimeout:   500 * time.Millisecond,
+		DOMWatchWindow:     3 * time.Second,
+
+		WaitForImages:      true,
+		WaitForFonts:       true,
+		WaitForStylesheets: true,
+		WaitForScripts:     true,
+		ResourceTimeout:    10 * time.Second,
+
+		WaitForAnimationFrame: true,
+		WaitForIdleCallback:   true,
+		JSExecutionTimeout:    5 * time.Second,
+
+		MaxStabilityWait: 30 * time.Second,
+		RetryAttempts:    3,
+		RetryDelay:       1 * time.Second,
+
+		CustomChecks: []StabilityCheck{},
+		Verbose:      false,
 	}
 }
 
@@ -114,7 +113,7 @@ func NewStabilityDetector(page *Page, config *StabilityConfig) *StabilityDetecto
 	if config == nil {
 		config = DefaultStabilityConfig()
 	}
-	
+
 	return &StabilityDetector{
 		page:   page,
 		config: config,
@@ -131,11 +130,11 @@ func NewStabilityDetector(page *Page, config *StabilityConfig) *StabilityDetecto
 func (sd *StabilityDetector) Start() error {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
-	
+
 	if sd.started {
 		return nil
 	}
-	
+
 	// Enable necessary Chrome DevTools domains
 	if err := chromedp.Run(sd.page.ctx,
 		network.Enable(),
@@ -145,15 +144,15 @@ func (sd *StabilityDetector) Start() error {
 	); err != nil {
 		return errors.Wrap(err, "enabling DevTools domains for stability detection")
 	}
-	
+
 	// Set up event listeners
 	chromedp.ListenTarget(sd.page.ctx, sd.handleEvent)
-	
+
 	// Inject DOM mutation observer
 	if err := sd.injectDOMMutationObserver(); err != nil {
 		return errors.Wrap(err, "injecting DOM mutation observer")
 	}
-	
+
 	sd.started = true
 	return nil
 }
@@ -162,7 +161,7 @@ func (sd *StabilityDetector) Start() error {
 func (sd *StabilityDetector) Stop() {
 	sd.mu.Lock()
 	defer sd.mu.Unlock()
-	
+
 	if sd.started {
 		close(sd.stopChan)
 		sd.started = false
@@ -176,11 +175,11 @@ func (sd *StabilityDetector) WaitForStability(ctx context.Context) error {
 			return err
 		}
 	}
-	
+
 	// Create a timeout context
 	timeoutCtx, cancel := context.WithTimeout(ctx, sd.config.MaxStabilityWait)
 	defer cancel()
-	
+
 	// Try stability check with retries
 	for attempt := 0; attempt <= sd.config.RetryAttempts; attempt++ {
 		if attempt > 0 {
@@ -189,7 +188,7 @@ func (sd *StabilityDetector) WaitForStability(ctx context.Context) error {
 			}
 			time.Sleep(sd.config.RetryDelay)
 		}
-		
+
 		err := sd.checkStability(timeoutCtx)
 		if err == nil {
 			if sd.config.Verbose {
@@ -197,14 +196,14 @@ func (sd *StabilityDetector) WaitForStability(ctx context.Context) error {
 			}
 			return nil
 		}
-		
+
 		if err == context.DeadlineExceeded {
 			continue // Retry on timeout
 		}
-		
+
 		return err // Return on other errors
 	}
-	
+
 	return errors.New("failed to detect page stability after all retry attempts")
 }
 
@@ -220,21 +219,21 @@ func (sd *StabilityDetector) checkStability(ctx context.Context) error {
 		{"JavaScript execution", sd.waitForJSExecution},
 		{"custom checks", sd.runCustomChecks},
 	}
-	
+
 	// Run all checks in parallel
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(checks))
-	
+
 	for _, c := range checks {
 		check := c
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			
+
 			if sd.config.Verbose {
 				log.Printf("Starting stability check: %s", check.name)
 			}
-			
+
 			if err := check.check(ctx); err != nil {
 				if sd.config.Verbose {
 					log.Printf("Stability check failed: %s - %v", check.name, err)
@@ -245,23 +244,23 @@ func (sd *StabilityDetector) checkStability(ctx context.Context) error {
 			}
 		}()
 	}
-	
+
 	// Wait for all checks to complete
 	go func() {
 		wg.Wait()
 		close(errChan)
 	}()
-	
+
 	// Collect any errors
 	var errs []error
 	for err := range errChan {
 		errs = append(errs, err)
 	}
-	
+
 	if len(errs) > 0 {
 		return errors.Errorf("stability checks failed: %v", errs)
 	}
-	
+
 	return nil
 }
 
@@ -269,20 +268,20 @@ func (sd *StabilityDetector) checkStability(ctx context.Context) error {
 func (sd *StabilityDetector) waitForNetworkIdle(ctx context.Context) error {
 	watchCtx, cancel := context.WithTimeout(ctx, sd.config.NetworkIdleWatchWindow)
 	defer cancel()
-	
+
 	idleStart := time.Time{}
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-watchCtx.Done():
 			return errors.New("network idle timeout")
 		case <-ticker.C:
-			sd.metrics.mu.RLock()
+			sd.mu.RLock()
 			pendingCount := len(sd.metrics.PendingRequests)
-			sd.metrics.mu.RUnlock()
-			
+			sd.mu.RUnlock()
+
 			if pendingCount <= sd.config.NetworkIdleThreshold {
 				if idleStart.IsZero() {
 					idleStart = time.Now()
@@ -306,32 +305,32 @@ func (sd *StabilityDetector) waitForNetworkIdle(ctx context.Context) error {
 func (sd *StabilityDetector) waitForDOMStability(ctx context.Context) error {
 	watchCtx, cancel := context.WithTimeout(ctx, sd.config.DOMWatchWindow)
 	defer cancel()
-	
+
 	// Reset DOM modification counter
 	atomic.StoreInt32(&sd.metrics.DOMModifications, 0)
-	
+
 	// Re-inject mutation observer to ensure it's active
 	if err := sd.injectDOMMutationObserver(); err != nil {
 		return err
 	}
-	
+
 	stableStart := time.Time{}
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-watchCtx.Done():
 			return errors.New("DOM stability timeout")
 		case <-ticker.C:
 			modifications := atomic.LoadInt32(&sd.metrics.DOMModifications)
-			
-			sd.metrics.mu.RLock()
+
+			sd.mu.RLock()
 			lastMod := sd.metrics.LastDOMModification
-			sd.metrics.mu.RUnlock()
-			
+			sd.mu.RUnlock()
+
 			timeSinceLastMod := time.Since(lastMod)
-			
+
 			if modifications <= int32(sd.config.DOMStableThreshold) || timeSinceLastMod >= sd.config.DOMStableTimeout {
 				if stableStart.IsZero() {
 					stableStart = time.Now()
@@ -342,7 +341,7 @@ func (sd *StabilityDetector) waitForDOMStability(ctx context.Context) error {
 					return nil // DOM has been stable long enough
 				}
 			} else {
-				stableStart = time.Time{} // Reset stable timer
+				stableStart = time.Time{}                          // Reset stable timer
 				atomic.StoreInt32(&sd.metrics.DOMModifications, 0) // Reset counter
 				if sd.config.Verbose {
 					log.Printf("DOM active: %d modifications in last %v", modifications, timeSinceLastMod)
@@ -356,11 +355,11 @@ func (sd *StabilityDetector) waitForDOMStability(ctx context.Context) error {
 func (sd *StabilityDetector) waitForResourceLoading(ctx context.Context) error {
 	resourceCtx, cancel := context.WithTimeout(ctx, sd.config.ResourceTimeout)
 	defer cancel()
-	
+
 	checks := []struct {
-		enabled  bool
-		name     string
-		script   string
+		enabled bool
+		name    string
+		script  string
 	}{
 		{
 			sd.config.WaitForImages,
@@ -385,16 +384,16 @@ func (sd *StabilityDetector) waitForResourceLoading(ctx context.Context) error {
 			`Array.from(document.scripts).every(script => !script.src || script.readyState === 'complete' || !script.readyState)`,
 		},
 	}
-	
+
 	for _, check := range checks {
 		if !check.enabled {
 			continue
 		}
-		
+
 		if sd.config.Verbose {
 			log.Printf("Waiting for %s to load", check.name)
 		}
-		
+
 		err := sd.page.WaitForFunction(check.script, sd.config.ResourceTimeout)
 		if err != nil {
 			if resourceCtx.Err() != nil {
@@ -402,12 +401,12 @@ func (sd *StabilityDetector) waitForResourceLoading(ctx context.Context) error {
 			}
 			return errors.Wrapf(err, "waiting for %s", check.name)
 		}
-		
+
 		if sd.config.Verbose {
 			log.Printf("All %s loaded", check.name)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -415,12 +414,12 @@ func (sd *StabilityDetector) waitForResourceLoading(ctx context.Context) error {
 func (sd *StabilityDetector) waitForJSExecution(ctx context.Context) error {
 	jsCtx, cancel := context.WithTimeout(ctx, sd.config.JSExecutionTimeout)
 	defer cancel()
-	
+
 	if sd.config.WaitForAnimationFrame {
 		if sd.config.Verbose {
 			log.Println("Waiting for animation frame")
 		}
-		
+
 		// Wait for next animation frame
 		var frameComplete bool
 		err := chromedp.Run(jsCtx,
@@ -430,12 +429,12 @@ func (sd *StabilityDetector) waitForJSExecution(ctx context.Context) error {
 			return errors.Wrap(err, "waiting for animation frame")
 		}
 	}
-	
+
 	if sd.config.WaitForIdleCallback {
 		if sd.config.Verbose {
 			log.Println("Waiting for idle callback")
 		}
-		
+
 		// Wait for browser idle time
 		var idleComplete bool
 		err := chromedp.Run(jsCtx,
@@ -451,7 +450,7 @@ func (sd *StabilityDetector) waitForJSExecution(ctx context.Context) error {
 			return errors.Wrap(err, "waiting for idle callback")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -460,11 +459,11 @@ func (sd *StabilityDetector) runCustomChecks(ctx context.Context) error {
 	for _, check := range sd.config.CustomChecks {
 		checkCtx, cancel := context.WithTimeout(ctx, check.Timeout)
 		defer cancel()
-		
+
 		if sd.config.Verbose {
 			log.Printf("Running custom stability check: %s", check.Name)
 		}
-		
+
 		err := sd.page.WaitForFunction(check.Expression, check.Timeout)
 		if err != nil {
 			if checkCtx.Err() != nil {
@@ -472,12 +471,12 @@ func (sd *StabilityDetector) runCustomChecks(ctx context.Context) error {
 			}
 			return errors.Wrapf(err, "custom check '%s' failed", check.Name)
 		}
-		
-		sd.metrics.mu.Lock()
+
+		sd.mu.Lock()
 		sd.metrics.StabilityChecks[check.Name] = true
-		sd.metrics.mu.Unlock()
+		sd.mu.Unlock()
 	}
-	
+
 	return nil
 }
 
@@ -510,12 +509,12 @@ func (sd *StabilityDetector) handleEvent(ev interface{}) {
 
 // handleRequestStart records a new network request
 func (sd *StabilityDetector) handleRequestStart(requestID network.RequestID) {
-	sd.metrics.mu.Lock()
-	defer sd.metrics.mu.Unlock()
-	
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
 	sd.metrics.PendingRequests[requestID] = time.Now()
 	atomic.AddInt32(&sd.metrics.NetworkRequests, 1)
-	
+
 	if sd.config.Verbose {
 		log.Printf("Network request started: %s (total pending: %d)", requestID, len(sd.metrics.PendingRequests))
 	}
@@ -523,12 +522,12 @@ func (sd *StabilityDetector) handleRequestStart(requestID network.RequestID) {
 
 // handleRequestEnd records the completion of a network request
 func (sd *StabilityDetector) handleRequestEnd(requestID network.RequestID) {
-	sd.metrics.mu.Lock()
-	defer sd.metrics.mu.Unlock()
-	
+	sd.mu.Lock()
+	defer sd.mu.Unlock()
+
 	if _, exists := sd.metrics.PendingRequests[requestID]; exists {
 		delete(sd.metrics.PendingRequests, requestID)
-		
+
 		if sd.config.Verbose {
 			log.Printf("Network request finished: %s (remaining: %d)", requestID, len(sd.metrics.PendingRequests))
 		}
@@ -538,11 +537,11 @@ func (sd *StabilityDetector) handleRequestEnd(requestID network.RequestID) {
 // handleDOMMutation records a DOM modification
 func (sd *StabilityDetector) handleDOMMutation() {
 	atomic.AddInt32(&sd.metrics.DOMModifications, 1)
-	
-	sd.metrics.mu.Lock()
+
+	sd.mu.Lock()
 	sd.metrics.LastDOMModification = time.Now()
-	sd.metrics.mu.Unlock()
-	
+	sd.mu.Unlock()
+
 	if sd.config.Verbose {
 		count := atomic.LoadInt32(&sd.metrics.DOMModifications)
 		log.Printf("DOM mutation detected (total: %d)", count)
@@ -567,15 +566,15 @@ func (sd *StabilityDetector) injectDOMMutationObserver() error {
 			});
 		}
 	`
-	
+
 	return chromedp.Run(sd.page.ctx, chromedp.Evaluate(script, nil))
 }
 
 // GetMetrics returns current stability metrics
 func (sd *StabilityDetector) GetMetrics() StabilityMetrics {
-	sd.metrics.mu.RLock()
-	defer sd.metrics.mu.RUnlock()
-	
+	sd.mu.RLock()
+	defer sd.mu.RUnlock()
+
 	// Create a copy of the metrics
 	metrics := StabilityMetrics{
 		NetworkRequests:     atomic.LoadInt32(&sd.metrics.NetworkRequests),
@@ -585,19 +584,19 @@ func (sd *StabilityDetector) GetMetrics() StabilityMetrics {
 		LoadedResources:     make(map[string]bool),
 		StabilityChecks:     make(map[string]bool),
 	}
-	
+
 	for k, v := range sd.metrics.PendingRequests {
 		metrics.PendingRequests[k] = v
 	}
-	
+
 	for k, v := range sd.metrics.LoadedResources {
 		metrics.LoadedResources[k] = v
 	}
-	
+
 	for k, v := range sd.metrics.StabilityChecks {
 		metrics.StabilityChecks[k] = v
 	}
-	
+
 	return metrics
 }
 

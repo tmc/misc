@@ -12,6 +12,7 @@ import (
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
+	"github.com/tmc/misc/chrome-to-har/internal/blocking"
 )
 
 // Request represents an intercepted network request
@@ -56,6 +57,9 @@ type NetworkManager struct {
 	// Request tracking
 	requests  map[network.RequestID]*Request
 	responses map[network.RequestID]*Response
+
+	// Blocking engine
+	blockingEngine *blocking.BlockingEngine
 }
 
 // NewNetworkManager creates a new network manager
@@ -65,6 +69,17 @@ func NewNetworkManager(page *Page) *NetworkManager {
 		routes:    make([]Route, 0),
 		requests:  make(map[network.RequestID]*Request),
 		responses: make(map[network.RequestID]*Response),
+	}
+}
+
+// NewNetworkManagerWithBlocking creates a new network manager with blocking support
+func NewNetworkManagerWithBlocking(page *Page, blockingEngine *blocking.BlockingEngine) *NetworkManager {
+	return &NetworkManager{
+		page:           page,
+		routes:         make([]Route, 0),
+		requests:       make(map[network.RequestID]*Request),
+		responses:      make(map[network.RequestID]*Response),
+		blockingEngine: blockingEngine,
 	}
 }
 
@@ -179,6 +194,16 @@ func (nm *NetworkManager) handleRequestPaused(ev *fetch.EventRequestPaused) {
 	nm.mu.Lock()
 	nm.requests[network.RequestID(ev.RequestID)] = req
 	nm.mu.Unlock()
+
+	// Check if the request should be blocked
+	if nm.blockingEngine != nil && nm.blockingEngine.ShouldBlock(req.URL) {
+		// Block the request
+		if err := req.Abort("accessdenied"); err != nil {
+			// If blocking fails, continue the request
+			req.Continue()
+		}
+		return
+	}
 
 	// Check if any route matches
 	nm.mu.RLock()
