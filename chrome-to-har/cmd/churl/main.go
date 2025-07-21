@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/tmc/misc/chrome-to-har/internal/browser"
 	"github.com/tmc/misc/chrome-to-har/internal/chromeprofiles"
+	chromeErrors "github.com/tmc/misc/chrome-to-har/internal/errors"
 	"github.com/tmc/misc/chrome-to-har/internal/recorder"
 )
 
@@ -73,6 +74,29 @@ type options struct {
 	scriptAfter      stringSlice
 	scriptFileBefore stringSlice
 	scriptFileAfter  stringSlice
+
+	// Blocking options
+	blockingEnabled     bool        // Enable URL/domain blocking
+	blockingVerbose     bool        // Enable verbose blocking logging
+	blockURLPatterns    stringSlice // URL patterns to block
+	blockDomains        stringSlice // Domains to block
+	blockRegexPatterns  stringSlice // Regex patterns to block
+	allowURLs           stringSlice // URLs to allow (whitelist)
+	allowDomains        stringSlice // Domains to allow (whitelist)
+	blockingRuleFile    string      // File containing blocking rules
+	blockCommonAds      bool        // Block common ad domains
+	blockCommonTracking bool        // Block common tracking domains
+
+	// WebSocket options
+	webSocketEnabled     bool        // Enable WebSocket monitoring
+	webSocketMessages    stringSlice // Messages to send to WebSocket
+	webSocketWaitFor     string      // Wait for specific WebSocket condition
+	webSocketTimeout     int         // WebSocket wait timeout in seconds
+	webSocketURLPattern  string      // WebSocket URL pattern to monitor
+	webSocketDataPattern string      // WebSocket data pattern to match
+	webSocketDirection   string      // WebSocket direction filter (sent/received)
+	webSocketOutputFile  string      // Output file for WebSocket data
+	webSocketStats       bool        // Show WebSocket statistics
 }
 
 // headerSlice allows multiple -H flags
@@ -145,6 +169,29 @@ func main() {
 	flag.Var(&opts.scriptAfter, "script-after", "JavaScript to execute after page load (can be used multiple times)")
 	flag.Var(&opts.scriptFileBefore, "script-file-before", "JavaScript file to execute before page load (can be used multiple times)")
 	flag.Var(&opts.scriptFileAfter, "script-file-after", "JavaScript file to execute after page load (can be used multiple times)")
+
+	// Blocking options
+	flag.BoolVar(&opts.blockingEnabled, "block-enabled", false, "Enable URL/domain blocking")
+	flag.BoolVar(&opts.blockingVerbose, "block-verbose", false, "Enable verbose blocking logging")
+	flag.Var(&opts.blockURLPatterns, "block-url", "URL pattern to block (can be used multiple times)")
+	flag.Var(&opts.blockDomains, "block-domain", "Domain to block (can be used multiple times)")
+	flag.Var(&opts.blockRegexPatterns, "block-regex", "Regex pattern to block (can be used multiple times)")
+	flag.Var(&opts.allowURLs, "allow-url", "URL to allow/whitelist (can be used multiple times)")
+	flag.Var(&opts.allowDomains, "allow-domain", "Domain to allow/whitelist (can be used multiple times)")
+	flag.StringVar(&opts.blockingRuleFile, "block-file", "", "File containing blocking rules")
+	flag.BoolVar(&opts.blockCommonAds, "block-ads", false, "Block common ad domains")
+	flag.BoolVar(&opts.blockCommonTracking, "block-tracking", false, "Block common tracking domains")
+
+	// WebSocket options
+	flag.BoolVar(&opts.webSocketEnabled, "ws-enabled", false, "Enable WebSocket monitoring")
+	flag.Var(&opts.webSocketMessages, "ws-send", "Message to send to WebSocket (can be used multiple times)")
+	flag.StringVar(&opts.webSocketWaitFor, "ws-wait-for", "", "Wait for WebSocket condition (open, closed, message, first_message, etc.)")
+	flag.IntVar(&opts.webSocketTimeout, "ws-timeout", 30, "WebSocket wait timeout in seconds")
+	flag.StringVar(&opts.webSocketURLPattern, "ws-url-pattern", "*", "WebSocket URL pattern to monitor")
+	flag.StringVar(&opts.webSocketDataPattern, "ws-data-pattern", "", "WebSocket data pattern to match")
+	flag.StringVar(&opts.webSocketDirection, "ws-direction", "", "WebSocket direction filter (sent/received)")
+	flag.StringVar(&opts.webSocketOutputFile, "ws-output", "", "Output file for WebSocket data")
+	flag.BoolVar(&opts.webSocketStats, "ws-stats", false, "Show WebSocket statistics")
 
 	// Custom usage message
 	flag.Usage = func() {
@@ -281,6 +328,19 @@ func main() {
 			log.Fatal("Operation was canceled. This might indicate an internal timeout issue.")
 		} else if strings.Contains(err.Error(), "context canceled") {
 			log.Fatal("Operation was canceled due to context timeout. Try increasing the timeout value with --timeout flag.")
+		} else if chromeErr, ok := err.(*chromeErrors.ChromeError); ok {
+			// Print user-friendly error message
+			fmt.Fprintf(os.Stderr, "Error: %s\n", chromeErr.UserMessage())
+			if suggestions := chromeErr.Suggestions(); len(suggestions) > 0 {
+				fmt.Fprintf(os.Stderr, "\nSuggestions:\n")
+				for _, suggestion := range suggestions {
+					fmt.Fprintf(os.Stderr, "  - %s\n", suggestion)
+				}
+			}
+			if opts.verbose {
+				fmt.Fprintf(os.Stderr, "\nDetailed error: %s\n", chromeErrors.FormatError(err))
+			}
+			os.Exit(1)
 		} else {
 			log.Fatal(err)
 		}
@@ -295,12 +355,12 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 	// Load script files and combine with inline scripts
 	scriptsBefore, err := loadScripts(opts.scriptBefore, opts.scriptFileBefore, opts.verbose)
 	if err != nil {
-		return errors.Wrap(err, "loading before scripts")
+		return chromeErrors.Wrap(err, chromeErrors.InvalidScriptError, "failed to load before scripts")
 	}
 
 	scriptsAfter, err := loadScripts(opts.scriptAfter, opts.scriptFileAfter, opts.verbose)
 	if err != nil {
-		return errors.Wrap(err, "loading after scripts")
+		return chromeErrors.Wrap(err, chromeErrors.InvalidScriptError, "failed to load after scripts")
 	}
 
 	if opts.verbose && (len(scriptsBefore) > 0 || len(scriptsAfter) > 0) {
@@ -312,7 +372,10 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 	for _, h := range opts.headers {
 		parts := strings.SplitN(h, ":", 2)
 		if len(parts) != 2 {
-			return errors.Errorf("invalid header format: %s", h)
+			return chromeErrors.WithContext(
+				chromeErrors.New(chromeErrors.InvalidHeaderError, "invalid header format (expected 'name: value')"),
+				"header", h,
+			)
 		}
 		name := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
@@ -323,7 +386,7 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 	if opts.profileDir != "" {
 		profiles, err := pm.ListProfiles()
 		if err != nil {
-			return errors.Wrap(err, "listing profiles")
+			return chromeErrors.Wrap(err, chromeErrors.ProfileSetupError, "failed to list Chrome profiles")
 		}
 
 		profileExists := false
@@ -335,7 +398,10 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		}
 
 		if !profileExists {
-			return errors.Errorf("profile not found: %s", opts.profileDir)
+			return chromeErrors.WithContext(
+				chromeErrors.New(chromeErrors.ProfileNotFoundError, "specified Chrome profile does not exist"),
+				"profile", opts.profileDir,
+			)
 		}
 	}
 
@@ -393,17 +459,17 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		if opts.socks5Proxy != "" {
 			proxyServer = opts.socks5Proxy
 		}
-		
+
 		browserOpts = append(browserOpts, browser.WithProxy(proxyServer))
-		
+
 		if opts.proxyBypass != "" {
 			browserOpts = append(browserOpts, browser.WithProxyBypassList(opts.proxyBypass))
 		}
-		
+
 		if opts.proxyUsername != "" && opts.proxyPassword != "" {
 			browserOpts = append(browserOpts, browser.WithProxyAuth(opts.proxyUsername, opts.proxyPassword))
 		}
-		
+
 		if opts.verbose {
 			log.Printf("Using proxy server: %s", proxyServer)
 			if opts.proxyBypass != "" {
@@ -415,28 +481,80 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		}
 	}
 
+	// Add blocking options if enabled
+	if opts.blockingEnabled {
+		browserOpts = append(browserOpts, browser.WithBlocking(true))
+		
+		if opts.blockingVerbose {
+			browserOpts = append(browserOpts, browser.WithBlockingVerbose(true))
+		}
+
+		// Add URL patterns to block
+		for _, pattern := range opts.blockURLPatterns {
+			browserOpts = append(browserOpts, browser.WithBlockedURLPattern(pattern))
+		}
+
+		// Add domains to block
+		for _, domain := range opts.blockDomains {
+			browserOpts = append(browserOpts, browser.WithBlockedDomain(domain))
+		}
+
+		// Add regex patterns to block
+		for _, pattern := range opts.blockRegexPatterns {
+			browserOpts = append(browserOpts, browser.WithBlockedRegexPattern(pattern))
+		}
+
+		// Add URLs to allow
+		for _, url := range opts.allowURLs {
+			browserOpts = append(browserOpts, browser.WithAllowedURL(url))
+		}
+
+		// Add domains to allow
+		for _, domain := range opts.allowDomains {
+			browserOpts = append(browserOpts, browser.WithAllowedDomain(domain))
+		}
+
+		// Add blocking rule file
+		if opts.blockingRuleFile != "" {
+			browserOpts = append(browserOpts, browser.WithBlockingRuleFile(opts.blockingRuleFile))
+		}
+
+		// Add common blocking rules
+		if opts.blockCommonAds {
+			browserOpts = append(browserOpts, browser.WithBlockCommonAds(true))
+		}
+
+		if opts.blockCommonTracking {
+			browserOpts = append(browserOpts, browser.WithBlockCommonTracking(true))
+		}
+
+		if opts.verbose {
+			log.Printf("URL/domain blocking enabled")
+		}
+	}
+
 	// Create and launch browser
 	b, err := browser.New(ctx, pm, browserOpts...)
 	if err != nil {
-		return errors.Wrap(err, "creating browser")
+		return chromeErrors.Wrap(err, chromeErrors.ChromeLaunchError, "failed to create browser instance")
 	}
 
 	if err := b.Launch(ctx); err != nil {
-		return errors.Wrap(err, "launching browser")
+		return chromeErrors.Wrap(err, chromeErrors.ChromeLaunchError, "failed to launch browser")
 	}
 	defer b.Close()
 
 	// Set up request headers
 	if len(headers) > 0 {
 		if err := b.SetRequestHeaders(headers); err != nil {
-			return errors.Wrap(err, "setting request headers")
+			return chromeErrors.Wrap(err, chromeErrors.NetworkError, "failed to set request headers")
 		}
 	}
 
 	// Set up basic auth if provided
 	if opts.username != "" && opts.password != "" {
 		if err := b.SetBasicAuth(opts.username, opts.password); err != nil {
-			return errors.Wrap(err, "setting basic authentication")
+			return chromeErrors.Wrap(err, chromeErrors.AuthenticationError, "failed to set basic authentication")
 		}
 	}
 
@@ -450,7 +568,7 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 
 		rec, err = recorder.New(recOpts...)
 		if err != nil {
-			return errors.Wrap(err, "creating recorder")
+			return chromeErrors.Wrap(err, chromeErrors.NetworkRecordError, "failed to create network recorder")
 		}
 
 		// Enable network monitoring with proper timeout handling
@@ -470,7 +588,7 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		defer enableCancel()
 
 		if err := chromedp.Run(enableCtx, network.Enable()); err != nil {
-			return errors.Wrap(err, "enabling network monitoring")
+			return chromeErrors.Wrap(err, chromeErrors.NetworkError, "failed to enable network monitoring")
 		}
 
 		// Set up event listener for network events
@@ -481,12 +599,25 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 	if opts.method != "GET" || opts.data != "" {
 		// Use HTTPRequest for custom methods or when data is provided
 		if err := b.HTTPRequest(opts.method, url, opts.data, headers); err != nil {
-			return errors.Wrap(err, "making HTTP request")
+			return chromeErrors.WithContext(
+				chromeErrors.Wrap(err, chromeErrors.NetworkError, "failed to make HTTP request"),
+				"method", opts.method,
+			)
 		}
 	} else {
 		// Use regular navigation for GET requests without data
 		if err := b.Navigate(url); err != nil {
-			return errors.Wrap(err, "navigating to URL")
+			return chromeErrors.WithContext(
+				chromeErrors.Wrap(err, chromeErrors.ChromeNavigationError, "failed to navigate to URL"),
+				"url", url,
+			)
+		}
+	}
+
+	// Handle WebSocket functionality if enabled
+	if opts.webSocketEnabled {
+		if err := handleWebSocketOperations(ctx, b, opts); err != nil {
+			return chromeErrors.Wrap(err, chromeErrors.NetworkError, "WebSocket operations failed")
 		}
 	}
 
@@ -502,18 +633,21 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 
 	case "har":
 		if rec == nil {
-			return errors.New("recorder not initialized for HAR output")
+			return chromeErrors.New(chromeErrors.InternalError, "recorder not initialized for HAR output")
 		}
 
 		// Write HAR to a temporary file and read it back
 		tmpFile, err := os.CreateTemp("", "churl-*.har")
 		if err != nil {
-			return errors.Wrap(err, "creating temp file")
+			return chromeErrors.FileError("create", "temp file", err)
 		}
 		defer os.Remove(tmpFile.Name())
 
 		if err := rec.WriteHAR(tmpFile.Name()); err != nil {
-			return errors.Wrap(err, "writing HAR")
+			return chromeErrors.WithContext(
+				chromeErrors.FileError("write", tmpFile.Name(), err),
+				"format", "har",
+			)
 		}
 
 		output, outputErr = os.ReadFile(tmpFile.Name())
@@ -557,27 +691,30 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 
 		info.URL, outputErr = b.GetURL()
 		if outputErr != nil {
-			return errors.Wrap(outputErr, "getting URL")
+			return chromeErrors.Wrap(outputErr, chromeErrors.ChromeScriptError, "failed to get URL")
 		}
 
 		info.Title, outputErr = b.GetTitle()
 		if outputErr != nil {
-			return errors.Wrap(outputErr, "getting title")
+			return chromeErrors.Wrap(outputErr, chromeErrors.ChromeScriptError, "failed to get title")
 		}
 
 		info.Content, outputErr = b.GetHTML()
 		if outputErr != nil {
-			return errors.Wrap(outputErr, "getting HTML")
+			return chromeErrors.Wrap(outputErr, chromeErrors.ChromeScriptError, "failed to get HTML")
 		}
 
 		output, outputErr = json.MarshalIndent(info, "", "  ")
 
 	default:
-		return errors.Errorf("unsupported output format: %s", opts.outputFormat)
+		return chromeErrors.WithContext(
+			chromeErrors.New(chromeErrors.ValidationError, "unsupported output format"),
+			"format", opts.outputFormat,
+		)
 	}
 
 	if outputErr != nil {
-		return errors.Wrap(outputErr, "getting output")
+		return chromeErrors.Wrap(outputErr, chromeErrors.InternalError, "failed to get output")
 	}
 
 	// Write the output
@@ -585,7 +722,7 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 	if opts.outputFile != "" {
 		file, err := os.Create(opts.outputFile)
 		if err != nil {
-			return errors.Wrap(err, "creating output file")
+			return chromeErrors.FileError("create", opts.outputFile, err)
 		}
 		defer file.Close()
 		outWriter = file
@@ -731,7 +868,10 @@ func loadScripts(inlineScripts []string, scriptFiles []string, verbose bool) ([]
 
 		content, err := os.ReadFile(scriptFile)
 		if err != nil {
-			return nil, errors.Wrapf(err, "reading script file %s", scriptFile)
+			return nil, chromeErrors.WithContext(
+				chromeErrors.FileError("read", scriptFile, err),
+				"operation", "load_script",
+			)
 		}
 
 		script := string(content)
@@ -744,7 +884,10 @@ func loadScripts(inlineScripts []string, scriptFiles []string, verbose bool) ([]
 
 		// Basic validation for JavaScript syntax
 		if err := validateJavaScript(script); err != nil {
-			return nil, errors.Wrapf(err, "validating script file %s", scriptFile)
+			return nil, chromeErrors.WithContext(
+				chromeErrors.Wrap(err, chromeErrors.InvalidScriptError, "script validation failed"),
+				"file", scriptFile,
+			)
 		}
 
 		allScripts = append(allScripts, script)
@@ -762,7 +905,7 @@ func validateJavaScript(script string) error {
 	// Trim whitespace and check for empty content
 	script = strings.TrimSpace(script)
 	if script == "" {
-		return errors.New("script is empty")
+		return chromeErrors.New(chromeErrors.ValidationError, "script is empty")
 	}
 
 	// Basic checks for potentially dangerous patterns
@@ -791,14 +934,198 @@ func validateJavaScript(script string) error {
 	}
 
 	if braceCount != 0 {
-		return errors.New("unbalanced braces in script")
+		return chromeErrors.New(chromeErrors.InvalidScriptError, "unbalanced braces in script")
 	}
 	if parenCount != 0 {
-		return errors.New("unbalanced parentheses in script")
+		return chromeErrors.New(chromeErrors.InvalidScriptError, "unbalanced parentheses in script")
 	}
 	if bracketCount != 0 {
-		return errors.New("unbalanced brackets in script")
+		return chromeErrors.New(chromeErrors.InvalidScriptError, "unbalanced brackets in script")
 	}
 
 	return nil
+}
+
+// handleWebSocketOperations handles WebSocket-specific operations
+func handleWebSocketOperations(ctx context.Context, b *browser.Browser, opts options) error {
+	// Get the first page from the browser
+	page, err := b.NewPage()
+	if err != nil {
+		return errors.Wrap(err, "failed to create new page")
+	}
+
+	// Enable WebSocket monitoring
+	if err := page.EnableWebSocketMonitoring(); err != nil {
+		return errors.Wrap(err, "failed to enable WebSocket monitoring")
+	}
+
+	// Set up WebSocket event handlers for verbose logging
+	if opts.verbose {
+		page.SetWebSocketConnectionHandler(
+			func(conn *browser.WebSocketConnection) {
+				log.Printf("WebSocket connected: %s", conn.URL)
+			},
+			func(conn *browser.WebSocketConnection) {
+				log.Printf("WebSocket disconnected: %s", conn.URL)
+			},
+			func(conn *browser.WebSocketConnection, err error) {
+				log.Printf("WebSocket error on %s: %v", conn.URL, err)
+			},
+		)
+
+		page.SetWebSocketFrameHandler(
+			func(conn *browser.WebSocketConnection, frame *browser.WebSocketFrame) {
+				log.Printf("WebSocket frame received from %s: %s (%d bytes)", 
+					conn.URL, frame.Type, frame.Size)
+			},
+			func(conn *browser.WebSocketConnection, frame *browser.WebSocketFrame) {
+				log.Printf("WebSocket frame sent to %s: %s (%d bytes)", 
+					conn.URL, frame.Type, frame.Size)
+			},
+		)
+	}
+
+	// Wait for WebSocket condition if specified
+	if opts.webSocketWaitFor != "" {
+		condition := browser.WebSocketWaitCondition(opts.webSocketWaitFor)
+		timeout := time.Duration(opts.webSocketTimeout) * time.Second
+		
+		waitOpts := []browser.WebSocketWaitOption{
+			browser.WithTimeout(timeout),
+			browser.WithURLPattern(opts.webSocketURLPattern),
+		}
+		
+		if opts.webSocketDataPattern != "" {
+			waitOpts = append(waitOpts, browser.WithDataPattern(opts.webSocketDataPattern))
+		}
+		
+		if opts.webSocketDirection != "" {
+			waitOpts = append(waitOpts, browser.WithDirection(opts.webSocketDirection))
+		}
+
+		if opts.verbose {
+			log.Printf("Waiting for WebSocket condition: %s", opts.webSocketWaitFor)
+		}
+
+		conn, err := page.WaitForWebSocket(condition, waitOpts...)
+		if err != nil {
+			return errors.Wrap(err, "failed to wait for WebSocket condition")
+		}
+
+		if opts.verbose {
+			log.Printf("WebSocket condition met: %s on %s", opts.webSocketWaitFor, conn.URL)
+		}
+	}
+
+	// Send WebSocket messages if specified
+	if len(opts.webSocketMessages) > 0 {
+		// Wait for a WebSocket connection first
+		timeout := time.Duration(opts.webSocketTimeout) * time.Second
+		conn, err := page.WaitForWebSocketConnection(opts.webSocketURLPattern, timeout)
+		if err != nil {
+			return errors.Wrap(err, "failed to wait for WebSocket connection")
+		}
+
+		// Send each message
+		for _, message := range opts.webSocketMessages {
+			if err := page.SendWebSocketMessage(conn.ID, message); err != nil {
+				return errors.Wrapf(err, "failed to send WebSocket message: %s", message)
+			}
+			
+			if opts.verbose {
+				log.Printf("Sent WebSocket message to %s: %s", conn.URL, message)
+			}
+		}
+	}
+
+	// Generate WebSocket output if requested
+	if opts.webSocketOutputFile != "" {
+		if err := generateWebSocketOutput(page, opts); err != nil {
+			return errors.Wrap(err, "failed to generate WebSocket output")
+		}
+	}
+
+	// Show WebSocket statistics if requested
+	if opts.webSocketStats {
+		showWebSocketStats(page, opts.verbose)
+	}
+
+	return nil
+}
+
+// generateWebSocketOutput generates WebSocket output to a file
+func generateWebSocketOutput(page *browser.Page, opts options) error {
+	connections := page.GetWebSocketConnections()
+	
+	// Create WebSocket HAR exporter
+	var filter *browser.WebSocketHARFilter
+	if opts.webSocketURLPattern != "*" || opts.webSocketDataPattern != "" || opts.webSocketDirection != "" {
+		filter = &browser.WebSocketHARFilter{
+			URLPattern:  opts.webSocketURLPattern,
+			DataPattern: opts.webSocketDataPattern,
+			Direction:   opts.webSocketDirection,
+		}
+	}
+
+	exporter := browser.NewWebSocketHARExporter(filter)
+	
+	// Generate output based on file extension
+	var output []byte
+	var err error
+	
+	if strings.HasSuffix(opts.webSocketOutputFile, ".json") {
+		output, err = exporter.ExportWithWebSocketData(connections)
+	} else {
+		output, err = exporter.Export(connections)
+	}
+	
+	if err != nil {
+		return errors.Wrap(err, "failed to export WebSocket data")
+	}
+
+	// Write to file
+	if err := os.WriteFile(opts.webSocketOutputFile, output, 0644); err != nil {
+		return errors.Wrap(err, "failed to write WebSocket output file")
+	}
+
+	if opts.verbose {
+		log.Printf("WebSocket data written to: %s", opts.webSocketOutputFile)
+	}
+
+	return nil
+}
+
+// showWebSocketStats displays WebSocket statistics
+func showWebSocketStats(page *browser.Page, verbose bool) {
+	stats := page.GetWebSocketStats()
+	
+	fmt.Printf("\n" + strings.Repeat("=", 50) + "\n")
+	fmt.Printf("WebSocket Statistics\n")
+	fmt.Printf(strings.Repeat("=", 50) + "\n")
+	
+	fmt.Printf("Active Connections: %v\n", stats["active_connections"])
+	fmt.Printf("Total Bytes Sent: %v\n", stats["total_bytes_sent"])
+	fmt.Printf("Total Bytes Received: %v\n", stats["total_bytes_received"])
+	fmt.Printf("Total Messages Sent: %v\n", stats["total_messages_sent"])
+	fmt.Printf("Total Messages Received: %v\n", stats["total_messages_received"])
+	
+	if verbose {
+		fmt.Printf("\nConnection Details:\n")
+		fmt.Printf(strings.Repeat("-", 30) + "\n")
+		
+		connections := page.GetWebSocketConnections()
+		for id, conn := range connections {
+			fmt.Printf("Connection %s:\n", id)
+			fmt.Printf("  URL: %s\n", conn.URL)
+			fmt.Printf("  State: %s\n", conn.State)
+			fmt.Printf("  Protocol: %s\n", conn.Protocol)
+			fmt.Printf("  Bytes Sent: %d\n", conn.BytesSent)
+			fmt.Printf("  Bytes Received: %d\n", conn.BytesReceived)
+			fmt.Printf("  Messages Sent: %d\n", conn.MessagesSent)
+			fmt.Printf("  Messages Received: %d\n", conn.MessagesReceived)
+			fmt.Printf("  Frame Count: %d\n", len(conn.Frames))
+			fmt.Printf("  Connection Time: %v\n", conn.ConnectionLatency)
+			fmt.Printf("\n")
+		}
+	}
 }
