@@ -13,7 +13,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"runtime"
+	goruntime "runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -235,7 +235,7 @@ func findRunningBrowsers(verbose bool) ([]BrowserCandidate, error) {
 				continue
 			}
 
-			processName := filepath.Base(fields[10])
+			_ = filepath.Base(fields[10]) // processName not used
 			var browserName, browserPath string
 			var debugPort int
 
@@ -297,7 +297,7 @@ func findRunningBrowsers(verbose bool) ([]BrowserCandidate, error) {
 func findInstalledBrowsers(verbose bool) ([]BrowserCandidate, error) {
 	var candidates []BrowserCandidate
 
-	switch runtime.GOOS {
+	switch goruntime.GOOS {
 	case "darwin":
 		return findMacOSBrowsers(verbose)
 	case "linux":
@@ -305,7 +305,7 @@ func findInstalledBrowsers(verbose bool) ([]BrowserCandidate, error) {
 	case "windows":
 		return findWindowsBrowsers(verbose)
 	default:
-		return candidates, fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
+		return candidates, fmt.Errorf("unsupported operating system: %s", goruntime.GOOS)
 	}
 }
 
@@ -864,7 +864,7 @@ func main() {
 		// Handle direct tab connection for specific operations
 		if jsCode != "" || tabID != "" || harFile != "" {
 			// Get available tabs
-			tabs, err := getChromeTabs(remotePort)
+			_, err := getChromeTabs(remotePort)
 			if err != nil {
 				log.Fatalf("Failed to get tabs: %v", err)
 			}

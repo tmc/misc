@@ -179,7 +179,7 @@ func main() {
 		response := processor.ProcessWithRetry(message, func(msg Message) (Message, error) {
 			result := handleMessage(msg)
 			if result.Error != "" {
-				return result, fmt.Errorf(result.Error)
+				return result, fmt.Errorf("%s", result.Error)
 			}
 			return result, nil
 		})
