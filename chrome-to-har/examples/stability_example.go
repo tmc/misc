@@ -35,7 +35,7 @@ func main() {
 
 	// Example 1: Basic stability detection
 	fmt.Println("=== Example 1: Basic Stability Detection ===")
-	
+
 	// Navigate to a dynamic page
 	if err := page.Navigate("https://httpbin.org/delay/2"); err != nil {
 		log.Fatalf("Failed to navigate: %v", err)
@@ -53,16 +53,16 @@ func main() {
 
 	// Example 2: Custom stability configuration
 	fmt.Println("\n=== Example 2: Custom Stability Configuration ===")
-	
+
 	// Configure custom stability detection
 	page.ConfigureStability(
-		browser.WithNetworkIdleThreshold(0),                      // No network requests
-		browser.WithNetworkIdleTimeout(500*time.Millisecond),     // Wait 500ms for network idle
-		browser.WithDOMStableTimeout(1*time.Second),              // Wait 1s for DOM stability
-		browser.WithResourceWaiting(true, true, true, true),      // Wait for all resources
-		browser.WithMaxStabilityWait(30*time.Second),             // Max 30s total wait
+		browser.WithNetworkIdleThreshold(0),                                      // No network requests
+		browser.WithNetworkIdleTimeout(500*time.Millisecond),                     // Wait 500ms for network idle
+		browser.WithDOMStableTimeout(1*time.Second),                              // Wait 1s for DOM stability
+		browser.WithResourceWaiting(true, true, true, true),                      // Wait for all resources
+		browser.WithMaxStabilityWait(30*time.Second),                             // Max 30s total wait
 		browser.WithCustomCheck("title", "document.title !== ''", 5*time.Second), // Custom check
-		browser.WithVerboseLogging(true),                         // Enable verbose logging
+		browser.WithVerboseLogging(true),                                         // Enable verbose logging
 	)
 
 	// Navigate to a complex page
@@ -82,19 +82,19 @@ func main() {
 
 	// Example 3: Using different load states
 	fmt.Println("\n=== Example 3: Different Load States ===")
-	
+
 	// Test different load states
 	testURL := "https://httpbin.org/html"
-	
+
 	// DOMContentLoaded
 	fmt.Println("Testing DOMContentLoaded...")
 	if err := page.Navigate(testURL); err != nil {
 		log.Fatalf("Failed to navigate: %v", err)
 	}
-	
+
 	ctx3, cancel3 := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel3()
-	
+
 	if err := page.WaitForLoadState(ctx3, browser.LoadStateDOMContentLoaded); err != nil {
 		log.Printf("DOMContentLoaded failed: %v", err)
 	} else {
@@ -106,10 +106,10 @@ func main() {
 	if err := page.Navigate(testURL); err != nil {
 		log.Fatalf("Failed to navigate: %v", err)
 	}
-	
+
 	ctx4, cancel4 := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel4()
-	
+
 	if err := page.WaitForLoadState(ctx4, browser.LoadStateNetworkIdle); err != nil {
 		log.Printf("NetworkIdle failed: %v", err)
 	} else {
@@ -118,7 +118,7 @@ func main() {
 
 	// Example 4: Monitoring stability metrics
 	fmt.Println("\n=== Example 4: Stability Metrics ===")
-	
+
 	// Navigate to a page
 	if err := page.Navigate("https://httpbin.org/json"); err != nil {
 		log.Fatalf("Failed to navigate: %v", err)
@@ -136,10 +136,10 @@ func main() {
 
 	// Example 5: SPA stability detection
 	fmt.Println("\n=== Example 5: SPA Stability Detection ===")
-	
+
 	// Configure for SPA (single page application)
 	page.ConfigureStability(
-		browser.WithNetworkIdleThreshold(2),                  // Allow up to 2 concurrent requests
+		browser.WithNetworkIdleThreshold(2),                 // Allow up to 2 concurrent requests
 		browser.WithNetworkIdleTimeout(1*time.Second),       // Wait 1s for network idle
 		browser.WithDOMStableTimeout(2*time.Second),         // Wait 2s for DOM stability
 		browser.WithResourceWaiting(true, true, true, true), // Wait for all resources
