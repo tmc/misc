@@ -8,5 +8,10 @@ func TestLongRunning(t *testing.T) {
 	}
 }
 
+func TestLongRunning2(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+}
 func TestQuick(t *testing.T) {
 }
