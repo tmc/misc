@@ -15,6 +15,7 @@ func main() {
 	templateDir := flags.String("templates", "", "path to custom templates")
 	verboseMode := flags.Bool("verbose", false, "enable verbose mode")
 	continueOnError := flags.Bool("continue_on_error", false, "continue on error")
+	runGoImports := flags.Bool("goimports", false, "run goimports on generated Go files")
 	opts := protogen.Options{
 		ParamFunc: flags.Set,
 	}
@@ -23,6 +24,7 @@ func main() {
 			TemplateDir:     *templateDir,
 			Verbose:         *verboseMode,
 			ContinueOnError: *continueOnError,
+			RunGoImports:    *runGoImports,
 			Logger:          setupLogger(logLevel),
 		}).Generate(p)
 	})

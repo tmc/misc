@@ -10,6 +10,7 @@ import (
 
 	"github.com/Masterminds/sprig"
 	"go.uber.org/zap"
+	"golang.org/x/tools/imports"
 	"google.golang.org/protobuf/compiler/protogen"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
@@ -27,6 +28,7 @@ type Generator struct {
 	TemplateDir     string
 	Verbose         bool
 	ContinueOnError bool
+	RunGoImports    bool
 
 	Logger *zap.Logger
 
@@ -46,6 +48,7 @@ type Options struct {
 	TemplateDir     string
 	Verbose         bool
 	ContinueOnError bool
+	RunGoImports    bool
 	Logger          *zap.Logger
 }
 
@@ -55,6 +58,7 @@ func NewGenerator(o Options) *Generator {
 		TemplateDir:     o.TemplateDir,
 		Verbose:         o.Verbose,
 		ContinueOnError: o.ContinueOnError,
+		RunGoImports:    o.RunGoImports,
 		Logger:          o.Logger,
 
 		types:          new(protoregistry.Types),
@@ -413,8 +417,23 @@ func (g *Generator) applyTemplateBehavior(behavior string, fileBuffer *Generated
 
 func (g *Generator) finalizeGeneration(gen *protogen.Plugin) error {
 	for outputFileName, buffer := range g.generatedFiles {
+		content := buffer.Content.Bytes()
+		
+		// Run goimports if requested and this is a Go file
+		if g.RunGoImports && strings.HasSuffix(outputFileName, ".go") {
+			formatted, err := imports.Process(outputFileName, content, nil)
+			if err != nil {
+				g.Logger.Warn("Failed to run goimports on file", 
+					zap.String("file", outputFileName), 
+					zap.Error(err))
+				// Continue with unformatted content
+			} else {
+				content = formatted
+			}
+		}
+		
 		generatedFile := gen.NewGeneratedFile(outputFileName, "")
-		_, err := generatedFile.Write(buffer.Content.Bytes())
+		_, err := generatedFile.Write(content)
 		if err != nil {
 			return fmt.Errorf("failed to write generated file %s: %w", outputFileName, err)
 		}
