@@ -109,8 +109,11 @@ func appendToShellHistory(command string) error {
 }
 
 func generateAndHandleCommand(llm llms.Model, ctx context.Context, input string) {
+	sp := systemPrompt
+	unameOutput, _ := exec.Command("uname", "-a").CombinedOutput()
+	sp += " the current uname output is: " + string(unameOutput)
 	content := []llms.MessageContent{
-		llms.TextParts(llms.ChatMessageTypeSystem, systemPrompt),
+		llms.TextParts(llms.ChatMessageTypeSystem, sp),
 		llms.TextParts(llms.ChatMessageTypeHuman, fewShot1),
 		llms.TextParts(llms.ChatMessageTypeAI, fewShot2),
 		llms.TextParts(llms.ChatMessageTypeHuman, input),
