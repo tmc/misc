@@ -110,7 +110,7 @@ func TestPageCompleteWorkflow(t *testing.T) {
 	defer page.Close()
 
 	// Navigate with options
-	err = page.Navigate(ts.URL, NavigateWithTimeout(10*time.Second))
+	err = page.Navigate(ts.URL, browser.NavigateWithTimeout(10*time.Second))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -772,15 +772,8 @@ func TestStressScenarios(t *testing.T) {
 
 // Helper functions for option compatibility
 
-// NavigateWithTimeout creates a navigate option with timeout
-func NavigateWithTimeout(timeout time.Duration) browser.NavigateOption {
-	return browser.WithNavigateTimeout(timeout)
-}
-
-// ClickWithTimeout creates a click option with timeout
-func ClickWithTimeout(timeout time.Duration) browser.ClickOption {
-	return browser.WithClickTimeout(timeout)
-}
+// Use the compatibility functions from page_options.go
+// NavigateWithTimeout and ClickWithTimeout are available in the browser package
 
 // TypeWithTimeout creates a type option with timeout
 func TypeWithTimeout(timeout time.Duration) browser.TypeOption {

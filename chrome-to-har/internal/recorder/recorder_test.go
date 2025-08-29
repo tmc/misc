@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/har"
 	"github.com/chromedp/cdproto/network"
 )
@@ -45,7 +46,7 @@ func TestRecorderStreaming(t *testing.T) {
 				},
 				&network.EventLoadingFinished{
 					RequestID: "1",
-					Timestamp: network.MonotonicTime(time.Now().UnixNano() / int64(time.Millisecond)),
+					Timestamp: cdp.MonotonicTime(time.Now()),
 				},
 			},
 			want: 1,
@@ -144,7 +145,7 @@ func TestCreateHAREntry(t *testing.T) {
 			},
 			timing: &network.EventLoadingFinished{
 				RequestID: "test1",
-				Timestamp: network.MonotonicTime(time.Now().UnixNano() / int64(time.Millisecond)),
+				Timestamp: cdp.MonotonicTime(time.Now()),
 			},
 			wantURL: "https://example.com",
 			wantErr: false,

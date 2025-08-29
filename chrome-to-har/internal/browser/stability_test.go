@@ -144,16 +144,16 @@ func TestStabilityDetector(t *testing.T) {
 
 	t.Run("DefaultStabilityConfig", func(t *testing.T) {
 		config := DefaultStabilityConfig()
-		
+
 		// Test default values
 		if config.NetworkIdleThreshold != 0 {
 			t.Errorf("Expected NetworkIdleThreshold 0, got %d", config.NetworkIdleThreshold)
 		}
-		
+
 		if config.NetworkIdleTimeout != 500*time.Millisecond {
 			t.Errorf("Expected NetworkIdleTimeout 500ms, got %v", config.NetworkIdleTimeout)
 		}
-		
+
 		if !config.WaitForImages {
 			t.Error("Expected WaitForImages to be true")
 		}
@@ -162,15 +162,15 @@ func TestStabilityDetector(t *testing.T) {
 	t.Run("StabilityDetectorCreation", func(t *testing.T) {
 		config := DefaultStabilityConfig()
 		detector := NewStabilityDetector(page, config)
-		
+
 		if detector == nil {
 			t.Fatal("Expected non-nil detector")
 		}
-		
+
 		if detector.page != page {
 			t.Error("Expected detector to reference the page")
 		}
-		
+
 		if detector.config != config {
 			t.Error("Expected detector to use the provided config")
 		}
@@ -182,7 +182,7 @@ func TestStabilityDetector(t *testing.T) {
 		config.NetworkIdleTimeout = 300 * time.Millisecond
 		config.MaxStabilityWait = 5 * time.Second
 		config.Verbose = true
-		
+
 		// Disable other checks to focus on network idle
 		config.WaitForImages = false
 		config.WaitForFonts = false
@@ -191,22 +191,22 @@ func TestStabilityDetector(t *testing.T) {
 		config.WaitForAnimationFrame = false
 		config.WaitForIdleCallback = false
 		config.DOMStableThreshold = -1 // Disable DOM check
-		
+
 		detector := NewStabilityDetector(page, config)
-		
+
 		testCtx, testCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer testCancel()
-		
+
 		start := time.Now()
 		err := detector.WaitForStability(testCtx)
 		duration := time.Since(start)
-		
+
 		if err != nil {
 			t.Errorf("Network idle detection failed: %v", err)
 		}
-		
+
 		t.Logf("Network idle detection took %v", duration)
-		
+
 		// Should take at least the network idle timeout
 		if duration < config.NetworkIdleTimeout {
 			t.Errorf("Expected at least %v, got %v", config.NetworkIdleTimeout, duration)
@@ -222,26 +222,26 @@ func TestStabilityDetector(t *testing.T) {
 		config.ResourceTimeout = 3 * time.Second
 		config.MaxStabilityWait = 5 * time.Second
 		config.Verbose = true
-		
+
 		// Disable other checks
 		config.NetworkIdleThreshold = -1 // Disable network check
 		config.DOMStableThreshold = -1   // Disable DOM check
 		config.WaitForAnimationFrame = false
 		config.WaitForIdleCallback = false
-		
+
 		detector := NewStabilityDetector(page, config)
-		
+
 		testCtx, testCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer testCancel()
-		
+
 		start := time.Now()
 		err := detector.WaitForStability(testCtx)
 		duration := time.Since(start)
-		
+
 		if err != nil {
 			t.Errorf("Resource loading detection failed: %v", err)
 		}
-		
+
 		t.Logf("Resource loading detection took %v", duration)
 	})
 
@@ -249,7 +249,7 @@ func TestStabilityDetector(t *testing.T) {
 		config := DefaultStabilityConfig()
 		config.MaxStabilityWait = 5 * time.Second
 		config.Verbose = true
-		
+
 		// Disable other checks
 		config.NetworkIdleThreshold = -1
 		config.DOMStableThreshold = -1
@@ -259,7 +259,7 @@ func TestStabilityDetector(t *testing.T) {
 		config.WaitForScripts = false
 		config.WaitForAnimationFrame = false
 		config.WaitForIdleCallback = false
-		
+
 		// Add custom check
 		config.CustomChecks = []StabilityCheck{
 			{
@@ -268,28 +268,28 @@ func TestStabilityDetector(t *testing.T) {
 				Timeout:    3 * time.Second,
 			},
 		}
-		
+
 		detector := NewStabilityDetector(page, config)
-		
+
 		testCtx, testCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer testCancel()
-		
+
 		start := time.Now()
 		err := detector.WaitForStability(testCtx)
 		duration := time.Since(start)
-		
+
 		if err != nil {
 			t.Errorf("Custom stability check failed: %v", err)
 		}
-		
+
 		t.Logf("Custom stability check took %v", duration)
-		
+
 		// Verify the custom check was actually satisfied
 		var statusClass string
 		if err := chromedp.Run(ctx, chromedp.AttributeValue("#status", "className", &statusClass, nil)); err != nil {
 			t.Errorf("Failed to get status class: %v", err)
 		}
-		
+
 		if statusClass != "loaded" {
 			t.Errorf("Expected status class 'loaded', got '%s'", statusClass)
 		}
@@ -297,23 +297,23 @@ func TestStabilityDetector(t *testing.T) {
 
 	t.Run("StabilityOptions", func(t *testing.T) {
 		config := DefaultStabilityConfig()
-		
+
 		// Test option functions
 		WithNetworkIdleThreshold(2)(config)
 		if config.NetworkIdleThreshold != 2 {
 			t.Errorf("Expected NetworkIdleThreshold 2, got %d", config.NetworkIdleThreshold)
 		}
-		
+
 		WithNetworkIdleTimeout(1 * time.Second)(config)
 		if config.NetworkIdleTimeout != 1*time.Second {
 			t.Errorf("Expected NetworkIdleTimeout 1s, got %v", config.NetworkIdleTimeout)
 		}
-		
+
 		WithDOMStableTimeout(2 * time.Second)(config)
 		if config.DOMStableTimeout != 2*time.Second {
 			t.Errorf("Expected DOMStableTimeout 2s, got %v", config.DOMStableTimeout)
 		}
-		
+
 		WithResourceWaiting(false, true, false, true)(config)
 		if config.WaitForImages != false {
 			t.Error("Expected WaitForImages to be false")
@@ -327,17 +327,17 @@ func TestStabilityDetector(t *testing.T) {
 		if config.WaitForScripts != true {
 			t.Error("Expected WaitForScripts to be true")
 		}
-		
+
 		WithMaxStabilityWait(10 * time.Second)(config)
 		if config.MaxStabilityWait != 10*time.Second {
 			t.Errorf("Expected MaxStabilityWait 10s, got %v", config.MaxStabilityWait)
 		}
-		
+
 		WithCustomCheck("test", "true", 1*time.Second)(config)
 		if len(config.CustomChecks) != 1 {
 			t.Errorf("Expected 1 custom check, got %d", len(config.CustomChecks))
 		}
-		
+
 		WithVerboseLogging(true)(config)
 		if !config.Verbose {
 			t.Error("Expected verbose logging to be enabled")
@@ -347,24 +347,24 @@ func TestStabilityDetector(t *testing.T) {
 	t.Run("StabilityMetrics", func(t *testing.T) {
 		config := DefaultStabilityConfig()
 		config.Verbose = true
-		
+
 		detector := NewStabilityDetector(page, config)
-		
+
 		// Get initial metrics
 		metrics := detector.GetMetrics()
-		
+
 		if metrics.NetworkRequests < 0 {
 			t.Error("Expected non-negative network requests")
 		}
-		
+
 		if metrics.PendingRequests == nil {
 			t.Error("Expected non-nil pending requests map")
 		}
-		
+
 		if metrics.LoadedResources == nil {
 			t.Error("Expected non-nil loaded resources map")
 		}
-		
+
 		if metrics.StabilityChecks == nil {
 			t.Error("Expected non-nil stability checks map")
 		}
@@ -374,7 +374,7 @@ func TestStabilityDetector(t *testing.T) {
 		config := DefaultStabilityConfig()
 		config.MaxStabilityWait = 100 * time.Millisecond // Very short timeout
 		config.Verbose = true
-		
+
 		// Set impossible conditions
 		config.CustomChecks = []StabilityCheck{
 			{
@@ -383,20 +383,20 @@ func TestStabilityDetector(t *testing.T) {
 				Timeout:    1 * time.Second,
 			},
 		}
-		
+
 		detector := NewStabilityDetector(page, config)
-		
+
 		testCtx, testCancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer testCancel()
-		
+
 		start := time.Now()
 		err := detector.WaitForStability(testCtx)
 		duration := time.Since(start)
-		
+
 		if err == nil {
 			t.Error("Expected stability detection to fail due to timeout")
 		}
-		
+
 		t.Logf("Stability timeout took %v (expected around 100ms)", duration)
 	})
 }
@@ -405,7 +405,7 @@ func TestStabilityConfigValidation(t *testing.T) {
 	t.Run("NilConfig", func(t *testing.T) {
 		page := &Page{}
 		detector := NewStabilityDetector(page, nil)
-		
+
 		if detector.config == nil {
 			t.Error("Expected detector to create default config when nil is provided")
 		}
@@ -417,14 +417,14 @@ func TestStabilityConfigValidation(t *testing.T) {
 			NetworkIdleTimeout:   1 * time.Second,
 			MaxStabilityWait:     30 * time.Second,
 		}
-		
+
 		page := &Page{}
 		detector := NewStabilityDetector(page, config)
-		
+
 		if detector.config.NetworkIdleThreshold != 1 {
 			t.Errorf("Expected NetworkIdleThreshold 1, got %d", detector.config.NetworkIdleThreshold)
 		}
-		
+
 		if detector.config.NetworkIdleTimeout != 1*time.Second {
 			t.Errorf("Expected NetworkIdleTimeout 1s, got %v", detector.config.NetworkIdleTimeout)
 		}
@@ -445,14 +445,14 @@ func TestStabilityDetectorLifecycle(t *testing.T) {
 		if err := detector.Start(); err != nil {
 			t.Errorf("Failed to start detector: %v", err)
 		}
-		
+
 		if !detector.started {
 			t.Error("Expected detector to be started")
 		}
-		
+
 		// Stop detector
 		detector.Stop()
-		
+
 		if detector.started {
 			t.Error("Expected detector to be stopped")
 		}
@@ -463,11 +463,11 @@ func TestStabilityDetectorLifecycle(t *testing.T) {
 		if err := detector.Start(); err != nil {
 			t.Errorf("Failed to start detector: %v", err)
 		}
-		
+
 		if err := detector.Start(); err != nil {
 			t.Errorf("Failed to start detector again: %v", err)
 		}
-		
+
 		detector.Stop()
 	})
 }

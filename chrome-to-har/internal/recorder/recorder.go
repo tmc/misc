@@ -13,7 +13,7 @@ import (
 
 	"github.com/chromedp/cdproto/har"
 	"github.com/chromedp/cdproto/network"
-	"github.com/pkg/errors"
+	chromeErrors "github.com/tmc/misc/chrome-to-har/internal/errors"
 )
 
 type Recorder struct {
@@ -253,11 +253,14 @@ func (r *Recorder) WriteHAR(filename string) error {
 
 	jsonBytes, err := json.MarshalIndent(h, "", "  ")
 	if err != nil {
-		return errors.Wrap(err, "marshaling HAR")
+		return chromeErrors.Wrap(err, chromeErrors.NetworkRecordError, "failed to marshal HAR data")
 	}
 
 	if err := os.WriteFile(filename, jsonBytes, 0644); err != nil {
-		return errors.Wrap(err, "writing HAR file")
+		return chromeErrors.WithContext(
+			chromeErrors.FileError("write", filename, err),
+			"format", "har",
+		)
 	}
 
 	return nil
@@ -295,12 +298,18 @@ func (r *Recorder) convertCookies(headers map[string]interface{}) []*har.Cookie 
 func (r *Recorder) applyTemplate(entry *har.Entry) (*har.Entry, error) {
 	t, err := template.New("har").Parse(r.template)
 	if err != nil {
-		return nil, errors.Wrap(err, "parse template")
+		return nil, chromeErrors.WithContext(
+			chromeErrors.Wrap(err, chromeErrors.ValidationError, "failed to parse template"),
+			"template", r.template,
+		)
 	}
 
 	var buf strings.Builder
 	if err := t.Execute(&buf, entry); err != nil {
-		return nil, errors.Wrap(err, "execute template")
+		return nil, chromeErrors.WithContext(
+			chromeErrors.Wrap(err, chromeErrors.ValidationError, "failed to execute template"),
+			"template", r.template,
+		)
 	}
 
 	return &har.Entry{

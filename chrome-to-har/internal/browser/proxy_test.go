@@ -131,7 +131,6 @@ func basicAuth(username, password string) string {
 	return base64.StdEncoding.EncodeToString([]byte(auth))
 }
 
-
 func TestProxyConnection(t *testing.T) {
 	// Skip if running in short mode
 	if testing.Short() {
@@ -313,7 +312,7 @@ func TestSOCKS5Proxy(t *testing.T) {
 
 	// Note: This test requires a real SOCKS5 proxy or a mock implementation
 	// For now, we'll just test that the option is accepted
-	
+
 	b, cleanup := createTestBrowser(t,
 		browser.WithProxy("socks5://localhost:1080"),
 		browser.WithVerbose(testing.Verbose()),

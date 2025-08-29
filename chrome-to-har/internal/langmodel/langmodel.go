@@ -70,17 +70,17 @@ func CheckAvailability(ctx context.Context) (Availability, error) {
 				}
 			})
 		`
-		
+
 		if err := chromedp.Evaluate(script, &res).Do(ctx); err != nil {
 			return err
 		}
-		
+
 		if str, ok := res.(string); ok {
 			result = str
 		} else {
 			result = fmt.Sprintf("%v", res)
 		}
-		
+
 		return nil
 	}))
 

@@ -2,7 +2,6 @@ package chromeprofiles
 
 import (
 	"database/sql"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -10,7 +9,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/pkg/errors"
+	chromeErrors "github.com/tmc/misc/chrome-to-har/internal/errors"
+	"github.com/tmc/misc/chrome-to-har/internal/secureio"
+	"github.com/tmc/misc/chrome-to-har/internal/validation"
 	_ "modernc.org/sqlite"
 )
 
@@ -42,19 +43,19 @@ func (pm *profileManager) logf(format string, args ...interface{}) {
 }
 
 func (pm *profileManager) SetupWorkdir() error {
-	dir, err := os.MkdirTemp("", "chrome-to-har-*")
+	dir, err := secureio.CreateSecureTempDir("chrome-to-har-")
 	if err != nil {
-		return errors.Wrap(err, "creating temp directory")
+		return chromeErrors.Wrap(err, chromeErrors.FilePermissionError, "failed to create secure temporary directory")
 	}
 	pm.workDir = dir
-	pm.logf("Created temporary working directory: %s", dir)
+	pm.logf("Created secure temporary working directory: %s", dir)
 	return nil
 }
 
 func (pm *profileManager) Cleanup() error {
 	if pm.workDir != "" {
 		pm.logf("Cleaning up working directory: %s", pm.workDir)
-		return os.RemoveAll(pm.workDir)
+		return secureio.SecureRemoveAll(pm.workDir)
 	}
 	return nil
 }
@@ -67,7 +68,10 @@ func (pm *profileManager) WorkDir() string {
 func (pm *profileManager) ListProfiles() ([]string, error) {
 	entries, err := os.ReadDir(pm.baseDir)
 	if err != nil {
-		return nil, errors.Wrap(err, "reading profile directory")
+		return nil, chromeErrors.WithContext(
+			chromeErrors.FileError("read", pm.baseDir, err),
+			"operation", "list_profiles",
+		)
 	}
 
 	var profiles []string
@@ -85,17 +89,31 @@ func (pm *profileManager) ListProfiles() ([]string, error) {
 
 func (pm *profileManager) CopyProfile(name string, cookieDomains []string) error {
 	if pm.workDir == "" {
-		return fmt.Errorf("working directory not set up")
+		return chromeErrors.New(chromeErrors.ProfileSetupError, "working directory not set up")
+	}
+
+	// Validate profile name for security
+	if err := validation.ValidateProfileName(name); err != nil {
+		return chromeErrors.WithContext(
+			chromeErrors.Wrap(err, chromeErrors.ProfileNotFoundError, "invalid profile name"),
+			"profile", name,
+		)
 	}
 
 	srcDir := filepath.Join(pm.baseDir, name)
 	if !isValidProfile(srcDir) {
-		return fmt.Errorf("invalid profile: %s", name)
+		return chromeErrors.WithContext(
+			chromeErrors.New(chromeErrors.ProfileNotFoundError, "invalid profile: profile directory does not contain expected files"),
+			"profile", name,
+		)
 	}
 
 	dstDir := filepath.Join(pm.workDir, "Default")
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		return errors.Wrap(err, "creating profile directory")
+	if err := os.MkdirAll(dstDir, secureio.SecureDirPerms); err != nil {
+		return chromeErrors.WithContext(
+			chromeErrors.FileError("create", dstDir, err),
+			"profile", name,
+		)
 	}
 
 	pm.logf("Copying profile from %s to %s", srcDir, dstDir)
@@ -104,12 +122,18 @@ func (pm *profileManager) CopyProfile(name string, cookieDomains []string) error
 	if len(cookieDomains) > 0 {
 		pm.logf("Filtering cookies for domains: %v", cookieDomains)
 		if err := pm.CopyCookiesWithDomains(srcDir, dstDir, cookieDomains); err != nil {
-			return errors.Wrap(err, "copying cookies")
+			return chromeErrors.WithContext(
+				chromeErrors.Wrap(err, chromeErrors.ProfileCopyError, "failed to copy cookies with domain filtering"),
+				"profile", name,
+			)
 		}
 	} else {
 		if err := copyFile(filepath.Join(srcDir, "Cookies"), filepath.Join(dstDir, "Cookies")); err != nil {
 			if !os.IsNotExist(err) {
-				return errors.Wrap(err, "copying cookies")
+				return chromeErrors.WithContext(
+					chromeErrors.FileError("copy", filepath.Join(srcDir, "Cookies"), err),
+					"profile", name,
+				)
 			}
 		}
 	}
@@ -156,7 +180,10 @@ func (pm *profileManager) CopyProfile(name string, cookieDomains []string) error
 	// Create minimal Local State file
 	localState := `{"os_crypt":{"encrypted_key":""}}`
 	if err := os.WriteFile(filepath.Join(pm.workDir, "Local State"), []byte(localState), 0644); err != nil {
-		return errors.Wrap(err, "writing local state")
+		return chromeErrors.WithContext(
+			chromeErrors.FileError("write", filepath.Join(pm.workDir, "Local State"), err),
+			"profile", name,
+		)
 	}
 	pm.logf("Created Local State file")
 
@@ -170,25 +197,34 @@ func (pm *profileManager) CopyCookiesWithDomains(srcDir, dstDir string, domains 
 	// Open source database
 	src, err := sql.Open("sqlite", srcDB+"?mode=ro")
 	if err != nil {
-		return errors.Wrap(err, "opening source cookies database")
+		return chromeErrors.WithContext(
+			chromeErrors.Wrap(err, chromeErrors.ProfileCopyError, "failed to open source cookies database"),
+			"database", srcDB,
+		)
 	}
 	defer src.Close()
 
 	// Create destination database
 	if err := copyFile(srcDB, dstDB); err != nil {
-		return errors.Wrap(err, "creating initial cookies database")
+		return chromeErrors.WithContext(
+			chromeErrors.FileError("copy", srcDB, err),
+			"operation", "copy_cookies_database",
+		)
 	}
 
 	dst, err := sql.Open("sqlite", dstDB)
 	if err != nil {
-		return errors.Wrap(err, "opening destination cookies database")
+		return chromeErrors.WithContext(
+			chromeErrors.Wrap(err, chromeErrors.ProfileCopyError, "failed to open destination cookies database"),
+			"database", dstDB,
+		)
 	}
 	defer dst.Close()
 
 	// Begin transaction
 	tx, err := dst.Begin()
 	if err != nil {
-		return errors.Wrap(err, "beginning transaction")
+		return chromeErrors.Wrap(err, chromeErrors.ProfileCopyError, "failed to begin database transaction")
 	}
 	defer tx.Rollback()
 
@@ -200,11 +236,14 @@ func (pm *profileManager) CopyCookiesWithDomains(srcDir, dstDir string, domains 
 
 	_, err = tx.Exec("DELETE FROM cookies WHERE " + whereClause.String())
 	if err != nil {
-		return errors.Wrap(err, "filtering cookies")
+		return chromeErrors.WithContext(
+			chromeErrors.Wrap(err, chromeErrors.ProfileCopyError, "failed to filter cookies by domain"),
+			"domains", domains,
+		)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return errors.Wrap(err, "committing changes")
+		return chromeErrors.Wrap(err, chromeErrors.ProfileCopyError, "failed to commit database changes")
 	}
 
 	pm.logf("Copied and filtered cookies for domains: %v", domains)
@@ -221,7 +260,10 @@ func getChromeProfileDir() (string, error) {
 	case "linux":
 		baseDir = filepath.Join(os.Getenv("HOME"), ".config", "google-chrome")
 	default:
-		return "", fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
+		return "", chromeErrors.WithContext(
+			chromeErrors.New(chromeErrors.ConfigurationError, "unsupported operating system"),
+			"os", runtime.GOOS,
+		)
 	}
 	return baseDir, nil
 }
