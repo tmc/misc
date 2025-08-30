@@ -1,2 +1,16 @@
 */venv
 .DS_Store
+
+# Binaries
+chrome-to-har/chrome-to-har
+macgo/main
+
+# Test/temporary files
+chrome-to-har/foo.js
+testctr-bak/
+tstodur/
+
+# New experimental directories (temporary)
+cmd/desktop-automation-mcp-server/
+desktop-automation/
+firebase-logic-swift-app/
