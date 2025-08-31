@@ -139,12 +139,12 @@ func (r *WebSocketRecorder) handleWebSocketFrameReceived(e *network.EventWebSock
 	}
 
 	frame := browser.WebSocketFrame{
-		Type:      r.getFrameType(e.Response.Opcode),
+		Type:      r.getFrameType(int64(e.Response.Opcode)),
 		Direction: "received",
 		Data:      e.Response.PayloadData,
 		Timestamp: time.Now(),
 		Size:      int64(len(e.Response.PayloadData)),
-		Opcode:    int64(e.Response.Opcode),
+		Opcode:    int(e.Response.Opcode),
 	}
 
 	conn.Frames = append(conn.Frames, frame)
@@ -170,12 +170,12 @@ func (r *WebSocketRecorder) handleWebSocketFrameSent(e *network.EventWebSocketFr
 	}
 
 	frame := browser.WebSocketFrame{
-		Type:      r.getFrameType(e.Response.Opcode),
+		Type:      r.getFrameType(int64(e.Response.Opcode)),
 		Direction: "sent",
 		Data:      e.Response.PayloadData,
 		Timestamp: time.Now(),
 		Size:      int64(len(e.Response.PayloadData)),
-		Opcode:    int64(e.Response.Opcode),
+		Opcode:    int(e.Response.Opcode),
 	}
 
 	conn.Frames = append(conn.Frames, frame)

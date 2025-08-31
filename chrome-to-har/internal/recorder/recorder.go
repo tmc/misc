@@ -191,13 +191,10 @@ func (r *Recorder) streamEntry(entry *har.Entry) {
 	fmt.Println(string(jsonBytes))
 }
 
-func (r *Recorder) WriteHAR(filename string) error {
+// HAR returns the HAR data structure
+func (r *Recorder) HAR() (*har.HAR, error) {
 	r.Lock()
 	defer r.Unlock()
-
-	if r.verbose {
-		log.Printf("Writing HAR file to %s", filename)
-	}
 
 	h := &har.HAR{
 		Log: &har.Log{
@@ -249,6 +246,20 @@ func (r *Recorder) WriteHAR(filename string) error {
 		}
 
 		h.Log.Entries = append(h.Log.Entries, entry)
+	}
+
+	return h, nil
+}
+
+// WriteHAR writes the HAR file to disk
+func (r *Recorder) WriteHAR(filename string) error {
+	if r.verbose {
+		log.Printf("Writing HAR file to %s", filename)
+	}
+
+	h, err := r.HAR()
+	if err != nil {
+		return err
 	}
 
 	jsonBytes, err := json.MarshalIndent(h, "", "  ")
