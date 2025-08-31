@@ -32,6 +32,7 @@ type DashboardConfig struct {
 // DashboardData represents data for the dashboard
 type DashboardData struct {
 	Title           string                      `json:"title"`
+	BasePath        string                      `json:"base_path"`
 	Timestamp       time.Time                   `json:"timestamp"`
 	OverallStatus   HealthResult                `json:"overall_status"`
 	Checks          map[string]HealthCheckStatus `json:"checks"`
@@ -265,6 +266,7 @@ func (d *Dashboard) getDashboardData() *DashboardData {
 	
 	return &DashboardData{
 		Title:           d.config.Title,
+		BasePath:        d.config.BasePath,
 		Timestamp:       time.Now(),
 		OverallStatus:   overallStatus,
 		Checks:          checks,
@@ -530,7 +532,7 @@ const dashboardHTML = `
         }
 
         function toggleCheck(checkName, action) {
-            fetch(` + "`" + `{{.Title}}` + "`" + `/api/check/${checkName}?action=${action}`, {
+            fetch('{{.BasePath}}/api/check/' + checkName + '?action=' + action, {
                 method: 'POST'
             })
             .then(response => {
@@ -543,7 +545,7 @@ const dashboardHTML = `
         }
 
         function acknowledgeAlert(alertId) {
-            fetch(` + "`" + `{{.Title}}` + "`" + `/api/alert/${alertId}?action=acknowledge`, {
+            fetch('{{.BasePath}}/api/alert/' + alertId + '?action=acknowledge', {
                 method: 'POST'
             })
             .then(response => {
@@ -556,7 +558,7 @@ const dashboardHTML = `
         }
 
         function resolveAlert(alertId) {
-            fetch(` + "`" + `{{.Title}}` + "`" + `/api/alert/${alertId}?action=resolve`, {
+            fetch('{{.BasePath}}/api/alert/' + alertId + '?action=resolve', {
                 method: 'POST'
             })
             .then(response => {
