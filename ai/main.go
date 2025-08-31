@@ -61,9 +61,10 @@ func appendToShellHistory(command string) error {
 		case strings.Contains(shell, "zsh"):
 			shellHistoryFile = filepath.Join(homeDir, ".zsh_history")
 			// zsh history format includes timestamps
-			timePrefix := ": " + fmt.Sprintf("%d", os.Getenv("EPOCHSECONDS"))
-			if timePrefix == ": " {
-				timePrefix = ": 0;" // fallback if EPOCHSECONDS not available
+			epochStr := os.Getenv("EPOCHSECONDS")
+			timePrefix := ": 0;"
+			if epochStr != "" {
+				timePrefix = ": " + epochStr + ";"
 			}
 			formattedCommand = timePrefix + command
 		case strings.Contains(shell, "fish"):
