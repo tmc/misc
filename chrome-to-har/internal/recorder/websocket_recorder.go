@@ -3,8 +3,8 @@ package recorder
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -144,7 +144,7 @@ func (r *WebSocketRecorder) handleWebSocketFrameReceived(e *network.EventWebSock
 		Data:      e.Response.PayloadData,
 		Timestamp: time.Now(),
 		Size:      int64(len(e.Response.PayloadData)),
-		Opcode:    int(e.Response.Opcode),
+		Opcode:    int64(e.Response.Opcode),
 	}
 
 	conn.Frames = append(conn.Frames, frame)
@@ -175,7 +175,7 @@ func (r *WebSocketRecorder) handleWebSocketFrameSent(e *network.EventWebSocketFr
 		Data:      e.Response.PayloadData,
 		Timestamp: time.Now(),
 		Size:      int64(len(e.Response.PayloadData)),
-		Opcode:    int(e.Response.Opcode),
+		Opcode:    int64(e.Response.Opcode),
 	}
 
 	conn.Frames = append(conn.Frames, frame)
