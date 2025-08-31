@@ -52,6 +52,16 @@ const (
 	CategorySystem      HealthCategory = "system"
 )
 
+// HealthCheckStatus represents the status of a health check
+type HealthCheckStatus struct {
+	Name        string        `json:"name"`
+	Status      string        `json:"status"`
+	Message     string        `json:"message,omitempty"`
+	LastChecked time.Time     `json:"last_checked"`
+	Duration    time.Duration `json:"duration"`
+	Error       error         `json:"error,omitempty"`
+}
+
 // HealthCheck represents a single health check
 type HealthCheck struct {
 	Name         string

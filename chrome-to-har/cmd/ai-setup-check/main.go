@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -216,7 +215,6 @@ func launchChromeWithAIFlags() (*exec.Cmd, ValidationResult) {
 	)
 
 	// Capture output for debugging
-	var startErr error
 	startTime := time.Now()
 
 	if err := cmd.Start(); err != nil {
