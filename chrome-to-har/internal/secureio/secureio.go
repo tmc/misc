@@ -34,25 +34,25 @@ func CreateSecureTempDir(prefix string) (string, error) {
 	if _, err := rand.Read(randomBytes); err != nil {
 		return "", fmt.Errorf("generating random bytes: %w", err)
 	}
-	
+
 	if prefix == "" {
 		prefix = TempDirPrefix
 	}
-	
+
 	dirName := fmt.Sprintf("%s%s", prefix, hex.EncodeToString(randomBytes))
 	tempDir := filepath.Join(os.TempDir(), dirName)
-	
+
 	// Create directory with secure permissions
 	if err := os.MkdirAll(tempDir, SecureDirPerms); err != nil {
 		return "", fmt.Errorf("creating secure directory: %w", err)
 	}
-	
+
 	// Double-check permissions were set correctly
 	if err := os.Chmod(tempDir, SecureDirPerms); err != nil {
 		os.RemoveAll(tempDir)
 		return "", fmt.Errorf("setting secure permissions: %w", err)
 	}
-	
+
 	return tempDir, nil
 }
 
@@ -61,30 +61,30 @@ func SecureCopyFile(src, dst string, maxSize int64) error {
 	if maxSize <= 0 {
 		maxSize = MaxFileSize
 	}
-	
+
 	// Validate source file exists and get info
 	srcInfo, err := os.Stat(src)
 	if err != nil {
 		return fmt.Errorf("accessing source file: %w", err)
 	}
-	
+
 	// Check file size
 	if srcInfo.Size() > maxSize {
 		return fmt.Errorf("file too large: %d bytes (max: %d)", srcInfo.Size(), maxSize)
 	}
-	
+
 	// Check if source is a regular file
 	if !srcInfo.Mode().IsRegular() {
 		return fmt.Errorf("source is not a regular file")
 	}
-	
+
 	// Open source file
 	srcFile, err := os.Open(src)
 	if err != nil {
 		return fmt.Errorf("opening source file: %w", err)
 	}
 	defer srcFile.Close()
-	
+
 	// Create destination file with secure permissions
 	dstFile, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_EXCL, SecureFilePerms)
 	if err != nil {
@@ -96,13 +96,13 @@ func SecureCopyFile(src, dst string, maxSize int64) error {
 			os.Remove(dst) // Clean up on error
 		}
 	}()
-	
+
 	// Copy with size limit
 	written, err := io.CopyN(dstFile, srcFile, maxSize)
 	if err != nil && err != io.EOF {
 		return fmt.Errorf("copying file: %w", err)
 	}
-	
+
 	// Verify we didn't exceed the limit
 	if written == maxSize {
 		// Check if there's more data
@@ -111,12 +111,12 @@ func SecureCopyFile(src, dst string, maxSize int64) error {
 			return fmt.Errorf("file exceeds size limit")
 		}
 	}
-	
+
 	// Ensure proper permissions
 	if err := dstFile.Chmod(SecureFilePerms); err != nil {
 		return fmt.Errorf("setting file permissions: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -125,52 +125,52 @@ func SecureWriteFile(filename string, data []byte) error {
 	if len(data) > MaxFileSize {
 		return fmt.Errorf("data too large: %d bytes (max: %d)", len(data), MaxFileSize)
 	}
-	
+
 	// Create temporary file in same directory for atomic operation
 	dir := filepath.Dir(filename)
 	base := filepath.Base(filename)
-	
+
 	tempFile, err := os.CreateTemp(dir, base+".tmp")
 	if err != nil {
 		return fmt.Errorf("creating temp file: %w", err)
 	}
 	tempName := tempFile.Name()
-	
+
 	// Ensure cleanup on failure
 	defer func() {
 		if err != nil {
 			os.Remove(tempName)
 		}
 	}()
-	
+
 	// Set secure permissions on temp file
 	if err := tempFile.Chmod(SecureFilePerms); err != nil {
 		tempFile.Close()
 		return fmt.Errorf("setting temp file permissions: %w", err)
 	}
-	
+
 	// Write data
 	if _, err := tempFile.Write(data); err != nil {
 		tempFile.Close()
 		return fmt.Errorf("writing data: %w", err)
 	}
-	
+
 	// Ensure data is written to disk
 	if err := tempFile.Sync(); err != nil {
 		tempFile.Close()
 		return fmt.Errorf("syncing data: %w", err)
 	}
-	
+
 	// Close temp file
 	if err := tempFile.Close(); err != nil {
 		return fmt.Errorf("closing temp file: %w", err)
 	}
-	
+
 	// Atomically rename temp file to final name
 	if err := os.Rename(tempName, filename); err != nil {
 		return fmt.Errorf("renaming file: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -179,38 +179,38 @@ func SecureCopyDir(src, dst string, maxTotalSize int64) error {
 	if maxTotalSize <= 0 {
 		maxTotalSize = MaxTotalSize
 	}
-	
+
 	var totalSize int64
-	
+
 	// Get source directory info
 	srcInfo, err := os.Stat(src)
 	if err != nil {
 		return fmt.Errorf("accessing source directory: %w", err)
 	}
-	
+
 	if !srcInfo.IsDir() {
 		return fmt.Errorf("source is not a directory")
 	}
-	
+
 	// Create destination directory with secure permissions
 	if err := os.MkdirAll(dst, SecureDirPerms); err != nil {
 		return fmt.Errorf("creating destination directory: %w", err)
 	}
-	
+
 	// Walk through source directory
 	err = filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		
+
 		// Calculate relative path
 		relPath, err := filepath.Rel(src, path)
 		if err != nil {
 			return fmt.Errorf("calculating relative path: %w", err)
 		}
-		
+
 		destPath := filepath.Join(dst, relPath)
-		
+
 		// Check total size limit
 		if info.Size() > 0 {
 			totalSize += info.Size()
@@ -218,7 +218,7 @@ func SecureCopyDir(src, dst string, maxTotalSize int64) error {
 				return fmt.Errorf("total size exceeds limit: %d bytes (max: %d)", totalSize, maxTotalSize)
 			}
 		}
-		
+
 		if info.IsDir() {
 			// Create directory
 			if err := os.MkdirAll(destPath, SecureDirPerms); err != nil {
@@ -231,15 +231,15 @@ func SecureCopyDir(src, dst string, maxTotalSize int64) error {
 			}
 		}
 		// Skip other file types (symlinks, devices, etc.)
-		
+
 		return nil
 	})
-	
+
 	if err != nil {
 		os.RemoveAll(dst) // Clean up on error
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -249,12 +249,12 @@ func SecureRemoveAll(path string) error {
 	if err := os.RemoveAll(path); err != nil {
 		return fmt.Errorf("removing path: %w", err)
 	}
-	
+
 	// Verify removal was successful
 	if _, err := os.Stat(path); err == nil {
 		return fmt.Errorf("failed to remove path: %s", path)
 	}
-	
+
 	return nil
 }
 
@@ -270,13 +270,13 @@ func NewLockFile(path string) (*LockFile, error) {
 	if err != nil {
 		return nil, fmt.Errorf("opening lock file: %w", err)
 	}
-	
+
 	// Try to acquire exclusive lock (non-blocking)
 	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		file.Close()
 		return nil, fmt.Errorf("acquiring lock: %w", err)
 	}
-	
+
 	return &LockFile{file: file, path: path}, nil
 }
 
@@ -285,23 +285,23 @@ func (l *LockFile) Unlock() error {
 	if l.file == nil {
 		return nil
 	}
-	
+
 	// Release the lock
 	if err := syscall.Flock(int(l.file.Fd()), syscall.LOCK_UN); err != nil {
 		l.file.Close()
 		return fmt.Errorf("releasing lock: %w", err)
 	}
-	
+
 	// Close the file
 	if err := l.file.Close(); err != nil {
 		return fmt.Errorf("closing lock file: %w", err)
 	}
-	
+
 	// Remove the lock file
 	if err := os.Remove(l.path); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("removing lock file: %w", err)
 	}
-	
+
 	l.file = nil
 	return nil
 }
@@ -314,13 +314,13 @@ func SecureSQLQuery(db *sql.DB, query string, args ...interface{}) (*sql.Rows, e
 		return nil, fmt.Errorf("preparing statement: %w", err)
 	}
 	defer stmt.Close()
-	
+
 	// Execute with parameters
 	rows, err := stmt.Query(args...)
 	if err != nil {
 		return nil, fmt.Errorf("executing query: %w", err)
 	}
-	
+
 	return rows, nil
 }
 
@@ -332,13 +332,13 @@ func SecureSQLExec(db *sql.DB, query string, args ...interface{}) (sql.Result, e
 		return nil, fmt.Errorf("preparing statement: %w", err)
 	}
 	defer stmt.Close()
-	
+
 	// Execute with parameters
 	result, err := stmt.Exec(args...)
 	if err != nil {
 		return nil, fmt.Errorf("executing statement: %w", err)
 	}
-	
+
 	return result, nil
 }
 
@@ -347,17 +347,17 @@ func BuildDomainFilterQuery(domains []string) (string, []interface{}) {
 	if len(domains) == 0 {
 		return "", nil
 	}
-	
+
 	placeholders := make([]string, len(domains))
 	args := make([]interface{}, len(domains))
-	
+
 	for i, domain := range domains {
 		placeholders[i] = "host_key LIKE ?"
 		args[i] = "%" + domain + "%"
 	}
-	
+
 	query := "DELETE FROM cookies WHERE NOT (" + strings.Join(placeholders, " OR ") + ")"
-	
+
 	return query, args
 }
 
@@ -376,12 +376,12 @@ func SecureFileInfo(path string) (*FileInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getting file info: %w", err)
 	}
-	
+
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, fmt.Errorf("getting absolute path: %w", err)
 	}
-	
+
 	return &FileInfo{
 		Path:        absPath,
 		Size:        info.Size(),
@@ -397,14 +397,14 @@ func IsSecurePermissions(path string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("getting file info: %w", err)
 	}
-	
+
 	mode := info.Mode()
 	perm := mode.Perm()
-	
+
 	if info.IsDir() {
 		return perm == SecureDirPerms, nil
 	}
-	
+
 	return perm == SecureFilePerms, nil
 }
 
@@ -414,18 +414,18 @@ func EnsureSecurePermissions(path string) error {
 	if err != nil {
 		return fmt.Errorf("getting file info: %w", err)
 	}
-	
+
 	var targetPerm os.FileMode
 	if info.IsDir() {
 		targetPerm = SecureDirPerms
 	} else {
 		targetPerm = SecureFilePerms
 	}
-	
+
 	if err := os.Chmod(path, targetPerm); err != nil {
 		return fmt.Errorf("setting permissions: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -453,24 +453,24 @@ func (c *CleanupHandler) AddLock(lock *LockFile) {
 // Cleanup removes all registered paths and releases locks
 func (c *CleanupHandler) Cleanup() error {
 	var errors []string
-	
+
 	// Release locks first
 	for _, lock := range c.locks {
 		if err := lock.Unlock(); err != nil {
 			errors = append(errors, fmt.Sprintf("releasing lock: %v", err))
 		}
 	}
-	
+
 	// Remove paths
 	for _, path := range c.paths {
 		if err := SecureRemoveAll(path); err != nil {
 			errors = append(errors, fmt.Sprintf("removing %s: %v", path, err))
 		}
 	}
-	
+
 	if len(errors) > 0 {
 		return fmt.Errorf("cleanup errors: %s", strings.Join(errors, "; "))
 	}
-	
+
 	return nil
 }

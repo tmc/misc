@@ -51,16 +51,16 @@ func (v *Validator) AllErrors() error {
 	if len(v.errors) == 0 {
 		return nil
 	}
-	
+
 	if len(v.errors) == 1 {
 		return v.errors[0]
 	}
-	
+
 	messages := make([]string, len(v.errors))
 	for i, err := range v.errors {
 		messages[i] = err.Error()
 	}
-	
+
 	return New(ValidationError, "multiple validation errors: "+strings.Join(messages, "; "))
 }
 
@@ -70,7 +70,7 @@ func (v *Validator) ValidateURL(urlStr string, fieldName string) *Validator {
 		v.AddError(NewValidationError(fieldName, "URL cannot be empty"))
 		return v
 	}
-	
+
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
 		v.AddError(WithContext(
@@ -79,7 +79,7 @@ func (v *Validator) ValidateURL(urlStr string, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	if parsedURL.Scheme == "" {
 		v.AddError(WithContext(
 			New(InvalidURLError, "URL must include a scheme (http:// or https://)"),
@@ -87,7 +87,7 @@ func (v *Validator) ValidateURL(urlStr string, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
 		v.AddError(WithContext(
 			New(InvalidURLError, "URL scheme must be http or https"),
@@ -95,7 +95,7 @@ func (v *Validator) ValidateURL(urlStr string, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	if parsedURL.Host == "" {
 		v.AddError(WithContext(
 			New(InvalidURLError, "URL must include a host"),
@@ -103,7 +103,7 @@ func (v *Validator) ValidateURL(urlStr string, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	return v
 }
 
@@ -113,7 +113,7 @@ func (v *Validator) ValidateHeader(header string, fieldName string) *Validator {
 		v.AddError(NewValidationError(fieldName, "header cannot be empty"))
 		return v
 	}
-	
+
 	parts := strings.SplitN(header, ":", 2)
 	if len(parts) != 2 {
 		v.AddError(WithContext(
@@ -122,10 +122,10 @@ func (v *Validator) ValidateHeader(header string, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	name := strings.TrimSpace(parts[0])
 	value := strings.TrimSpace(parts[1])
-	
+
 	if name == "" {
 		v.AddError(WithContext(
 			New(InvalidHeaderError, "header name cannot be empty"),
@@ -133,7 +133,7 @@ func (v *Validator) ValidateHeader(header string, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	// Basic header name validation (RFC 7230)
 	headerNameRegex := regexp.MustCompile(`^[a-zA-Z0-9!#$%&'*+\-.^_` + "`" + `|~]+$`)
 	if !headerNameRegex.MatchString(name) {
@@ -143,7 +143,7 @@ func (v *Validator) ValidateHeader(header string, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	// Check for common problematic headers
 	lowerName := strings.ToLower(name)
 	if lowerName == "content-length" || lowerName == "transfer-encoding" {
@@ -153,7 +153,7 @@ func (v *Validator) ValidateHeader(header string, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	// Value should not contain control characters
 	for _, char := range value {
 		if char < 32 && char != 9 { // Allow tab (9) but not other control characters
@@ -164,7 +164,7 @@ func (v *Validator) ValidateHeader(header string, fieldName string) *Validator {
 			break
 		}
 	}
-	
+
 	return v
 }
 
@@ -174,7 +174,7 @@ func (v *Validator) ValidateFilePath(path string, fieldName string, mustExist bo
 		v.AddError(NewValidationError(fieldName, "file path cannot be empty"))
 		return v
 	}
-	
+
 	// Check for path traversal attempts
 	if strings.Contains(path, "..") {
 		v.AddError(WithContext(
@@ -183,7 +183,7 @@ func (v *Validator) ValidateFilePath(path string, fieldName string, mustExist bo
 		))
 		return v
 	}
-	
+
 	// Convert to absolute path for validation
 	absPath, err := filepath.Abs(path)
 	if err != nil {
@@ -193,7 +193,7 @@ func (v *Validator) ValidateFilePath(path string, fieldName string, mustExist bo
 		))
 		return v
 	}
-	
+
 	if mustExist {
 		if _, err := os.Stat(absPath); os.IsNotExist(err) {
 			v.AddError(WithContext(
@@ -209,7 +209,7 @@ func (v *Validator) ValidateFilePath(path string, fieldName string, mustExist bo
 			return v
 		}
 	}
-	
+
 	return v
 }
 
@@ -222,7 +222,7 @@ func (v *Validator) ValidateTimeout(timeout int, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	if timeout == 0 {
 		v.AddError(WithContext(
 			New(ValidationError, "timeout cannot be zero"),
@@ -230,7 +230,7 @@ func (v *Validator) ValidateTimeout(timeout int, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	// Check for reasonable upper limit (10 hours)
 	if timeout > 36000 {
 		v.AddError(WithContext(
@@ -239,7 +239,7 @@ func (v *Validator) ValidateTimeout(timeout int, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	return v
 }
 
@@ -252,7 +252,7 @@ func (v *Validator) ValidatePort(port int, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	if port > 65535 {
 		v.AddError(WithContext(
 			New(ValidationError, "port cannot be greater than 65535"),
@@ -260,12 +260,12 @@ func (v *Validator) ValidatePort(port int, fieldName string) *Validator {
 		))
 		return v
 	}
-	
+
 	// Check for reserved ports (optional warning)
 	if port > 0 && port < 1024 {
 		LogWarn("Port %d is in the reserved range (1-1023) and may require elevated privileges", port)
 	}
-	
+
 	return v
 }
 
@@ -275,12 +275,12 @@ func (v *Validator) ValidateHTTPMethod(method string, fieldName string) *Validat
 		v.AddError(NewValidationError(fieldName, "HTTP method cannot be empty"))
 		return v
 	}
-	
+
 	method = strings.ToUpper(method)
 	validMethods := []string{
 		"GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH", "TRACE",
 	}
-	
+
 	valid := false
 	for _, validMethod := range validMethods {
 		if method == validMethod {
@@ -288,7 +288,7 @@ func (v *Validator) ValidateHTTPMethod(method string, fieldName string) *Validat
 			break
 		}
 	}
-	
+
 	if !valid {
 		v.AddError(WithContext(
 			New(ValidationError, "invalid HTTP method"),
@@ -296,7 +296,7 @@ func (v *Validator) ValidateHTTPMethod(method string, fieldName string) *Validat
 		))
 		return v
 	}
-	
+
 	return v
 }
 
@@ -306,12 +306,12 @@ func (v *Validator) ValidateJavaScript(script string, fieldName string) *Validat
 		v.AddError(NewValidationError(fieldName, "JavaScript code cannot be empty"))
 		return v
 	}
-	
+
 	// Basic syntax validation (check for balanced braces, brackets, parentheses)
 	braceCount := 0
 	parenCount := 0
 	bracketCount := 0
-	
+
 	for _, char := range script {
 		switch char {
 		case '{':
@@ -328,28 +328,28 @@ func (v *Validator) ValidateJavaScript(script string, fieldName string) *Validat
 			bracketCount--
 		}
 	}
-	
+
 	if braceCount != 0 {
 		v.AddError(WithContext(
 			New(InvalidScriptError, "unbalanced braces in JavaScript"),
 			"field", fieldName,
 		))
 	}
-	
+
 	if parenCount != 0 {
 		v.AddError(WithContext(
 			New(InvalidScriptError, "unbalanced parentheses in JavaScript"),
 			"field", fieldName,
 		))
 	}
-	
+
 	if bracketCount != 0 {
 		v.AddError(WithContext(
 			New(InvalidScriptError, "unbalanced brackets in JavaScript"),
 			"field", fieldName,
 		))
 	}
-	
+
 	// Check for potentially dangerous patterns
 	dangerousPatterns := []string{
 		"eval(",
@@ -360,7 +360,7 @@ func (v *Validator) ValidateJavaScript(script string, fieldName string) *Validat
 		"location.replace(",
 		"location.assign(",
 	}
-	
+
 	scriptLower := strings.ToLower(script)
 	for _, pattern := range dangerousPatterns {
 		if strings.Contains(scriptLower, pattern) {
@@ -368,7 +368,7 @@ func (v *Validator) ValidateJavaScript(script string, fieldName string) *Validat
 			break
 		}
 	}
-	
+
 	return v
 }
 
@@ -378,7 +378,7 @@ func (v *Validator) ValidateOutputFormat(format string, fieldName string) *Valid
 		v.AddError(NewValidationError(fieldName, "output format cannot be empty"))
 		return v
 	}
-	
+
 	validFormats := []string{"html", "har", "text", "json"}
 	valid := false
 	for _, validFormat := range validFormats {
@@ -387,7 +387,7 @@ func (v *Validator) ValidateOutputFormat(format string, fieldName string) *Valid
 			break
 		}
 	}
-	
+
 	if !valid {
 		v.AddError(WithContext(
 			New(ValidationError, "invalid output format (must be one of: html, har, text, json)"),
@@ -395,7 +395,7 @@ func (v *Validator) ValidateOutputFormat(format string, fieldName string) *Valid
 		))
 		return v
 	}
-	
+
 	return v
 }
 
@@ -405,7 +405,7 @@ func (v *Validator) ValidateProxyURL(proxyURL string, fieldName string) *Validat
 		v.AddError(NewValidationError(fieldName, "proxy URL cannot be empty"))
 		return v
 	}
-	
+
 	parsedURL, err := url.Parse(proxyURL)
 	if err != nil {
 		v.AddError(WithContext(
@@ -414,7 +414,7 @@ func (v *Validator) ValidateProxyURL(proxyURL string, fieldName string) *Validat
 		))
 		return v
 	}
-	
+
 	validSchemes := []string{"http", "https", "socks5"}
 	valid := false
 	for _, scheme := range validSchemes {
@@ -423,7 +423,7 @@ func (v *Validator) ValidateProxyURL(proxyURL string, fieldName string) *Validat
 			break
 		}
 	}
-	
+
 	if !valid {
 		v.AddError(WithContext(
 			New(ProxyError, "proxy URL scheme must be http, https, or socks5"),
@@ -431,7 +431,7 @@ func (v *Validator) ValidateProxyURL(proxyURL string, fieldName string) *Validat
 		))
 		return v
 	}
-	
+
 	if parsedURL.Host == "" {
 		v.AddError(WithContext(
 			New(ProxyError, "proxy URL must include a host"),
@@ -439,7 +439,7 @@ func (v *Validator) ValidateProxyURL(proxyURL string, fieldName string) *Validat
 		))
 		return v
 	}
-	
+
 	return v
 }
 
@@ -449,7 +449,7 @@ func (v *Validator) ValidateCredentials(credentials string, fieldName string) *V
 		v.AddError(NewValidationError(fieldName, "credentials cannot be empty"))
 		return v
 	}
-	
+
 	if !strings.Contains(credentials, ":") {
 		v.AddError(WithContext(
 			New(ValidationError, "credentials must be in format 'username:password'"),
@@ -457,7 +457,7 @@ func (v *Validator) ValidateCredentials(credentials string, fieldName string) *V
 		))
 		return v
 	}
-	
+
 	parts := strings.SplitN(credentials, ":", 2)
 	if len(parts) != 2 {
 		v.AddError(WithContext(
@@ -466,10 +466,10 @@ func (v *Validator) ValidateCredentials(credentials string, fieldName string) *V
 		))
 		return v
 	}
-	
+
 	username := parts[0]
 	password := parts[1]
-	
+
 	if username == "" {
 		v.AddError(WithContext(
 			New(ValidationError, "username cannot be empty"),
@@ -477,7 +477,7 @@ func (v *Validator) ValidateCredentials(credentials string, fieldName string) *V
 		))
 		return v
 	}
-	
+
 	if password == "" {
 		v.AddError(WithContext(
 			New(ValidationError, "password cannot be empty"),
@@ -485,7 +485,7 @@ func (v *Validator) ValidateCredentials(credentials string, fieldName string) *V
 		))
 		return v
 	}
-	
+
 	return v
 }
 

@@ -59,16 +59,16 @@ func ValidateProfileName(name string) error {
 	if name == "" {
 		return fmt.Errorf("profile name cannot be empty")
 	}
-	
+
 	if len(name) > 255 {
 		return fmt.Errorf("profile name too long (max 255 characters)")
 	}
-	
+
 	// Check for directory traversal attempts
 	if strings.Contains(name, "..") || strings.Contains(name, "/") || strings.Contains(name, "\\") {
 		return fmt.Errorf("profile name contains invalid path characters")
 	}
-	
+
 	// Check for reserved names
 	reservedNames := []string{".", "..", "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"}
 	upperName := strings.ToUpper(name)
@@ -77,18 +77,18 @@ func ValidateProfileName(name string) error {
 			return fmt.Errorf("profile name is reserved: %s", name)
 		}
 	}
-	
+
 	if !safeProfileRegex.MatchString(name) {
 		return fmt.Errorf("profile name contains invalid characters (only alphanumeric, spaces, underscores, and hyphens allowed)")
 	}
-	
+
 	// Check for control characters
 	for _, r := range name {
 		if unicode.IsControl(r) {
 			return fmt.Errorf("profile name contains control characters")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -97,26 +97,26 @@ func ValidatePath(path string, allowedDirs []string) error {
 	if path == "" {
 		return fmt.Errorf("path cannot be empty")
 	}
-	
+
 	// Resolve to absolute path
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return fmt.Errorf("invalid path: %w", err)
 	}
-	
+
 	// Clean the path to remove any .. or . components
 	cleanPath := filepath.Clean(absPath)
-	
+
 	// Check for directory traversal - if clean path is different from abs path, it contained traversal
 	if cleanPath != absPath {
 		return fmt.Errorf("path contains directory traversal")
 	}
-	
+
 	// Check for null bytes
 	if strings.Contains(path, "\x00") {
 		return fmt.Errorf("path contains null bytes")
 	}
-	
+
 	// Check if path is within allowed directories
 	if len(allowedDirs) > 0 {
 		allowed := false
@@ -135,7 +135,7 @@ func ValidatePath(path string, allowedDirs []string) error {
 			return fmt.Errorf("path outside allowed directories")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -144,14 +144,14 @@ func ValidateURL(rawURL string, allowedProtocols []string) error {
 	if rawURL == "" {
 		return fmt.Errorf("URL cannot be empty")
 	}
-	
+
 	// Check for control characters and null bytes
 	for _, r := range rawURL {
 		if unicode.IsControl(r) || r == 0 {
 			return fmt.Errorf("URL contains control characters or null bytes")
 		}
 	}
-	
+
 	// Check for suspicious patterns
 	lowerURL := strings.ToLower(rawURL)
 	if strings.Contains(lowerURL, "javascript:") {
@@ -166,13 +166,13 @@ func ValidateURL(rawURL string, allowedProtocols []string) error {
 	if strings.Contains(lowerURL, "file:") && !strings.HasPrefix(lowerURL, "file://") {
 		return fmt.Errorf("malformed file URLs not allowed")
 	}
-	
+
 	// Parse the URL
 	u, err := url.Parse(rawURL)
 	if err != nil {
 		return fmt.Errorf("invalid URL: %w", err)
 	}
-	
+
 	// Check protocol
 	if len(allowedProtocols) > 0 {
 		allowed := false
@@ -186,7 +186,7 @@ func ValidateURL(rawURL string, allowedProtocols []string) error {
 			return fmt.Errorf("protocol %s not allowed", u.Scheme)
 		}
 	}
-	
+
 	// Additional checks for specific protocols
 	if u.Scheme == "file" {
 		// File URLs should have proper paths
@@ -198,7 +198,7 @@ func ValidateURL(rawURL string, allowedProtocols []string) error {
 			return fmt.Errorf("invalid file path in URL: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -207,37 +207,37 @@ func ValidateHostname(hostname string) error {
 	if hostname == "" {
 		return fmt.Errorf("hostname cannot be empty")
 	}
-	
+
 	if len(hostname) > 253 {
 		return fmt.Errorf("hostname too long (max 253 characters)")
 	}
-	
+
 	// Check for control characters
 	for _, r := range hostname {
 		if unicode.IsControl(r) {
 			return fmt.Errorf("hostname contains control characters")
 		}
 	}
-	
+
 	// Check basic pattern
 	if !safeHostRegex.MatchString(hostname) {
 		return fmt.Errorf("hostname contains invalid characters")
 	}
-	
+
 	// Try to parse as IP address first
 	if net.ParseIP(hostname) != nil {
 		return nil // Valid IP address
 	}
-	
+
 	// Validate as hostname
 	if len(hostname) > 0 && (hostname[0] == '-' || hostname[len(hostname)-1] == '-') {
 		return fmt.Errorf("hostname cannot start or end with hyphen")
 	}
-	
+
 	if strings.Contains(hostname, "..") {
 		return fmt.Errorf("hostname contains consecutive dots")
 	}
-	
+
 	labels := strings.Split(hostname, ".")
 	for _, label := range labels {
 		if label == "" {
@@ -250,7 +250,7 @@ func ValidateHostname(hostname string) error {
 			return fmt.Errorf("hostname label cannot start or end with hyphen")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -259,12 +259,12 @@ func ValidatePort(port int) error {
 	if port < 1 || port > 65535 {
 		return fmt.Errorf("port must be between 1 and 65535")
 	}
-	
+
 	// Check for privileged ports (optional warning)
 	if port < 1024 {
 		return fmt.Errorf("privileged port %d requires elevated permissions", port)
 	}
-	
+
 	return nil
 }
 
@@ -273,19 +273,19 @@ func ValidateJavaScript(script string, allowDangerous bool) error {
 	if script == "" {
 		return fmt.Errorf("script cannot be empty")
 	}
-	
+
 	// Check for extremely long scripts
 	if len(script) > 1048576 { // 1MB limit
 		return fmt.Errorf("script too long (max 1MB)")
 	}
-	
+
 	// Check for control characters (except common ones like \n, \t, \r)
 	for _, r := range script {
 		if unicode.IsControl(r) && r != '\n' && r != '\t' && r != '\r' {
 			return fmt.Errorf("script contains control characters")
 		}
 	}
-	
+
 	if !allowDangerous {
 		lowerScript := strings.ToLower(script)
 		for _, pattern := range dangerousJSPatterns {
@@ -294,28 +294,28 @@ func ValidateJavaScript(script string, allowDangerous bool) error {
 			}
 		}
 	}
-	
+
 	// Basic syntax validation - check for balanced braces
 	openBraces := strings.Count(script, "{")
 	closeBraces := strings.Count(script, "}")
 	if openBraces != closeBraces {
 		return fmt.Errorf("unbalanced braces in script")
 	}
-	
+
 	// Check for balanced parentheses
 	openParens := strings.Count(script, "(")
 	closeParens := strings.Count(script, ")")
 	if openParens != closeParens {
 		return fmt.Errorf("unbalanced parentheses in script")
 	}
-	
+
 	// Check for balanced square brackets
 	openBrackets := strings.Count(script, "[")
 	closeBrackets := strings.Count(script, "]")
 	if openBrackets != closeBrackets {
 		return fmt.Errorf("unbalanced square brackets in script")
 	}
-	
+
 	return nil
 }
 
@@ -324,11 +324,11 @@ func ValidateTimeout(timeout int) error {
 	if timeout <= 0 {
 		return fmt.Errorf("timeout must be positive")
 	}
-	
+
 	if timeout > 3600 { // 1 hour max
 		return fmt.Errorf("timeout too long (max 3600 seconds)")
 	}
-	
+
 	return nil
 }
 
@@ -337,18 +337,18 @@ func ValidateUserAgent(userAgent string) error {
 	if userAgent == "" {
 		return fmt.Errorf("user agent cannot be empty")
 	}
-	
+
 	if len(userAgent) > 1024 {
 		return fmt.Errorf("user agent too long (max 1024 characters)")
 	}
-	
+
 	// Check for control characters
 	for _, r := range userAgent {
 		if unicode.IsControl(r) && r != '\t' {
 			return fmt.Errorf("user agent contains control characters")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -357,41 +357,41 @@ func ValidateHeaders(headers map[string]string) error {
 	if len(headers) > 100 {
 		return fmt.Errorf("too many headers (max 100)")
 	}
-	
+
 	for name, value := range headers {
 		if name == "" {
 			return fmt.Errorf("header name cannot be empty")
 		}
-		
+
 		if len(name) > 256 {
 			return fmt.Errorf("header name too long: %s", name)
 		}
-		
+
 		if len(value) > 8192 {
 			return fmt.Errorf("header value too long for %s", name)
 		}
-		
+
 		// Check for control characters in header name
 		for _, r := range name {
 			if unicode.IsControl(r) {
 				return fmt.Errorf("header name contains control characters: %s", name)
 			}
 		}
-		
+
 		// Check for control characters in header value (except \t)
 		for _, r := range value {
 			if unicode.IsControl(r) && r != '\t' {
 				return fmt.Errorf("header value contains control characters: %s", name)
 			}
 		}
-		
+
 		// Check for dangerous headers
 		lowerName := strings.ToLower(name)
 		if lowerName == "host" || lowerName == "content-length" || lowerName == "transfer-encoding" {
 			return fmt.Errorf("dangerous header not allowed: %s", name)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -400,10 +400,10 @@ func SanitizeFilename(filename string) string {
 	if filename == "" {
 		return "output"
 	}
-	
+
 	// Remove directory components
 	filename = filepath.Base(filename)
-	
+
 	// Replace unsafe characters with underscores
 	var result strings.Builder
 	for _, r := range filename {
@@ -413,24 +413,24 @@ func SanitizeFilename(filename string) string {
 			result.WriteRune('_')
 		}
 	}
-	
+
 	sanitized := result.String()
-	
+
 	// Ensure it's not empty after sanitization
 	if sanitized == "" || sanitized == "." || sanitized == ".." {
 		sanitized = "output"
 	}
-	
+
 	// Ensure it doesn't start with a dot (hidden file)
 	if sanitized[0] == '.' {
 		sanitized = "file_" + sanitized[1:]
 	}
-	
+
 	// Truncate if too long
 	if len(sanitized) > 255 {
 		sanitized = sanitized[:255]
 	}
-	
+
 	return sanitized
 }
 
@@ -439,17 +439,17 @@ func ValidateRemoteHosts(host string, allowedHosts []string) error {
 	if err := ValidateHostname(host); err != nil {
 		return err
 	}
-	
+
 	if len(allowedHosts) == 0 {
 		return fmt.Errorf("no remote hosts allowed")
 	}
-	
+
 	for _, allowed := range allowedHosts {
 		if host == allowed {
 			return nil
 		}
 	}
-	
+
 	return fmt.Errorf("host %s not in allowed list", host)
 }
 
@@ -458,13 +458,13 @@ func ValidateProxyURL(proxyURL string) error {
 	if proxyURL == "" {
 		return fmt.Errorf("proxy URL cannot be empty")
 	}
-	
+
 	// Parse the proxy URL
 	u, err := url.Parse(proxyURL)
 	if err != nil {
 		return fmt.Errorf("invalid proxy URL: %w", err)
 	}
-	
+
 	// Check supported schemes
 	switch u.Scheme {
 	case "http", "https", "socks5":
@@ -472,12 +472,12 @@ func ValidateProxyURL(proxyURL string) error {
 	default:
 		return fmt.Errorf("unsupported proxy scheme: %s", u.Scheme)
 	}
-	
+
 	// Validate hostname
 	if err := ValidateHostname(u.Hostname()); err != nil {
 		return fmt.Errorf("invalid proxy hostname: %w", err)
 	}
-	
+
 	// Validate port
 	if u.Port() != "" {
 		port := 0
@@ -488,6 +488,6 @@ func ValidateProxyURL(proxyURL string) error {
 			return fmt.Errorf("invalid proxy port: %w", err)
 		}
 	}
-	
+
 	return nil
 }

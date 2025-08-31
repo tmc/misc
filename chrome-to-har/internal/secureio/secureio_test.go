@@ -305,7 +305,7 @@ func TestBuildDomainFilterQuery(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			query, args := BuildDomainFilterQuery(tt.domains)
-			
+
 			if tt.wantNil {
 				if query != "" {
 					t.Errorf("Expected empty query for empty domains")
@@ -473,7 +473,7 @@ func BenchmarkSecureWriteFile(b *testing.B) {
 	defer os.RemoveAll(dir)
 
 	data := []byte("benchmark data")
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		testFile := filepath.Join(dir, fmt.Sprintf("bench-%d.txt", i))

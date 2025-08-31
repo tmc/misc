@@ -23,25 +23,25 @@ const (
 	ProfileSetupError    ErrorType = "profile_setup"
 
 	// Network-related errors
-	NetworkError      ErrorType = "network"
-	NetworkIdleError  ErrorType = "network_idle"
+	NetworkError       ErrorType = "network"
+	NetworkIdleError   ErrorType = "network_idle"
 	NetworkRecordError ErrorType = "network_record"
 
 	// File system errors
-	FileNotFoundError ErrorType = "file_not_found"
+	FileNotFoundError   ErrorType = "file_not_found"
 	FilePermissionError ErrorType = "file_permission"
-	FileWriteError    ErrorType = "file_write"
-	FileReadError     ErrorType = "file_read"
+	FileWriteError      ErrorType = "file_write"
+	FileReadError       ErrorType = "file_read"
 
 	// Input validation errors
-	ValidationError     ErrorType = "validation"
-	InvalidURLError     ErrorType = "invalid_url"
-	InvalidHeaderError  ErrorType = "invalid_header"
-	InvalidScriptError  ErrorType = "invalid_script"
+	ValidationError    ErrorType = "validation"
+	InvalidURLError    ErrorType = "invalid_url"
+	InvalidHeaderError ErrorType = "invalid_header"
+	InvalidScriptError ErrorType = "invalid_script"
 
 	// Configuration errors
-	ConfigurationError ErrorType = "configuration"
-	ProxyError         ErrorType = "proxy"
+	ConfigurationError  ErrorType = "configuration"
+	ProxyError          ErrorType = "proxy"
 	AuthenticationError ErrorType = "authentication"
 
 	// Generic errors
@@ -254,11 +254,11 @@ func FormatError(err error) string {
 		var parts []string
 		parts = append(parts, fmt.Sprintf("Type: %s", chromeErr.Type))
 		parts = append(parts, fmt.Sprintf("Message: %s", chromeErr.Message))
-		
+
 		if chromeErr.Cause != nil {
 			parts = append(parts, fmt.Sprintf("Cause: %v", chromeErr.Cause))
 		}
-		
+
 		if len(chromeErr.Context) > 0 {
 			contextParts := make([]string, 0, len(chromeErr.Context))
 			for k, v := range chromeErr.Context {
@@ -266,12 +266,12 @@ func FormatError(err error) string {
 			}
 			parts = append(parts, fmt.Sprintf("Context: %s", strings.Join(contextParts, ", ")))
 		}
-		
+
 		parts = append(parts, fmt.Sprintf("Retryable: %t", chromeErr.Retryable))
-		
+
 		return strings.Join(parts, " | ")
 	}
-	
+
 	return fmt.Sprintf("Error: %v", err)
 }
 
@@ -322,7 +322,7 @@ func FileError(operation, path string, err error) *ChromeError {
 	} else {
 		errorType = FileWriteError
 	}
-	
+
 	chromeErr := Wrapf(err, errorType, "failed to %s file", operation)
 	return WithContext(chromeErr, "path", path)
 }
@@ -337,7 +337,7 @@ func NewNetworkError(operation, url string, err error) *ChromeError {
 func NewChromeError(operation string, err error) *ChromeError {
 	var errorType ErrorType
 	errStr := strings.ToLower(err.Error())
-	
+
 	switch {
 	case strings.Contains(errStr, "timeout"):
 		errorType = ChromeTimeoutError
@@ -350,6 +350,6 @@ func NewChromeError(operation string, err error) *ChromeError {
 	default:
 		errorType = ChromeLaunchError
 	}
-	
+
 	return Wrapf(err, errorType, "Chrome %s failed", operation)
 }

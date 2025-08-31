@@ -75,7 +75,7 @@ func Retry(ctx context.Context, config *RetryConfig, fn RetryFunc) error {
 
 		// Calculate delay for next attempt
 		delay := calculateDelay(config, attempt)
-		
+
 		if config.Verbose {
 			log.Printf("Attempt %d failed with retryable error: %v", attempt, err)
 			log.Printf("Retrying in %v...", delay)
@@ -131,7 +131,7 @@ func RetryWithResult[T any](ctx context.Context, config *RetryConfig, fn func() 
 
 		// Calculate delay for next attempt
 		delay := calculateDelay(config, attempt)
-		
+
 		if config.Verbose {
 			log.Printf("Attempt %d failed with retryable error: %v", attempt, err)
 			log.Printf("Retrying in %v...", delay)
@@ -243,10 +243,10 @@ func IsTransientError(err error) bool {
 
 // contains checks if a string contains a substring (case-insensitive)
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && 
-		   (s == substr || 
-		    (len(s) > len(substr) && 
-		     someMatch(s, substr)))
+	return len(s) >= len(substr) &&
+		(s == substr ||
+			(len(s) > len(substr) &&
+				someMatch(s, substr)))
 }
 
 // someMatch is a simple substring search helper
@@ -261,12 +261,12 @@ func someMatch(s, substr string) bool {
 
 // RetryableOperation represents an operation that can be retried
 type RetryableOperation struct {
-	Name        string
-	Operation   RetryFunc
-	Config      *RetryConfig
-	OnRetry     func(attempt int, err error)
-	OnSuccess   func(attempt int)
-	OnFailure   func(err error)
+	Name      string
+	Operation RetryFunc
+	Config    *RetryConfig
+	OnRetry   func(attempt int, err error)
+	OnSuccess func(attempt int)
+	OnFailure func(err error)
 }
 
 // Execute runs the retryable operation with callbacks

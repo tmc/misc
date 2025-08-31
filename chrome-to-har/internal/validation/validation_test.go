@@ -37,9 +37,9 @@ func TestValidateProfileName(t *testing.T) {
 
 func TestValidateURL(t *testing.T) {
 	tests := []struct {
-		name              string
-		url               string
-		allowedProtocols  []string
+		name             string
+		url              string
+		allowedProtocols []string
 		wantErr          bool
 	}{
 		{"Valid HTTP URL", "http://example.com", []string{"http", "https"}, false},

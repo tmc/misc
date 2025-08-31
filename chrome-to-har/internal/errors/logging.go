@@ -127,13 +127,13 @@ func (el *ErrorLogger) LogError(err error) {
 
 	if chromeErr, ok := err.(*ChromeError); ok {
 		level := el.getLogLevelForError(chromeErr)
-		
+
 		if el.verbose {
 			el.log(level, "Chrome error: %s", FormatError(err))
 		} else {
 			el.log(level, "Error: %s", chromeErr.UserMessage())
 		}
-		
+
 		// Log suggestions if available and at appropriate level
 		if level >= LogLevelWarn && len(chromeErr.Suggestions()) > 0 {
 			suggestions := strings.Join(chromeErr.Suggestions(), ", ")
