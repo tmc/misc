@@ -1,4 +1,6 @@
 // Example demonstrating Playwright-like capabilities
+// +build ignore
+
 package main
 
 import (

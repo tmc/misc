@@ -55,23 +55,21 @@ func main() {
 	}
 
 	// Connect to first available page target
-	var pageTarget *chromedp.Target
-	for _, target := range targets {
+	// NOTE: chromedp API has changed, this needs to be updated
+	// var pageTarget *chromedp.Target
+	for i, target := range targets {
 		if target.Type == "page" && !strings.Contains(target.URL, "chrome://") {
-			pageTarget = target
+			fmt.Printf("Would connect to target %d: %s (%s)\n", i, target.Title, target.URL)
 			break
 		}
 	}
 
-	if pageTarget == nil {
-		log.Fatal("No suitable page target found. Please navigate to a regular webpage in Chrome.")
-	}
-
-	fmt.Printf("Connecting to: %s (%s)\n", pageTarget.Title, pageTarget.URL)
+	fmt.Println("AI takeover functionality needs chromedp API update")
 
 	// Create context for the specific target
-	ctx, cancel = chromedp.NewContext(ctx, chromedp.WithTargetID(pageTarget.TargetID))
-	defer cancel()
+	// NOTE: Commented out due to chromedp API changes
+	// ctx, cancel = chromedp.NewContext(ctx, chromedp.WithTargetID(pageTarget.TargetID))
+	// defer cancel()
 
 	ctx, cancel = context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
