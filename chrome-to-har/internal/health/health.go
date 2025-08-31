@@ -4,17 +4,12 @@ package health
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"os"
 	"runtime"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
-	"github.com/tmc/misc/chrome-to-har/internal/browser"
 )
 
 // HealthStatus represents the health status of a component
@@ -79,14 +74,15 @@ type HealthCheck struct {
 	AlertConfig  *AlertConfig              // Alert configuration
 
 	// Runtime state
-	lastResult        HealthResult
-	lastCheck         time.Time
-	lastSuccess       time.Time
-	lastFailure       time.Time
+	lastResult          HealthResult
+	lastCheck           time.Time
+	lastDuration        time.Duration
+	lastSuccess         time.Time
+	lastFailure         time.Time
 	consecutiveFailures int64
-	totalChecks       int64
-	totalFailures     int64
-	running           bool
+	totalChecks         int64
+	totalFailures       int64
+	running             bool
 	mu                sync.RWMutex
 
 	// Performance metrics
@@ -159,6 +155,8 @@ type TrendData struct {
 type HealthManager struct {
 	checks          map[string]*HealthCheck
 	mu              sync.RWMutex
+	ctx             context.Context
+	cancel          context.CancelFunc
 	stopChan        chan struct{}
 	wg              sync.WaitGroup
 	config          *HealthConfig
@@ -251,6 +249,25 @@ type ResourceMonitor struct {
 	mu             sync.RWMutex
 }
 
+// NewResourceMonitor creates a new resource monitor
+func NewResourceMonitor() *ResourceMonitor {
+	return &ResourceMonitor{}
+}
+
+// GetResourceMetrics returns current resource metrics
+func (rm *ResourceMonitor) GetResourceMetrics() map[string]interface{} {
+	rm.mu.RLock()
+	defer rm.mu.RUnlock()
+	
+	return map[string]interface{}{
+		"memory_usage":     rm.memoryUsage,
+		"cpu_usage":        rm.cpuUsage,
+		"goroutine_count":  rm.goroutineCount,
+		"heap_size":        rm.heapSize,
+		"gc_pauses":        rm.gcPauses,
+	}
+}
+
 // NewHealthManager creates a new health manager with default configuration
 func NewHealthManager() *HealthManager {
 	return NewHealthManagerWithConfig(DefaultHealthConfig())
@@ -258,8 +275,11 @@ func NewHealthManager() *HealthManager {
 
 // NewHealthManagerWithConfig creates a new health manager with custom configuration
 func NewHealthManagerWithConfig(config *HealthConfig) *HealthManager {
+	ctx, cancel := context.WithCancel(context.Background())
 	hm := &HealthManager{
 		checks:   make(map[string]*HealthCheck),
+		ctx:      ctx,
+		cancel:   cancel,
 		stopChan: make(chan struct{}),
 		config:   config,
 		metrics:  &HealthMetrics{StartTime: time.Now()},
@@ -1032,8 +1052,40 @@ func (hm *HealthManager) GetOverallStatus() HealthResult {
 	}
 }
 
-// GetAllStatuses returns all health check statuses
-func (hm *HealthManager) GetAllStatuses() map[string]HealthResult {
+// GetAllStatuses returns all health check statuses as HealthCheckStatus
+func (hm *HealthManager) GetAllStatuses() map[string]HealthCheckStatus {
+	hm.mu.RLock()
+	defer hm.mu.RUnlock()
+
+	results := make(map[string]HealthCheckStatus)
+
+	for name, check := range hm.checks {
+		check.mu.RLock()
+		if check.lastCheck.IsZero() {
+			results[name] = HealthCheckStatus{
+				Name:        name,
+				Status:      string(StatusUnknown),
+				Message:     "Check has not run yet",
+				LastChecked: time.Now(),
+				Duration:    0,
+			}
+		} else {
+			results[name] = HealthCheckStatus{
+				Name:        name,
+				Status:      string(check.lastResult.Status),
+				Message:     check.lastResult.Message,
+				LastChecked: check.lastCheck,
+				Duration:    check.lastDuration,
+			}
+		}
+		check.mu.RUnlock()
+	}
+
+	return results
+}
+
+// GetAllResults returns all health check results as HealthResult
+func (hm *HealthManager) GetAllResults() map[string]HealthResult {
 	hm.mu.RLock()
 	defer hm.mu.RUnlock()
 
@@ -1065,7 +1117,7 @@ func ChromeConnectionCheck(ctx context.Context) HealthResult {
 	return HealthResult{
 		Status:  StatusHealthy,
 		Message: "Chrome DevTools connection is healthy",
-		Details: map[string]string{
+		Details: map[string]interface{}{
 			"connection_type": "devtools",
 			"protocol":        "CDP",
 		},
@@ -1080,7 +1132,7 @@ func NativeMessagingCheck(ctx context.Context) HealthResult {
 	return HealthResult{
 		Status:  StatusHealthy,
 		Message: "Native messaging is functional",
-		Details: map[string]string{
+		Details: map[string]interface{}{
 			"protocol": "native_messaging",
 			"binary":   "chrome-ai-native-host",
 		},
@@ -1095,7 +1147,7 @@ func AIAPICheck(ctx context.Context) HealthResult {
 	return HealthResult{
 		Status:  StatusHealthy,
 		Message: "AI APIs are accessible",
-		Details: map[string]string{
+		Details: map[string]interface{}{
 			"language_model": "available",
 			"window_ai":      "unknown",
 		},
@@ -1110,7 +1162,7 @@ func ExtensionCheck(ctx context.Context) HealthResult {
 	return HealthResult{
 		Status:  StatusHealthy,
 		Message: "Extension context is valid",
-		Details: map[string]string{
+		Details: map[string]interface{}{
 			"manifest_version": "3",
 			"context":          "valid",
 		},
@@ -1125,10 +1177,56 @@ func MemoryCheck(ctx context.Context) HealthResult {
 	return HealthResult{
 		Status:  StatusHealthy,
 		Message: "Memory usage is within acceptable limits",
-		Details: map[string]string{
+		Details: map[string]interface{}{
 			"heap_used":  "25MB",
 			"heap_limit": "100MB",
 		},
 		Timestamp: time.Now(),
+	}
+}
+
+// runResourceMonitor runs the resource monitoring goroutine
+func (hm *HealthManager) runResourceMonitor() {
+	defer hm.wg.Done()
+	
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	
+	for {
+		select {
+		case <-hm.ctx.Done():
+			return
+		case <-ticker.C:
+			// Update resource metrics
+			if hm.resourceMonitor != nil {
+				var m runtime.MemStats
+				runtime.ReadMemStats(&m)
+				
+				hm.resourceMonitor.mu.Lock()
+				hm.resourceMonitor.memoryUsage = m.Alloc
+				hm.resourceMonitor.heapSize = m.HeapAlloc
+				hm.resourceMonitor.goroutineCount = runtime.NumGoroutine()
+				hm.resourceMonitor.mu.Unlock()
+			}
+		}
+	}
+}
+
+// runPredictor runs the predictive analytics goroutine
+func (hm *HealthManager) runPredictor() {
+	defer hm.wg.Done()
+	
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	
+	for {
+		select {
+		case <-hm.ctx.Done():
+			return
+		case <-ticker.C:
+			// Run predictive analysis
+			// This would contain actual prediction logic
+			// For now, just a placeholder
+		}
 	}
 }

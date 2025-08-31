@@ -6,8 +6,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"sort"
-	"strconv"
 	"time"
 )
 
