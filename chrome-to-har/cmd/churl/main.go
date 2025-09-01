@@ -533,13 +533,15 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		}
 	}
 
-	// Create and launch browser
-	b, err := browser.New(ctx, pm, browserOpts...)
+	// Create and launch browser with a separate context to avoid timeout during launch
+	// The browser itself should not be subject to the operation timeout
+	launchCtx := context.Background()
+	b, err := browser.New(launchCtx, pm, browserOpts...)
 	if err != nil {
 		return chromeErrors.Wrap(err, chromeErrors.ChromeLaunchError, "failed to create browser instance")
 	}
 
-	if err := b.Launch(ctx); err != nil {
+	if err := b.Launch(launchCtx); err != nil {
 		return chromeErrors.Wrap(err, chromeErrors.ChromeLaunchError, "failed to launch browser")
 	}
 	defer b.Close()
@@ -991,7 +993,7 @@ func handleWebSocketOperations(ctx context.Context, b *browser.Browser, opts opt
 		timeout := time.Duration(opts.webSocketTimeout) * time.Second
 		
 		waitOpts := []browser.WebSocketWaitOption{
-			browser.WithTimeout(timeout),
+			browser.WithWebSocketWaitTimeout(timeout),
 			browser.WithURLPattern(opts.webSocketURLPattern),
 		}
 		
@@ -1059,11 +1061,10 @@ func generateWebSocketOutput(page *browser.Page, opts options) error {
 	
 	// Create WebSocket HAR exporter
 	var filter *browser.WebSocketHARFilter
-	if opts.webSocketURLPattern != "*" || opts.webSocketDataPattern != "" || opts.webSocketDirection != "" {
+	if opts.webSocketURLPattern != "*" || opts.webSocketDirection != "" {
 		filter = &browser.WebSocketHARFilter{
-			URLPattern:  opts.webSocketURLPattern,
-			DataPattern: opts.webSocketDataPattern,
-			Direction:   opts.webSocketDirection,
+			URLPattern: opts.webSocketURLPattern,
+			Direction:  opts.webSocketDirection,
 		}
 	}
 

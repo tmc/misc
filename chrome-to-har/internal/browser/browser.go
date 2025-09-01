@@ -202,15 +202,16 @@ func (b *Browser) Launch(ctx context.Context) error {
 		allocCancel()
 	}
 
-	// Test connection with navigation to about:blank to ensure browser launches properly
+	// Test connection with a simple evaluation to ensure browser launches properly
 	if b.opts.Verbose {
-		log.Println("Testing Chrome connection with about:blank...")
+		log.Println("Testing Chrome connection...")
 	}
 
-	testCtx, testCancel := context.WithTimeout(browserCtx, 30*time.Second)
+	testCtx, testCancel := context.WithTimeout(browserCtx, 5*time.Second)
 	defer testCancel()
 
-	if err := chromedp.Run(testCtx, chromedp.Navigate("about:blank")); err != nil {
+	var result bool
+	if err := chromedp.Run(testCtx, chromedp.Evaluate(`true`, &result)); err != nil {
 		b.cancelFunc()
 		return errors.Wrap(err, "testing Chrome connection")
 	}
