@@ -13,18 +13,18 @@ import (
 	"time"
 )
 
-// skipIfNoBrowser skips the test if Chrome is not available or if running in CI
+// skipIfNoBrowser skips the test if Chrome is not available or if running in short mode
 func skipIfNoBrowser(t testing.TB) {
 	t.Helper()
 
-	// Skip in CI environment
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping browser test in CI environment")
+	// Skip browser tests in short mode (go test -short)
+	if testing.Short() {
+		t.Skip("Skipping browser test in short mode")
 	}
 
-	// Skip if explicitly requested
-	if os.Getenv("SKIP_BROWSER_TESTS") != "" {
-		t.Skip("Skipping browser test (SKIP_BROWSER_TESTS is set)")
+	// Skip in CI environment unless browser is explicitly available
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping browser test in CI environment")
 	}
 
 	// Skip tests due to known context cancellation issue with chromedp on this system

@@ -57,7 +57,7 @@ func CreateSecureTempDir(prefix string) (string, error) {
 }
 
 // SecureCopyFile copies a file with size limits and secure permissions
-func SecureCopyFile(src, dst string, maxSize int64) error {
+func SecureCopyFile(src, dst string, maxSize int64) (retErr error) {
 	if maxSize <= 0 {
 		maxSize = MaxFileSize
 	}
@@ -92,7 +92,7 @@ func SecureCopyFile(src, dst string, maxSize int64) error {
 	}
 	defer func() {
 		dstFile.Close()
-		if err != nil {
+		if retErr != nil {
 			os.Remove(dst) // Clean up on error
 		}
 	}()

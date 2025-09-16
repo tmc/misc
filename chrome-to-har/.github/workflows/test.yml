@@ -72,7 +72,6 @@ jobs:
       run: go test -v -short -coverprofile=coverage.out ./...
       env:
         CI: true
-        SKIP_BROWSER_TESTS: true
     
     - name: Run Integration Tests (Linux/macOS)
       if: runner.os != 'Windows'

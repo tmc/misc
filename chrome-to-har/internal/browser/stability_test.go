@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
+	"github.com/tmc/misc/chrome-to-har/internal/testutil"
 )
 
 func TestStabilityDetector(t *testing.T) {
@@ -128,8 +129,21 @@ func TestStabilityDetector(t *testing.T) {
 		}
 	})
 
-	// Create browser context
-	ctx, cancel := chromedp.NewContext(context.Background())
+	// Find available browser
+	browserPath := testutil.FindChrome()
+	if browserPath == "" {
+		t.Skip("No Chrome-compatible browser found (Chrome, Chromium, Brave, etc.)")
+	}
+
+	// Create browser context with detected browser
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.ExecPath(browserPath),
+		chromedp.Headless,
+	)
+	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer allocCancel()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
 	// Create a page

@@ -239,27 +239,9 @@ func newTestServer() *TestServer {
 	return ts
 }
 
-// Helper function to find Chrome executable
+// Helper function to find Chrome executable - use testutil instead
 func findChrome() string {
-	// Common Chrome paths
-	paths := []string{
-		"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-		"/usr/bin/google-chrome",
-		"/usr/bin/google-chrome-stable",
-		"/usr/bin/chromium",
-		"/usr/bin/chromium-browser",
-		"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-		"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-	}
-
-	for _, path := range paths {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-
-	// Try PATH
-	return "google-chrome"
+	return testutil.FindChrome()
 }
 
 // Test utilities

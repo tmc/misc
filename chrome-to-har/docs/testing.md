@@ -204,8 +204,9 @@ defer server.Close()
 
 ### Test Control
 - `CI`: Set to "true" in CI environments
-- `SKIP_BROWSER_TESTS`: Skip all browser-dependent tests
 - `TIMEOUT`: Override default test timeout
+
+Note: Browser-dependent tests are automatically skipped when using `go test -short` or when Chrome/Chromium is not available.
 
 ## Troubleshooting
 

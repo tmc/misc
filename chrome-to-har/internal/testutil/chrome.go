@@ -33,14 +33,19 @@ type ChromeTestHelper struct {
 func NewChromeTestHelper(t *testing.T) *ChromeTestHelper {
 	t.Helper()
 
-	// Skip if in CI without Chrome
-	if os.Getenv("CI") != "" && os.Getenv("SKIP_BROWSER_TESTS") != "" {
-		t.Skip("Skipping browser tests in CI")
+	// Skip browser tests in short mode (go test -short)
+	if testing.Short() {
+		t.Skip("Skipping browser test in short mode")
+	}
+
+	// Skip if in CI environment
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping browser tests in CI environment")
 	}
 
 	chromePath := findChrome()
 	if chromePath == "" {
-		t.Skip("Chrome not found, skipping browser tests")
+		t.Skip("No Chrome-compatible browser found (Chrome, Chromium, Brave, etc.)")
 	}
 
 	return &ChromeTestHelper{
@@ -235,6 +240,11 @@ func (s *TestHTTPServer) Close() {
 	}
 }
 
+// FindChrome locates the Chrome executable (public wrapper)
+func FindChrome() string {
+	return findChrome()
+}
+
 // findChrome locates the Chrome executable
 func findChrome() string {
 	// Check environment variable first
@@ -254,6 +264,7 @@ func findChrome() string {
 			"/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
 			"/Applications/Chromium.app/Contents/MacOS/Chromium",
 			"/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+			"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
 		}
 	case "linux":
 		paths = []string{
@@ -262,14 +273,21 @@ func findChrome() string {
 			"/usr/bin/chromium-browser",
 			"/usr/bin/chromium",
 			"/usr/bin/brave-browser",
+			"/usr/bin/microsoft-edge",
 			"/snap/bin/chromium",
+			"/snap/bin/brave",
 		}
 	case "windows":
 		paths = []string{
 			`C:\Program Files\Google\Chrome\Application\chrome.exe`,
 			`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
 			`C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe`,
+			`C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe`,
+			`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
+			`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
 			filepath.Join(os.Getenv("LOCALAPPDATA"), `Google\Chrome\Application\chrome.exe`),
+			filepath.Join(os.Getenv("LOCALAPPDATA"), `BraveSoftware\Brave-Browser\Application\brave.exe`),
+			filepath.Join(os.Getenv("LOCALAPPDATA"), `Microsoft\Edge\Application\msedge.exe`),
 		}
 	}
 
@@ -281,17 +299,22 @@ func findChrome() string {
 	}
 
 	// Try to find in PATH
-	if path, err := exec.LookPath("google-chrome"); err == nil {
-		return path
+	pathCommands := []string{
+		"google-chrome",
+		"google-chrome-stable",
+		"chromium",
+		"chromium-browser",
+		"brave-browser",
+		"microsoft-edge",
+		"msedge",
+		"chrome",
+		"brave",
 	}
-	if path, err := exec.LookPath("chromium"); err == nil {
-		return path
-	}
-	if path, err := exec.LookPath("chromium-browser"); err == nil {
-		return path
-	}
-	if path, err := exec.LookPath("chrome"); err == nil {
-		return path
+
+	for _, cmd := range pathCommands {
+		if path, err := exec.LookPath(cmd); err == nil {
+			return path
+		}
 	}
 
 	return ""
@@ -309,9 +332,19 @@ func getFreePort() (int, error) {
 	return addr.Port, nil
 }
 
-// SkipIfNoChrome skips the test if Chrome is not available
+// SkipIfNoChrome skips the test if Chrome is not available or if running in short mode
 func SkipIfNoChrome(t *testing.T) {
 	t.Helper()
+
+	// Skip browser tests in short mode (go test -short)
+	if testing.Short() {
+		t.Skip("Skipping browser test in short mode")
+	}
+
+	// Skip if in CI environment
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping browser tests in CI environment")
+	}
 
 	if findChrome() == "" {
 		t.Skip("Chrome not found, skipping test")

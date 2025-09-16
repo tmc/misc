@@ -219,14 +219,14 @@ func ValidateHostname(hostname string) error {
 		}
 	}
 
-	// Check basic pattern
-	if !safeHostRegex.MatchString(hostname) {
-		return fmt.Errorf("hostname contains invalid characters")
-	}
-
-	// Try to parse as IP address first
+	// Try to parse as IP address first (including IPv6)
 	if net.ParseIP(hostname) != nil {
 		return nil // Valid IP address
+	}
+
+	// Check basic pattern for hostnames (not IP addresses)
+	if !safeHostRegex.MatchString(hostname) {
+		return fmt.Errorf("hostname contains invalid characters")
 	}
 
 	// Validate as hostname
@@ -407,7 +407,8 @@ func SanitizeFilename(filename string) string {
 	// Replace unsafe characters with underscores
 	var result strings.Builder
 	for _, r := range filename {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '.' || r == '_' || r == '-' {
+		// Only allow ASCII letters, digits, and specific punctuation
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '.' || r == '_' || r == '-' {
 			result.WriteRune(r)
 		} else {
 			result.WriteRune('_')
@@ -422,8 +423,8 @@ func SanitizeFilename(filename string) string {
 	}
 
 	// Ensure it doesn't start with a dot (hidden file)
-	if sanitized[0] == '.' {
-		sanitized = "file_" + sanitized[1:]
+	if len(sanitized) > 0 && sanitized[0] == '.' {
+		sanitized = "file_" + sanitized
 	}
 
 	// Truncate if too long
