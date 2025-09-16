@@ -42,7 +42,7 @@ func (bm *BaselineManager) SaveBaseline(testName string, screenshot []byte, meta
 		metadata.ChecksumSHA256 = fmt.Sprintf("%x", sha256.Sum256(screenshot))
 		metadata.FileSize = int64(len(screenshot))
 		metadata.UpdatedAt = time.Now()
-		
+
 		// Get image dimensions
 		if dims, err := GetScreenshotDimensions(screenshot); err == nil {
 			metadata.ImageDimensions = *dims
@@ -99,7 +99,7 @@ func (bm *BaselineManager) LoadBaseline(testName string, config *VisualTestConfi
 // GetBaselineMetadata gets metadata for a baseline
 func (bm *BaselineManager) GetBaselineMetadata(testName string, config *VisualTestConfig) (*BaselineMetadata, error) {
 	metadataFile := bm.getBaselineMetadataPath(testName, config)
-	
+
 	if !bm.fileExists(metadataFile) {
 		return nil, errors.New("baseline metadata not found")
 	}
@@ -228,7 +228,7 @@ func (bm *BaselineManager) CleanupBaselines(config *VisualTestConfig, olderThan 
 	cleaned := 0
 	for _, testName := range baselines {
 		imageFile := bm.getBaselineImagePath(testName, config)
-		
+
 		if stat, err := os.Stat(imageFile); err == nil {
 			if stat.ModTime().Before(olderThan) {
 				if err := bm.DeleteBaseline(testName, config); err != nil {
@@ -340,15 +340,15 @@ func (bm *BaselineManager) ValidateBaseline(testName string, config *VisualTestC
 			validation.Issues = append(validation.Issues, fmt.Sprintf("cannot read metadata: %v", err))
 		} else {
 			validation.Metadata = metadata
-			
+
 			// Validate checksums
 			actualMD5 := fmt.Sprintf("%x", md5.Sum(screenshot))
 			actualSHA256 := fmt.Sprintf("%x", sha256.Sum256(screenshot))
-			
+
 			if metadata.ChecksumMD5 != "" && metadata.ChecksumMD5 != actualMD5 {
 				validation.Issues = append(validation.Issues, "MD5 checksum mismatch")
 			}
-			
+
 			if metadata.ChecksumSHA256 != "" && metadata.ChecksumSHA256 != actualSHA256 {
 				validation.Issues = append(validation.Issues, "SHA256 checksum mismatch")
 			}
@@ -417,7 +417,7 @@ func (bm *BaselineManager) incrementVersion(version string) string {
 	if version == "" {
 		return "1.0.0"
 	}
-	
+
 	// Simple version increment (would be more sophisticated in real implementation)
 	return version + ".1"
 }
@@ -426,11 +426,11 @@ func (bm *BaselineManager) incrementVersion(version string) string {
 
 // BaselineInfo contains information about a baseline
 type BaselineInfo struct {
-	TestName      string
-	ImageFile     string
-	ImageSize     int64
-	ImageModTime  time.Time
-	Metadata      *BaselineMetadata
+	TestName     string
+	ImageFile    string
+	ImageSize    int64
+	ImageModTime time.Time
+	Metadata     *BaselineMetadata
 }
 
 // BaselineComparison contains the result of comparing two baselines

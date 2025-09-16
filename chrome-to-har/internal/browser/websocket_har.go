@@ -40,15 +40,15 @@ type WebSocketHARMessage struct {
 
 // WebSocketHARStats contains WebSocket connection statistics
 type WebSocketHARStats struct {
-	BytesSent         int64 `json:"bytesSent"`
-	BytesReceived     int64 `json:"bytesReceived"`
-	MessagesSent      int   `json:"messagesSent"`
-	MessagesReceived  int   `json:"messagesReceived"`
-	ConnectionTime    int64 `json:"connectionTime"`    // in milliseconds
-	ActiveTime        int64 `json:"activeTime"`        // in milliseconds
-	AverageLatency    int64 `json:"averageLatency"`    // in milliseconds
-	MessageFrequency  int64 `json:"messageFrequency"`  // messages per second
-	DataThroughput    int64 `json:"dataThroughput"`    // bytes per second
+	BytesSent        int64 `json:"bytesSent"`
+	BytesReceived    int64 `json:"bytesReceived"`
+	MessagesSent     int   `json:"messagesSent"`
+	MessagesReceived int   `json:"messagesReceived"`
+	ConnectionTime   int64 `json:"connectionTime"`   // in milliseconds
+	ActiveTime       int64 `json:"activeTime"`       // in milliseconds
+	AverageLatency   int64 `json:"averageLatency"`   // in milliseconds
+	MessageFrequency int64 `json:"messageFrequency"` // messages per second
+	DataThroughput   int64 `json:"dataThroughput"`   // bytes per second
 }
 
 // WebSocketHARConverter converts WebSocket connections to HAR format
@@ -312,13 +312,13 @@ func ExtendHARWithWebSockets(harData *har.HAR, connections map[string]*WebSocket
 
 // WebSocketHARFilter filters WebSocket HAR entries based on criteria
 type WebSocketHARFilter struct {
-	URLPattern    string
-	MessageType   string
-	Direction     string
-	MinSize       int64
-	MaxSize       int64
-	TimeRange     *TimeRange
-	StateFilter   []string
+	URLPattern  string
+	MessageType string
+	Direction   string
+	MinSize     int64
+	MaxSize     int64
+	TimeRange   *TimeRange
+	StateFilter []string
 }
 
 // TimeRange represents a time range filter

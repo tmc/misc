@@ -42,7 +42,7 @@ func (ic *ImageComparison) CompareImages(baseline, actual image.Image, config *V
 			DifferencePercentage: 100.0,
 			MatchingScore:        0.0,
 			Metadata: map[string]interface{}{
-				"error": "Image dimensions do not match",
+				"error":         "Image dimensions do not match",
 				"baseline_size": fmt.Sprintf("%dx%d", baselineBounds.Dx(), baselineBounds.Dy()),
 				"actual_size":   fmt.Sprintf("%dx%d", actualBounds.Dx(), actualBounds.Dy()),
 			},
@@ -55,33 +55,33 @@ func (ic *ImageComparison) CompareImages(baseline, actual image.Image, config *V
 
 	// Create diff image
 	diffImage := image.NewRGBA(baselineBounds)
-	
+
 	// Comparison statistics
 	var diffPixels int
 	var totalColorDiff float64
 	var regions []DiffRegion
-	
+
 	// Pixel-by-pixel comparison
 	for y := baselineBounds.Min.Y; y < baselineBounds.Max.Y; y++ {
 		for x := baselineBounds.Min.X; x < baselineBounds.Max.X; x++ {
 			baselineColor := baseline.At(x, y)
 			actualColor := actual.At(x, y)
-			
+
 			// Calculate color difference
 			diff := ic.calculateColorDifference(baselineColor, actualColor)
 			totalColorDiff += diff
-			
+
 			// Determine if pixel is different based on threshold
 			isDifferent := diff > config.Threshold
-			
+
 			if config.EnableFuzzyMatching {
 				isDifferent = diff > config.FuzzyThreshold
 			}
-			
+
 			if config.IgnoreAntialiasing {
 				isDifferent = isDifferent && !ic.isAntialiasedPixel(baseline, actual, x, y)
 			}
-			
+
 			if isDifferent {
 				diffPixels++
 				// Highlight difference in diff image
@@ -93,24 +93,24 @@ func (ic *ImageComparison) CompareImages(baseline, actual image.Image, config *V
 			}
 		}
 	}
-	
+
 	// Calculate overall statistics
 	differencePercentage := (float64(diffPixels) / float64(totalPixels)) * 100
 	matchingScore := 1.0 - (differencePercentage / 100.0)
-	
+
 	// Find difference regions
 	if diffPixels > 0 {
 		regions = ic.findDiffRegions(diffImage, baselineBounds)
 	}
-	
+
 	// Determine if comparison passed
-	passed := diffPixels <= config.MaxDiffPixels && differencePercentage <= (config.Threshold * 100)
-	
+	passed := diffPixels <= config.MaxDiffPixels && differencePercentage <= (config.Threshold*100)
+
 	if ic.verbose {
 		fmt.Printf("Image comparison: %d different pixels out of %d total (%.2f%%), score: %.2f\n",
 			diffPixels, totalPixels, differencePercentage, matchingScore)
 	}
-	
+
 	return &ComparisonResult{
 		Passed:               passed,
 		DiffPixels:           diffPixels,
@@ -120,12 +120,12 @@ func (ic *ImageComparison) CompareImages(baseline, actual image.Image, config *V
 		MatchingScore:        matchingScore,
 		Regions:              regions,
 		Metadata: map[string]interface{}{
-			"threshold":              config.Threshold,
-			"fuzzy_matching":         config.EnableFuzzyMatching,
-			"ignore_antialiasing":    config.IgnoreAntialiasing,
-			"max_diff_pixels":        config.MaxDiffPixels,
-			"average_color_diff":     totalColorDiff / float64(totalPixels),
-			"total_color_diff":       totalColorDiff,
+			"threshold":           config.Threshold,
+			"fuzzy_matching":      config.EnableFuzzyMatching,
+			"ignore_antialiasing": config.IgnoreAntialiasing,
+			"max_diff_pixels":     config.MaxDiffPixels,
+			"average_color_diff":  totalColorDiff / float64(totalPixels),
+			"total_color_diff":    totalColorDiff,
 		},
 	}, nil
 }
@@ -137,13 +137,13 @@ func (ic *ImageComparison) CompareScreenshots(baselineData, actualData []byte, c
 	if err != nil {
 		return nil, errors.Wrap(err, "decoding baseline image")
 	}
-	
+
 	// Decode actual image
 	actual, _, err := image.Decode(bytes.NewReader(actualData))
 	if err != nil {
 		return nil, errors.Wrap(err, "decoding actual image")
 	}
-	
+
 	return ic.CompareImages(baseline, actual, config)
 }
 
@@ -151,39 +151,39 @@ func (ic *ImageComparison) CompareScreenshots(baselineData, actualData []byte, c
 func (ic *ImageComparison) calculateColorDifference(c1, c2 color.Color) float64 {
 	r1, g1, b1, a1 := c1.RGBA()
 	r2, g2, b2, a2 := c2.RGBA()
-	
+
 	// Convert to 0-255 range
 	r1, g1, b1, a1 = r1>>8, g1>>8, b1>>8, a1>>8
 	r2, g2, b2, a2 = r2>>8, g2>>8, b2>>8, a2>>8
-	
+
 	// Calculate Euclidean distance in RGBA space
 	dr := float64(r1) - float64(r2)
 	dg := float64(g1) - float64(g2)
 	db := float64(b1) - float64(b2)
 	da := float64(a1) - float64(a2)
-	
+
 	// Normalize to 0-1 range
-	distance := math.Sqrt(dr*dr + dg*dg + db*db + da*da) / (255 * 2)
-	
+	distance := math.Sqrt(dr*dr+dg*dg+db*db+da*da) / (255 * 2)
+
 	return distance
 }
 
 // isAntialiasedPixel detects if a pixel difference is due to antialiasing
 func (ic *ImageComparison) isAntialiasedPixel(baseline, actual image.Image, x, y int) bool {
 	bounds := baseline.Bounds()
-	
+
 	// Check surrounding pixels for antialiasing patterns
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
 			if dx == 0 && dy == 0 {
 				continue
 			}
-			
+
 			nx, ny := x+dx, y+dy
 			if nx >= bounds.Min.X && nx < bounds.Max.X && ny >= bounds.Min.Y && ny < bounds.Max.Y {
 				baselineNeighbor := baseline.At(nx, ny)
 				actualCenter := actual.At(x, y)
-				
+
 				// If the actual center pixel matches a neighboring baseline pixel,
 				// this might be antialiasing
 				if ic.calculateColorDifference(baselineNeighbor, actualCenter) < 0.1 {
@@ -192,7 +192,7 @@ func (ic *ImageComparison) isAntialiasedPixel(baseline, actual image.Image, x, y
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -200,14 +200,14 @@ func (ic *ImageComparison) isAntialiasedPixel(baseline, actual image.Image, x, y
 func (ic *ImageComparison) findDiffRegions(diffImage *image.RGBA, bounds image.Rectangle) []DiffRegion {
 	var regions []DiffRegion
 	visited := make(map[string]bool)
-	
+
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			key := fmt.Sprintf("%d,%d", x, y)
 			if visited[key] {
 				continue
 			}
-			
+
 			// Check if this pixel is different (red)
 			r, _, _, _ := diffImage.At(x, y).RGBA()
 			if r > 32768 { // Red channel is high
@@ -219,7 +219,7 @@ func (ic *ImageComparison) findDiffRegions(diffImage *image.RGBA, bounds image.R
 			}
 		}
 	}
-	
+
 	return regions
 }
 
@@ -227,29 +227,29 @@ func (ic *ImageComparison) findDiffRegions(diffImage *image.RGBA, bounds image.R
 func (ic *ImageComparison) expandRegion(diffImage *image.RGBA, bounds image.Rectangle, startX, startY int, visited map[string]bool) DiffRegion {
 	minX, minY := startX, startY
 	maxX, maxY := startX, startY
-	
+
 	// Simple flood fill to find connected different pixels
 	queue := []image.Point{{startX, startY}}
-	
+
 	for len(queue) > 0 {
 		point := queue[0]
 		queue = queue[1:]
-		
+
 		x, y := point.X, point.Y
 		key := fmt.Sprintf("%d,%d", x, y)
-		
+
 		if visited[key] || x < bounds.Min.X || x >= bounds.Max.X || y < bounds.Min.Y || y >= bounds.Max.Y {
 			continue
 		}
-		
+
 		// Check if this pixel is different (red)
 		r, _, _, _ := diffImage.At(x, y).RGBA()
 		if r <= 32768 { // Not red
 			continue
 		}
-		
+
 		visited[key] = true
-		
+
 		// Update bounds
 		if x < minX {
 			minX = x
@@ -263,17 +263,17 @@ func (ic *ImageComparison) expandRegion(diffImage *image.RGBA, bounds image.Rect
 		if y > maxY {
 			maxY = y
 		}
-		
+
 		// Add neighbors to queue
 		neighbors := []image.Point{
 			{x - 1, y}, {x + 1, y}, {x, y - 1}, {x, y + 1},
 		}
-		
+
 		for _, neighbor := range neighbors {
 			queue = append(queue, neighbor)
 		}
 	}
-	
+
 	return DiffRegion{
 		X:      minX,
 		Y:      minY,
@@ -289,7 +289,7 @@ func (ic *ImageComparison) GenerateDiffImage(baseline, actual image.Image, confi
 	if err != nil {
 		return nil, errors.Wrap(err, "comparing images")
 	}
-	
+
 	return comparison.DiffImage, nil
 }
 
@@ -298,7 +298,7 @@ func (ic *ImageComparison) GenerateSideBySideImage(baseline, actual image.Image,
 	baselineBounds := baseline.Bounds()
 	actualBounds := actual.Bounds()
 	diffBounds := diffImage.Bounds()
-	
+
 	// Calculate dimensions for side-by-side layout
 	width := baselineBounds.Dx() + actualBounds.Dx() + diffBounds.Dx() + 20 // 10px padding between images
 	height := baselineBounds.Dy()
@@ -308,24 +308,24 @@ func (ic *ImageComparison) GenerateSideBySideImage(baseline, actual image.Image,
 	if diffBounds.Dy() > height {
 		height = diffBounds.Dy()
 	}
-	
+
 	// Create result image
 	result := image.NewRGBA(image.Rect(0, 0, width, height))
-	
+
 	// Fill with white background
 	draw.Draw(result, result.Bounds(), &image.Uniform{color.RGBA{255, 255, 255, 255}}, image.Point{}, draw.Src)
-	
+
 	// Draw baseline image
 	draw.Draw(result, image.Rect(0, 0, baselineBounds.Dx(), baselineBounds.Dy()), baseline, baselineBounds.Min, draw.Src)
-	
+
 	// Draw actual image
 	actualX := baselineBounds.Dx() + 10
 	draw.Draw(result, image.Rect(actualX, 0, actualX+actualBounds.Dx(), actualBounds.Dy()), actual, actualBounds.Min, draw.Src)
-	
+
 	// Draw diff image
 	diffX := actualX + actualBounds.Dx() + 10
 	draw.Draw(result, image.Rect(diffX, 0, diffX+diffBounds.Dx(), diffBounds.Dy()), diffImage, diffBounds.Min, draw.Src)
-	
+
 	return result, nil
 }
 
@@ -333,32 +333,32 @@ func (ic *ImageComparison) GenerateSideBySideImage(baseline, actual image.Image,
 func (ic *ImageComparison) GenerateAnnotatedImage(actual image.Image, regions []DiffRegion) (image.Image, error) {
 	bounds := actual.Bounds()
 	result := image.NewRGBA(bounds)
-	
+
 	// Copy actual image
 	draw.Draw(result, bounds, actual, bounds.Min, draw.Src)
-	
+
 	// Draw region annotations
 	for i, region := range regions {
 		// Draw red rectangle around region
 		ic.drawRect(result, region.X, region.Y, region.Width, region.Height, color.RGBA{255, 0, 0, 255})
-		
+
 		// Add region number
 		// (In a real implementation, this would use proper text rendering)
 		// For now, just mark the top-left corner
 		result.Set(region.X, region.Y, color.RGBA{255, 255, 0, 255})
-		
+
 		if ic.verbose {
 			fmt.Printf("Region %d: (%d,%d) %dx%d, score: %.2f\n", i+1, region.X, region.Y, region.Width, region.Height, region.Score)
 		}
 	}
-	
+
 	return result, nil
 }
 
 // drawRect draws a rectangle outline on the image
 func (ic *ImageComparison) drawRect(img *image.RGBA, x, y, width, height int, col color.RGBA) {
 	bounds := img.Bounds()
-	
+
 	// Draw top and bottom lines
 	for i := x; i < x+width && i < bounds.Max.X; i++ {
 		if y >= bounds.Min.Y && y < bounds.Max.Y {
@@ -368,7 +368,7 @@ func (ic *ImageComparison) drawRect(img *image.RGBA, x, y, width, height int, co
 			img.Set(i, y+height-1, col)
 		}
 	}
-	
+
 	// Draw left and right lines
 	for i := y; i < y+height && i < bounds.Max.Y; i++ {
 		if x >= bounds.Min.X && x < bounds.Max.X {
@@ -383,11 +383,11 @@ func (ic *ImageComparison) drawRect(img *image.RGBA, x, y, width, height int, co
 // SaveDiffImage saves a diff image to a file
 func (ic *ImageComparison) SaveDiffImage(diffImage image.Image, filename string) error {
 	var buf bytes.Buffer
-	
+
 	if err := png.Encode(&buf, diffImage); err != nil {
 		return errors.Wrap(err, "encoding diff image")
 	}
-	
+
 	return ic.saveImageFile(filename, buf.Bytes())
 }
 
@@ -405,59 +405,59 @@ func (ic *ImageComparison) saveImageFile(filename string, data []byte) error {
 func (ic *ImageComparison) CalculateStructuralSimilarity(baseline, actual image.Image) (float64, error) {
 	// This would implement SSIM (Structural Similarity Index)
 	// For now, return a simple correlation-based similarity
-	
+
 	baselineBounds := baseline.Bounds()
 	actualBounds := actual.Bounds()
-	
+
 	if !baselineBounds.Eq(actualBounds) {
 		return 0.0, errors.New("images must have the same dimensions")
 	}
-	
+
 	var correlation float64
 	var baselineSum, actualSum float64
 	totalPixels := float64(baselineBounds.Dx() * baselineBounds.Dy())
-	
+
 	// Calculate means
 	for y := baselineBounds.Min.Y; y < baselineBounds.Max.Y; y++ {
 		for x := baselineBounds.Min.X; x < baselineBounds.Max.X; x++ {
 			baselineGray := ic.rgbaToGray(baseline.At(x, y))
 			actualGray := ic.rgbaToGray(actual.At(x, y))
-			
+
 			baselineSum += baselineGray
 			actualSum += actualGray
 		}
 	}
-	
+
 	baselineMean := baselineSum / totalPixels
 	actualMean := actualSum / totalPixels
-	
+
 	// Calculate correlation
 	var numerator, baselineVariance, actualVariance float64
-	
+
 	for y := baselineBounds.Min.Y; y < baselineBounds.Max.Y; y++ {
 		for x := baselineBounds.Min.X; x < baselineBounds.Max.X; x++ {
 			baselineGray := ic.rgbaToGray(baseline.At(x, y))
 			actualGray := ic.rgbaToGray(actual.At(x, y))
-			
+
 			baselineDiff := baselineGray - baselineMean
 			actualDiff := actualGray - actualMean
-			
+
 			numerator += baselineDiff * actualDiff
 			baselineVariance += baselineDiff * baselineDiff
 			actualVariance += actualDiff * actualDiff
 		}
 	}
-	
+
 	denominator := math.Sqrt(baselineVariance * actualVariance)
 	if denominator == 0 {
 		return 1.0, nil // Images are identical
 	}
-	
+
 	correlation = numerator / denominator
-	
+
 	// Convert correlation to similarity score (0-1)
 	similarity := (correlation + 1.0) / 2.0
-	
+
 	return similarity, nil
 }
 
@@ -473,7 +473,7 @@ func (ic *ImageComparison) rgbaToGray(c color.Color) float64 {
 func (ic *ImageComparison) GenerateHistogram(img image.Image) map[string]int {
 	histogram := make(map[string]int)
 	bounds := img.Bounds()
-	
+
 	for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			r, g, b, _ := img.At(x, y).RGBA()
@@ -482,7 +482,7 @@ func (ic *ImageComparison) GenerateHistogram(img image.Image) map[string]int {
 			histogram[colorKey]++
 		}
 	}
-	
+
 	return histogram
 }
 
@@ -490,30 +490,30 @@ func (ic *ImageComparison) GenerateHistogram(img image.Image) map[string]int {
 func (ic *ImageComparison) CompareHistograms(baseline, actual image.Image) (float64, error) {
 	baselineHist := ic.GenerateHistogram(baseline)
 	actualHist := ic.GenerateHistogram(actual)
-	
+
 	// Calculate histogram intersection
 	var intersection, union int
 	allColors := make(map[string]bool)
-	
+
 	for color := range baselineHist {
 		allColors[color] = true
 	}
 	for color := range actualHist {
 		allColors[color] = true
 	}
-	
+
 	for color := range allColors {
 		baselineCount := baselineHist[color]
 		actualCount := actualHist[color]
-		
+
 		intersection += int(math.Min(float64(baselineCount), float64(actualCount)))
 		union += int(math.Max(float64(baselineCount), float64(actualCount)))
 	}
-	
+
 	if union == 0 {
 		return 1.0, nil
 	}
-	
+
 	return float64(intersection) / float64(union), nil
 }
 
@@ -524,28 +524,28 @@ func (ic *ImageComparison) PerformAdvancedComparison(baseline, actual image.Imag
 	if err != nil {
 		return nil, errors.Wrap(err, "performing pixel comparison")
 	}
-	
+
 	// Structural similarity
 	structuralSimilarity, err := ic.CalculateStructuralSimilarity(baseline, actual)
 	if err != nil {
 		return nil, errors.Wrap(err, "calculating structural similarity")
 	}
-	
+
 	// Histogram comparison
 	histogramSimilarity, err := ic.CompareHistograms(baseline, actual)
 	if err != nil {
 		return nil, errors.Wrap(err, "comparing histograms")
 	}
-	
+
 	// Calculate overall score
 	overallScore := (pixelComparison.MatchingScore + structuralSimilarity + histogramSimilarity) / 3.0
-	
+
 	return &AdvancedComparisonResult{
-		PixelComparison:       pixelComparison,
-		StructuralSimilarity:  structuralSimilarity,
-		HistogramSimilarity:   histogramSimilarity,
-		OverallScore:          overallScore,
-		Passed:                overallScore >= (1.0 - config.Threshold),
+		PixelComparison:      pixelComparison,
+		StructuralSimilarity: structuralSimilarity,
+		HistogramSimilarity:  histogramSimilarity,
+		OverallScore:         overallScore,
+		Passed:               overallScore >= (1.0 - config.Threshold),
 	}, nil
 }
 

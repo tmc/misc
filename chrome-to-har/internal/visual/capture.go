@@ -35,7 +35,7 @@ func (sc *ScreenshotCapture) CaptureScreenshot(ctx context.Context, page *browse
 	}
 
 	if sc.verbose {
-		log.Printf("Capturing screenshot with options: fullPage=%v, selector=%s, viewport=%dx%d", 
+		log.Printf("Capturing screenshot with options: fullPage=%v, selector=%s, viewport=%dx%d",
 			opts.FullPage, opts.Selector, opts.ViewportWidth, opts.ViewportHeight)
 	}
 
@@ -291,7 +291,7 @@ func (sc *ScreenshotCapture) waitForStability(ctx context.Context, page *browser
 // captureFullPage captures the full page
 func (sc *ScreenshotCapture) captureFullPage(ctx context.Context, page *browser.Page, opts *ScreenshotOptions) ([]byte, error) {
 	var buf []byte
-	
+
 	var action chromedp.Action
 	if opts.OmitBackground {
 		action = chromedp.ActionFunc(func(ctx context.Context) error {
@@ -321,7 +321,7 @@ func (sc *ScreenshotCapture) captureFullPage(ctx context.Context, page *browser.
 // captureElement captures a specific element
 func (sc *ScreenshotCapture) captureElement(ctx context.Context, page *browser.Page, selector string, opts *ScreenshotOptions) ([]byte, error) {
 	var buf []byte
-	
+
 	action := chromedp.Screenshot(selector, &buf, chromedp.NodeVisible)
 	if err := chromedp.Run(ctx, action); err != nil {
 		return nil, errors.Wrapf(err, "capturing element screenshot for selector: %s", selector)
@@ -333,7 +333,7 @@ func (sc *ScreenshotCapture) captureElement(ctx context.Context, page *browser.P
 // captureViewport captures the current viewport
 func (sc *ScreenshotCapture) captureViewport(ctx context.Context, page *browser.Page, opts *ScreenshotOptions) ([]byte, error) {
 	var buf []byte
-	
+
 	action := chromedp.CaptureScreenshot(&buf)
 	if opts.OmitBackground {
 		action = chromedp.ActionFunc(func(ctx context.Context) error {
@@ -360,7 +360,7 @@ func (sc *ScreenshotCapture) captureViewport(ctx context.Context, page *browser.
 // CaptureMultipleViewports captures screenshots at multiple viewport sizes
 func (sc *ScreenshotCapture) CaptureMultipleViewports(ctx context.Context, page *browser.Page, viewports []ViewportSize, opts *ScreenshotOptions) (map[string][]byte, error) {
 	results := make(map[string][]byte)
-	
+
 	for _, viewport := range viewports {
 		if sc.verbose {
 			log.Printf("Capturing screenshot for viewport: %s (%dx%d)", viewport.Name, viewport.Width, viewport.Height)
@@ -385,7 +385,7 @@ func (sc *ScreenshotCapture) CaptureMultipleViewports(ctx context.Context, page 
 // CaptureWithDeviceEmulation captures screenshots with device emulation
 func (sc *ScreenshotCapture) CaptureWithDeviceEmulation(ctx context.Context, page *browser.Page, devices []string, opts *ScreenshotOptions) (map[string][]byte, error) {
 	results := make(map[string][]byte)
-	
+
 	for _, deviceName := range devices {
 		if sc.verbose {
 			log.Printf("Capturing screenshot for device: %s", deviceName)
@@ -409,7 +409,7 @@ func (sc *ScreenshotCapture) CaptureWithDeviceEmulation(ctx context.Context, pag
 // CaptureElementScreenshots captures screenshots of multiple elements
 func (sc *ScreenshotCapture) CaptureElementScreenshots(ctx context.Context, page *browser.Page, selectors []string, opts *ScreenshotOptions) (map[string][]byte, error) {
 	results := make(map[string][]byte)
-	
+
 	for _, selector := range selectors {
 		if sc.verbose {
 			log.Printf("Capturing screenshot for element: %s", selector)
@@ -497,10 +497,10 @@ func GetImageHash(img image.Image) (string, error) {
 	bounds := img.Bounds()
 	width := bounds.Max.X - bounds.Min.X
 	height := bounds.Max.Y - bounds.Min.Y
-	
+
 	// Simple hash based on image dimensions and sample pixels
 	hash := fmt.Sprintf("%dx%d", width, height)
-	
+
 	// Sample some pixels for a more detailed hash
 	for y := 0; y < height; y += height / 10 {
 		for x := 0; x < width; x += width / 10 {
@@ -508,6 +508,6 @@ func GetImageHash(img image.Image) (string, error) {
 			hash += fmt.Sprintf("_%d_%d_%d_%d", r, g, b, a)
 		}
 	}
-	
+
 	return hash, nil
 }

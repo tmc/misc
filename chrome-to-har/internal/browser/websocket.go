@@ -26,7 +26,7 @@ type WebSocketFrame struct {
 type WebSocketConnection struct {
 	ID                string            `json:"id"`
 	URL               string            `json:"url"`
-	State             string            `json:"state"`       // "connecting", "open", "closing", "closed"
+	State             string            `json:"state"` // "connecting", "open", "closing", "closed"
 	Protocol          string            `json:"protocol"`
 	Extensions        []string          `json:"extensions"`
 	ConnectedAt       time.Time         `json:"connected_at"`
@@ -49,7 +49,7 @@ type WebSocketMonitor struct {
 	connections map[string]*WebSocketConnection
 	enabled     bool
 	mu          sync.RWMutex
-	
+
 	// Event handlers
 	onFrameReceived func(*WebSocketConnection, *WebSocketFrame)
 	onFrameSent     func(*WebSocketConnection, *WebSocketFrame)
@@ -535,10 +535,10 @@ func (wsm *WebSocketMonitor) GetStats() map[string]interface{} {
 	defer wsm.mu.RUnlock()
 
 	stats := map[string]interface{}{
-		"active_connections": len(wsm.connections),
-		"total_bytes_sent":   int64(0),
-		"total_bytes_received": int64(0),
-		"total_messages_sent": 0,
+		"active_connections":      len(wsm.connections),
+		"total_bytes_sent":        int64(0),
+		"total_bytes_received":    int64(0),
+		"total_messages_sent":     0,
 		"total_messages_received": 0,
 	}
 

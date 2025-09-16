@@ -29,16 +29,16 @@ type DashboardConfig struct {
 
 // DashboardData represents data for the dashboard
 type DashboardData struct {
-	Title           string                      `json:"title"`
-	BasePath        string                      `json:"base_path"`
-	Timestamp       time.Time                   `json:"timestamp"`
-	OverallStatus   HealthResult                `json:"overall_status"`
+	Title           string                       `json:"title"`
+	BasePath        string                       `json:"base_path"`
+	Timestamp       time.Time                    `json:"timestamp"`
+	OverallStatus   HealthResult                 `json:"overall_status"`
 	Checks          map[string]HealthCheckStatus `json:"checks"`
-	Alerts          []*Alert                    `json:"alerts"`
-	Metrics         *HealthMetrics              `json:"metrics"`
-	ResourceMetrics map[string]interface{}      `json:"resource_metrics"`
-	RefreshRate     int                         `json:"refresh_rate"`
-	Theme           string                      `json:"theme"`
+	Alerts          []*Alert                     `json:"alerts"`
+	Metrics         *HealthMetrics               `json:"metrics"`
+	ResourceMetrics map[string]interface{}       `json:"resource_metrics"`
+	RefreshRate     int                          `json:"refresh_rate"`
+	Theme           string                       `json:"theme"`
 }
 
 // NewDashboard creates a new dashboard
@@ -129,38 +129,38 @@ func (d *Dashboard) handleAPIChecks(w http.ResponseWriter, r *http.Request) {
 // handleAPIAlerts handles the alerts API endpoint
 func (d *Dashboard) handleAPIAlerts(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	var alerts []*Alert
 	if d.healthManager.alertManager != nil {
 		alerts = d.healthManager.alertManager.GetAlerts()
 	}
-	
+
 	json.NewEncoder(w).Encode(alerts)
 }
 
 // handleAPIMetrics handles the metrics API endpoint
 func (d *Dashboard) handleAPIMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	
+
 	metrics := d.healthManager.metrics
 	resourceMetrics := make(map[string]interface{})
-	
+
 	if d.healthManager.resourceMonitor != nil {
 		resourceMetrics = d.healthManager.resourceMonitor.GetResourceMetrics()
 	}
-	
+
 	response := map[string]interface{}{
 		"health_metrics":   metrics,
 		"resource_metrics": resourceMetrics,
 	}
-	
+
 	json.NewEncoder(w).Encode(response)
 }
 
 // handleAPICheck handles individual check operations
 func (d *Dashboard) handleAPICheck(w http.ResponseWriter, r *http.Request) {
 	checkName := r.URL.Path[len(d.config.BasePath+"/api/check/"):]
-	
+
 	switch r.Method {
 	case "GET":
 		status, err := d.healthManager.GetStatus(checkName)
@@ -168,10 +168,10 @@ func (d *Dashboard) handleAPICheck(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(status)
-		
+
 	case "POST":
 		// Enable/disable check
 		action := r.URL.Query().Get("action")
@@ -190,9 +190,9 @@ func (d *Dashboard) handleAPICheck(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "Invalid action", http.StatusBadRequest)
 			return
 		}
-		
+
 		w.WriteHeader(http.StatusOK)
-		
+
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -201,12 +201,12 @@ func (d *Dashboard) handleAPICheck(w http.ResponseWriter, r *http.Request) {
 // handleAPIAlert handles individual alert operations
 func (d *Dashboard) handleAPIAlert(w http.ResponseWriter, r *http.Request) {
 	alertID := r.URL.Path[len(d.config.BasePath+"/api/alert/"):]
-	
+
 	if d.healthManager.alertManager == nil {
 		http.Error(w, "Alert manager not available", http.StatusServiceUnavailable)
 		return
 	}
-	
+
 	switch r.Method {
 	case "POST":
 		action := r.URL.Query().Get("action")
@@ -216,25 +216,25 @@ func (d *Dashboard) handleAPIAlert(w http.ResponseWriter, r *http.Request) {
 			if acknowledgedBy == "" {
 				acknowledgedBy = "dashboard"
 			}
-			
+
 			if err := d.healthManager.alertManager.AcknowledgeAlert(alertID, acknowledgedBy); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			
+
 		case "resolve":
 			if err := d.healthManager.alertManager.ResolveAlert(alertID); err != nil {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			
+
 		default:
 			http.Error(w, "Invalid action", http.StatusBadRequest)
 			return
 		}
-		
+
 		w.WriteHeader(http.StatusOK)
-		
+
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -251,17 +251,17 @@ func (d *Dashboard) handleStatic(w http.ResponseWriter, r *http.Request) {
 func (d *Dashboard) getDashboardData() *DashboardData {
 	overallStatus := d.healthManager.GetOverallStatus()
 	checks := d.healthManager.GetAllStatuses()
-	
+
 	var alerts []*Alert
 	if d.healthManager.alertManager != nil {
 		alerts = d.healthManager.alertManager.GetAlerts()
 	}
-	
+
 	var resourceMetrics map[string]interface{}
 	if d.healthManager.resourceMonitor != nil {
 		resourceMetrics = d.healthManager.resourceMonitor.GetResourceMetrics()
 	}
-	
+
 	return &DashboardData{
 		Title:           d.config.Title,
 		BasePath:        d.config.BasePath,

@@ -9,24 +9,24 @@ import (
 
 // Alert represents a health alert
 type Alert struct {
-	ID           string         `json:"id"`
-	CheckName    string         `json:"check_name"`
-	Severity     HealthSeverity `json:"severity"`
-	Message      string         `json:"message"`
-	Details      map[string]interface{} `json:"details,omitempty"`
-	Timestamp    time.Time      `json:"timestamp"`
-	Category     HealthCategory `json:"category"`
-	Predictive   bool           `json:"predictive"`
-	Confidence   float64        `json:"confidence,omitempty"`
-	Trend        string         `json:"trend,omitempty"`
-	Resolved     bool           `json:"resolved"`
-	ResolvedAt   time.Time      `json:"resolved_at,omitempty"`
-	Acknowledged bool           `json:"acknowledged"`
-	AcknowledgedAt time.Time    `json:"acknowledged_at,omitempty"`
-	AcknowledgedBy string       `json:"acknowledged_by,omitempty"`
-	Escalated    bool           `json:"escalated"`
-	EscalatedAt  time.Time      `json:"escalated_at,omitempty"`
-	Actions      []string       `json:"actions,omitempty"`
+	ID             string                 `json:"id"`
+	CheckName      string                 `json:"check_name"`
+	Severity       HealthSeverity         `json:"severity"`
+	Message        string                 `json:"message"`
+	Details        map[string]interface{} `json:"details,omitempty"`
+	Timestamp      time.Time              `json:"timestamp"`
+	Category       HealthCategory         `json:"category"`
+	Predictive     bool                   `json:"predictive"`
+	Confidence     float64                `json:"confidence,omitempty"`
+	Trend          string                 `json:"trend,omitempty"`
+	Resolved       bool                   `json:"resolved"`
+	ResolvedAt     time.Time              `json:"resolved_at,omitempty"`
+	Acknowledged   bool                   `json:"acknowledged"`
+	AcknowledgedAt time.Time              `json:"acknowledged_at,omitempty"`
+	AcknowledgedBy string                 `json:"acknowledged_by,omitempty"`
+	Escalated      bool                   `json:"escalated"`
+	EscalatedAt    time.Time              `json:"escalated_at,omitempty"`
+	Actions        []string               `json:"actions,omitempty"`
 }
 
 // AlertManager manages health alerts
@@ -116,7 +116,7 @@ func (am *AlertManager) ProcessResult(checkName string, result HealthResult) {
 		// Check if we've reached the failure threshold
 		if check.consecutiveFailures >= int64(check.AlertConfig.FailureThreshold) {
 			alertID := fmt.Sprintf("%s-%d", checkName, time.Now().Unix())
-			
+
 			alert := &Alert{
 				ID:        alertID,
 				CheckName: checkName,
@@ -139,7 +139,7 @@ func (am *AlertManager) ProcessResult(checkName string, result HealthResult) {
 		// Check for recovery notifications
 		if check.AlertConfig.RecoveryNotification && check.consecutiveFailures > 0 {
 			alertID := fmt.Sprintf("%s-recovery-%d", checkName, time.Now().Unix())
-			
+
 			alert := &Alert{
 				ID:        alertID,
 				CheckName: checkName,
@@ -282,7 +282,7 @@ func (am *AlertManager) SuppressCheck(checkName string, duration time.Duration) 
 type LogAlertHandler struct{}
 
 func (h *LogAlertHandler) HandleAlert(alert *Alert) error {
-	log.Printf("[ALERT] %s: %s (%s) - %s", 
+	log.Printf("[ALERT] %s: %s (%s) - %s",
 		alert.Severity, alert.CheckName, alert.Category, alert.Message)
 	return nil
 }

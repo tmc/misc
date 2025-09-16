@@ -165,7 +165,7 @@ func (vcli *VisualCLI) TestCommand(ctx context.Context, testName, url string) er
 	// Run visual test
 	visualConfig := vcli.createVisualTestConfig()
 	opts := vcli.createScreenshotOptions()
-	
+
 	result, err := vcli.tester.RunVisualTest(ctx, testName, page, visualConfig, opts)
 	if err != nil {
 		return errors.Wrap(err, "running visual test")
@@ -344,7 +344,7 @@ func (vcli *VisualCLI) ResponsiveCommand(ctx context.Context, testName, url stri
 
 	// Create responsive tester
 	responsiveTester := NewResponsiveVisualTester(vcli.config.Verbose)
-	
+
 	// Create responsive config
 	visualConfig := vcli.createVisualTestConfig()
 	responsiveConfig := CreateResponsiveTestConfig(visualConfig)
@@ -377,10 +377,10 @@ func (vcli *VisualCLI) ReportCommand(ctx context.Context, reportPath string) err
 	// This would load test results and generate a report
 	// For now, just create a placeholder
 	report := &TestReport{
-		Title:       "Visual Regression Test Report",
-		GeneratedAt: time.Now(),
-		Environment: vcli.config.BaselineDir,
-		Config:      vcli.createVisualTestConfig(),
+		Title:        "Visual Regression Test Report",
+		GeneratedAt:  time.Now(),
+		Environment:  vcli.config.BaselineDir,
+		Config:       vcli.createVisualTestConfig(),
 		SuiteResults: []*TestSuiteResult{},
 	}
 
@@ -428,7 +428,7 @@ func (vcli *VisualCLI) createBrowser(ctx context.Context) (*browser.Browser, err
 // createScreenshotOptions creates screenshot options from CLI config
 func (vcli *VisualCLI) createScreenshotOptions() *ScreenshotOptions {
 	opts := DefaultScreenshotOptions()
-	
+
 	opts.FullPage = vcli.config.FullPage
 	opts.ViewportWidth = vcli.config.ViewportWidth
 	opts.ViewportHeight = vcli.config.ViewportHeight
@@ -452,7 +452,7 @@ func (vcli *VisualCLI) createScreenshotOptions() *ScreenshotOptions {
 // createVisualTestConfig creates visual test config from CLI config
 func (vcli *VisualCLI) createVisualTestConfig() *VisualTestConfig {
 	config := DefaultConfig()
-	
+
 	config.BaselineDir = vcli.config.BaselineDir
 	config.ActualDir = vcli.config.ActualDir
 	config.DiffDir = vcli.config.DiffDir
@@ -483,22 +483,22 @@ func (vcli *VisualCLI) outputResult(result *TestResult) error {
 		if !result.Passed {
 			status = "FAILED"
 		}
-		
+
 		fmt.Printf("Test: %s\n", result.TestName)
 		fmt.Printf("Status: %s\n", status)
 		fmt.Printf("Duration: %.2fs\n", result.Duration.Seconds())
-		
+
 		if result.ComparisonResult != nil {
 			fmt.Printf("Difference: %.2f%%\n", result.ComparisonResult.DifferencePercentage)
 			fmt.Printf("Different pixels: %d/%d\n", result.ComparisonResult.DiffPixels, result.ComparisonResult.TotalPixels)
 			fmt.Printf("Matching score: %.2f\n", result.ComparisonResult.MatchingScore)
 		}
-		
+
 		if result.Error != nil {
 			fmt.Printf("Error: %s\n", result.Error.Error())
 		}
 	}
-	
+
 	return nil
 }
 
@@ -516,14 +516,14 @@ func (vcli *VisualCLI) outputComparison(comparison *ComparisonResult) error {
 		if !comparison.Passed {
 			status = "FAILED"
 		}
-		
+
 		fmt.Printf("Comparison: %s\n", status)
 		fmt.Printf("Difference: %.2f%%\n", comparison.DifferencePercentage)
 		fmt.Printf("Different pixels: %d/%d\n", comparison.DiffPixels, comparison.TotalPixels)
 		fmt.Printf("Matching score: %.2f\n", comparison.MatchingScore)
 		fmt.Printf("Diff regions: %d\n", len(comparison.Regions))
 	}
-	
+
 	return nil
 }
 
@@ -541,22 +541,22 @@ func (vcli *VisualCLI) outputResponsiveResult(result *ResponsiveTestResult) erro
 		if !result.Passed {
 			status = "FAILED"
 		}
-		
+
 		fmt.Printf("Responsive Test: %s\n", result.TestName)
 		fmt.Printf("Status: %s\n", status)
 		fmt.Printf("Duration: %.2fs\n", result.Duration.Seconds())
 		fmt.Printf("Viewports: %d/%d passed\n", result.Summary.PassedViewports, result.Summary.TotalViewports)
-		
+
 		if result.Summary.WorstViewport != "" {
 			fmt.Printf("Worst viewport: %s (%.2f%% difference)\n", result.Summary.WorstViewport, result.Summary.WorstDifference)
 		}
-		
+
 		if result.Summary.BestViewport != "" {
 			fmt.Printf("Best viewport: %s (%.2f%% difference)\n", result.Summary.BestViewport, result.Summary.BestDifference)
 		}
-		
+
 		fmt.Printf("Average difference: %.2f%%\n", result.Summary.AverageDifference)
-		
+
 		// Show details for each viewport
 		if vcli.config.Verbose {
 			fmt.Printf("\nViewport details:\n")
@@ -573,7 +573,7 @@ func (vcli *VisualCLI) outputResponsiveResult(result *ResponsiveTestResult) erro
 			}
 		}
 	}
-	
+
 	return nil
 }
 

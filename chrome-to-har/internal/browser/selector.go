@@ -32,11 +32,11 @@ const (
 
 // Selector represents a selector with its engine
 type Selector struct {
-	Engine      SelectorEngine
-	Value       string
-	Modifiers   SelectorModifiers
-	Subqueries  []Selector // For compound selectors
-	LogicalOp   LogicalOperator
+	Engine     SelectorEngine
+	Value      string
+	Modifiers  SelectorModifiers
+	Subqueries []Selector // For compound selectors
+	LogicalOp  LogicalOperator
 }
 
 // SelectorModifiers contains additional selector options
@@ -150,7 +150,7 @@ func (s Selector) ToChromedpSelector() (string, chromedp.QueryOption) {
 	case TextPartial:
 		// Convert partial text selector to XPath
 		if s.Modifiers.CaseInsensitive {
-			return fmt.Sprintf("//*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '%s')]", 
+			return fmt.Sprintf("//*[contains(translate(text(), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), '%s')]",
 				strings.ToLower(s.Value)), chromedp.BySearch
 		}
 		return fmt.Sprintf("//*[contains(text(), '%s')]", s.Value), chromedp.BySearch
@@ -183,21 +183,21 @@ func normalizeWhitespace(text string) string {
 func buildRoleSelector(role string) string {
 	// Support for common ARIA roles with proper attributes
 	roleMap := map[string]string{
-		"button":      "[role='button'], button",
-		"link":        "[role='link'], a[href]",
-		"textbox":     "[role='textbox'], input[type='text'], input[type='email'], input[type='password'], textarea",
-		"checkbox":    "[role='checkbox'], input[type='checkbox']",
-		"radio":       "[role='radio'], input[type='radio']",
-		"combobox":    "[role='combobox'], select",
-		"heading":     "[role='heading'], h1, h2, h3, h4, h5, h6",
-		"img":         "[role='img'], img",
-		"list":        "[role='list'], ul, ol",
-		"listitem":    "[role='listitem'], li",
-		"navigation":  "[role='navigation'], nav",
-		"main":        "[role='main'], main",
+		"button":        "[role='button'], button",
+		"link":          "[role='link'], a[href]",
+		"textbox":       "[role='textbox'], input[type='text'], input[type='email'], input[type='password'], textarea",
+		"checkbox":      "[role='checkbox'], input[type='checkbox']",
+		"radio":         "[role='radio'], input[type='radio']",
+		"combobox":      "[role='combobox'], select",
+		"heading":       "[role='heading'], h1, h2, h3, h4, h5, h6",
+		"img":           "[role='img'], img",
+		"list":          "[role='list'], ul, ol",
+		"listitem":      "[role='listitem'], li",
+		"navigation":    "[role='navigation'], nav",
+		"main":          "[role='main'], main",
 		"complementary": "[role='complementary'], aside",
-		"contentinfo": "[role='contentinfo'], footer",
-		"banner":      "[role='banner'], header",
+		"contentinfo":   "[role='contentinfo'], footer",
+		"banner":        "[role='banner'], header",
 	}
 
 	if mapped, ok := roleMap[strings.ToLower(role)]; ok {

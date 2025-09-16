@@ -67,11 +67,11 @@ type HealthCheck struct {
 	Timeout      time.Duration
 	Critical     bool // If true, failure affects overall health
 	Enabled      bool
-	Dependencies []string                  // Dependencies on other checks
-	Tags         map[string]string         // Metadata tags
-	Thresholds   map[string]float64        // Custom thresholds
-	RetryConfig  *RetryConfig              // Retry configuration
-	AlertConfig  *AlertConfig              // Alert configuration
+	Dependencies []string           // Dependencies on other checks
+	Tags         map[string]string  // Metadata tags
+	Thresholds   map[string]float64 // Custom thresholds
+	RetryConfig  *RetryConfig       // Retry configuration
+	AlertConfig  *AlertConfig       // Alert configuration
 
 	// Runtime state
 	lastResult          HealthResult
@@ -83,7 +83,7 @@ type HealthCheck struct {
 	totalChecks         int64
 	totalFailures       int64
 	running             bool
-	mu                sync.RWMutex
+	mu                  sync.RWMutex
 
 	// Performance metrics
 	performanceMetrics *PerformanceMetrics
@@ -91,10 +91,10 @@ type HealthCheck struct {
 
 // RetryConfig defines retry behavior for health checks
 type RetryConfig struct {
-	MaxRetries   int
-	RetryDelay   time.Duration
-	BackoffRate  float64
-	MaxBackoff   time.Duration
+	MaxRetries  int
+	RetryDelay  time.Duration
+	BackoffRate float64
+	MaxBackoff  time.Duration
 }
 
 // AlertConfig defines alerting behavior for health checks
@@ -115,39 +115,39 @@ type EscalationRule struct {
 
 // PerformanceMetrics tracks performance statistics for health checks
 type PerformanceMetrics struct {
-	MinDuration    time.Duration
-	MaxDuration    time.Duration
-	AvgDuration    time.Duration
-	TotalDuration  time.Duration
-	P95Duration    time.Duration
-	P99Duration    time.Duration
-	durations      []time.Duration
-	mu             sync.RWMutex
+	MinDuration   time.Duration
+	MaxDuration   time.Duration
+	AvgDuration   time.Duration
+	TotalDuration time.Duration
+	P95Duration   time.Duration
+	P99Duration   time.Duration
+	durations     []time.Duration
+	mu            sync.RWMutex
 }
 
 // HealthResult represents the result of a health check
 type HealthResult struct {
-	Status       HealthStatus             `json:"status"`
-	Message      string                   `json:"message,omitempty"`
-	Details      map[string]interface{}   `json:"details,omitempty"`
-	Timestamp    time.Time                `json:"timestamp"`
-	Duration     time.Duration            `json:"duration"`
-	Error        error                    `json:"error,omitempty"`
-	Severity     HealthSeverity           `json:"severity"`
-	Category     HealthCategory           `json:"category"`
-	Metrics      map[string]float64       `json:"metrics,omitempty"`
-	Tags         map[string]string        `json:"tags,omitempty"`
-	Recommendations []string              `json:"recommendations,omitempty"`
-	RetryAttempt int                      `json:"retry_attempt,omitempty"`
-	TrendData    *TrendData               `json:"trend_data,omitempty"`
+	Status          HealthStatus           `json:"status"`
+	Message         string                 `json:"message,omitempty"`
+	Details         map[string]interface{} `json:"details,omitempty"`
+	Timestamp       time.Time              `json:"timestamp"`
+	Duration        time.Duration          `json:"duration"`
+	Error           error                  `json:"error,omitempty"`
+	Severity        HealthSeverity         `json:"severity"`
+	Category        HealthCategory         `json:"category"`
+	Metrics         map[string]float64     `json:"metrics,omitempty"`
+	Tags            map[string]string      `json:"tags,omitempty"`
+	Recommendations []string               `json:"recommendations,omitempty"`
+	RetryAttempt    int                    `json:"retry_attempt,omitempty"`
+	TrendData       *TrendData             `json:"trend_data,omitempty"`
 }
 
 // TrendData represents trend information for health metrics
 type TrendData struct {
-	Direction   string    `json:"direction"`   // improving, degrading, stable
-	Rate        float64   `json:"rate"`        // Rate of change
-	Confidence  float64   `json:"confidence"`  // Confidence in trend (0-1)
-	Prediction  string    `json:"prediction"`  // Predicted future state
+	Direction   string    `json:"direction"`  // improving, degrading, stable
+	Rate        float64   `json:"rate"`       // Rate of change
+	Confidence  float64   `json:"confidence"` // Confidence in trend (0-1)
+	Prediction  string    `json:"prediction"` // Predicted future state
 	LastUpdated time.Time `json:"last_updated"`
 }
 
@@ -191,23 +191,23 @@ type HealthConfig struct {
 
 // HealthMetrics tracks overall health system metrics
 type HealthMetrics struct {
-	TotalChecks       int64
-	HealthyChecks     int64
-	DegradedChecks    int64
-	UnhealthyChecks   int64
-	TotalExecutions   int64
-	TotalFailures     int64
-	AverageLatency    time.Duration
-	Uptime            time.Duration
-	StartTime         time.Time
-	mu                sync.RWMutex
+	TotalChecks     int64
+	HealthyChecks   int64
+	DegradedChecks  int64
+	UnhealthyChecks int64
+	TotalExecutions int64
+	TotalFailures   int64
+	AverageLatency  time.Duration
+	Uptime          time.Duration
+	StartTime       time.Time
+	mu              sync.RWMutex
 }
 
 // HealthHistory maintains historical health data
 type HealthHistory struct {
-	records    []HealthRecord
-	maxSize    int
-	mu         sync.RWMutex
+	records []HealthRecord
+	maxSize int
+	mu      sync.RWMutex
 }
 
 // HealthRecord represents a historical health check record
@@ -219,17 +219,17 @@ type HealthRecord struct {
 
 // HealthPredictor provides predictive health analysis
 type HealthPredictor struct {
-	models    map[string]*PredictionModel
-	mu        sync.RWMutex
+	models map[string]*PredictionModel
+	mu     sync.RWMutex
 }
 
 // PredictionModel represents a predictive model for health trends
 type PredictionModel struct {
-	CheckName    string
-	DataPoints   []DataPoint
-	Trend        string
-	Confidence   float64
-	LastUpdated  time.Time
+	CheckName   string
+	DataPoints  []DataPoint
+	Trend       string
+	Confidence  float64
+	LastUpdated time.Time
 }
 
 // DataPoint represents a single data point in a prediction model
@@ -258,13 +258,13 @@ func NewResourceMonitor() *ResourceMonitor {
 func (rm *ResourceMonitor) GetResourceMetrics() map[string]interface{} {
 	rm.mu.RLock()
 	defer rm.mu.RUnlock()
-	
+
 	return map[string]interface{}{
-		"memory_usage":     rm.memoryUsage,
-		"cpu_usage":        rm.cpuUsage,
-		"goroutine_count":  rm.goroutineCount,
-		"heap_size":        rm.heapSize,
-		"gc_pauses":        rm.gcPauses,
+		"memory_usage":    rm.memoryUsage,
+		"cpu_usage":       rm.cpuUsage,
+		"goroutine_count": rm.goroutineCount,
+		"heap_size":       rm.heapSize,
+		"gc_pauses":       rm.gcPauses,
 	}
 }
 
@@ -277,13 +277,13 @@ func NewHealthManager() *HealthManager {
 func NewHealthManagerWithConfig(config *HealthConfig) *HealthManager {
 	ctx, cancel := context.WithCancel(context.Background())
 	hm := &HealthManager{
-		checks:   make(map[string]*HealthCheck),
-		ctx:      ctx,
-		cancel:   cancel,
-		stopChan: make(chan struct{}),
-		config:   config,
-		metrics:  &HealthMetrics{StartTime: time.Now()},
-		history:  &HealthHistory{maxSize: config.MaxHistorySize},
+		checks:    make(map[string]*HealthCheck),
+		ctx:       ctx,
+		cancel:    cancel,
+		stopChan:  make(chan struct{}),
+		config:    config,
+		metrics:   &HealthMetrics{StartTime: time.Now()},
+		history:   &HealthHistory{maxSize: config.MaxHistorySize},
 		predictor: &HealthPredictor{models: make(map[string]*PredictionModel)},
 	}
 
@@ -335,14 +335,14 @@ func (hm *HealthManager) RegisterCheck(name string, checkFunc func(context.Conte
 
 	// Create check with defaults
 	check := &HealthCheck{
-		Name:        name,
-		CheckFunc:   checkFunc,
-		Interval:    hm.config.CheckInterval,
-		Timeout:     hm.config.DefaultTimeout,
-		Critical:    true,
-		Enabled:     true,
-		Tags:        make(map[string]string),
-		Thresholds:  make(map[string]float64),
+		Name:       name,
+		CheckFunc:  checkFunc,
+		Interval:   hm.config.CheckInterval,
+		Timeout:    hm.config.DefaultTimeout,
+		Critical:   true,
+		Enabled:    true,
+		Tags:       make(map[string]string),
+		Thresholds: make(map[string]float64),
 		RetryConfig: &RetryConfig{
 			MaxRetries:  3,
 			RetryDelay:  1 * time.Second,
@@ -768,11 +768,11 @@ func (hm *HealthManager) updatePerformanceMetrics(check *HealthCheck, duration t
 	if len(metrics.durations) >= 20 {
 		durations := make([]time.Duration, len(metrics.durations))
 		copy(durations, metrics.durations)
-		
+
 		// Simple percentile calculation (not fully accurate but sufficient)
 		p95Index := int(float64(len(durations)) * 0.95)
 		p99Index := int(float64(len(durations)) * 0.99)
-		
+
 		if p95Index < len(durations) {
 			metrics.P95Duration = durations[p95Index]
 		}
@@ -965,8 +965,8 @@ func (hm *HealthManager) GetOverallStatus() HealthResult {
 			"consecutive_failures": check.consecutiveFailures,
 			"total_failures":       check.totalFailures,
 			"total_checks":         check.totalChecks,
-			"category":              string(check.Category),
-			"critical":              check.Critical,
+			"category":             string(check.Category),
+			"critical":             check.Critical,
 		}
 
 		if result.Message != "" {
@@ -1024,7 +1024,7 @@ func (hm *HealthManager) GetOverallStatus() HealthResult {
 	}
 
 	// Generate message
-	message := fmt.Sprintf("%d healthy, %d degraded, %d unhealthy out of %d total checks", 
+	message := fmt.Sprintf("%d healthy, %d degraded, %d unhealthy out of %d total checks",
 		healthyCount, degradedCount, unhealthyCount, int(totalChecks))
 
 	// Add severity based on overall status
@@ -1188,10 +1188,10 @@ func MemoryCheck(ctx context.Context) HealthResult {
 // runResourceMonitor runs the resource monitoring goroutine
 func (hm *HealthManager) runResourceMonitor() {
 	defer hm.wg.Done()
-	
+
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-hm.ctx.Done():
@@ -1201,7 +1201,7 @@ func (hm *HealthManager) runResourceMonitor() {
 			if hm.resourceMonitor != nil {
 				var m runtime.MemStats
 				runtime.ReadMemStats(&m)
-				
+
 				hm.resourceMonitor.mu.Lock()
 				hm.resourceMonitor.memoryUsage = m.Alloc
 				hm.resourceMonitor.heapSize = m.HeapAlloc
@@ -1215,10 +1215,10 @@ func (hm *HealthManager) runResourceMonitor() {
 // runPredictor runs the predictive analytics goroutine
 func (hm *HealthManager) runPredictor() {
 	defer hm.wg.Done()
-	
+
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-hm.ctx.Done():

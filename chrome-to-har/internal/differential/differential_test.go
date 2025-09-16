@@ -26,7 +26,7 @@ func TestCaptureManager(t *testing.T) {
 		"test": "true",
 		"env":  "development",
 	}
-	
+
 	capture, err := cm.CreateCapture("test-capture", "https://example.com", "Test capture", labels)
 	if err != nil {
 		t.Fatalf("Failed to create capture: %v", err)
@@ -257,14 +257,14 @@ func TestReportGenerator(t *testing.T) {
 func TestStateTracker(t *testing.T) {
 	// Note: This test would require a real Chrome context to work properly
 	// For now, we'll test the basic functionality without Chrome
-	
+
 	options := &StateTrackingOptions{
-		TrackDOM:         true,
+		TrackDOM:          true,
 		TrackLocalStorage: true,
-		TrackCookies:     true,
-		TrackViewport:    true,
-		TrackPerformance: true,
-		MaxSnapshots:     10,
+		TrackCookies:      true,
+		TrackViewport:     true,
+		TrackPerformance:  true,
+		MaxSnapshots:      10,
 	}
 
 	st := NewStateTracker(true, options)
@@ -343,7 +343,7 @@ func TestDifferentialController(t *testing.T) {
 	// Test creating a baseline capture
 	ctx := context.Background()
 	labels := map[string]string{"test": "true"}
-	
+
 	capture, err := controller.CreateBaselineCapture(ctx, "test-baseline", "https://example.com", "Test baseline", labels)
 	if err != nil {
 		t.Fatalf("Failed to create baseline capture: %v", err)

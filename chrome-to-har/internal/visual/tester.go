@@ -37,7 +37,7 @@ func (vrt *VisualRegressionTester) CaptureScreenshot(ctx context.Context, page *
 	if err := ValidateScreenshotOptions(opts); err != nil {
 		return nil, errors.Wrap(err, "invalid screenshot options")
 	}
-	
+
 	return vrt.capture.CaptureScreenshot(ctx, page, opts)
 }
 
@@ -49,20 +49,20 @@ func (vrt *VisualRegressionTester) CompareImages(baseline, actual []byte, config
 // RunVisualTest runs a single visual regression test
 func (vrt *VisualRegressionTester) RunVisualTest(ctx context.Context, testName string, page *browser.Page, config *VisualTestConfig, opts *ScreenshotOptions) (*TestResult, error) {
 	startTime := time.Now()
-	
+
 	result := &TestResult{
-		TestName:    testName,
-		Timestamp:   startTime,
-		Environment: config.BaselineDir, // Use baseline dir as environment indicator
-		Config:      config,
+		TestName:          testName,
+		Timestamp:         startTime,
+		Environment:       config.BaselineDir, // Use baseline dir as environment indicator
+		Config:            config,
 		ScreenshotOptions: opts,
-		Metadata:    make(map[string]interface{}),
+		Metadata:          make(map[string]interface{}),
 	}
-	
+
 	if vrt.verbose {
 		log.Printf("Running visual test: %s", testName)
 	}
-	
+
 	// Capture actual screenshot
 	actualScreenshot, err := vrt.CaptureScreenshot(ctx, page, opts)
 	if err != nil {
@@ -70,9 +70,9 @@ func (vrt *VisualRegressionTester) RunVisualTest(ctx context.Context, testName s
 		result.Duration = time.Since(startTime)
 		return result, nil
 	}
-	
+
 	result.ActualScreenshot = actualScreenshot
-	
+
 	// Load baseline
 	baselineScreenshot, baselineMetadata, err := vrt.baseline.LoadBaseline(testName, config)
 	if err != nil {
@@ -81,7 +81,7 @@ func (vrt *VisualRegressionTester) RunVisualTest(ctx context.Context, testName s
 			if vrt.verbose {
 				log.Printf("Baseline not found for %s, creating new baseline", testName)
 			}
-			
+
 			// Create metadata for new baseline
 			metadata := &BaselineMetadata{
 				Version:     "1.0.0",
@@ -90,36 +90,36 @@ func (vrt *VisualRegressionTester) RunVisualTest(ctx context.Context, testName s
 				TestName:    testName,
 				Environment: config.BaselineDir,
 			}
-			
+
 			// Get current URL from page
 			if currentURL, err := page.URL(); err == nil {
 				metadata.URL = currentURL
 			}
-			
+
 			// Save baseline
 			if err := vrt.baseline.SaveBaseline(testName, actualScreenshot, metadata, config); err != nil {
 				result.Error = errors.Wrap(err, "saving new baseline")
 				result.Duration = time.Since(startTime)
 				return result, nil
 			}
-			
+
 			result.Passed = true
 			result.BaselineMetadata = metadata
 			result.BaselineScreenshot = actualScreenshot
 			result.Duration = time.Since(startTime)
 			result.Metadata["baseline_created"] = true
-			
+
 			return result, nil
 		}
-		
+
 		result.Error = errors.Wrap(err, "loading baseline")
 		result.Duration = time.Since(startTime)
 		return result, nil
 	}
-	
+
 	result.BaselineScreenshot = baselineScreenshot
 	result.BaselineMetadata = baselineMetadata
-	
+
 	// Compare images
 	comparison, err := vrt.CompareImages(baselineScreenshot, actualScreenshot, config)
 	if err != nil {
@@ -127,15 +127,15 @@ func (vrt *VisualRegressionTester) RunVisualTest(ctx context.Context, testName s
 		result.Duration = time.Since(startTime)
 		return result, nil
 	}
-	
+
 	result.ComparisonResult = comparison
 	result.Passed = comparison.Passed
-	
+
 	// Save diff image if test failed
 	if !comparison.Passed {
 		diffFilename := fmt.Sprintf("%s_diff.png", testName)
 		diffPath := filepath.Join(config.DiffDir, diffFilename)
-		
+
 		if err := vrt.saveDiffImage(comparison.DiffImage, diffPath); err != nil {
 			if vrt.verbose {
 				log.Printf("Warning: failed to save diff image: %v", err)
@@ -144,9 +144,9 @@ func (vrt *VisualRegressionTester) RunVisualTest(ctx context.Context, testName s
 			result.Metadata["diff_image_path"] = diffPath
 		}
 	}
-	
+
 	result.Duration = time.Since(startTime)
-	
+
 	if vrt.verbose {
 		status := "PASSED"
 		if !result.Passed {
@@ -154,14 +154,14 @@ func (vrt *VisualRegressionTester) RunVisualTest(ctx context.Context, testName s
 		}
 		log.Printf("Test %s: %s (%.2f%% difference, %.2fs)", testName, status, comparison.DifferencePercentage, result.Duration.Seconds())
 	}
-	
+
 	return result, nil
 }
 
 // RunTestSuite runs a suite of visual regression tests
 func (vrt *VisualRegressionTester) RunTestSuite(ctx context.Context, suiteName string, tests []VisualTest, config *VisualTestConfig) (*TestSuiteResult, error) {
 	startTime := time.Now()
-	
+
 	suiteResult := &TestSuiteResult{
 		SuiteName:   suiteName,
 		Timestamp:   startTime,
@@ -170,18 +170,18 @@ func (vrt *VisualRegressionTester) RunTestSuite(ctx context.Context, suiteName s
 		Results:     make([]*TestResult, 0, len(tests)),
 		Metadata:    make(map[string]interface{}),
 	}
-	
+
 	if vrt.verbose {
 		log.Printf("Running test suite: %s (%d tests)", suiteName, len(tests))
 	}
-	
+
 	// Ensure directories exist
 	if err := vrt.ensureDirectories(config); err != nil {
 		return nil, errors.Wrap(err, "ensuring directories exist")
 	}
-	
+
 	var totalTests, passedTests, failedTests, skippedTests int
-	
+
 	for i, test := range tests {
 		if test.Skip {
 			skippedTests++
@@ -190,17 +190,17 @@ func (vrt *VisualRegressionTester) RunTestSuite(ctx context.Context, suiteName s
 			}
 			continue
 		}
-		
+
 		totalTests++
-		
+
 		if vrt.verbose {
 			log.Printf("Running test %d/%d: %s", i+1, len(tests), test.Name)
 		}
-		
+
 		// Run the test with retries
 		var result *TestResult
 		var err error
-		
+
 		for retry := 0; retry <= config.RetryCount; retry++ {
 			if retry > 0 {
 				if vrt.verbose {
@@ -208,17 +208,17 @@ func (vrt *VisualRegressionTester) RunTestSuite(ctx context.Context, suiteName s
 				}
 				time.Sleep(config.RetryDelay)
 			}
-			
+
 			result, err = vrt.runSingleTest(ctx, test, config)
 			if err == nil && result.Passed {
 				break
 			}
-			
+
 			if result != nil {
 				result.Retries = retry
 			}
 		}
-		
+
 		if err != nil {
 			// Create a failed result
 			result = &TestResult{
@@ -233,19 +233,19 @@ func (vrt *VisualRegressionTester) RunTestSuite(ctx context.Context, suiteName s
 				Metadata:    make(map[string]interface{}),
 			}
 		}
-		
+
 		suiteResult.Results = append(suiteResult.Results, result)
-		
+
 		if result.Passed {
 			passedTests++
 		} else {
 			failedTests++
 		}
 	}
-	
+
 	suiteResult.Duration = time.Since(startTime)
 	suiteResult.Passed = failedTests == 0
-	
+
 	// Calculate summary
 	suiteResult.Summary = TestSummary{
 		TotalTests:      totalTests,
@@ -256,12 +256,12 @@ func (vrt *VisualRegressionTester) RunTestSuite(ctx context.Context, suiteName s
 		TotalDuration:   suiteResult.Duration,
 		AverageDuration: suiteResult.Duration / time.Duration(totalTests),
 	}
-	
+
 	if vrt.verbose {
 		log.Printf("Test suite completed: %d/%d passed (%.1f%%), %d skipped, %.2fs total",
 			passedTests, totalTests, suiteResult.Summary.PassRate*100, skippedTests, suiteResult.Duration.Seconds())
 	}
-	
+
 	return suiteResult, nil
 }
 
@@ -273,52 +273,52 @@ func (vrt *VisualRegressionTester) runSingleTest(ctx context.Context, test Visua
 		return nil, errors.Wrap(err, "creating browser")
 	}
 	defer browser.Close()
-	
+
 	// Launch browser
 	if err := browser.Launch(ctx); err != nil {
 		return nil, errors.Wrap(err, "launching browser")
 	}
-	
+
 	// Get current page
 	page := browser.GetCurrentPage()
 	if page == nil {
 		return nil, errors.New("failed to get current page")
 	}
-	
+
 	// Set viewport if specified
 	if test.Viewport != nil {
 		if err := page.SetViewport(test.Viewport.Width, test.Viewport.Height); err != nil {
 			return nil, errors.Wrap(err, "setting viewport")
 		}
 	}
-	
+
 	// Navigate to URL
 	if test.URL != "" {
 		if err := page.Navigate(test.URL); err != nil {
 			return nil, errors.Wrap(err, "navigating to URL")
 		}
 	}
-	
+
 	// Run setup if provided
 	if test.Setup != nil {
 		if err := test.Setup(ctx, page); err != nil {
 			return nil, errors.Wrap(err, "running test setup")
 		}
 	}
-	
+
 	// Run test action if provided
 	if test.Action != nil {
 		if err := test.Action(ctx, page); err != nil {
 			return nil, errors.Wrap(err, "running test action")
 		}
 	}
-	
+
 	// Run the visual test
 	result, err := vrt.RunVisualTest(ctx, test.Name, page, config, test.Options)
 	if err != nil {
 		return nil, errors.Wrap(err, "running visual test")
 	}
-	
+
 	// Set additional metadata
 	if result.Metadata == nil {
 		result.Metadata = make(map[string]interface{})
@@ -328,7 +328,7 @@ func (vrt *VisualRegressionTester) runSingleTest(ctx context.Context, test Visua
 	if test.Viewport != nil {
 		result.Metadata["viewport"] = fmt.Sprintf("%dx%d", test.Viewport.Width, test.Viewport.Height)
 	}
-	
+
 	// Run cleanup if provided
 	if test.Cleanup != nil {
 		if err := test.Cleanup(ctx, page); err != nil {
@@ -337,7 +337,7 @@ func (vrt *VisualRegressionTester) runSingleTest(ctx context.Context, test Visua
 			}
 		}
 	}
-	
+
 	return result, nil
 }
 
@@ -380,7 +380,7 @@ func (vrt *VisualRegressionTester) GenerateReport(results []*TestResult, config 
 		Config:      config,
 		Metadata:    make(map[string]interface{}),
 	}
-	
+
 	// Group results by test suite
 	suiteMap := make(map[string][]*TestResult)
 	for _, result := range results {
@@ -390,11 +390,11 @@ func (vrt *VisualRegressionTester) GenerateReport(results []*TestResult, config 
 		}
 		suiteMap[suite] = append(suiteMap[suite], result)
 	}
-	
+
 	// Create suite results
 	var totalTests, passedTests, failedTests, skippedTests int
 	var totalDuration time.Duration
-	
+
 	for suiteName, suiteResults := range suiteMap {
 		suiteResult := &TestSuiteResult{
 			SuiteName:   suiteName,
@@ -404,11 +404,11 @@ func (vrt *VisualRegressionTester) GenerateReport(results []*TestResult, config 
 			Config:      config,
 			Metadata:    make(map[string]interface{}),
 		}
-		
+
 		// Calculate suite summary
 		var suitePassed, suiteFailed, suiteSkipped int
 		var suiteDuration time.Duration
-		
+
 		for _, result := range suiteResults {
 			suiteDuration += result.Duration
 			if result.Passed {
@@ -417,7 +417,7 @@ func (vrt *VisualRegressionTester) GenerateReport(results []*TestResult, config 
 				suiteFailed++
 			}
 		}
-		
+
 		suiteResult.Duration = suiteDuration
 		suiteResult.Passed = suiteFailed == 0
 		suiteResult.Summary = TestSummary{
@@ -429,16 +429,16 @@ func (vrt *VisualRegressionTester) GenerateReport(results []*TestResult, config 
 			TotalDuration:   suiteDuration,
 			AverageDuration: suiteDuration / time.Duration(len(suiteResults)),
 		}
-		
+
 		report.SuiteResults = append(report.SuiteResults, suiteResult)
-		
+
 		totalTests += len(suiteResults)
 		passedTests += suitePassed
 		failedTests += suiteFailed
 		skippedTests += suiteSkipped
 		totalDuration += suiteDuration
 	}
-	
+
 	// Calculate overall summary
 	report.Summary = TestSummary{
 		TotalTests:      totalTests,
@@ -449,7 +449,7 @@ func (vrt *VisualRegressionTester) GenerateReport(results []*TestResult, config 
 		TotalDuration:   totalDuration,
 		AverageDuration: totalDuration / time.Duration(totalTests),
 	}
-	
+
 	return report, nil
 }
 
@@ -462,13 +462,13 @@ func (vrt *VisualRegressionTester) ensureDirectories(config *VisualTestConfig) e
 		config.ActualDir,
 		config.DiffDir,
 	}
-	
+
 	for _, dir := range dirs {
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return errors.Wrapf(err, "creating directory %s", dir)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -478,7 +478,7 @@ func (vrt *VisualRegressionTester) saveDiffImage(diffImage image.Image, path str
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return errors.Wrap(err, "creating diff directory")
 	}
-	
+
 	return vrt.comparison.SaveDiffImage(diffImage, path)
 }
 
@@ -487,7 +487,7 @@ func CreateVisualTestFromURL(name, url string, opts *ScreenshotOptions) VisualTe
 	if opts == nil {
 		opts = DefaultScreenshotOptions()
 	}
-	
+
 	return VisualTest{
 		Name:    name,
 		URL:     url,
@@ -505,12 +505,12 @@ func CreateVisualTestFromURL(name, url string, opts *ScreenshotOptions) VisualTe
 // CreateResponsiveVisualTest creates a visual test that runs on multiple viewports
 func CreateResponsiveVisualTest(name, url string, viewports []ViewportSize) []VisualTest {
 	var tests []VisualTest
-	
+
 	for _, viewport := range viewports {
 		opts := DefaultScreenshotOptions()
 		opts.ViewportWidth = viewport.Width
 		opts.ViewportHeight = viewport.Height
-		
+
 		test := VisualTest{
 			Name:     fmt.Sprintf("%s_%s", name, viewport.Name),
 			URL:      url,
@@ -525,10 +525,10 @@ func CreateResponsiveVisualTest(name, url string, viewports []ViewportSize) []Vi
 				"viewport":   viewport.Name,
 			},
 		}
-		
+
 		tests = append(tests, test)
 	}
-	
+
 	return tests
 }
 
@@ -536,7 +536,7 @@ func CreateResponsiveVisualTest(name, url string, viewports []ViewportSize) []Vi
 func CreateElementVisualTest(name, url, selector string) VisualTest {
 	opts := DefaultScreenshotOptions()
 	opts.Selector = selector
-	
+
 	return VisualTest{
 		Name:    name,
 		URL:     url,

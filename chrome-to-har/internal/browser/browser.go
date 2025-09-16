@@ -510,30 +510,30 @@ func (b *Browser) getSecureChromeOptions() []chromedp.ExecAllocatorOption {
 func (b *Browser) getStrictSecurityOptions() []chromedp.ExecAllocatorOption {
 	return []chromedp.ExecAllocatorOption{
 		// Enable sandboxing (CRITICAL SECURITY FIX)
-		chromedp.Flag("no-sandbox", false), // Ensure sandbox is NOT disabled
+		chromedp.Flag("no-sandbox", false),             // Ensure sandbox is NOT disabled
 		chromedp.Flag("disable-setuid-sandbox", false), // Keep setuid sandbox enabled
-		
+
 		// Enable site isolation and process isolation
 		chromedp.Flag("site-per-process", true),
 		chromedp.Flag("enable-features", "SitePerProcess,NetworkServiceSandbox,StrictOriginIsolation"),
-		
+
 		// Security-focused flags
-		chromedp.Flag("disable-web-security", false), // Keep web security enabled
+		chromedp.Flag("disable-web-security", false),                 // Keep web security enabled
 		chromedp.Flag("disable-features", "TranslateUI,MediaRouter"), // Only disable non-security features
 		chromedp.Flag("enable-strict-mixed-content-checking", true),
 		chromedp.Flag("enable-strict-powerful-feature-restrictions", true),
-		
+
 		// Block dangerous content
 		chromedp.Flag("block-new-web-contents", true),
 		chromedp.Flag("disable-plugins", true),
 		chromedp.Flag("disable-java", true),
 		chromedp.Flag("disable-3d-apis", true),
 		chromedp.Flag("disable-webgl", true),
-		
+
 		// Disable extensions for security
 		chromedp.Flag("disable-extensions", true),
 		chromedp.Flag("disable-default-apps", true),
-		
+
 		// Essential stability flags (security-neutral)
 		chromedp.Flag("disable-background-networking", true),
 		chromedp.Flag("disable-background-timer-throttling", true),
@@ -542,15 +542,15 @@ func (b *Browser) getStrictSecurityOptions() []chromedp.ExecAllocatorOption {
 		chromedp.Flag("disable-sync", true),
 		chromedp.Flag("metrics-recording-only", true),
 		chromedp.Flag("no-first-run", true),
-		
+
 		// GPU handling - keep enabled for security
 		chromedp.Flag("disable-gpu", false),
 		chromedp.Flag("gpu-sandbox-failures-fatal", true),
-		
+
 		// Memory management
 		chromedp.Flag("disable-dev-shm-usage", false), // Only disable if absolutely necessary
 		chromedp.Flag("memory-pressure-off", false),
-		
+
 		// Secure defaults
 		chromedp.Flag("force-color-profile", "srgb"),
 		chromedp.Flag("password-store", "basic"),
@@ -564,20 +564,20 @@ func (b *Browser) getBalancedSecurityOptions() []chromedp.ExecAllocatorOption {
 		// Enable core sandboxing
 		chromedp.Flag("no-sandbox", false),
 		chromedp.Flag("disable-setuid-sandbox", false),
-		
+
 		// Enable site isolation
 		chromedp.Flag("site-per-process", true),
 		chromedp.Flag("enable-features", "SitePerProcess,NetworkServiceSandbox"),
-		
+
 		// Essential security
 		chromedp.Flag("disable-web-security", false),
 		chromedp.Flag("block-new-web-contents", true),
-		
+
 		// Disable risky features
 		chromedp.Flag("disable-extensions", true),
 		chromedp.Flag("disable-default-apps", true),
 		chromedp.Flag("disable-plugins", true),
-		
+
 		// Stability flags
 		chromedp.Flag("disable-background-networking", true),
 		chromedp.Flag("disable-background-timer-throttling", true),
@@ -590,13 +590,13 @@ func (b *Browser) getBalancedSecurityOptions() []chromedp.ExecAllocatorOption {
 		chromedp.Flag("disable-prompt-on-repost", true),
 		chromedp.Flag("metrics-recording-only", true),
 		chromedp.Flag("no-first-run", true),
-		
+
 		// GPU - disable for headless stability
 		chromedp.DisableGPU,
-		
+
 		// Memory management
 		chromedp.Flag("disable-dev-shm-usage", true),
-		
+
 		// Defaults
 		chromedp.Flag("force-color-profile", "srgb"),
 		chromedp.Flag("password-store", "basic"),
@@ -613,11 +613,11 @@ func (b *Browser) getPermissiveSecurityOptions() []chromedp.ExecAllocatorOption 
 		chromedp.Flag("disable-client-side-phishing-detection", true),
 		chromedp.Flag("disable-popup-blocking", true),
 		chromedp.Flag("safebrowsing-disable-auto-update", true),
-		
+
 		// Still maintain some basic security
 		chromedp.Flag("disable-extensions", true),
 		chromedp.Flag("disable-default-apps", true),
-		
+
 		// Stability flags
 		chromedp.Flag("disable-background-networking", true),
 		chromedp.Flag("disable-background-timer-throttling", true),
@@ -630,11 +630,11 @@ func (b *Browser) getPermissiveSecurityOptions() []chromedp.ExecAllocatorOption 
 		chromedp.Flag("disable-prompt-on-repost", true),
 		chromedp.Flag("metrics-recording-only", true),
 		chromedp.Flag("no-first-run", true),
-		
+
 		// GPU and memory
 		chromedp.DisableGPU,
 		chromedp.Flag("disable-dev-shm-usage", true),
-		
+
 		// Defaults
 		chromedp.Flag("force-color-profile", "srgb"),
 		chromedp.Flag("password-store", "basic"),

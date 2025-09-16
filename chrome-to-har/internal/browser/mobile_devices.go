@@ -9,33 +9,33 @@ import (
 
 // MobileDevice represents a mobile device profile with all emulation parameters
 type MobileDevice struct {
-	Name             string  `json:"name"`
-	UserAgent        string  `json:"userAgent"`
-	Viewport         Viewport `json:"viewport"`
-	DeviceScaleFactor float64 `json:"deviceScaleFactor"`
-	IsMobile         bool    `json:"isMobile"`
-	HasTouch         bool    `json:"hasTouch"`
-	DefaultOrientation string `json:"defaultOrientation"`
+	Name               string   `json:"name"`
+	UserAgent          string   `json:"userAgent"`
+	Viewport           Viewport `json:"viewport"`
+	DeviceScaleFactor  float64  `json:"deviceScaleFactor"`
+	IsMobile           bool     `json:"isMobile"`
+	HasTouch           bool     `json:"hasTouch"`
+	DefaultOrientation string   `json:"defaultOrientation"`
 }
 
 // Viewport represents device viewport settings
 type Viewport struct {
-	Width             int  `json:"width"`
-	Height            int  `json:"height"`
+	Width             int     `json:"width"`
+	Height            int     `json:"height"`
 	DeviceScaleFactor float64 `json:"deviceScaleFactor"`
-	IsMobile          bool `json:"isMobile"`
-	HasTouch          bool `json:"hasTouch"`
-	IsLandscape       bool `json:"isLandscape"`
+	IsMobile          bool    `json:"isMobile"`
+	HasTouch          bool    `json:"hasTouch"`
+	IsLandscape       bool    `json:"isLandscape"`
 }
 
 // NetworkProfile represents mobile network conditions
 type NetworkProfile struct {
-	Name              string  `json:"name"`
+	Name               string  `json:"name"`
 	DownloadThroughput float64 `json:"downloadThroughput"` // bytes/sec
 	UploadThroughput   float64 `json:"uploadThroughput"`   // bytes/sec
-	Latency           float64  `json:"latency"`            // milliseconds
-	PacketLoss        float64  `json:"packetLoss"`         // percentage (0-100)
-	Offline           bool     `json:"offline"`
+	Latency            float64 `json:"latency"`            // milliseconds
+	PacketLoss         float64 `json:"packetLoss"`         // percentage (0-100)
+	Offline            bool    `json:"offline"`
 }
 
 // predefinedDevices contains popular mobile device profiles
@@ -51,9 +51,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 3,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  3,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"iPhone 14 Pro": {
@@ -66,9 +66,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 3,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  3,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"iPhone 14": {
@@ -81,9 +81,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 3,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  3,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"iPhone 13": {
@@ -96,9 +96,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 3,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  3,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"iPhone 12": {
@@ -111,9 +111,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 3,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  3,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"iPhone SE (3rd generation)": {
@@ -126,9 +126,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"iPhone 8": {
@@ -141,9 +141,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	// iPad Devices
@@ -157,9 +157,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"iPad Pro (11-inch)": {
@@ -172,9 +172,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"iPad Air": {
@@ -187,9 +187,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"iPad": {
@@ -202,9 +202,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"iPad Mini": {
@@ -217,9 +217,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	// Android Devices
@@ -233,9 +233,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 3.5,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  3.5,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"Samsung Galaxy S22": {
@@ -248,9 +248,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 3,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  3,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"Samsung Galaxy S21": {
@@ -263,9 +263,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 3,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  3,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"Samsung Galaxy A54": {
@@ -278,9 +278,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2.75,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2.75,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"Google Pixel 7 Pro": {
@@ -293,9 +293,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 3.5,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  3.5,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"Google Pixel 7": {
@@ -308,9 +308,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2.6,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2.6,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"Google Pixel 6": {
@@ -323,9 +323,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2.6,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2.6,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"Google Pixel 5": {
@@ -338,9 +338,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2.75,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2.75,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	// Android Tablets
@@ -354,9 +354,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"Samsung Galaxy Tab S8": {
@@ -369,9 +369,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 2,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  2,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	// Other Popular Devices
@@ -385,9 +385,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 3.5,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  3.5,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 	"Xiaomi Mi 13": {
@@ -400,9 +400,9 @@ var predefinedDevices = map[string]*MobileDevice{
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: 3,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  3,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	},
 }
@@ -410,60 +410,60 @@ var predefinedDevices = map[string]*MobileDevice{
 // predefinedNetworkProfiles contains common mobile network conditions
 var predefinedNetworkProfiles = map[string]*NetworkProfile{
 	"offline": {
-		Name:              "Offline",
+		Name:               "Offline",
 		DownloadThroughput: 0,
 		UploadThroughput:   0,
-		Latency:           0,
-		PacketLoss:        100,
-		Offline:           true,
+		Latency:            0,
+		PacketLoss:         100,
+		Offline:            true,
 	},
 	"slow-3g": {
-		Name:              "Slow 3G",
-		DownloadThroughput: 50 * 1024,   // 50 KB/s
-		UploadThroughput:   25 * 1024,   // 25 KB/s
-		Latency:           400,          // 400ms
-		PacketLoss:        2,            // 2%
-		Offline:           false,
+		Name:               "Slow 3G",
+		DownloadThroughput: 50 * 1024, // 50 KB/s
+		UploadThroughput:   25 * 1024, // 25 KB/s
+		Latency:            400,       // 400ms
+		PacketLoss:         2,         // 2%
+		Offline:            false,
 	},
 	"fast-3g": {
-		Name:              "Fast 3G",
-		DownloadThroughput: 200 * 1024,  // 200 KB/s
-		UploadThroughput:   100 * 1024,  // 100 KB/s
-		Latency:           150,          // 150ms
-		PacketLoss:        1,            // 1%
-		Offline:           false,
+		Name:               "Fast 3G",
+		DownloadThroughput: 200 * 1024, // 200 KB/s
+		UploadThroughput:   100 * 1024, // 100 KB/s
+		Latency:            150,        // 150ms
+		PacketLoss:         1,          // 1%
+		Offline:            false,
 	},
 	"4g": {
-		Name:              "4G",
+		Name:               "4G",
 		DownloadThroughput: 1.5 * 1024 * 1024, // 1.5 MB/s
 		UploadThroughput:   750 * 1024,        // 750 KB/s
-		Latency:           50,                 // 50ms
-		PacketLoss:        0.5,                // 0.5%
-		Offline:           false,
+		Latency:            50,                // 50ms
+		PacketLoss:         0.5,               // 0.5%
+		Offline:            false,
 	},
 	"5g": {
-		Name:              "5G",
-		DownloadThroughput: 10 * 1024 * 1024,  // 10 MB/s
-		UploadThroughput:   5 * 1024 * 1024,   // 5 MB/s
-		Latency:           20,                 // 20ms
-		PacketLoss:        0.1,                // 0.1%
-		Offline:           false,
+		Name:               "5G",
+		DownloadThroughput: 10 * 1024 * 1024, // 10 MB/s
+		UploadThroughput:   5 * 1024 * 1024,  // 5 MB/s
+		Latency:            20,               // 20ms
+		PacketLoss:         0.1,              // 0.1%
+		Offline:            false,
 	},
 	"edge": {
-		Name:              "EDGE",
-		DownloadThroughput: 30 * 1024,   // 30 KB/s
-		UploadThroughput:   15 * 1024,   // 15 KB/s
-		Latency:           500,          // 500ms
-		PacketLoss:        3,            // 3%
-		Offline:           false,
+		Name:               "EDGE",
+		DownloadThroughput: 30 * 1024, // 30 KB/s
+		UploadThroughput:   15 * 1024, // 15 KB/s
+		Latency:            500,       // 500ms
+		PacketLoss:         3,         // 3%
+		Offline:            false,
 	},
 	"wifi": {
-		Name:              "WiFi",
-		DownloadThroughput: 30 * 1024 * 1024,  // 30 MB/s
-		UploadThroughput:   15 * 1024 * 1024,  // 15 MB/s
-		Latency:           5,                  // 5ms
-		PacketLoss:        0,                  // 0%
-		Offline:           false,
+		Name:               "WiFi",
+		DownloadThroughput: 30 * 1024 * 1024, // 30 MB/s
+		UploadThroughput:   15 * 1024 * 1024, // 15 MB/s
+		Latency:            5,                // 5ms
+		PacketLoss:         0,                // 0%
+		Offline:            false,
 	},
 }
 
@@ -477,7 +477,7 @@ func GetPredefinedDevice(name string) (*MobileDevice, error) {
 			return &deviceCopy, nil
 		}
 	}
-	
+
 	// Try partial match
 	nameLower := strings.ToLower(name)
 	for deviceName, device := range predefinedDevices {
@@ -487,7 +487,7 @@ func GetPredefinedDevice(name string) (*MobileDevice, error) {
 			return &deviceCopy, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("device '%s' not found", name)
 }
 
@@ -511,7 +511,7 @@ func GetNetworkProfile(name string) (*NetworkProfile, error) {
 			return &profileCopy, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("network profile '%s' not found", name)
 }
 
@@ -531,7 +531,7 @@ func CreateCustomDevice(name string, width, height int, scaleFactor float64, use
 		// Default mobile Chrome user agent
 		userAgent = fmt.Sprintf("Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36 (Custom %dx%d)", width, height)
 	}
-	
+
 	return &MobileDevice{
 		Name:      name,
 		UserAgent: userAgent,
@@ -542,9 +542,9 @@ func CreateCustomDevice(name string, width, height int, scaleFactor float64, use
 			IsMobile:          true,
 			HasTouch:          true,
 		},
-		DeviceScaleFactor: scaleFactor,
-		IsMobile:         true,
-		HasTouch:         true,
+		DeviceScaleFactor:  scaleFactor,
+		IsMobile:           true,
+		HasTouch:           true,
 		DefaultOrientation: "portrait",
 	}
 }
@@ -552,12 +552,12 @@ func CreateCustomDevice(name string, width, height int, scaleFactor float64, use
 // CreateCustomNetworkProfile creates a custom network profile
 func CreateCustomNetworkProfile(name string, downloadMbps, uploadMbps, latencyMs, packetLossPercent float64) *NetworkProfile {
 	return &NetworkProfile{
-		Name:              name,
+		Name:               name,
 		DownloadThroughput: downloadMbps * 1024 * 1024 / 8, // Convert Mbps to bytes/sec
 		UploadThroughput:   uploadMbps * 1024 * 1024 / 8,   // Convert Mbps to bytes/sec
-		Latency:           latencyMs,
-		PacketLoss:        packetLossPercent,
-		Offline:           false,
+		Latency:            latencyMs,
+		PacketLoss:         packetLossPercent,
+		Offline:            false,
 	}
 }
 

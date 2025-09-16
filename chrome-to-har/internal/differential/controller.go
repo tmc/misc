@@ -25,21 +25,21 @@ type DifferentialController struct {
 
 // DifferentialOptions configures the differential capture process
 type DifferentialOptions struct {
-	WorkDir          string                   `json:"work_dir"`
-	BaselineName     string                   `json:"baseline_name"`
-	BaselineURL      string                   `json:"baseline_url"`
-	CompareName      string                   `json:"compare_name"`
-	CompareURL       string                   `json:"compare_url"`
-	Labels           map[string]string        `json:"labels"`
-	TrackResources   bool                     `json:"track_resources"`
-	TrackPerformance bool                     `json:"track_performance"`
-	TrackStates      bool                     `json:"track_states"`
-	StateOptions     *StateTrackingOptions    `json:"state_options"`
-	ReportOptions    *ReportOptions           `json:"report_options"`
-	AutoCapture      bool                     `json:"auto_capture"`
-	CaptureInterval  time.Duration            `json:"capture_interval"`
-	MaxCaptures      int                      `json:"max_captures"`
-	Verbose          bool                     `json:"verbose"`
+	WorkDir          string                `json:"work_dir"`
+	BaselineName     string                `json:"baseline_name"`
+	BaselineURL      string                `json:"baseline_url"`
+	CompareName      string                `json:"compare_name"`
+	CompareURL       string                `json:"compare_url"`
+	Labels           map[string]string     `json:"labels"`
+	TrackResources   bool                  `json:"track_resources"`
+	TrackPerformance bool                  `json:"track_performance"`
+	TrackStates      bool                  `json:"track_states"`
+	StateOptions     *StateTrackingOptions `json:"state_options"`
+	ReportOptions    *ReportOptions        `json:"report_options"`
+	AutoCapture      bool                  `json:"auto_capture"`
+	CaptureInterval  time.Duration         `json:"capture_interval"`
+	MaxCaptures      int                   `json:"max_captures"`
+	Verbose          bool                  `json:"verbose"`
 }
 
 // NewDifferentialController creates a new differential controller
@@ -300,7 +300,7 @@ func (dc *DifferentialController) RunDifferentialComparison(ctx context.Context,
 	}
 
 	if dc.verbose {
-		fmt.Printf("Differential comparison completed: %d changes detected\n", 
+		fmt.Printf("Differential comparison completed: %d changes detected\n",
 			result.Summary.AddedRequests+result.Summary.RemovedRequests+result.Summary.ModifiedRequests)
 	}
 

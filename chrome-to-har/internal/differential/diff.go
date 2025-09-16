@@ -11,13 +11,13 @@ import (
 
 // DiffResult represents the result of comparing two HAR captures
 type DiffResult struct {
-	BaselineCapture *CaptureMetadata    `json:"baseline_capture"`
-	CompareCapture  *CaptureMetadata    `json:"compare_capture"`
-	Summary         *DiffSummary        `json:"summary"`
-	NetworkDiffs    []*NetworkDiff      `json:"network_diffs"`
-	ResourceDiffs   []*ResourceDiff     `json:"resource_diffs"`
-	PerformanceDiff *PerformanceDiff    `json:"performance_diff"`
-	Timestamp       time.Time           `json:"timestamp"`
+	BaselineCapture *CaptureMetadata `json:"baseline_capture"`
+	CompareCapture  *CaptureMetadata `json:"compare_capture"`
+	Summary         *DiffSummary     `json:"summary"`
+	NetworkDiffs    []*NetworkDiff   `json:"network_diffs"`
+	ResourceDiffs   []*ResourceDiff  `json:"resource_diffs"`
+	PerformanceDiff *PerformanceDiff `json:"performance_diff"`
+	Timestamp       time.Time        `json:"timestamp"`
 }
 
 // DiffSummary provides high-level statistics about the differences
@@ -33,12 +33,12 @@ type DiffSummary struct {
 
 // NetworkDiff represents a difference in network requests
 type NetworkDiff struct {
-	Type        DiffType    `json:"type"`
-	URL         string      `json:"url"`
-	Method      string      `json:"method"`
-	Baseline    *NetworkReq `json:"baseline,omitempty"`
-	Compare     *NetworkReq `json:"compare,omitempty"`
-	Changes     []string    `json:"changes,omitempty"`
+	Type         DiffType         `json:"type"`
+	URL          string           `json:"url"`
+	Method       string           `json:"method"`
+	Baseline     *NetworkReq      `json:"baseline,omitempty"`
+	Compare      *NetworkReq      `json:"compare,omitempty"`
+	Changes      []string         `json:"changes,omitempty"`
 	Significance DiffSignificance `json:"significance"`
 }
 
@@ -163,7 +163,7 @@ func (de *DiffEngine) CompareCaptures(baseline, compare *CaptureMetadata, baseli
 	}
 
 	if de.verbose {
-		fmt.Printf("Diff complete: %d added, %d removed, %d modified requests\n", 
+		fmt.Printf("Diff complete: %d added, %d removed, %d modified requests\n",
 			summary.AddedRequests, summary.RemovedRequests, summary.ModifiedRequests)
 	}
 
@@ -307,11 +307,11 @@ func (de *DiffEngine) findHeaderChanges(baseline, compare map[string]string) []s
 
 	// Check for important header changes
 	importantHeaders := []string{"User-Agent", "Accept", "Content-Type", "Authorization", "Cache-Control"}
-	
+
 	for _, header := range importantHeaders {
 		baseValue, baseExists := baseline[header]
 		compValue, compExists := compare[header]
-		
+
 		if baseExists && compExists && baseValue != compValue {
 			changes = append(changes, fmt.Sprintf("Header %s: %s -> %s", header, baseValue, compValue))
 		} else if baseExists && !compExists {
@@ -335,7 +335,7 @@ func (de *DiffEngine) compareResources(baseline, compare map[string]*NetworkReq)
 	// Compare each resource type
 	for resourceType, baseReqs := range baselineResources {
 		compReqs := compareResources[resourceType]
-		
+
 		// Calculate metrics for each group
 		baseMetrics := de.calculateResourceMetrics(baseReqs)
 		compMetrics := de.calculateResourceMetrics(compReqs)
@@ -381,7 +381,7 @@ func (de *DiffEngine) getResourceType(req *NetworkReq) string {
 	if strings.Contains(path, ".") {
 		parts := strings.Split(path, ".")
 		ext := strings.ToLower(parts[len(parts)-1])
-		
+
 		switch ext {
 		case "js", "mjs":
 			return "script"

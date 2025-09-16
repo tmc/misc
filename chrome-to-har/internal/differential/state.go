@@ -14,32 +14,32 @@ import (
 
 // StateTracker tracks page state changes during interactions
 type StateTracker struct {
-	mu          sync.RWMutex
-	states      []*PageState
+	mu           sync.RWMutex
+	states       []*PageState
 	currentState *PageState
-	verbose     bool
-	options     *StateTrackingOptions
+	verbose      bool
+	options      *StateTrackingOptions
 }
 
 // StateTrackingOptions configures state tracking behavior
 type StateTrackingOptions struct {
-	TrackDOM         bool          `json:"track_dom"`
-	TrackLocalStorage bool          `json:"track_local_storage"`
-	TrackSessionStorage bool        `json:"track_session_storage"`
-	TrackCookies     bool          `json:"track_cookies"`
-	TrackViewport    bool          `json:"track_viewport"`
-	TrackURL         bool          `json:"track_url"`
-	TrackPerformance bool          `json:"track_performance"`
-	SnapshotInterval time.Duration `json:"snapshot_interval"`
-	MaxSnapshots     int           `json:"max_snapshots"`
+	TrackDOM            bool          `json:"track_dom"`
+	TrackLocalStorage   bool          `json:"track_local_storage"`
+	TrackSessionStorage bool          `json:"track_session_storage"`
+	TrackCookies        bool          `json:"track_cookies"`
+	TrackViewport       bool          `json:"track_viewport"`
+	TrackURL            bool          `json:"track_url"`
+	TrackPerformance    bool          `json:"track_performance"`
+	SnapshotInterval    time.Duration `json:"snapshot_interval"`
+	MaxSnapshots        int           `json:"max_snapshots"`
 }
 
 // PageState represents the state of a page at a specific point in time
 type PageState struct {
-	ID              string                 `json:"id"`
-	Timestamp       time.Time              `json:"timestamp"`
-	URL             string                 `json:"url"`
-	Title           string                 `json:"title"`
+	ID              string                `json:"id"`
+	Timestamp       time.Time             `json:"timestamp"`
+	URL             string                `json:"url"`
+	Title           string                `json:"title"`
 	DOM             *DOMState             `json:"dom,omitempty"`
 	Storage         *StorageState         `json:"storage,omitempty"`
 	Cookies         []*CookieState        `json:"cookies,omitempty"`
@@ -79,10 +79,10 @@ type CookieState struct {
 
 // ViewportState represents viewport dimensions and scroll position
 type ViewportState struct {
-	Width      int64 `json:"width"`
-	Height     int64 `json:"height"`
-	ScrollX    int64 `json:"scroll_x"`
-	ScrollY    int64 `json:"scroll_y"`
+	Width       int64   `json:"width"`
+	Height      int64   `json:"height"`
+	ScrollX     int64   `json:"scroll_x"`
+	ScrollY     int64   `json:"scroll_y"`
 	DeviceScale float64 `json:"device_scale"`
 }
 
@@ -99,11 +99,11 @@ type PerformanceState struct {
 
 // NetworkActivityState represents network activity snapshot
 type NetworkActivityState struct {
-	ActiveRequests  int     `json:"active_requests"`
-	TotalRequests   int     `json:"total_requests"`
+	ActiveRequests   int     `json:"active_requests"`
+	TotalRequests    int     `json:"total_requests"`
 	TotalTransferred int64   `json:"total_transferred"`
-	AverageLatency  float64 `json:"average_latency"`
-	ErrorCount      int     `json:"error_count"`
+	AverageLatency   float64 `json:"average_latency"`
+	ErrorCount       int     `json:"error_count"`
 }
 
 // InteractionEvent represents a user interaction or system event
@@ -113,8 +113,8 @@ type InteractionEvent struct {
 	Timestamp   time.Time              `json:"timestamp"`
 	Target      string                 `json:"target,omitempty"`
 	Data        map[string]interface{} `json:"data,omitempty"`
-	BeforeState *PageState            `json:"before_state,omitempty"`
-	AfterState  *PageState            `json:"after_state,omitempty"`
+	BeforeState *PageState             `json:"before_state,omitempty"`
+	AfterState  *PageState             `json:"after_state,omitempty"`
 	Duration    time.Duration          `json:"duration"`
 }
 
@@ -134,15 +134,15 @@ const (
 func NewStateTracker(verbose bool, options *StateTrackingOptions) *StateTracker {
 	if options == nil {
 		options = &StateTrackingOptions{
-			TrackDOM:         true,
-			TrackLocalStorage: true,
+			TrackDOM:            true,
+			TrackLocalStorage:   true,
 			TrackSessionStorage: true,
-			TrackCookies:     true,
-			TrackViewport:    true,
-			TrackURL:         true,
-			TrackPerformance: true,
-			SnapshotInterval: 1 * time.Second,
-			MaxSnapshots:     100,
+			TrackCookies:        true,
+			TrackViewport:       true,
+			TrackURL:            true,
+			TrackPerformance:    true,
+			SnapshotInterval:    1 * time.Second,
+			MaxSnapshots:        100,
 		}
 	}
 
@@ -288,7 +288,7 @@ func (st *StateTracker) captureDOMState(ctx context.Context) (*DOMState, error) 
 	// Get key elements
 	keyElements := make(map[string]string)
 	selectors := []string{"title", "h1", "h2", "[data-testid]", "#main", ".main"}
-	
+
 	for _, selector := range selectors {
 		var text string
 		if err := chromedp.Run(ctx,
@@ -386,7 +386,7 @@ func (st *StateTracker) captureStorageState(ctx context.Context) (*StorageState,
 // captureCookies captures browser cookies
 func (st *StateTracker) captureCookies(ctx context.Context) ([]*CookieState, error) {
 	var cookieData []map[string]interface{}
-	
+
 	if err := chromedp.Run(ctx,
 		chromedp.Evaluate(`
 			document.cookie.split(';').map(cookie => {
@@ -412,7 +412,7 @@ func (st *StateTracker) captureCookies(ctx context.Context) ([]*CookieState, err
 // captureViewport captures viewport information
 func (st *StateTracker) captureViewport(ctx context.Context) (*ViewportState, error) {
 	var viewportData map[string]interface{}
-	
+
 	if err := chromedp.Run(ctx,
 		chromedp.Evaluate(`({
 			width: window.innerWidth,
@@ -437,7 +437,7 @@ func (st *StateTracker) captureViewport(ctx context.Context) (*ViewportState, er
 // capturePerformance captures performance metrics
 func (st *StateTracker) capturePerformance(ctx context.Context) (*PerformanceState, error) {
 	var perfData map[string]interface{}
-	
+
 	if err := chromedp.Run(ctx,
 		chromedp.Evaluate(`
 			(function() {
@@ -457,23 +457,23 @@ func (st *StateTracker) capturePerformance(ctx context.Context) (*PerformanceSta
 	}
 
 	perf := &PerformanceState{}
-	
+
 	if navStart, ok := perfData["navigationStart"].(float64); ok && navStart > 0 {
 		perf.NavigationStart = time.Unix(int64(navStart/1000), 0)
 	}
-	
+
 	if domReady, ok := perfData["domReady"].(float64); ok && domReady > 0 {
 		perf.DOMReady = time.Unix(int64(domReady/1000), 0)
 	}
-	
+
 	if loadComplete, ok := perfData["loadComplete"].(float64); ok && loadComplete > 0 {
 		perf.LoadComplete = time.Unix(int64(loadComplete/1000), 0)
 	}
-	
+
 	if jsHeap, ok := perfData["jsHeapSize"].(float64); ok {
 		perf.JSHeapSize = int64(jsHeap)
 	}
-	
+
 	if memUsage, ok := perfData["memoryUsage"].(float64); ok {
 		perf.MemoryUsage = int64(memUsage)
 	}
@@ -492,7 +492,7 @@ func (st *StateTracker) GetCurrentState() *PageState {
 func (st *StateTracker) GetStates() []*PageState {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
-	
+
 	states := make([]*PageState, len(st.states))
 	copy(states, st.states)
 	return states
@@ -502,7 +502,7 @@ func (st *StateTracker) GetStates() []*PageState {
 func (st *StateTracker) GetStateByID(id string) *PageState {
 	st.mu.RLock()
 	defer st.mu.RUnlock()
-	
+
 	for _, state := range st.states {
 		if state.ID == id {
 			return state
@@ -548,8 +548,8 @@ func (st *StateTracker) CompareStates(state1, state2 *PageState) []string {
 	// Compare viewport
 	if state1.Viewport != nil && state2.Viewport != nil {
 		if state1.Viewport.ScrollX != state2.Viewport.ScrollX || state1.Viewport.ScrollY != state2.Viewport.ScrollY {
-			differences = append(differences, fmt.Sprintf("Scroll position: (%d,%d) -> (%d,%d)", 
-				state1.Viewport.ScrollX, state1.Viewport.ScrollY, 
+			differences = append(differences, fmt.Sprintf("Scroll position: (%d,%d) -> (%d,%d)",
+				state1.Viewport.ScrollX, state1.Viewport.ScrollY,
 				state2.Viewport.ScrollX, state2.Viewport.ScrollY))
 		}
 	}

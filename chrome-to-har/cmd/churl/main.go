@@ -486,7 +486,7 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 	// Add blocking options if enabled
 	if opts.blockingEnabled {
 		browserOpts = append(browserOpts, browser.WithBlocking(true))
-		
+
 		if opts.blockingVerbose {
 			browserOpts = append(browserOpts, browser.WithBlockingVerbose(true))
 		}
@@ -738,10 +738,10 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 
 // browserCandidate represents a potential browser installation
 type browserCandidate struct {
-	path       string
-	name       string
-	lastUsed   time.Time
-	priority   int // lower is better
+	path     string
+	name     string
+	lastUsed time.Time
+	priority int // lower is better
 }
 
 // detectChromePath attempts to find Chrome or any Chromium-based browser in common installation locations
@@ -909,14 +909,14 @@ func getLastUsedTime(browserPath string, browserName string) time.Time {
 
 	// Map browser names to their profile directories
 	profilePaths := map[string][]string{
-		"Google Chrome":        {filepath.Join(home, "Library", "Application Support", "Google", "Chrome")},
-		"Chrome Canary":        {filepath.Join(home, "Library", "Application Support", "Google", "Chrome Canary")},
-		"Brave Browser":        {filepath.Join(home, "Library", "Application Support", "BraveSoftware", "Brave-Browser")},
-		"Microsoft Edge":       {filepath.Join(home, "Library", "Application Support", "Microsoft Edge")},
-		"Chromium":            {filepath.Join(home, "Library", "Application Support", "Chromium")},
-		"Vivaldi":             {filepath.Join(home, "Library", "Application Support", "Vivaldi")},
-		"Opera":               {filepath.Join(home, "Library", "Application Support", "com.operasoftware.Opera")},
-		"Arc Browser":         {filepath.Join(home, "Library", "Application Support", "Arc")},
+		"Google Chrome":  {filepath.Join(home, "Library", "Application Support", "Google", "Chrome")},
+		"Chrome Canary":  {filepath.Join(home, "Library", "Application Support", "Google", "Chrome Canary")},
+		"Brave Browser":  {filepath.Join(home, "Library", "Application Support", "BraveSoftware", "Brave-Browser")},
+		"Microsoft Edge": {filepath.Join(home, "Library", "Application Support", "Microsoft Edge")},
+		"Chromium":       {filepath.Join(home, "Library", "Application Support", "Chromium")},
+		"Vivaldi":        {filepath.Join(home, "Library", "Application Support", "Vivaldi")},
+		"Opera":          {filepath.Join(home, "Library", "Application Support", "com.operasoftware.Opera")},
+		"Arc Browser":    {filepath.Join(home, "Library", "Application Support", "Arc")},
 	}
 
 	// Check for User-level installations
@@ -969,14 +969,14 @@ func findBrowsersViaMDFind(alreadyFound map[string]bool) []browserCandidate {
 		execName string
 		priority int
 	}{
-		"com.google.Chrome":         {"Google Chrome", "Google Chrome", 1},
-		"com.google.Chrome.canary":  {"Chrome Canary", "Google Chrome Canary", 2},
-		"com.brave.Browser":         {"Brave Browser", "Brave Browser", 3},
-		"org.chromium.Chromium":     {"Chromium", "Chromium", 4},
-		"com.microsoft.edgemac":     {"Microsoft Edge", "Microsoft Edge", 5},
+		"com.google.Chrome":          {"Google Chrome", "Google Chrome", 1},
+		"com.google.Chrome.canary":   {"Chrome Canary", "Google Chrome Canary", 2},
+		"com.brave.Browser":          {"Brave Browser", "Brave Browser", 3},
+		"org.chromium.Chromium":      {"Chromium", "Chromium", 4},
+		"com.microsoft.edgemac":      {"Microsoft Edge", "Microsoft Edge", 5},
 		"company.thebrowser.Browser": {"Arc Browser", "Arc", 6},
-		"com.vivaldi.Vivaldi":       {"Vivaldi", "Vivaldi", 7},
-		"com.operasoftware.Opera":   {"Opera", "Opera", 8},
+		"com.vivaldi.Vivaldi":        {"Vivaldi", "Vivaldi", 7},
+		"com.operasoftware.Opera":    {"Opera", "Opera", 8},
 	}
 
 	for bundleID, info := range bundleIDs {
@@ -1206,11 +1206,11 @@ func handleWebSocketOperations(ctx context.Context, b *browser.Browser, opts opt
 
 		page.SetWebSocketFrameHandler(
 			func(conn *browser.WebSocketConnection, frame *browser.WebSocketFrame) {
-				log.Printf("WebSocket frame received from %s: %s (%d bytes)", 
+				log.Printf("WebSocket frame received from %s: %s (%d bytes)",
 					conn.URL, frame.Type, frame.Size)
 			},
 			func(conn *browser.WebSocketConnection, frame *browser.WebSocketFrame) {
-				log.Printf("WebSocket frame sent to %s: %s (%d bytes)", 
+				log.Printf("WebSocket frame sent to %s: %s (%d bytes)",
 					conn.URL, frame.Type, frame.Size)
 			},
 		)
@@ -1220,16 +1220,16 @@ func handleWebSocketOperations(ctx context.Context, b *browser.Browser, opts opt
 	if opts.webSocketWaitFor != "" {
 		condition := browser.WebSocketWaitCondition(opts.webSocketWaitFor)
 		timeout := time.Duration(opts.webSocketTimeout) * time.Second
-		
+
 		waitOpts := []browser.WebSocketWaitOption{
 			browser.WithWebSocketWaitTimeout(timeout),
 			browser.WithURLPattern(opts.webSocketURLPattern),
 		}
-		
+
 		if opts.webSocketDataPattern != "" {
 			waitOpts = append(waitOpts, browser.WithDataPattern(opts.webSocketDataPattern))
 		}
-		
+
 		if opts.webSocketDirection != "" {
 			waitOpts = append(waitOpts, browser.WithDirection(opts.webSocketDirection))
 		}
@@ -1262,7 +1262,7 @@ func handleWebSocketOperations(ctx context.Context, b *browser.Browser, opts opt
 			if err := page.SendWebSocketMessage(conn.ID, message); err != nil {
 				return errors.Wrapf(err, "failed to send WebSocket message: %s", message)
 			}
-			
+
 			if opts.verbose {
 				log.Printf("Sent WebSocket message to %s: %s", conn.URL, message)
 			}
@@ -1287,7 +1287,7 @@ func handleWebSocketOperations(ctx context.Context, b *browser.Browser, opts opt
 // generateWebSocketOutput generates WebSocket output to a file
 func generateWebSocketOutput(page *browser.Page, opts options) error {
 	connections := page.GetWebSocketConnections()
-	
+
 	// Create WebSocket HAR exporter
 	var filter *browser.WebSocketHARFilter
 	if opts.webSocketURLPattern != "*" || opts.webSocketDirection != "" {
@@ -1298,17 +1298,17 @@ func generateWebSocketOutput(page *browser.Page, opts options) error {
 	}
 
 	exporter := browser.NewWebSocketHARExporter(filter)
-	
+
 	// Generate output based on file extension
 	var output []byte
 	var err error
-	
+
 	if strings.HasSuffix(opts.webSocketOutputFile, ".json") {
 		output, err = exporter.ExportWithWebSocketData(connections)
 	} else {
 		output, err = exporter.Export(connections)
 	}
-	
+
 	if err != nil {
 		return errors.Wrap(err, "failed to export WebSocket data")
 	}
@@ -1328,21 +1328,21 @@ func generateWebSocketOutput(page *browser.Page, opts options) error {
 // showWebSocketStats displays WebSocket statistics
 func showWebSocketStats(page *browser.Page, verbose bool) {
 	stats := page.GetWebSocketStats()
-	
+
 	fmt.Printf("\n%s\n", strings.Repeat("=", 50))
 	fmt.Printf("WebSocket Statistics\n")
 	fmt.Printf("%s\n", strings.Repeat("=", 50))
-	
+
 	fmt.Printf("Active Connections: %v\n", stats["active_connections"])
 	fmt.Printf("Total Bytes Sent: %v\n", stats["total_bytes_sent"])
 	fmt.Printf("Total Bytes Received: %v\n", stats["total_bytes_received"])
 	fmt.Printf("Total Messages Sent: %v\n", stats["total_messages_sent"])
 	fmt.Printf("Total Messages Received: %v\n", stats["total_messages_received"])
-	
+
 	if verbose {
 		fmt.Printf("\nConnection Details:\n")
 		fmt.Printf("%s\n", strings.Repeat("-", 30))
-		
+
 		connections := page.GetWebSocketConnections()
 		for id, conn := range connections {
 			fmt.Printf("Connection %s:\n", id)

@@ -26,73 +26,73 @@ type WebSocketPerformanceMonitor struct {
 // WebSocketPerformanceMetrics contains comprehensive performance metrics
 type WebSocketPerformanceMetrics struct {
 	// Connection metrics
-	ConnectionLatency     time.Duration `json:"connection_latency"`
-	ConnectionUptime      time.Duration `json:"connection_uptime"`
-	ReconnectionCount     int           `json:"reconnection_count"`
-	ConnectionSuccess     float64       `json:"connection_success_rate"`
-	
+	ConnectionLatency time.Duration `json:"connection_latency"`
+	ConnectionUptime  time.Duration `json:"connection_uptime"`
+	ReconnectionCount int           `json:"reconnection_count"`
+	ConnectionSuccess float64       `json:"connection_success_rate"`
+
 	// Message metrics
-	MessageLatency        LatencyMetrics `json:"message_latency"`
-	MessageThroughput     float64        `json:"message_throughput"` // messages per second
-	DataThroughput        float64        `json:"data_throughput"`    // bytes per second
-	MessageLossRate       float64        `json:"message_loss_rate"`
-	
+	MessageLatency    LatencyMetrics `json:"message_latency"`
+	MessageThroughput float64        `json:"message_throughput"` // messages per second
+	DataThroughput    float64        `json:"data_throughput"`    // bytes per second
+	MessageLossRate   float64        `json:"message_loss_rate"`
+
 	// Frame metrics
-	FrameLatency          LatencyMetrics `json:"frame_latency"`
-	FrameSize             SizeMetrics    `json:"frame_size"`
-	FrameErrorRate        float64        `json:"frame_error_rate"`
-	
+	FrameLatency   LatencyMetrics `json:"frame_latency"`
+	FrameSize      SizeMetrics    `json:"frame_size"`
+	FrameErrorRate float64        `json:"frame_error_rate"`
+
 	// Network metrics
-	BytesSent             int64     `json:"bytes_sent"`
-	BytesReceived         int64     `json:"bytes_received"`
-	MessagesSent          int       `json:"messages_sent"`
-	MessagesReceived      int       `json:"messages_received"`
-	
+	BytesSent        int64 `json:"bytes_sent"`
+	BytesReceived    int64 `json:"bytes_received"`
+	MessagesSent     int   `json:"messages_sent"`
+	MessagesReceived int   `json:"messages_received"`
+
 	// Performance indicators
-	CPU                   float64   `json:"cpu_usage"`
-	Memory                int64     `json:"memory_usage"`
-	
+	CPU    float64 `json:"cpu_usage"`
+	Memory int64   `json:"memory_usage"`
+
 	// Quality metrics
-	Jitter                time.Duration `json:"jitter"`
-	PacketLoss            float64       `json:"packet_loss"`
-	
+	Jitter     time.Duration `json:"jitter"`
+	PacketLoss float64       `json:"packet_loss"`
+
 	// Timestamps
-	StartTime             time.Time `json:"start_time"`
-	EndTime               time.Time `json:"end_time"`
-	Duration              time.Duration `json:"duration"`
-	
+	StartTime time.Time     `json:"start_time"`
+	EndTime   time.Time     `json:"end_time"`
+	Duration  time.Duration `json:"duration"`
+
 	// Connection details
-	ActiveConnections     int       `json:"active_connections"`
-	TotalConnections      int       `json:"total_connections"`
-	FailedConnections     int       `json:"failed_connections"`
-	
+	ActiveConnections int `json:"active_connections"`
+	TotalConnections  int `json:"total_connections"`
+	FailedConnections int `json:"failed_connections"`
+
 	// Additional metrics
-	AverageRTT            time.Duration `json:"average_rtt"`
-	MinRTT                time.Duration `json:"min_rtt"`
-	MaxRTT                time.Duration `json:"max_rtt"`
-	StdDevRTT             time.Duration `json:"stddev_rtt"`
+	AverageRTT time.Duration `json:"average_rtt"`
+	MinRTT     time.Duration `json:"min_rtt"`
+	MaxRTT     time.Duration `json:"max_rtt"`
+	StdDevRTT  time.Duration `json:"stddev_rtt"`
 }
 
 // LatencyMetrics contains latency statistics
 type LatencyMetrics struct {
-	Min       time.Duration `json:"min"`
-	Max       time.Duration `json:"max"`
-	Mean      time.Duration `json:"mean"`
-	Median    time.Duration `json:"median"`
-	P95       time.Duration `json:"p95"`
-	P99       time.Duration `json:"p99"`
-	StdDev    time.Duration `json:"stddev"`
-	Count     int           `json:"count"`
+	Min    time.Duration `json:"min"`
+	Max    time.Duration `json:"max"`
+	Mean   time.Duration `json:"mean"`
+	Median time.Duration `json:"median"`
+	P95    time.Duration `json:"p95"`
+	P99    time.Duration `json:"p99"`
+	StdDev time.Duration `json:"stddev"`
+	Count  int           `json:"count"`
 }
 
 // SizeMetrics contains size statistics
 type SizeMetrics struct {
-	Min     int64   `json:"min"`
-	Max     int64   `json:"max"`
-	Mean    float64 `json:"mean"`
-	Median  int64   `json:"median"`
-	Total   int64   `json:"total"`
-	Count   int     `json:"count"`
+	Min    int64   `json:"min"`
+	Max    int64   `json:"max"`
+	Mean   float64 `json:"mean"`
+	Median int64   `json:"median"`
+	Total  int64   `json:"total"`
+	Count  int     `json:"count"`
 }
 
 // WebSocketPerformanceSample represents a single performance sample
@@ -109,25 +109,25 @@ type WebSocketPerformanceSample struct {
 
 // WebSocketPerformanceAlert represents a performance alert
 type WebSocketPerformanceAlert struct {
-	Type        string        `json:"type"`
-	Severity    string        `json:"severity"` // "low", "medium", "high", "critical"
-	Message     string        `json:"message"`
-	Timestamp   time.Time     `json:"timestamp"`
-	Value       interface{}   `json:"value"`
-	Threshold   interface{}   `json:"threshold"`
-	Connection  string        `json:"connection,omitempty"`
+	Type       string      `json:"type"`
+	Severity   string      `json:"severity"` // "low", "medium", "high", "critical"
+	Message    string      `json:"message"`
+	Timestamp  time.Time   `json:"timestamp"`
+	Value      interface{} `json:"value"`
+	Threshold  interface{} `json:"threshold"`
+	Connection string      `json:"connection,omitempty"`
 }
 
 // WebSocketPerformanceThresholds defines performance thresholds
 type WebSocketPerformanceThresholds struct {
-	MaxConnectionLatency   time.Duration `json:"max_connection_latency"`
-	MaxMessageLatency      time.Duration `json:"max_message_latency"`
-	MinThroughput          float64       `json:"min_throughput"`
-	MaxErrorRate           float64       `json:"max_error_rate"`
-	MaxCPUUsage            float64       `json:"max_cpu_usage"`
-	MaxMemoryUsage         int64         `json:"max_memory_usage"`
-	MaxJitter              time.Duration `json:"max_jitter"`
-	MaxPacketLoss          float64       `json:"max_packet_loss"`
+	MaxConnectionLatency time.Duration `json:"max_connection_latency"`
+	MaxMessageLatency    time.Duration `json:"max_message_latency"`
+	MinThroughput        float64       `json:"min_throughput"`
+	MaxErrorRate         float64       `json:"max_error_rate"`
+	MaxCPUUsage          float64       `json:"max_cpu_usage"`
+	MaxMemoryUsage       int64         `json:"max_memory_usage"`
+	MaxJitter            time.Duration `json:"max_jitter"`
+	MaxPacketLoss        float64       `json:"max_packet_loss"`
 }
 
 // NewWebSocketPerformanceMonitor creates a new performance monitor
@@ -146,18 +146,18 @@ func NewWebSocketPerformanceMonitor(page *Page) *WebSocketPerformanceMonitor {
 func (wpm *WebSocketPerformanceMonitor) Start() error {
 	wpm.mu.Lock()
 	defer wpm.mu.Unlock()
-	
+
 	if wpm.enabled {
 		return nil
 	}
-	
+
 	wpm.enabled = true
 	wpm.startTime = time.Now()
 	wpm.metrics.StartTime = wpm.startTime
-	
+
 	// Start sampling goroutine
 	go wpm.sampleLoop()
-	
+
 	return nil
 }
 
@@ -165,17 +165,17 @@ func (wpm *WebSocketPerformanceMonitor) Start() error {
 func (wpm *WebSocketPerformanceMonitor) Stop() error {
 	wpm.mu.Lock()
 	defer wpm.mu.Unlock()
-	
+
 	if !wpm.enabled {
 		return nil
 	}
-	
+
 	wpm.enabled = false
 	close(wpm.stopChan)
-	
+
 	// Calculate final metrics
 	wpm.calculateFinalMetrics()
-	
+
 	return nil
 }
 
@@ -183,7 +183,7 @@ func (wpm *WebSocketPerformanceMonitor) Stop() error {
 func (wpm *WebSocketPerformanceMonitor) sampleLoop() {
 	ticker := time.NewTicker(wpm.sampleInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-wpm.stopChan:
@@ -198,52 +198,52 @@ func (wpm *WebSocketPerformanceMonitor) sampleLoop() {
 func (wpm *WebSocketPerformanceMonitor) takeSample() {
 	wpm.mu.Lock()
 	defer wpm.mu.Unlock()
-	
+
 	if !wpm.enabled {
 		return
 	}
-	
+
 	connections := wpm.page.GetWebSocketConnections()
 	_ = wpm.page.GetWebSocketStats() // stats may be used in future versions
-	
+
 	sample := WebSocketPerformanceSample{
 		Timestamp:       time.Now(),
 		ConnectionCount: len(connections),
 	}
-	
+
 	// Calculate throughput
 	if len(wpm.samples) > 0 {
 		lastSample := wpm.samples[len(wpm.samples)-1]
 		timeDiff := sample.Timestamp.Sub(lastSample.Timestamp).Seconds()
-		
+
 		if timeDiff > 0 {
 			// Calculate bytes per second
 			totalBytes := int64(0)
 			totalMessages := 0
-			
+
 			for _, conn := range connections {
 				totalBytes += conn.BytesSent + conn.BytesReceived
 				totalMessages += conn.MessagesSent + conn.MessagesReceived
 			}
-			
+
 			sample.BytesPerSecond = float64(totalBytes) / timeDiff
 			sample.MessagesPerSecond = float64(totalMessages) / timeDiff
 		}
 	}
-	
+
 	// Calculate message latency (simplified)
 	sample.MessageLatency = wpm.calculateCurrentLatency(connections)
-	
+
 	// Get system metrics (simplified)
 	sample.CPU = wpm.getCPUUsage()
 	sample.Memory = wpm.getMemoryUsage()
-	
+
 	// Calculate error rate
 	sample.ErrorRate = wpm.calculateErrorRate(connections)
-	
+
 	// Add sample
 	wpm.samples = append(wpm.samples, sample)
-	
+
 	// Limit sample count
 	if len(wpm.samples) > wpm.maxSamples {
 		wpm.samples = wpm.samples[1:]
@@ -253,12 +253,12 @@ func (wpm *WebSocketPerformanceMonitor) takeSample() {
 // calculateCurrentLatency calculates current message latency
 func (wpm *WebSocketPerformanceMonitor) calculateCurrentLatency(connections map[string]*WebSocketConnection) time.Duration {
 	var latencies []time.Duration
-	
+
 	for _, conn := range connections {
 		conn.mu.RLock()
 		frames := conn.Frames
 		conn.mu.RUnlock()
-		
+
 		// Find recent ping-pong pairs
 		for i := len(frames) - 1; i > 0; i-- {
 			if frames[i].Type == "pong" && frames[i-1].Type == "ping" {
@@ -270,11 +270,11 @@ func (wpm *WebSocketPerformanceMonitor) calculateCurrentLatency(connections map[
 			}
 		}
 	}
-	
+
 	if len(latencies) == 0 {
 		return 0
 	}
-	
+
 	// Return average latency
 	var total time.Duration
 	for _, latency := range latencies {
@@ -301,12 +301,12 @@ func (wpm *WebSocketPerformanceMonitor) getMemoryUsage() int64 {
 func (wpm *WebSocketPerformanceMonitor) calculateErrorRate(connections map[string]*WebSocketConnection) float64 {
 	totalFrames := 0
 	errorFrames := 0
-	
+
 	for _, conn := range connections {
 		conn.mu.RLock()
 		frames := conn.Frames
 		conn.mu.RUnlock()
-		
+
 		for _, frame := range frames {
 			totalFrames++
 			if frame.Type == "error" {
@@ -314,11 +314,11 @@ func (wpm *WebSocketPerformanceMonitor) calculateErrorRate(connections map[strin
 			}
 		}
 	}
-	
+
 	if totalFrames == 0 {
 		return 0
 	}
-	
+
 	return float64(errorFrames) / float64(totalFrames) * 100
 }
 
@@ -326,48 +326,48 @@ func (wpm *WebSocketPerformanceMonitor) calculateErrorRate(connections map[strin
 func (wpm *WebSocketPerformanceMonitor) calculateFinalMetrics() {
 	wpm.metrics.EndTime = time.Now()
 	wpm.metrics.Duration = wpm.metrics.EndTime.Sub(wpm.metrics.StartTime)
-	
+
 	connections := wpm.page.GetWebSocketConnections()
-	
+
 	// Calculate connection metrics
 	wpm.metrics.TotalConnections = len(connections)
 	wpm.metrics.ActiveConnections = 0
 	wpm.metrics.FailedConnections = 0
-	
+
 	var connectionLatencies []time.Duration
 	var uptimes []time.Duration
-	
+
 	for _, conn := range connections {
 		connectionLatencies = append(connectionLatencies, conn.ConnectionLatency)
-		
+
 		if conn.State == "open" {
 			wpm.metrics.ActiveConnections++
 			uptimes = append(uptimes, time.Since(conn.ConnectedAt))
 		} else if conn.State == "closed" && conn.CloseCode != 0 {
 			wpm.metrics.FailedConnections++
 		}
-		
+
 		if conn.DisconnectedAt != nil {
 			uptimes = append(uptimes, conn.DisconnectedAt.Sub(conn.ConnectedAt))
 		}
-		
+
 		wpm.metrics.BytesSent += conn.BytesSent
 		wpm.metrics.BytesReceived += conn.BytesReceived
 		wpm.metrics.MessagesSent += conn.MessagesSent
 		wpm.metrics.MessagesReceived += conn.MessagesReceived
 	}
-	
+
 	// Calculate connection success rate
 	if wpm.metrics.TotalConnections > 0 {
 		successfulConnections := wpm.metrics.TotalConnections - wpm.metrics.FailedConnections
 		wpm.metrics.ConnectionSuccess = float64(successfulConnections) / float64(wpm.metrics.TotalConnections) * 100
 	}
-	
+
 	// Calculate connection latency
 	if len(connectionLatencies) > 0 {
 		wpm.metrics.ConnectionLatency = wpm.calculateLatencyMetrics(connectionLatencies).Mean
 	}
-	
+
 	// Calculate connection uptime
 	if len(uptimes) > 0 {
 		var totalUptime time.Duration
@@ -376,19 +376,19 @@ func (wpm *WebSocketPerformanceMonitor) calculateFinalMetrics() {
 		}
 		wpm.metrics.ConnectionUptime = totalUptime / time.Duration(len(uptimes))
 	}
-	
+
 	// Calculate throughput
 	if wpm.metrics.Duration > 0 {
 		wpm.metrics.MessageThroughput = float64(wpm.metrics.MessagesSent+wpm.metrics.MessagesReceived) / wpm.metrics.Duration.Seconds()
 		wpm.metrics.DataThroughput = float64(wpm.metrics.BytesSent+wpm.metrics.BytesReceived) / wpm.metrics.Duration.Seconds()
 	}
-	
+
 	// Calculate latency metrics from samples
 	wpm.calculateLatencyMetricsFromSamples()
-	
+
 	// Calculate RTT metrics
 	wpm.calculateRTTMetrics(connections)
-	
+
 	// Calculate jitter
 	wpm.calculateJitter()
 }
@@ -398,32 +398,32 @@ func (wpm *WebSocketPerformanceMonitor) calculateLatencyMetrics(latencies []time
 	if len(latencies) == 0 {
 		return LatencyMetrics{}
 	}
-	
+
 	// Sort latencies
 	sort.Slice(latencies, func(i, j int) bool {
 		return latencies[i] < latencies[j]
 	})
-	
+
 	metrics := LatencyMetrics{
 		Min:   latencies[0],
 		Max:   latencies[len(latencies)-1],
 		Count: len(latencies),
 	}
-	
+
 	// Calculate mean
 	var total time.Duration
 	for _, latency := range latencies {
 		total += latency
 	}
 	metrics.Mean = total / time.Duration(len(latencies))
-	
+
 	// Calculate median
 	if len(latencies)%2 == 0 {
 		metrics.Median = (latencies[len(latencies)/2-1] + latencies[len(latencies)/2]) / 2
 	} else {
 		metrics.Median = latencies[len(latencies)/2]
 	}
-	
+
 	// Calculate percentiles
 	if len(latencies) > 0 {
 		p95Index := int(0.95 * float64(len(latencies)))
@@ -431,14 +431,14 @@ func (wpm *WebSocketPerformanceMonitor) calculateLatencyMetrics(latencies []time
 			p95Index = len(latencies) - 1
 		}
 		metrics.P95 = latencies[p95Index]
-		
+
 		p99Index := int(0.99 * float64(len(latencies)))
 		if p99Index >= len(latencies) {
 			p99Index = len(latencies) - 1
 		}
 		metrics.P99 = latencies[p99Index]
 	}
-	
+
 	// Calculate standard deviation
 	var variance time.Duration
 	for _, latency := range latencies {
@@ -446,32 +446,32 @@ func (wpm *WebSocketPerformanceMonitor) calculateLatencyMetrics(latencies []time
 		variance += diff * diff / time.Duration(len(latencies))
 	}
 	metrics.StdDev = time.Duration(float64(variance) * 0.5) // Simplified sqrt
-	
+
 	return metrics
 }
 
 // calculateLatencyMetricsFromSamples calculates latency metrics from samples
 func (wpm *WebSocketPerformanceMonitor) calculateLatencyMetricsFromSamples() {
 	var messageLatencies []time.Duration
-	
+
 	for _, sample := range wpm.samples {
 		if sample.MessageLatency > 0 {
 			messageLatencies = append(messageLatencies, sample.MessageLatency)
 		}
 	}
-	
+
 	wpm.metrics.MessageLatency = wpm.calculateLatencyMetrics(messageLatencies)
 }
 
 // calculateRTTMetrics calculates RTT metrics
 func (wpm *WebSocketPerformanceMonitor) calculateRTTMetrics(connections map[string]*WebSocketConnection) {
 	var rtts []time.Duration
-	
+
 	for _, conn := range connections {
 		conn.mu.RLock()
 		frames := conn.Frames
 		conn.mu.RUnlock()
-		
+
 		// Find ping-pong pairs
 		for i := 1; i < len(frames); i++ {
 			if frames[i-1].Type == "ping" && frames[i].Type == "pong" {
@@ -482,21 +482,21 @@ func (wpm *WebSocketPerformanceMonitor) calculateRTTMetrics(connections map[stri
 			}
 		}
 	}
-	
+
 	if len(rtts) > 0 {
 		sort.Slice(rtts, func(i, j int) bool {
 			return rtts[i] < rtts[j]
 		})
-		
+
 		wpm.metrics.MinRTT = rtts[0]
 		wpm.metrics.MaxRTT = rtts[len(rtts)-1]
-		
+
 		var total time.Duration
 		for _, rtt := range rtts {
 			total += rtt
 		}
 		wpm.metrics.AverageRTT = total / time.Duration(len(rtts))
-		
+
 		// Calculate standard deviation
 		var variance time.Duration
 		for _, rtt := range rtts {
@@ -510,17 +510,17 @@ func (wpm *WebSocketPerformanceMonitor) calculateRTTMetrics(connections map[stri
 // calculateJitter calculates jitter from RTT measurements
 func (wpm *WebSocketPerformanceMonitor) calculateJitter() {
 	var rtts []time.Duration
-	
+
 	for _, sample := range wpm.samples {
 		if sample.MessageLatency > 0 {
 			rtts = append(rtts, sample.MessageLatency)
 		}
 	}
-	
+
 	if len(rtts) < 2 {
 		return
 	}
-	
+
 	// Calculate jitter as average of absolute differences
 	var jitterSum time.Duration
 	for i := 1; i < len(rtts); i++ {
@@ -530,7 +530,7 @@ func (wpm *WebSocketPerformanceMonitor) calculateJitter() {
 		}
 		jitterSum += diff
 	}
-	
+
 	wpm.metrics.Jitter = jitterSum / time.Duration(len(rtts)-1)
 }
 
@@ -538,7 +538,7 @@ func (wpm *WebSocketPerformanceMonitor) calculateJitter() {
 func (wpm *WebSocketPerformanceMonitor) GetMetrics() *WebSocketPerformanceMetrics {
 	wpm.mu.RLock()
 	defer wpm.mu.RUnlock()
-	
+
 	// Create a copy of metrics
 	metrics := *wpm.metrics
 	return &metrics
@@ -548,7 +548,7 @@ func (wpm *WebSocketPerformanceMonitor) GetMetrics() *WebSocketPerformanceMetric
 func (wpm *WebSocketPerformanceMonitor) GetSamples() []WebSocketPerformanceSample {
 	wpm.mu.RLock()
 	defer wpm.mu.RUnlock()
-	
+
 	// Create a copy of samples
 	samples := make([]WebSocketPerformanceSample, len(wpm.samples))
 	copy(samples, wpm.samples)
@@ -559,15 +559,15 @@ func (wpm *WebSocketPerformanceMonitor) GetSamples() []WebSocketPerformanceSampl
 func (wpm *WebSocketPerformanceMonitor) CheckThresholds(thresholds *WebSocketPerformanceThresholds) []WebSocketPerformanceAlert {
 	wpm.mu.RLock()
 	defer wpm.mu.RUnlock()
-	
+
 	var alerts []WebSocketPerformanceAlert
-	
+
 	if len(wpm.samples) == 0 {
 		return alerts
 	}
-	
+
 	currentSample := wpm.samples[len(wpm.samples)-1]
-	
+
 	// Check connection latency
 	if thresholds.MaxConnectionLatency > 0 && wpm.metrics.ConnectionLatency > thresholds.MaxConnectionLatency {
 		alerts = append(alerts, WebSocketPerformanceAlert{
@@ -579,7 +579,7 @@ func (wpm *WebSocketPerformanceMonitor) CheckThresholds(thresholds *WebSocketPer
 			Threshold: thresholds.MaxConnectionLatency,
 		})
 	}
-	
+
 	// Check message latency
 	if thresholds.MaxMessageLatency > 0 && currentSample.MessageLatency > thresholds.MaxMessageLatency {
 		alerts = append(alerts, WebSocketPerformanceAlert{
@@ -591,7 +591,7 @@ func (wpm *WebSocketPerformanceMonitor) CheckThresholds(thresholds *WebSocketPer
 			Threshold: thresholds.MaxMessageLatency,
 		})
 	}
-	
+
 	// Check throughput
 	if thresholds.MinThroughput > 0 && currentSample.MessagesPerSecond < thresholds.MinThroughput {
 		alerts = append(alerts, WebSocketPerformanceAlert{
@@ -603,7 +603,7 @@ func (wpm *WebSocketPerformanceMonitor) CheckThresholds(thresholds *WebSocketPer
 			Threshold: thresholds.MinThroughput,
 		})
 	}
-	
+
 	// Check error rate
 	if thresholds.MaxErrorRate > 0 && currentSample.ErrorRate > thresholds.MaxErrorRate {
 		alerts = append(alerts, WebSocketPerformanceAlert{
@@ -615,7 +615,7 @@ func (wpm *WebSocketPerformanceMonitor) CheckThresholds(thresholds *WebSocketPer
 			Threshold: thresholds.MaxErrorRate,
 		})
 	}
-	
+
 	// Check CPU usage
 	if thresholds.MaxCPUUsage > 0 && currentSample.CPU > thresholds.MaxCPUUsage {
 		alerts = append(alerts, WebSocketPerformanceAlert{
@@ -627,7 +627,7 @@ func (wpm *WebSocketPerformanceMonitor) CheckThresholds(thresholds *WebSocketPer
 			Threshold: thresholds.MaxCPUUsage,
 		})
 	}
-	
+
 	// Check memory usage
 	if thresholds.MaxMemoryUsage > 0 && currentSample.Memory > thresholds.MaxMemoryUsage {
 		alerts = append(alerts, WebSocketPerformanceAlert{
@@ -639,7 +639,7 @@ func (wpm *WebSocketPerformanceMonitor) CheckThresholds(thresholds *WebSocketPer
 			Threshold: thresholds.MaxMemoryUsage,
 		})
 	}
-	
+
 	// Check jitter
 	if thresholds.MaxJitter > 0 && wpm.metrics.Jitter > thresholds.MaxJitter {
 		alerts = append(alerts, WebSocketPerformanceAlert{
@@ -651,7 +651,7 @@ func (wpm *WebSocketPerformanceMonitor) CheckThresholds(thresholds *WebSocketPer
 			Threshold: thresholds.MaxJitter,
 		})
 	}
-	
+
 	return alerts
 }
 
@@ -659,7 +659,7 @@ func (wpm *WebSocketPerformanceMonitor) CheckThresholds(thresholds *WebSocketPer
 func (wpm *WebSocketPerformanceMonitor) GenerateReport() *WebSocketPerformanceReport {
 	wpm.mu.RLock()
 	defer wpm.mu.RUnlock()
-	
+
 	return &WebSocketPerformanceReport{
 		Metrics: *wpm.metrics,
 		Samples: wpm.samples,
@@ -669,18 +669,18 @@ func (wpm *WebSocketPerformanceMonitor) GenerateReport() *WebSocketPerformanceRe
 
 // WebSocketPerformanceReport represents a comprehensive performance report
 type WebSocketPerformanceReport struct {
-	Metrics WebSocketPerformanceMetrics   `json:"metrics"`
-	Samples []WebSocketPerformanceSample  `json:"samples"`
-	Summary WebSocketPerformanceSummary   `json:"summary"`
+	Metrics WebSocketPerformanceMetrics  `json:"metrics"`
+	Samples []WebSocketPerformanceSample `json:"samples"`
+	Summary WebSocketPerformanceSummary  `json:"summary"`
 }
 
 // WebSocketPerformanceSummary represents a performance summary
 type WebSocketPerformanceSummary struct {
-	OverallRating    string   `json:"overall_rating"`    // "excellent", "good", "fair", "poor"
-	KeyFindings      []string `json:"key_findings"`
-	Recommendations  []string `json:"recommendations"`
-	Issues           []string `json:"issues"`
-	Strengths        []string `json:"strengths"`
+	OverallRating   string   `json:"overall_rating"` // "excellent", "good", "fair", "poor"
+	KeyFindings     []string `json:"key_findings"`
+	Recommendations []string `json:"recommendations"`
+	Issues          []string `json:"issues"`
+	Strengths       []string `json:"strengths"`
 }
 
 // generateSummary generates a performance summary
@@ -691,7 +691,7 @@ func (wpm *WebSocketPerformanceMonitor) generateSummary() WebSocketPerformanceSu
 		Issues:          []string{},
 		Strengths:       []string{},
 	}
-	
+
 	// Analyze connection metrics
 	if wpm.metrics.ConnectionSuccess >= 95 {
 		summary.Strengths = append(summary.Strengths, "High connection success rate")
@@ -699,7 +699,7 @@ func (wpm *WebSocketPerformanceMonitor) generateSummary() WebSocketPerformanceSu
 		summary.Issues = append(summary.Issues, "Low connection success rate")
 		summary.Recommendations = append(summary.Recommendations, "Investigate connection stability")
 	}
-	
+
 	// Analyze latency
 	if wpm.metrics.MessageLatency.Mean < 100*time.Millisecond {
 		summary.Strengths = append(summary.Strengths, "Low message latency")
@@ -707,7 +707,7 @@ func (wpm *WebSocketPerformanceMonitor) generateSummary() WebSocketPerformanceSu
 		summary.Issues = append(summary.Issues, "High message latency")
 		summary.Recommendations = append(summary.Recommendations, "Optimize message processing")
 	}
-	
+
 	// Analyze throughput
 	if wpm.metrics.MessageThroughput > 100 {
 		summary.Strengths = append(summary.Strengths, "High message throughput")
@@ -715,11 +715,11 @@ func (wpm *WebSocketPerformanceMonitor) generateSummary() WebSocketPerformanceSu
 		summary.Issues = append(summary.Issues, "Low message throughput")
 		summary.Recommendations = append(summary.Recommendations, "Investigate throughput bottlenecks")
 	}
-	
+
 	// Determine overall rating
 	issueCount := len(summary.Issues)
 	strengthCount := len(summary.Strengths)
-	
+
 	if issueCount == 0 && strengthCount > 2 {
 		summary.OverallRating = "excellent"
 	} else if issueCount <= 1 && strengthCount > 1 {
@@ -729,15 +729,15 @@ func (wpm *WebSocketPerformanceMonitor) generateSummary() WebSocketPerformanceSu
 	} else {
 		summary.OverallRating = "poor"
 	}
-	
+
 	// Add key findings
-	summary.KeyFindings = append(summary.KeyFindings, 
+	summary.KeyFindings = append(summary.KeyFindings,
 		fmt.Sprintf("Average connection latency: %v", wpm.metrics.ConnectionLatency))
-	summary.KeyFindings = append(summary.KeyFindings, 
+	summary.KeyFindings = append(summary.KeyFindings,
 		fmt.Sprintf("Message throughput: %.1f messages/sec", wpm.metrics.MessageThroughput))
-	summary.KeyFindings = append(summary.KeyFindings, 
+	summary.KeyFindings = append(summary.KeyFindings,
 		fmt.Sprintf("Connection success rate: %.1f%%", wpm.metrics.ConnectionSuccess))
-	
+
 	return summary
 }
 
@@ -760,12 +760,12 @@ func (p *Page) MonitorPerformanceWithThresholds(
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Start threshold monitoring
 	go func() {
 		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
-		
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -778,6 +778,6 @@ func (p *Page) MonitorPerformanceWithThresholds(
 			}
 		}
 	}()
-	
+
 	return monitor, nil
 }

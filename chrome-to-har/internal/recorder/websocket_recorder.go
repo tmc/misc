@@ -152,7 +152,7 @@ func (r *WebSocketRecorder) handleWebSocketFrameReceived(e *network.EventWebSock
 	conn.MessagesReceived++
 
 	if r.verbose {
-		log.Printf("WebSocket Frame Received: %s [%s] %d bytes", 
+		log.Printf("WebSocket Frame Received: %s [%s] %d bytes",
 			conn.URL, frame.Type, frame.Size)
 	}
 
@@ -183,7 +183,7 @@ func (r *WebSocketRecorder) handleWebSocketFrameSent(e *network.EventWebSocketFr
 	conn.MessagesSent++
 
 	if r.verbose {
-		log.Printf("WebSocket Frame Sent: %s [%s] %d bytes", 
+		log.Printf("WebSocket Frame Sent: %s [%s] %d bytes",
 			conn.URL, frame.Type, frame.Size)
 	}
 
@@ -278,7 +278,7 @@ func (r *WebSocketRecorder) handleWebSocketHandshakeResponse(e *network.EventWeb
 	}
 
 	if r.verbose {
-		log.Printf("WebSocket Handshake Response: %s - Connected in %v", 
+		log.Printf("WebSocket Handshake Response: %s - Connected in %v",
 			conn.URL, conn.ConnectionLatency)
 	}
 
@@ -311,9 +311,9 @@ func (r *WebSocketRecorder) streamWebSocketFrame(conn *browser.WebSocketConnecti
 		"type":      "websocket_frame",
 		"timestamp": frame.Timestamp.Format(time.RFC3339),
 		"websocket": map[string]interface{}{
-			"id":        conn.ID,
-			"url":       conn.URL,
-			"state":     conn.State,
+			"id":    conn.ID,
+			"url":   conn.URL,
+			"state": conn.State,
 		},
 		"frame": map[string]interface{}{
 			"type":      frame.Type,
@@ -337,11 +337,11 @@ func (r *WebSocketRecorder) streamWebSocketConnection(conn *browser.WebSocketCon
 		"type":      "websocket_connect",
 		"timestamp": time.Now().Format(time.RFC3339),
 		"websocket": map[string]interface{}{
-			"id":                conn.ID,
-			"url":               conn.URL,
-			"state":             conn.State,
-			"protocol":          conn.Protocol,
-			"extensions":        conn.Extensions,
+			"id":                 conn.ID,
+			"url":                conn.URL,
+			"state":              conn.State,
+			"protocol":           conn.Protocol,
+			"extensions":         conn.Extensions,
 			"connection_latency": conn.ConnectionLatency.Nanoseconds() / 1e6,
 		},
 	}
@@ -365,11 +365,11 @@ func (r *WebSocketRecorder) streamWebSocketClosure(conn *browser.WebSocketConnec
 			"close_code":   conn.CloseCode,
 			"close_reason": conn.CloseReason,
 			"stats": map[string]interface{}{
-				"bytes_sent":         conn.BytesSent,
-				"bytes_received":     conn.BytesReceived,
-				"messages_sent":      conn.MessagesSent,
-				"messages_received":  conn.MessagesReceived,
-				"connection_time":    conn.ConnectionLatency.Nanoseconds() / 1e6,
+				"bytes_sent":        conn.BytesSent,
+				"bytes_received":    conn.BytesReceived,
+				"messages_sent":     conn.MessagesSent,
+				"messages_received": conn.MessagesReceived,
+				"connection_time":   conn.ConnectionLatency.Nanoseconds() / 1e6,
 			},
 		},
 	}
@@ -448,13 +448,13 @@ func (r *WebSocketRecorder) GetWebSocketStatistics() map[string]interface{} {
 	defer r.wsLock.RUnlock()
 
 	stats := map[string]interface{}{
-		"total_connections":      len(r.webSocketConnections),
-		"active_connections":     0,
-		"total_bytes_sent":       int64(0),
-		"total_bytes_received":   int64(0),
-		"total_messages_sent":    0,
+		"total_connections":       len(r.webSocketConnections),
+		"active_connections":      0,
+		"total_bytes_sent":        int64(0),
+		"total_bytes_received":    int64(0),
+		"total_messages_sent":     0,
 		"total_messages_received": 0,
-		"connections":            make(map[string]interface{}),
+		"connections":             make(map[string]interface{}),
 	}
 
 	for id, conn := range r.webSocketConnections {

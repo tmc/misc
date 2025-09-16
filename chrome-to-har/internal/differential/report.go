@@ -24,14 +24,14 @@ const (
 
 // ReportOptions configures report generation
 type ReportOptions struct {
-	Format          ReportFormat `json:"format"`
-	OutputPath      string       `json:"output_path"`
-	IncludeDetails  bool         `json:"include_details"`
-	IncludeGraphs   bool         `json:"include_graphs"`
-	ThemeColor      string       `json:"theme_color"`
-	Title           string       `json:"title"`
-	Description     string       `json:"description"`
-	ShowUnchanged   bool         `json:"show_unchanged"`
+	Format          ReportFormat     `json:"format"`
+	OutputPath      string           `json:"output_path"`
+	IncludeDetails  bool             `json:"include_details"`
+	IncludeGraphs   bool             `json:"include_graphs"`
+	ThemeColor      string           `json:"theme_color"`
+	Title           string           `json:"title"`
+	Description     string           `json:"description"`
+	ShowUnchanged   bool             `json:"show_unchanged"`
 	MinSignificance DiffSignificance `json:"min_significance"`
 }
 
@@ -121,9 +121,9 @@ func (rg *ReportGenerator) generateHTMLReport(result *DiffResult, options *Repor
 
 	var buf bytes.Buffer
 	data := map[string]interface{}{
-		"Result":  filteredResult,
-		"Options": options,
-		"Title":   options.Title,
+		"Result":    filteredResult,
+		"Options":   options,
+		"Title":     options.Title,
 		"Generated": time.Now().Format("January 2, 2006 at 3:04 PM"),
 	}
 
@@ -182,35 +182,35 @@ func (rg *ReportGenerator) generateTextReport(result *DiffResult, options *Repor
 	if filteredResult.PerformanceDiff != nil {
 		buf.WriteString("PERFORMANCE COMPARISON\n")
 		buf.WriteString("----------------------\n")
-		
+
 		if filteredResult.PerformanceDiff.TotalLoadTime != nil {
-			buf.WriteString(fmt.Sprintf("Total Load Time: %.2fms → %.2fms (%+.2f%%)\n", 
+			buf.WriteString(fmt.Sprintf("Total Load Time: %.2fms → %.2fms (%+.2f%%)\n",
 				filteredResult.PerformanceDiff.TotalLoadTime.Baseline,
 				filteredResult.PerformanceDiff.TotalLoadTime.Compare,
 				filteredResult.PerformanceDiff.TotalLoadTime.Percentage))
 		}
-		
+
 		if filteredResult.PerformanceDiff.TotalSize != nil {
-			buf.WriteString(fmt.Sprintf("Total Size: %s → %s (%+.2f%%)\n", 
+			buf.WriteString(fmt.Sprintf("Total Size: %s → %s (%+.2f%%)\n",
 				rg.formatSize(int64(filteredResult.PerformanceDiff.TotalSize.Baseline)),
 				rg.formatSize(int64(filteredResult.PerformanceDiff.TotalSize.Compare)),
 				filteredResult.PerformanceDiff.TotalSize.Percentage))
 		}
-		
+
 		if filteredResult.PerformanceDiff.RequestCount != nil {
-			buf.WriteString(fmt.Sprintf("Request Count: %.0f → %.0f (%+.2f%%)\n", 
+			buf.WriteString(fmt.Sprintf("Request Count: %.0f → %.0f (%+.2f%%)\n",
 				filteredResult.PerformanceDiff.RequestCount.Baseline,
 				filteredResult.PerformanceDiff.RequestCount.Compare,
 				filteredResult.PerformanceDiff.RequestCount.Percentage))
 		}
-		
+
 		if filteredResult.PerformanceDiff.AverageResponse != nil {
-			buf.WriteString(fmt.Sprintf("Average Response Time: %.2fms → %.2fms (%+.2f%%)\n", 
+			buf.WriteString(fmt.Sprintf("Average Response Time: %.2fms → %.2fms (%+.2f%%)\n",
 				filteredResult.PerformanceDiff.AverageResponse.Baseline,
 				filteredResult.PerformanceDiff.AverageResponse.Compare,
 				filteredResult.PerformanceDiff.AverageResponse.Percentage))
 		}
-		
+
 		buf.WriteString("\n")
 	}
 
@@ -218,12 +218,12 @@ func (rg *ReportGenerator) generateTextReport(result *DiffResult, options *Repor
 	if len(filteredResult.NetworkDiffs) > 0 {
 		buf.WriteString("NETWORK CHANGES\n")
 		buf.WriteString("---------------\n")
-		
+
 		// Group by type
 		added := make([]*NetworkDiff, 0)
 		removed := make([]*NetworkDiff, 0)
 		modified := make([]*NetworkDiff, 0)
-		
+
 		for _, diff := range filteredResult.NetworkDiffs {
 			switch diff.Type {
 			case DiffTypeAdded:
@@ -234,7 +234,7 @@ func (rg *ReportGenerator) generateTextReport(result *DiffResult, options *Repor
 				modified = append(modified, diff)
 			}
 		}
-		
+
 		// Added requests
 		if len(added) > 0 {
 			buf.WriteString(fmt.Sprintf("\nAdded Requests (%d):\n", len(added)))
@@ -242,7 +242,7 @@ func (rg *ReportGenerator) generateTextReport(result *DiffResult, options *Repor
 				buf.WriteString(fmt.Sprintf("  + %s %s [%s]\n", diff.Method, diff.URL, diff.Significance))
 			}
 		}
-		
+
 		// Removed requests
 		if len(removed) > 0 {
 			buf.WriteString(fmt.Sprintf("\nRemoved Requests (%d):\n", len(removed)))
@@ -250,7 +250,7 @@ func (rg *ReportGenerator) generateTextReport(result *DiffResult, options *Repor
 				buf.WriteString(fmt.Sprintf("  - %s %s [%s]\n", diff.Method, diff.URL, diff.Significance))
 			}
 		}
-		
+
 		// Modified requests
 		if len(modified) > 0 {
 			buf.WriteString(fmt.Sprintf("\nModified Requests (%d):\n", len(modified)))
@@ -261,7 +261,7 @@ func (rg *ReportGenerator) generateTextReport(result *DiffResult, options *Repor
 				}
 			}
 		}
-		
+
 		buf.WriteString("\n")
 	}
 
@@ -269,14 +269,14 @@ func (rg *ReportGenerator) generateTextReport(result *DiffResult, options *Repor
 	if len(filteredResult.ResourceDiffs) > 0 {
 		buf.WriteString("RESOURCE CHANGES\n")
 		buf.WriteString("----------------\n")
-		
+
 		for _, diff := range filteredResult.ResourceDiffs {
 			buf.WriteString(fmt.Sprintf("%s Resources [%s]:\n", strings.Title(diff.ResourceType), diff.Significance))
 			for _, change := range diff.Changes {
 				buf.WriteString(fmt.Sprintf("  %s\n", change))
 			}
 		}
-		
+
 		buf.WriteString("\n")
 	}
 
@@ -298,23 +298,23 @@ func (rg *ReportGenerator) generateCSVReport(result *DiffResult, options *Report
 
 	// Write network diffs
 	for _, diff := range filteredResult.NetworkDiffs {
-		buf.WriteString(fmt.Sprintf("%s,%s,\"%s\",%s,", 
+		buf.WriteString(fmt.Sprintf("%s,%s,\"%s\",%s,",
 			diff.Type, diff.Method, diff.URL, diff.Significance))
-		
+
 		if diff.Baseline != nil {
-			buf.WriteString(fmt.Sprintf("%d,%d,%.2f,", 
+			buf.WriteString(fmt.Sprintf("%d,%d,%.2f,",
 				diff.Baseline.Status, diff.Baseline.Size, diff.Baseline.Time))
 		} else {
 			buf.WriteString(",,,")
 		}
-		
+
 		if diff.Compare != nil {
-			buf.WriteString(fmt.Sprintf("%d,%d,%.2f,", 
+			buf.WriteString(fmt.Sprintf("%d,%d,%.2f,",
 				diff.Compare.Status, diff.Compare.Size, diff.Compare.Time))
 		} else {
 			buf.WriteString(",,,")
 		}
-		
+
 		buf.WriteString(fmt.Sprintf("\"%s\"\n", strings.Join(diff.Changes, "; ")))
 	}
 

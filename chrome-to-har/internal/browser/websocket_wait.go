@@ -18,17 +18,17 @@ const (
 	WebSocketOpen       WebSocketWaitCondition = "open"
 	WebSocketClosing    WebSocketWaitCondition = "closing"
 	WebSocketClosed     WebSocketWaitCondition = "closed"
-	
+
 	// WebSocket frame types
 	WebSocketTextFrame   WebSocketWaitCondition = "text_frame"
 	WebSocketBinaryFrame WebSocketWaitCondition = "binary_frame"
 	WebSocketCloseFrame  WebSocketWaitCondition = "close_frame"
 	WebSocketPingFrame   WebSocketWaitCondition = "ping_frame"
 	WebSocketPongFrame   WebSocketWaitCondition = "pong_frame"
-	
+
 	// WebSocket events
-	WebSocketMessage     WebSocketWaitCondition = "message"
-	WebSocketError       WebSocketWaitCondition = "error"
+	WebSocketMessage      WebSocketWaitCondition = "message"
+	WebSocketError        WebSocketWaitCondition = "error"
 	WebSocketFirstMessage WebSocketWaitCondition = "first_message"
 	WebSocketLastMessage  WebSocketWaitCondition = "last_message"
 )
@@ -537,7 +537,7 @@ func (w *WebSocketEventWaiter) WaitForEvent(condition WebSocketWaitCondition) (*
 // WaitForMultipleEvents waits for multiple WebSocket events
 func (w *WebSocketEventWaiter) WaitForMultipleEvents(conditions []WebSocketWaitCondition) ([]*WebSocketConnection, error) {
 	var results []*WebSocketConnection
-	
+
 	for _, condition := range conditions {
 		conn, err := w.WaitForEvent(condition)
 		if err != nil {
@@ -545,14 +545,14 @@ func (w *WebSocketEventWaiter) WaitForMultipleEvents(conditions []WebSocketWaitC
 		}
 		results = append(results, conn)
 	}
-	
+
 	return results, nil
 }
 
 // WaitForSequence waits for a sequence of WebSocket events in order
 func (w *WebSocketEventWaiter) WaitForSequence(conditions []WebSocketWaitCondition) ([]*WebSocketConnection, error) {
 	var results []*WebSocketConnection
-	
+
 	for _, condition := range conditions {
 		conn, err := w.WaitForEvent(condition)
 		if err != nil {
@@ -560,7 +560,7 @@ func (w *WebSocketEventWaiter) WaitForSequence(conditions []WebSocketWaitConditi
 		}
 		results = append(results, conn)
 	}
-	
+
 	return results, nil
 }
 

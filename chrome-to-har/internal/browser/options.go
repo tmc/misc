@@ -44,17 +44,17 @@ type Options struct {
 	ScriptAfter  []string // Scripts to execute after page load
 
 	// Blocking settings
-	BlockingEnabled       bool     // Enable URL/domain blocking
-	BlockingVerbose       bool     // Enable verbose blocking logging
-	BlockedURLPatterns    []string // URL patterns to block
-	BlockedDomains        []string // Domains to block
-	BlockedRegexPatterns  []string // Regex patterns to block
-	AllowedURLs           []string // URLs to allow (whitelist)
-	AllowedDomains        []string // Domains to allow (whitelist)
-	BlockingRuleFile      string   // File containing blocking rules
-	BlockCommonAds        bool     // Block common ad domains
-	BlockCommonTracking   bool     // Block common tracking domains
-	
+	BlockingEnabled      bool     // Enable URL/domain blocking
+	BlockingVerbose      bool     // Enable verbose blocking logging
+	BlockedURLPatterns   []string // URL patterns to block
+	BlockedDomains       []string // Domains to block
+	BlockedRegexPatterns []string // Regex patterns to block
+	AllowedURLs          []string // URLs to allow (whitelist)
+	AllowedDomains       []string // Domains to allow (whitelist)
+	BlockingRuleFile     string   // File containing blocking rules
+	BlockCommonAds       bool     // Block common ad domains
+	BlockCommonTracking  bool     // Block common tracking domains
+
 	// Security settings
 	SecurityProfile       string   // Security profile: strict, balanced, permissive
 	AllowedRemoteHosts    []string // Allowed remote hosts for connections
@@ -68,17 +68,17 @@ type Options struct {
 	AllowDangerousScripts bool     // Allow potentially dangerous scripts
 
 	// File upload settings
-	UploadFiles           []FileUpload // Files to upload
-	UploadFormSelector    string       // Form selector for file uploads
-	UploadInputSelector   string       // File input selector
-	UploadMethod          string       // Upload method: form, ajax, drop
-	UploadProgressReport  bool         // Enable upload progress reporting
-	UploadChunkSize       int64        // Chunk size for chunked uploads (0 = no chunking)
-	UploadMaxFileSize     int64        // Maximum file size allowed (0 = no limit)
-	UploadTimeout         int          // Upload timeout in seconds
-	UploadRetryAttempts   int          // Number of retry attempts for failed uploads
-	UploadValidateTypes   []string     // Allowed file types (empty = all types)
-	UploadCompressFiles   bool         // Compress files before upload
+	UploadFiles          []FileUpload // Files to upload
+	UploadFormSelector   string       // Form selector for file uploads
+	UploadInputSelector  string       // File input selector
+	UploadMethod         string       // Upload method: form, ajax, drop
+	UploadProgressReport bool         // Enable upload progress reporting
+	UploadChunkSize      int64        // Chunk size for chunked uploads (0 = no chunking)
+	UploadMaxFileSize    int64        // Maximum file size allowed (0 = no limit)
+	UploadTimeout        int          // Upload timeout in seconds
+	UploadRetryAttempts  int          // Number of retry attempts for failed uploads
+	UploadValidateTypes  []string     // Allowed file types (empty = all types)
+	UploadCompressFiles  bool         // Compress files before upload
 }
 
 // FileUpload represents a file to be uploaded
@@ -102,7 +102,7 @@ func defaultOptions() *Options {
 		StableTimeout:     30,
 		UseProfile:        false,
 		CookieDomains:     []string{},
-		
+
 		// Secure defaults
 		SecurityProfile:       "balanced",
 		AllowedRemoteHosts:    []string{"localhost", "127.0.0.1"},

@@ -92,15 +92,15 @@ type ViewportSize struct {
 
 // DeviceEmulation represents device emulation settings
 type DeviceEmulation struct {
-	Name                string
-	ViewportSize        ViewportSize
-	DeviceScaleFactor   float64
-	IsMobile            bool
-	HasTouch            bool
-	UserAgent           string
-	ScreenWidth         int
-	ScreenHeight        int
-	ScreenOrientation   string
+	Name              string
+	ViewportSize      ViewportSize
+	DeviceScaleFactor float64
+	IsMobile          bool
+	HasTouch          bool
+	UserAgent         string
+	ScreenWidth       int
+	ScreenHeight      int
+	ScreenOrientation string
 }
 
 // ComparisonResult represents the result of image comparison
@@ -270,34 +270,34 @@ type TestSummary struct {
 type VisualTester interface {
 	// CaptureScreenshot captures a screenshot with the given options
 	CaptureScreenshot(ctx context.Context, page *browser.Page, opts *ScreenshotOptions) ([]byte, error)
-	
+
 	// CompareImages compares two images and returns the result
 	CompareImages(baseline, actual image.Image, config *VisualTestConfig) (*ComparisonResult, error)
-	
+
 	// RunVisualTest runs a visual test
 	RunVisualTest(ctx context.Context, testName string, page *browser.Page, config *VisualTestConfig, opts *ScreenshotOptions) (*TestResult, error)
-	
+
 	// RunTestSuite runs a test suite
 	RunTestSuite(ctx context.Context, suiteName string, tests []VisualTest, config *VisualTestConfig) (*TestSuiteResult, error)
-	
+
 	// SaveBaseline saves a baseline image
 	SaveBaseline(testName string, screenshot []byte, metadata *BaselineMetadata, config *VisualTestConfig) error
-	
+
 	// LoadBaseline loads a baseline image
 	LoadBaseline(testName string, config *VisualTestConfig) ([]byte, *BaselineMetadata, error)
-	
+
 	// GetBaselineMetadata gets metadata for a baseline
 	GetBaselineMetadata(testName string, config *VisualTestConfig) (*BaselineMetadata, error)
-	
+
 	// UpdateBaseline updates a baseline image
 	UpdateBaseline(testName string, screenshot []byte, metadata *BaselineMetadata, config *VisualTestConfig) error
-	
+
 	// DeleteBaseline deletes a baseline image
 	DeleteBaseline(testName string, config *VisualTestConfig) error
-	
+
 	// ListBaselines lists all baselines
 	ListBaselines(config *VisualTestConfig) ([]string, error)
-	
+
 	// GenerateReport generates a visual test report
 	GenerateReport(results []*TestResult, config *VisualTestConfig) (*TestReport, error)
 }
@@ -365,37 +365,37 @@ var (
 
 	DefaultDeviceEmulations = map[string]*DeviceEmulation{
 		"desktop": {
-			Name:                "Desktop",
-			ViewportSize:        ViewportSize{Width: 1920, Height: 1080, Name: "Desktop"},
-			DeviceScaleFactor:   1.0,
-			IsMobile:            false,
-			HasTouch:            false,
-			UserAgent:           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-			ScreenWidth:         1920,
-			ScreenHeight:        1080,
-			ScreenOrientation:   "landscape",
+			Name:              "Desktop",
+			ViewportSize:      ViewportSize{Width: 1920, Height: 1080, Name: "Desktop"},
+			DeviceScaleFactor: 1.0,
+			IsMobile:          false,
+			HasTouch:          false,
+			UserAgent:         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+			ScreenWidth:       1920,
+			ScreenHeight:      1080,
+			ScreenOrientation: "landscape",
 		},
 		"tablet": {
-			Name:                "Tablet",
-			ViewportSize:        ViewportSize{Width: 768, Height: 1024, Name: "Tablet"},
-			DeviceScaleFactor:   2.0,
-			IsMobile:            true,
-			HasTouch:            true,
-			UserAgent:           "Mozilla/5.0 (iPad; CPU OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
-			ScreenWidth:         768,
-			ScreenHeight:        1024,
-			ScreenOrientation:   "portrait",
+			Name:              "Tablet",
+			ViewportSize:      ViewportSize{Width: 768, Height: 1024, Name: "Tablet"},
+			DeviceScaleFactor: 2.0,
+			IsMobile:          true,
+			HasTouch:          true,
+			UserAgent:         "Mozilla/5.0 (iPad; CPU OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+			ScreenWidth:       768,
+			ScreenHeight:      1024,
+			ScreenOrientation: "portrait",
 		},
 		"mobile": {
-			Name:                "Mobile",
-			ViewportSize:        ViewportSize{Width: 414, Height: 896, Name: "Mobile"},
-			DeviceScaleFactor:   3.0,
-			IsMobile:            true,
-			HasTouch:            true,
-			UserAgent:           "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
-			ScreenWidth:         414,
-			ScreenHeight:        896,
-			ScreenOrientation:   "portrait",
+			Name:              "Mobile",
+			ViewportSize:      ViewportSize{Width: 414, Height: 896, Name: "Mobile"},
+			DeviceScaleFactor: 3.0,
+			IsMobile:          true,
+			HasTouch:          true,
+			UserAgent:         "Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1",
+			ScreenWidth:       414,
+			ScreenHeight:      896,
+			ScreenOrientation: "portrait",
 		},
 	}
 )
@@ -421,21 +421,21 @@ func DefaultConfig() *VisualTestConfig {
 // DefaultScreenshotOptions returns default screenshot options
 func DefaultScreenshotOptions() *ScreenshotOptions {
 	return &ScreenshotOptions{
-		FullPage:            false,
-		ViewportWidth:       1920,
-		ViewportHeight:      1080,
-		Quality:             90,
-		Format:              "png",
-		HideCursor:          true,
-		HideScrollbars:      true,
-		WaitForFonts:        true,
-		WaitForImages:       true,
-		WaitForAnimations:   true,
-		AnimationWaitTime:   1 * time.Second,
-		StabilityWaitTime:   2 * time.Second,
-		DeviceScaleFactor:   1.0,
-		ClipToViewport:      false,
-		OmitBackground:      false,
-		MaskColor:           "#000000",
+		FullPage:          false,
+		ViewportWidth:     1920,
+		ViewportHeight:    1080,
+		Quality:           90,
+		Format:            "png",
+		HideCursor:        true,
+		HideScrollbars:    true,
+		WaitForFonts:      true,
+		WaitForImages:     true,
+		WaitForAnimations: true,
+		AnimationWaitTime: 1 * time.Second,
+		StabilityWaitTime: 2 * time.Second,
+		DeviceScaleFactor: 1.0,
+		ClipToViewport:    false,
+		OmitBackground:    false,
+		MaskColor:         "#000000",
 	}
 }

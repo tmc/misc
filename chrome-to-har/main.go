@@ -65,7 +65,7 @@ type options struct {
 	waitForFonts       bool // Wait for all fonts to load
 	waitForStylesheets bool // Wait for all stylesheets to load
 	waitForScripts     bool // Wait for all scripts to load
-	
+
 	// Blocking options
 	blockingEnabled     bool   // Enable URL/domain blocking
 	blockingVerbose     bool   // Enable verbose blocking logging
@@ -77,23 +77,23 @@ type options struct {
 	blockingRuleFile    string // File containing blocking rules
 	blockCommonAds      bool   // Block common ad domains
 	blockCommonTracking bool   // Block common tracking domains
-	
+
 	// Differential capture options
-	diffMode            bool   // Enable differential mode
-	baselineCapture     string // Baseline capture name or ID
-	compareWith         string // Compare with this capture
-	diffOutput          string // Diff report output path
-	diffFormat          string // Diff report format (json, html, text, csv)
-	trackResources      bool   // Track resource changes
-	trackPerformance    bool   // Track performance changes
-	trackStates         bool   // Track page state changes
-	captureName         string // Name for the current capture
-	captureLabels       string // Labels for the current capture (key=value,key2=value2)
-	diffWorkDir         string // Working directory for differential captures
-	listCaptures        bool   // List available captures
-	deleteCapture       string // Delete a capture by ID
-	minSignificance     string // Minimum significance level for reporting
-	
+	diffMode         bool   // Enable differential mode
+	baselineCapture  string // Baseline capture name or ID
+	compareWith      string // Compare with this capture
+	diffOutput       string // Diff report output path
+	diffFormat       string // Diff report format (json, html, text, csv)
+	trackResources   bool   // Track resource changes
+	trackPerformance bool   // Track performance changes
+	trackStates      bool   // Track page state changes
+	captureName      string // Name for the current capture
+	captureLabels    string // Labels for the current capture (key=value,key2=value2)
+	diffWorkDir      string // Working directory for differential captures
+	listCaptures     bool   // List available captures
+	deleteCapture    string // Delete a capture by ID
+	minSignificance  string // Minimum significance level for reporting
+
 	// Security options
 	securityProfile       string // Security profile: strict, balanced, permissive
 	allowedRemoteHosts    string // Comma-separated list of allowed remote hosts
@@ -190,7 +190,7 @@ func main() {
 	flag.BoolVar(&opts.waitForFonts, "wait-for-fonts", true, "Wait for all fonts to load")
 	flag.BoolVar(&opts.waitForStylesheets, "wait-for-stylesheets", true, "Wait for all stylesheets to load")
 	flag.BoolVar(&opts.waitForScripts, "wait-for-scripts", true, "Wait for all scripts to load")
-	
+
 	// Blocking flags
 	flag.BoolVar(&opts.blockingEnabled, "block-enabled", false, "Enable URL/domain blocking")
 	flag.BoolVar(&opts.blockingVerbose, "block-verbose", false, "Enable verbose blocking logging")
@@ -202,7 +202,7 @@ func main() {
 	flag.StringVar(&opts.blockingRuleFile, "block-file", "", "File containing blocking rules")
 	flag.BoolVar(&opts.blockCommonAds, "block-ads", false, "Block common ad domains")
 	flag.BoolVar(&opts.blockCommonTracking, "block-tracking", false, "Block common tracking domains")
-	
+
 	// Differential capture flags
 	flag.BoolVar(&opts.diffMode, "diff-mode", false, "Enable differential capture mode")
 	flag.StringVar(&opts.baselineCapture, "baseline", "", "Baseline capture name or ID for comparison")
@@ -996,7 +996,7 @@ func runDifferentialMode(opts options) error {
 
 		// Generate report
 		if opts.diffOutput == "" {
-			opts.diffOutput = fmt.Sprintf("diff-report-%s.%s", 
+			opts.diffOutput = fmt.Sprintf("diff-report-%s.%s",
 				time.Now().Format("20060102-150405"), opts.diffFormat)
 		}
 
@@ -1046,16 +1046,16 @@ func runDifferentialMode(opts options) error {
 
 		fmt.Printf("Comparison completed successfully\n")
 		fmt.Printf("Report generated: %s\n", opts.diffOutput)
-		fmt.Printf("Summary: %d added, %d removed, %d modified requests\n", 
+		fmt.Printf("Summary: %d added, %d removed, %d modified requests\n",
 			result.Summary.AddedRequests, result.Summary.RemovedRequests, result.Summary.ModifiedRequests)
-		
+
 		return nil
 	}
 
 	// Handle differential mode (normal capture with differential features)
 	if opts.diffMode {
 		fmt.Println("Differential mode enabled")
-		
+
 		// Parse labels
 		labels := make(map[string]string)
 		if opts.captureLabels != "" {
@@ -1083,7 +1083,7 @@ func runDifferentialMode(opts options) error {
 		fmt.Printf("Created capture: %s (ID: %s)\n", capture.Name, capture.ID)
 		fmt.Printf("Capture will be completed by the normal HAR recording process\n")
 		fmt.Printf("To compare with another capture, use: -compare-with <capture-id> -baseline %s\n", capture.ID)
-		
+
 		return nil
 	}
 

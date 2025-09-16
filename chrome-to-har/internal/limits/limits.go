@@ -14,13 +14,13 @@ import (
 
 // ResourceLimiter manages system resource limits to prevent DoS attacks
 type ResourceLimiter struct {
-	maxMemoryBytes    uint64
-	maxGoroutines     int
-	maxConcurrent     int
-	activeRequests    int64
-	mu                sync.RWMutex
-	requestSemaphore  chan struct{}
-	verbose           bool
+	maxMemoryBytes   uint64
+	maxGoroutines    int
+	maxConcurrent    int
+	activeRequests   int64
+	mu               sync.RWMutex
+	requestSemaphore chan struct{}
+	verbose          bool
 }
 
 // NewResourceLimiter creates a new resource limiter with the specified limits
@@ -32,12 +32,12 @@ func NewResourceLimiter(maxMemoryMB uint64, maxGoroutines, maxConcurrent int, ve
 		requestSemaphore: make(chan struct{}, maxConcurrent),
 		verbose:          verbose,
 	}
-	
+
 	// Fill semaphore with initial capacity
 	for i := 0; i < maxConcurrent; i++ {
 		rl.requestSemaphore <- struct{}{}
 	}
-	
+
 	return rl
 }
 
@@ -45,23 +45,23 @@ func NewResourceLimiter(maxMemoryMB uint64, maxGoroutines, maxConcurrent int, ve
 func (rl *ResourceLimiter) CheckMemoryUsage() error {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	
+
 	if m.Alloc > rl.maxMemoryBytes {
-		return fmt.Errorf("memory limit exceeded: %d MB (max: %d MB)", 
+		return fmt.Errorf("memory limit exceeded: %d MB (max: %d MB)",
 			m.Alloc/1024/1024, rl.maxMemoryBytes/1024/1024)
 	}
-	
+
 	// Also check heap usage
 	if m.HeapAlloc > rl.maxMemoryBytes/2 {
 		if rl.verbose {
-			log.Printf("High heap usage: %d MB (limit: %d MB)", 
+			log.Printf("High heap usage: %d MB (limit: %d MB)",
 				m.HeapAlloc/1024/1024, rl.maxMemoryBytes/1024/1024)
 		}
-		
+
 		// Force garbage collection to free memory
 		runtime.GC()
 	}
-	
+
 	return nil
 }
 
@@ -107,11 +107,11 @@ func (rl *ResourceLimiter) PerformResourceCheck() error {
 	if err := rl.CheckMemoryUsage(); err != nil {
 		return err
 	}
-	
+
 	if err := rl.CheckGoroutineCount(); err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -123,41 +123,41 @@ func SetSystemLimits(maxMemoryMB uint64, maxProcesses uint64, maxOpenFiles uint6
 			Cur: maxMemoryMB * 1024 * 1024,
 			Max: maxMemoryMB * 1024 * 1024,
 		}
-		
+
 		if err := syscall.Setrlimit(syscall.RLIMIT_AS, memLimit); err != nil {
 			return fmt.Errorf("setting memory limit: %w", err)
 		}
 	}
-	
+
 	// Set process limit (platform-specific implementation)
 	if err := setProcLimit(maxProcesses); err != nil {
 		return fmt.Errorf("setting process limit: %w", err)
 	}
-	
+
 	// Set file descriptor limit
 	if maxOpenFiles > 0 {
 		fileLimit := &syscall.Rlimit{
 			Cur: maxOpenFiles,
 			Max: maxOpenFiles,
 		}
-		
+
 		if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, fileLimit); err != nil {
 			return fmt.Errorf("setting file descriptor limit: %w", err)
 		}
 	}
-	
+
 	return nil
 }
 
 // RateLimiter provides rate limiting functionality
 type RateLimiter struct {
-	rate         int
-	interval     time.Duration
-	tokens       chan struct{}
-	stop         chan struct{}
-	lastRefill   time.Time
-	mu           sync.Mutex
-	verbose      bool
+	rate       int
+	interval   time.Duration
+	tokens     chan struct{}
+	stop       chan struct{}
+	lastRefill time.Time
+	mu         sync.Mutex
+	verbose    bool
 }
 
 // NewRateLimiter creates a new rate limiter with the specified rate and interval
@@ -170,15 +170,15 @@ func NewRateLimiter(rate int, interval time.Duration, verbose bool) *RateLimiter
 		lastRefill: time.Now(),
 		verbose:    verbose,
 	}
-	
+
 	// Fill initial tokens
 	for i := 0; i < rate; i++ {
 		rl.tokens <- struct{}{}
 	}
-	
+
 	// Start token refill goroutine
 	go rl.refillTokens()
-	
+
 	return rl
 }
 
@@ -219,14 +219,14 @@ func (rl *RateLimiter) Stop() {
 func (rl *RateLimiter) refillTokens() {
 	ticker := time.NewTicker(rl.interval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
 			rl.mu.Lock()
 			now := time.Now()
 			elapsed := now.Sub(rl.lastRefill)
-			
+
 			// Calculate how many tokens to add based on elapsed time
 			tokensToAdd := int(elapsed / rl.interval)
 			if tokensToAdd > 0 {
@@ -239,14 +239,14 @@ func (rl *RateLimiter) refillTokens() {
 					}
 				}
 				rl.lastRefill = now
-				
+
 				if rl.verbose {
-					log.Printf("Rate limiter: refilled %d tokens, %d available", 
+					log.Printf("Rate limiter: refilled %d tokens, %d available",
 						tokensToAdd, len(rl.tokens))
 				}
 			}
 			rl.mu.Unlock()
-			
+
 		case <-rl.stop:
 			return
 		}
@@ -274,18 +274,18 @@ func (tm *TimeoutManager) CreateContext(parent context.Context, timeout time.Dur
 	if timeout <= 0 {
 		timeout = tm.defaultTimeout
 	}
-	
+
 	if timeout > tm.maxTimeout {
 		timeout = tm.maxTimeout
 		if tm.verbose {
 			log.Printf("Timeout capped at maximum: %v", tm.maxTimeout)
 		}
 	}
-	
+
 	if tm.verbose {
 		log.Printf("Creating context with timeout: %v", timeout)
 	}
-	
+
 	return context.WithTimeout(parent, timeout)
 }
 
@@ -310,7 +310,7 @@ func NewConnectionLimiter(verbose bool) *ConnectionLimiter {
 func (cl *ConnectionLimiter) SetLimit(connType string, maxConns int) {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
-	
+
 	cl.maxConnections[connType] = maxConns
 	if cl.verbose {
 		log.Printf("Set connection limit for %s: %d", connType, maxConns)
@@ -321,22 +321,22 @@ func (cl *ConnectionLimiter) SetLimit(connType string, maxConns int) {
 func (cl *ConnectionLimiter) AcquireConnection(connType string) error {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
-	
+
 	maxConns, exists := cl.maxConnections[connType]
 	if !exists {
 		return fmt.Errorf("no limit set for connection type: %s", connType)
 	}
-	
+
 	currentConns := cl.activeConns[connType]
 	if currentConns >= maxConns {
 		return fmt.Errorf("connection limit reached for %s: %d", connType, maxConns)
 	}
-	
+
 	cl.activeConns[connType] = currentConns + 1
 	if cl.verbose {
 		log.Printf("Acquired connection for %s: %d/%d", connType, cl.activeConns[connType], maxConns)
 	}
-	
+
 	return nil
 }
 
@@ -344,11 +344,11 @@ func (cl *ConnectionLimiter) AcquireConnection(connType string) error {
 func (cl *ConnectionLimiter) ReleaseConnection(connType string) {
 	cl.mu.Lock()
 	defer cl.mu.Unlock()
-	
+
 	if cl.activeConns[connType] > 0 {
 		cl.activeConns[connType]--
 		if cl.verbose {
-			log.Printf("Released connection for %s: %d/%d", 
+			log.Printf("Released connection for %s: %d/%d",
 				connType, cl.activeConns[connType], cl.maxConnections[connType])
 		}
 	}
@@ -358,7 +358,7 @@ func (cl *ConnectionLimiter) ReleaseConnection(connType string) {
 func (cl *ConnectionLimiter) GetActiveConnections(connType string) int {
 	cl.mu.RLock()
 	defer cl.mu.RUnlock()
-	
+
 	return cl.activeConns[connType]
 }
 
@@ -394,11 +394,11 @@ func (cb *CircuitBreaker) Call(fn func() error) error {
 	cb.mu.RLock()
 	state := atomic.LoadInt32(&cb.state)
 	cb.mu.RUnlock()
-	
+
 	if state == StateOpen {
 		cb.mu.Lock()
 		defer cb.mu.Unlock()
-		
+
 		if time.Since(cb.lastFailureTime) > cb.resetTimeout {
 			atomic.StoreInt32(&cb.state, StateHalfOpen)
 			atomic.StoreInt32(&cb.failures, 0)
@@ -409,14 +409,14 @@ func (cb *CircuitBreaker) Call(fn func() error) error {
 			return fmt.Errorf("circuit breaker is open")
 		}
 	}
-	
+
 	err := fn()
-	
+
 	if err != nil {
 		cb.onFailure()
 		return err
 	}
-	
+
 	cb.onSuccess()
 	return nil
 }
@@ -425,7 +425,7 @@ func (cb *CircuitBreaker) Call(fn func() error) error {
 func (cb *CircuitBreaker) onSuccess() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	
+
 	atomic.StoreInt32(&cb.failures, 0)
 	if atomic.LoadInt32(&cb.state) == StateHalfOpen {
 		atomic.StoreInt32(&cb.state, StateClosed)
@@ -439,10 +439,10 @@ func (cb *CircuitBreaker) onSuccess() {
 func (cb *CircuitBreaker) onFailure() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	
+
 	failures := atomic.AddInt32(&cb.failures, 1)
 	cb.lastFailureTime = time.Now()
-	
+
 	if failures >= int32(cb.maxFailures) {
 		atomic.StoreInt32(&cb.state, StateOpen)
 		if cb.verbose {
@@ -490,7 +490,7 @@ func (pm *ProcessMonitor) Stop() {
 func (pm *ProcessMonitor) monitor() {
 	ticker := time.NewTicker(pm.checkInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -505,7 +505,7 @@ func (pm *ProcessMonitor) monitor() {
 func (pm *ProcessMonitor) checkResources() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	
+
 	memoryMB := m.Alloc / 1024 / 1024
 	if memoryMB > pm.maxMemoryMB {
 		if pm.verbose {
@@ -513,7 +513,7 @@ func (pm *ProcessMonitor) checkResources() {
 		}
 		runtime.GC() // Force garbage collection
 	}
-	
+
 	goroutines := runtime.NumGoroutine()
 	if pm.verbose {
 		log.Printf("Resource check: Memory: %d MB, Goroutines: %d", memoryMB, goroutines)

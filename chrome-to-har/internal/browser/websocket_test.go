@@ -797,7 +797,7 @@ func createTestWebSocketServerForBenchmark(b *testing.B) *httptest.Server {
 			if err != nil {
 				break
 			}
-			
+
 			// Echo back the message
 			if err := conn.WriteMessage(websocket.TextMessage, message); err != nil {
 				break
