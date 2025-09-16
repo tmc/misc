@@ -50,14 +50,14 @@ func TestWebSocketMonitoring(t *testing.T) {
 	}
 
 	// Track events
-	var connections []WebSocketConnection
+	var connections []*WebSocketConnection
 	var frames []WebSocketFrame
 	var mu sync.Mutex
 
 	page.SetWebSocketConnectionHandler(
 		func(conn *WebSocketConnection) {
 			mu.Lock()
-			connections = append(connections, *conn)
+			connections = append(connections, conn)
 			mu.Unlock()
 		},
 		func(conn *WebSocketConnection) {
@@ -65,7 +65,7 @@ func TestWebSocketMonitoring(t *testing.T) {
 			// Update connection state
 			for i, c := range connections {
 				if c.ID == conn.ID {
-					connections[i] = *conn
+					connections[i] = conn
 					break
 				}
 			}
