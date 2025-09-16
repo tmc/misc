@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"time"
+
+	"golang.org/x/term"
 )
 
 // Format patterns that can be cycled through
@@ -21,9 +23,48 @@ var formatPatterns = []string{
 	"%C(bold yellow)%h%C(auto)%d %C(bold white)%s %C(dim cyan)(%ar)%C(reset)",
 }
 
+// getTerminalHeight returns the height of the terminal in lines.
+// Returns a default value if unable to detect.
+func getTerminalHeight() int {
+	if !term.IsTerminal(int(os.Stdout.Fd())) {
+		return 24 // Default for non-terminal output
+	}
+
+	_, height, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		return 24 // Default if we can't get terminal size
+	}
+	return height
+}
+
+// calculateCommitLines determines how many commits can fit in the terminal.
+// Reserves space for header, worktrees, and footer.
+func calculateCommitLines(termHeight int, compactMode bool) int {
+	// Reserve lines:
+	// - 1 line for clearing/positioning
+	// - 3-8 lines for worktrees (depending on mode)
+	// - 2 lines for footer (format info + refresh info)
+	// - 1 line for buffer
+
+	worktreeLines := 8
+	if compactMode {
+		worktreeLines = 3
+	}
+
+	reservedLines := 1 + worktreeLines + 2 + 1
+	availableLines := termHeight - reservedLines
+
+	// Ensure we show at least 5 commits
+	if availableLines < 5 {
+		return 5
+	}
+
+	return availableLines
+}
+
 func main() {
 	// Parse command-line flags
-	numCommits := flag.Int("n", 20, "Number of commits to display")
+	numCommits := flag.Int("n", 0, "Number of commits to display (0=auto based on terminal height)")
 	refreshRate := flag.Duration("r", 2*time.Second, "Refresh rate (e.g. 1s, 500ms)")
 	compactMode := flag.Bool("compact", false, "Use compact vertical spacing")
 	rotate := flag.Bool("rotate", false, "Rotate through different display formats")
@@ -41,22 +82,36 @@ func main() {
 
 	// Main display loop
 	for {
+		// Get terminal height and calculate how many commits to show
+		termHeight := getTerminalHeight()
+		commitsToShow := *numCommits
+		if commitsToShow == 0 {
+			// Auto-calculate based on terminal height
+			commitsToShow = calculateCommitLines(termHeight, *compactMode)
+		}
+
+		// Ensure commits don't overflow terminal
+		maxCommits := calculateCommitLines(termHeight, *compactMode)
+		if commitsToShow > maxCommits {
+			commitsToShow = maxCommits
+		}
+
 		// Clear the screen
 		fmt.Print("\033[2J\033[H")
-		
+
 		// If rotation is enabled, check if it's time to rotate
 		if *rotate && time.Since(lastRotation) >= rotationInterval {
 			currentFormat = (currentFormat + 1) % len(formatPatterns)
 			lastRotation = time.Now()
 		}
-		
+
 		// Get the current format pattern
 		format := formatPatterns[currentFormat]
-		
+
 		// Run git log command with the selected format
-		logCmd := exec.Command("git", "-c", "color.ui=always", "log", "--all", "--graph", 
-			"--pretty=format:" + format, 
-			"--date-order", fmt.Sprintf("-%d", *numCommits))
+		logCmd := exec.Command("git", "-c", "color.ui=always", "log", "--all", "--graph",
+			"--pretty=format:" + format,
+			"--date-order", fmt.Sprintf("-%d", commitsToShow))
 		logCmd.Stdout = os.Stdout
 		logCmd.Run()
 		
@@ -79,8 +134,8 @@ func main() {
 		}
 		
 		// Show instruction and info
-		fmt.Printf("\nFormat: %d/%d | Press Ctrl+C to exit | Refreshing in %s...\n", 
-			currentFormat+1, len(formatPatterns), refreshRate)
+		fmt.Printf("\nFormat: %d/%d | Commits: %d | Height: %d | Press Ctrl+C to exit | Refreshing in %s...\n",
+			currentFormat+1, len(formatPatterns), commitsToShow, termHeight, refreshRate)
 		
 		time.Sleep(*refreshRate)
 	}
