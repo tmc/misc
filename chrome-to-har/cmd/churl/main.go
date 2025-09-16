@@ -1100,9 +1100,9 @@ func generateWebSocketOutput(page *browser.Page, opts options) error {
 func showWebSocketStats(page *browser.Page, verbose bool) {
 	stats := page.GetWebSocketStats()
 	
-	fmt.Printf("\n" + strings.Repeat("=", 50) + "\n")
+	fmt.Printf("\n%s\n", strings.Repeat("=", 50))
 	fmt.Printf("WebSocket Statistics\n")
-	fmt.Printf(strings.Repeat("=", 50) + "\n")
+	fmt.Printf("%s\n", strings.Repeat("=", 50))
 	
 	fmt.Printf("Active Connections: %v\n", stats["active_connections"])
 	fmt.Printf("Total Bytes Sent: %v\n", stats["total_bytes_sent"])
@@ -1112,7 +1112,7 @@ func showWebSocketStats(page *browser.Page, verbose bool) {
 	
 	if verbose {
 		fmt.Printf("\nConnection Details:\n")
-		fmt.Printf(strings.Repeat("-", 30) + "\n")
+		fmt.Printf("%s\n", strings.Repeat("-", 30))
 		
 		connections := page.GetWebSocketConnections()
 		for id, conn := range connections {
