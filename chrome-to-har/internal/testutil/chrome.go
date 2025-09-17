@@ -43,6 +43,11 @@ func NewChromeTestHelper(t *testing.T) *ChromeTestHelper {
 		t.Skip("Skipping browser tests in CI environment")
 	}
 
+	// Skip if SKIP_BROWSER_TESTS is set
+	if os.Getenv("SKIP_BROWSER_TESTS") != "" {
+		t.Skip("Skipping browser tests (SKIP_BROWSER_TESTS is set)")
+	}
+
 	chromePath := findChrome()
 	if chromePath == "" {
 		t.Skip("No Chrome-compatible browser found (Chrome, Chromium, Brave, etc.)")
@@ -344,6 +349,11 @@ func SkipIfNoChrome(t *testing.T) {
 	// Skip if in CI environment
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping browser tests in CI environment")
+	}
+
+	// Skip if SKIP_BROWSER_TESTS is set
+	if os.Getenv("SKIP_BROWSER_TESTS") != "" {
+		t.Skip("Skipping browser tests (SKIP_BROWSER_TESTS is set)")
 	}
 
 	if findChrome() == "" {

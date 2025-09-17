@@ -12,6 +12,8 @@ import (
 )
 
 func TestStabilityDetector(t *testing.T) {
+	testutil.SkipIfNoChrome(t)
+
 	// Create a test server with dynamic content
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
@@ -416,6 +418,7 @@ func TestStabilityDetector(t *testing.T) {
 }
 
 func TestStabilityConfigValidation(t *testing.T) {
+	testutil.SkipIfNoChrome(t)
 	t.Run("NilConfig", func(t *testing.T) {
 		page := &Page{}
 		detector := NewStabilityDetector(page, nil)
@@ -446,6 +449,7 @@ func TestStabilityConfigValidation(t *testing.T) {
 }
 
 func TestStabilityDetectorLifecycle(t *testing.T) {
+	testutil.SkipIfNoChrome(t)
 	// Create browser context
 	ctx, cancel := chromedp.NewContext(context.Background())
 	defer cancel()
