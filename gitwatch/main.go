@@ -2,10 +2,15 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
+	"strings"
+	"syscall"
 	"time"
 
 	"golang.org/x/term"
@@ -21,6 +26,55 @@ var formatPatterns = []string{
 	"%C(bold yellow)%h%C(auto)%d %C(bold white)%s %C(dim cyan)[%ad] %C(dim green)[%an]%C(reset) %C(blue)<%ae>%C(reset)",
 	// Stats focused format (better for branch visualization)
 	"%C(bold yellow)%h%C(auto)%d %C(bold white)%s %C(dim cyan)(%ar)%C(reset)",
+}
+
+// initAlternateScreen enters alternate screen buffer and hides cursor
+func initAlternateScreen() {
+	fmt.Print("\033[?1049h\033[H\033[?25l")
+}
+
+// exitAlternateScreen restores normal screen buffer and shows cursor
+func exitAlternateScreen() {
+	fmt.Print("\033[?25h\033[?1049l")
+}
+
+// clearScreen moves cursor to home and clears screen without flicker
+func clearScreen() {
+	fmt.Print("\033[H\033[2J")
+}
+
+// countLines counts the number of lines in the given text
+func countLines(text string) int {
+	if len(text) == 0 {
+		return 0
+	}
+	return strings.Count(text, "\n") + 1
+}
+
+// executeCommand runs a command and captures its output as a string
+func executeCommand(name string, args ...string) (string, error) {
+	cmd := exec.Command(name, args...)
+	var buf bytes.Buffer
+	cmd.Stdout = &buf
+	err := cmd.Run()
+	return buf.String(), err
+}
+
+// printWithLimit prints text but ensures it doesn't exceed the given number of lines
+func printWithLimit(text string, maxLines int) int {
+	if maxLines <= 0 {
+		return 0
+	}
+
+	scanner := bufio.NewScanner(strings.NewReader(text))
+	linesShown := 0
+
+	for scanner.Scan() && linesShown < maxLines {
+		fmt.Println(scanner.Text())
+		linesShown++
+	}
+
+	return linesShown
 }
 
 // getTerminalHeight returns the height of the terminal in lines.
@@ -80,6 +134,21 @@ func main() {
 	rotationInterval := 10 * time.Second // Time between format rotations
 	lastRotation := time.Now()
 
+	// Set up signal handling for clean exit
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	// Initialize alternate screen buffer
+	initAlternateScreen()
+	defer exitAlternateScreen()
+
+	// Handle cleanup on signal
+	go func() {
+		<-sigCh
+		exitAlternateScreen()
+		os.Exit(0)
+	}()
+
 	// Main display loop
 	for {
 		// Get terminal height and calculate how many commits to show
@@ -96,9 +165,6 @@ func main() {
 			commitsToShow = maxCommits
 		}
 
-		// Clear the screen
-		fmt.Print("\033[2J\033[H")
-
 		// If rotation is enabled, check if it's time to rotate
 		if *rotate && time.Since(lastRotation) >= rotationInterval {
 			currentFormat = (currentFormat + 1) % len(formatPatterns)
@@ -108,34 +174,70 @@ func main() {
 		// Get the current format pattern
 		format := formatPatterns[currentFormat]
 
-		// Run git log command with the selected format
-		logCmd := exec.Command("git", "-c", "color.ui=always", "log", "--all", "--graph",
-			"--pretty=format:" + format,
+		// Build entire screen content in memory first
+		var screenBuffer bytes.Buffer
+
+		// Get git log output
+		logOutput, err := executeCommand("git", "-c", "color.ui=always", "log", "--all", "--graph",
+			"--pretty=format:"+format,
 			"--date-order", fmt.Sprintf("-%d", commitsToShow))
-		logCmd.Stdout = os.Stdout
-		logCmd.Run()
-		
-		// Print worktrees section
-		if *compactMode {
-			fmt.Print("\n\033[1;34m=== Worktrees ===\033[0m ")
-			
-			// Run compact worktree command that outputs everything on one line
-			wtCmd := exec.Command("bash", "-c", "git worktree list | awk '{print \"\\033[1;34m[\"$1\"]\033[0m\"}' | tr '\\n' ' '")
-			wtCmd.Stdout = os.Stdout
-			wtCmd.Run()
-			fmt.Println()
+		if err != nil {
+			screenBuffer.WriteString(fmt.Sprintf("Error running git log: %v\n", err))
 		} else {
-			fmt.Println("\n\033[1;34m=== Worktrees ===\033[0m")
-			
-			// Run standard worktree command
-			wtCmd := exec.Command("bash", "-c", "git worktree list --porcelain | awk '{print \"\\033[1;34m\" $0 \"\\033[0m\"}'")
-			wtCmd.Stdout = os.Stdout
-			wtCmd.Run()
+			// Calculate how many lines we can use for the log
+			worktreeLines := 8
+			if *compactMode {
+				worktreeLines = 3
+			}
+			footerLines := 2
+			availableLogLines := termHeight - worktreeLines - footerLines - 2 // 2 for buffer
+
+			// Add git log to buffer with line limit
+			scanner := bufio.NewScanner(strings.NewReader(logOutput))
+			linesShown := 0
+			for scanner.Scan() && linesShown < availableLogLines {
+				screenBuffer.WriteString(scanner.Text() + "\n")
+				linesShown++
+			}
 		}
-		
-		// Show instruction and info
-		fmt.Printf("\nFormat: %d/%d | Commits: %d | Height: %d | Press Ctrl+C to exit | Refreshing in %s...\n",
-			currentFormat+1, len(formatPatterns), commitsToShow, termHeight, refreshRate)
+
+		// Add worktrees section to buffer
+		if *compactMode {
+			screenBuffer.WriteString("\n\033[1;34m=== Worktrees ===\033[0m ")
+			wtOutput, err := executeCommand("bash", "-c", "git worktree list | awk '{print \"\\033[1;34m[\"$1\"]\033[0m\"}' | tr '\\n' ' '")
+			if err == nil {
+				screenBuffer.WriteString(strings.TrimSpace(wtOutput))
+			}
+			screenBuffer.WriteString("\n")
+		} else {
+			screenBuffer.WriteString("\n\033[1;34m=== Worktrees ===\033[0m\n")
+			wtOutput, err := executeCommand("bash", "-c", "git worktree list --porcelain | awk '{print \"\\033[1;34m\" $0 \"\\033[0m\"}'")
+			if err == nil {
+				scanner := bufio.NewScanner(strings.NewReader(wtOutput))
+				linesShown := 0
+				for scanner.Scan() && linesShown < 5 {
+					screenBuffer.WriteString(scanner.Text() + "\n")
+					linesShown++
+				}
+			}
+		}
+
+		// Add footer to buffer with proper line clearing
+		statusLine := ""
+		if *rotate {
+			statusLine = fmt.Sprintf("\n\033[2mFormat %d/%d • %d commits • %s\033[0m",
+				currentFormat+1, len(formatPatterns), commitsToShow, refreshRate)
+		} else {
+			statusLine = fmt.Sprintf("\n\033[2m%d commits • %s\033[0m",
+				commitsToShow, refreshRate)
+		}
+		screenBuffer.WriteString(statusLine)
+		screenBuffer.WriteString("\033[K") // Clear to end of line to remove any leftover text
+
+		// Now output everything at once with minimal screen manipulation
+		fmt.Print("\033[H") // Move cursor to top-left
+		fmt.Print(screenBuffer.String())
+		fmt.Print("\033[J") // Clear from cursor to end of screen to remove any leftover content
 		
 		time.Sleep(*refreshRate)
 	}
