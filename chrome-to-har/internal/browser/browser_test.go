@@ -239,7 +239,7 @@ func newTestServer() *TestServer {
 	return ts
 }
 
-// Helper function to find Chrome executable - use testutil instead
+// Helper function to find Chrome executable - use discovery package
 func findChrome() string {
 	return testutil.FindChrome()
 }
@@ -247,6 +247,12 @@ func findChrome() string {
 // Test utilities
 func skipIfNoChrome(t testing.TB) {
 	t.Helper()
+
+	// Skip if SKIP_BROWSER_TESTS is set
+	if os.Getenv("SKIP_BROWSER_TESTS") != "" {
+		t.Skip("Skipping browser tests (SKIP_BROWSER_TESTS is set)")
+	}
+
 	if os.Getenv("CI") == "true" && runtime.GOOS != "linux" {
 		t.Skip("Skipping browser test in CI on non-Linux platform")
 	}

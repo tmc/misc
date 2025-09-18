@@ -8,8 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -17,6 +15,7 @@ import (
 
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
+	"github.com/tmc/misc/chrome-to-har/internal/discovery"
 )
 
 // ChromeTestHelper provides utilities for running Chrome in tests
@@ -250,79 +249,9 @@ func FindChrome() string {
 	return findChrome()
 }
 
-// findChrome locates the Chrome executable
+// findChrome locates the Chrome executable using the discovery package
 func findChrome() string {
-	// Check environment variable first
-	if path := os.Getenv("CHROME_PATH"); path != "" {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-
-	// Platform-specific paths
-	var paths []string
-
-	switch runtime.GOOS {
-	case "darwin":
-		paths = []string{
-			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-			"/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
-			"/Applications/Chromium.app/Contents/MacOS/Chromium",
-			"/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-			"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-		}
-	case "linux":
-		paths = []string{
-			"/usr/bin/google-chrome-stable",
-			"/usr/bin/google-chrome",
-			"/usr/bin/chromium-browser",
-			"/usr/bin/chromium",
-			"/usr/bin/brave-browser",
-			"/usr/bin/microsoft-edge",
-			"/snap/bin/chromium",
-			"/snap/bin/brave",
-		}
-	case "windows":
-		paths = []string{
-			`C:\Program Files\Google\Chrome\Application\chrome.exe`,
-			`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
-			`C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe`,
-			`C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe`,
-			`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
-			`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
-			filepath.Join(os.Getenv("LOCALAPPDATA"), `Google\Chrome\Application\chrome.exe`),
-			filepath.Join(os.Getenv("LOCALAPPDATA"), `BraveSoftware\Brave-Browser\Application\brave.exe`),
-			filepath.Join(os.Getenv("LOCALAPPDATA"), `Microsoft\Edge\Application\msedge.exe`),
-		}
-	}
-
-	// Check each path
-	for _, path := range paths {
-		if _, err := os.Stat(path); err == nil {
-			return path
-		}
-	}
-
-	// Try to find in PATH
-	pathCommands := []string{
-		"google-chrome",
-		"google-chrome-stable",
-		"chromium",
-		"chromium-browser",
-		"brave-browser",
-		"microsoft-edge",
-		"msedge",
-		"chrome",
-		"brave",
-	}
-
-	for _, cmd := range pathCommands {
-		if path, err := exec.LookPath(cmd); err == nil {
-			return path
-		}
-	}
-
-	return ""
+	return discovery.FindBestBrowser()
 }
 
 // getFreePort finds a free port
