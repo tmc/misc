@@ -8,7 +8,6 @@ import (
 	"image/draw"
 	"image/png"
 	"math"
-	"strings"
 
 	"github.com/pkg/errors"
 )

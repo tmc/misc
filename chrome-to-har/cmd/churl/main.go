@@ -302,9 +302,11 @@ func main() {
 	if opts.chromePath == "" {
 		if chromePath, detected := detectChromePath(); detected {
 			if opts.verbose {
-				log.Printf("Auto-detected Chrome path: %s", chromePath)
+				log.Printf("Auto-detected browser path: %s", chromePath)
 			}
 			opts.chromePath = chromePath
+		} else if opts.verbose {
+			log.Printf("No Chrome-based browser detected automatically")
 		}
 	}
 
@@ -734,7 +736,16 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 	return err
 }
 
+// browserCandidate represents a potential browser installation
+type browserCandidate struct {
+	path       string
+	name       string
+	lastUsed   time.Time
+	priority   int // lower is better
+}
+
 // detectChromePath attempts to find Chrome or any Chromium-based browser in common installation locations
+// It prioritizes the most recently used browser when multiple are found
 func detectChromePath() (string, bool) {
 	// Try to find browsers in PATH first (ordered by preference)
 	for _, browser := range []string{
@@ -748,110 +759,328 @@ func detectChromePath() (string, bool) {
 	// Check OS-specific locations
 	switch runtime.GOOS {
 	case "darwin":
-		paths := []string{
-			// Chrome variants
-			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-			"/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
+		return detectChromeDarwin()
+	case "windows":
+		return detectChromeWindows()
+	case "linux":
+		return detectChromeLinux()
+	}
 
-			// Chromium variants
-			"/Applications/Chromium.app/Contents/MacOS/Chromium",
+	return "", false
+}
 
-			// Brave
-			"/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
+// detectChromeDarwin finds Chrome/Chromium browsers on macOS, preferring the most recently used
+func detectChromeDarwin() (string, bool) {
+	var candidates []browserCandidate
 
-			// Microsoft Edge
-			"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+	// Browser paths with their priority (lower number = higher priority if all else equal)
+	browserPaths := []struct {
+		path     string
+		name     string
+		priority int
+	}{
+		// Chrome variants (highest priority)
+		{"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "Google Chrome", 1},
+		{"/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary", "Chrome Canary", 2},
 
-			// Opera
-			"/Applications/Opera.app/Contents/MacOS/Opera",
+		// Brave (high priority)
+		{"/Applications/Brave Browser.app/Contents/MacOS/Brave Browser", "Brave Browser", 3},
 
-			// Vivaldi
-			"/Applications/Vivaldi.app/Contents/MacOS/Vivaldi",
+		// Chromium
+		{"/Applications/Chromium.app/Contents/MacOS/Chromium", "Chromium", 4},
 
-			// User-level installations
-			"~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-			"~/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-			"~/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-			"~/Applications/Chromium.app/Contents/MacOS/Chromium",
+		// Microsoft Edge
+		{"/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge", "Microsoft Edge", 5},
+
+		// Arc Browser
+		{"/Applications/Arc.app/Contents/MacOS/Arc", "Arc Browser", 6},
+
+		// Vivaldi
+		{"/Applications/Vivaldi.app/Contents/MacOS/Vivaldi", "Vivaldi", 7},
+
+		// Opera
+		{"/Applications/Opera.app/Contents/MacOS/Opera", "Opera", 8},
+
+		// User-level installations
+		{"~/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "Google Chrome (User)", 10},
+		{"~/Applications/Brave Browser.app/Contents/MacOS/Brave Browser", "Brave Browser (User)", 11},
+		{"~/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge", "Microsoft Edge (User)", 12},
+		{"~/Applications/Chromium.app/Contents/MacOS/Chromium", "Chromium (User)", 13},
+	}
+
+	// Check each potential browser path
+	for _, browser := range browserPaths {
+		path := browser.path
+		if strings.HasPrefix(path, "~/") {
+			home, err := os.UserHomeDir()
+			if err == nil {
+				path = filepath.Join(home, path[2:])
+			}
 		}
-		for _, path := range paths {
-			expandedPath := path
-			if strings.HasPrefix(path, "~/") {
-				home, err := os.UserHomeDir()
-				if err == nil {
-					expandedPath = filepath.Join(home, path[2:])
+
+		if _, err := os.Stat(path); err == nil {
+			// Get the last access time to determine most recently used
+			lastUsed := getLastUsedTime(path, browser.name)
+
+			candidates = append(candidates, browserCandidate{
+				path:     path,
+				name:     browser.name,
+				lastUsed: lastUsed,
+				priority: browser.priority,
+			})
+		}
+	}
+
+	// Also check via mdfind for browsers not in standard locations
+	// Pass already found browsers to avoid duplicates
+	foundPaths := make(map[string]bool)
+	for _, c := range candidates {
+		foundPaths[c.path] = true
+	}
+	if additionalBrowsers := findBrowsersViaMDFind(foundPaths); len(additionalBrowsers) > 0 {
+		candidates = append(candidates, additionalBrowsers...)
+	}
+
+	if len(candidates) == 0 {
+		return "", false
+	}
+
+	// Sort candidates by:
+	// 1. Most recently used (within last 30 days)
+	// 2. Priority (if not recently used)
+	// 3. Name (for stability)
+	recencyThreshold := time.Now().Add(-30 * 24 * time.Hour)
+
+	for i := 0; i < len(candidates)-1; i++ {
+		for j := i + 1; j < len(candidates); j++ {
+			swap := false
+
+			// Both recently used: prefer the more recent one
+			if candidates[i].lastUsed.After(recencyThreshold) && candidates[j].lastUsed.After(recencyThreshold) {
+				if candidates[j].lastUsed.After(candidates[i].lastUsed) {
+					swap = true
+				}
+			} else if candidates[j].lastUsed.After(recencyThreshold) && !candidates[i].lastUsed.After(recencyThreshold) {
+				// j is recent, i is not: prefer j
+				swap = true
+			} else if !candidates[j].lastUsed.After(recencyThreshold) && !candidates[i].lastUsed.After(recencyThreshold) {
+				// Neither is recent: use priority
+				if candidates[j].priority < candidates[i].priority {
+					swap = true
+				} else if candidates[j].priority == candidates[i].priority && candidates[j].name < candidates[i].name {
+					swap = true
 				}
 			}
-			if _, err := os.Stat(expandedPath); err == nil {
-				return expandedPath, true
-			}
-		}
-	case "windows":
-		paths := []string{
-			// Chrome
-			`C:\Program Files\Google\Chrome\Application\chrome.exe`,
-			`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
 
-			// Edge
-			`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
-			`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
-
-			// Brave
-			`C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe`,
-			`C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe`,
-
-			// Vivaldi
-			`C:\Program Files\Vivaldi\Application\vivaldi.exe`,
-			`C:\Program Files (x86)\Vivaldi\Application\vivaldi.exe`,
-
-			// Opera
-			`C:\Program Files\Opera\launcher.exe`,
-			`C:\Program Files (x86)\Opera\launcher.exe`,
-		}
-		for _, path := range paths {
-			if _, err := os.Stat(path); err == nil {
-				return path, true
-			}
-		}
-	case "linux":
-		paths := []string{
-			// Chrome
-			"/usr/bin/google-chrome",
-			"/usr/bin/google-chrome-stable",
-			"/opt/google/chrome/chrome",
-
-			// Chromium
-			"/usr/bin/chromium",
-			"/usr/bin/chromium-browser",
-			"/snap/bin/chromium",
-
-			// Brave
-			"/usr/bin/brave-browser",
-			"/usr/bin/brave",
-			"/opt/brave.com/brave/brave",
-			"/snap/bin/brave",
-
-			// Edge
-			"/usr/bin/microsoft-edge",
-			"/usr/bin/microsoft-edge-stable",
-			"/opt/microsoft/msedge/msedge",
-
-			// Vivaldi
-			"/usr/bin/vivaldi",
-			"/usr/bin/vivaldi-stable",
-			"/opt/vivaldi/vivaldi",
-
-			// Opera
-			"/usr/bin/opera",
-			"/usr/bin/opera-stable",
-		}
-		for _, path := range paths {
-			if _, err := os.Stat(path); err == nil {
-				return path, true
+			if swap {
+				candidates[i], candidates[j] = candidates[j], candidates[i]
 			}
 		}
 	}
 
+	// Return the best candidate
+	best := candidates[0]
+
+	// Log the selection if verbose
+	if os.Getenv("CHURL_DEBUG_BROWSER_SELECTION") != "" {
+		log.Printf("Selected browser: %s", best.name)
+		log.Printf("  Path: %s", best.path)
+		log.Printf("  Last used: %s", best.lastUsed.Format(time.RFC3339))
+		log.Printf("  Priority: %d", best.priority)
+		if len(candidates) > 1 {
+			log.Printf("Other candidates:")
+			for i := 1; i < len(candidates); i++ {
+				c := candidates[i]
+				log.Printf("  - %s (last used: %s, priority: %d)",
+					c.name, c.lastUsed.Format(time.RFC3339), c.priority)
+			}
+		}
+	}
+
+	return best.path, true
+}
+
+// getLastUsedTime attempts to determine when a browser was last used
+func getLastUsedTime(browserPath string, browserName string) time.Time {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return time.Time{}
+	}
+
+	// Map browser names to their profile directories
+	profilePaths := map[string][]string{
+		"Google Chrome":        {filepath.Join(home, "Library", "Application Support", "Google", "Chrome")},
+		"Chrome Canary":        {filepath.Join(home, "Library", "Application Support", "Google", "Chrome Canary")},
+		"Brave Browser":        {filepath.Join(home, "Library", "Application Support", "BraveSoftware", "Brave-Browser")},
+		"Microsoft Edge":       {filepath.Join(home, "Library", "Application Support", "Microsoft Edge")},
+		"Chromium":            {filepath.Join(home, "Library", "Application Support", "Chromium")},
+		"Vivaldi":             {filepath.Join(home, "Library", "Application Support", "Vivaldi")},
+		"Opera":               {filepath.Join(home, "Library", "Application Support", "com.operasoftware.Opera")},
+		"Arc Browser":         {filepath.Join(home, "Library", "Application Support", "Arc")},
+	}
+
+	// Check for User-level installations
+	for k, v := range profilePaths {
+		profilePaths[k+" (User)"] = v
+	}
+
+	var mostRecent time.Time
+
+	if paths, ok := profilePaths[browserName]; ok {
+		for _, profileDir := range paths {
+			// Check various files that indicate recent usage
+			filesIndicatingUsage := []string{
+				"Default/History",
+				"Default/Cookies",
+				"Default/Preferences",
+				"Local State",
+			}
+
+			for _, file := range filesIndicatingUsage {
+				fullPath := filepath.Join(profileDir, file)
+				if info, err := os.Stat(fullPath); err == nil {
+					modTime := info.ModTime()
+					if modTime.After(mostRecent) {
+						mostRecent = modTime
+					}
+				}
+			}
+		}
+	}
+
+	// If we couldn't find profile data, use the app bundle modification time
+	if mostRecent.IsZero() {
+		if info, err := os.Stat(browserPath); err == nil {
+			mostRecent = info.ModTime()
+		}
+	}
+
+	return mostRecent
+}
+
+// findBrowsersViaMDFind uses mdfind to locate Chrome-based browsers on macOS
+func findBrowsersViaMDFind(alreadyFound map[string]bool) []browserCandidate {
+	var candidates []browserCandidate
+	seenPaths := make(map[string]bool)
+
+	// Bundle IDs to search for
+	bundleIDs := map[string]struct {
+		name     string
+		execName string
+		priority int
+	}{
+		"com.google.Chrome":         {"Google Chrome", "Google Chrome", 1},
+		"com.google.Chrome.canary":  {"Chrome Canary", "Google Chrome Canary", 2},
+		"com.brave.Browser":         {"Brave Browser", "Brave Browser", 3},
+		"org.chromium.Chromium":     {"Chromium", "Chromium", 4},
+		"com.microsoft.edgemac":     {"Microsoft Edge", "Microsoft Edge", 5},
+		"company.thebrowser.Browser": {"Arc Browser", "Arc", 6},
+		"com.vivaldi.Vivaldi":       {"Vivaldi", "Vivaldi", 7},
+		"com.operasoftware.Opera":   {"Opera", "Opera", 8},
+	}
+
+	for bundleID, info := range bundleIDs {
+		cmd := exec.Command("mdfind", fmt.Sprintf("kMDItemCFBundleIdentifier == '%s'", bundleID))
+		out, err := cmd.Output()
+		if err == nil && len(out) > 0 {
+			paths := strings.Split(strings.TrimSpace(string(out)), "\n")
+			for _, appPath := range paths {
+				if appPath == "" {
+					continue
+				}
+				execPath := filepath.Join(appPath, "Contents", "MacOS", info.execName)
+
+				// Skip if we've already seen this path or if it was already found directly
+				if seenPaths[execPath] || alreadyFound[execPath] {
+					continue
+				}
+
+				if _, err := os.Stat(execPath); err == nil {
+					seenPaths[execPath] = true
+					lastUsed := getLastUsedTime(execPath, info.name)
+					candidates = append(candidates, browserCandidate{
+						path:     execPath,
+						name:     info.name + " (mdfind)",
+						lastUsed: lastUsed,
+						priority: info.priority + 20, // Slightly lower priority for mdfind results
+					})
+				}
+			}
+		}
+	}
+
+	return candidates
+}
+
+// detectChromeWindows finds Chrome/Chromium browsers on Windows
+func detectChromeWindows() (string, bool) {
+	paths := []string{
+		// Chrome
+		`C:\Program Files\Google\Chrome\Application\chrome.exe`,
+		`C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
+
+		// Edge
+		`C:\Program Files\Microsoft\Edge\Application\msedge.exe`,
+		`C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
+
+		// Brave
+		`C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe`,
+		`C:\Program Files (x86)\BraveSoftware\Brave-Browser\Application\brave.exe`,
+
+		// Vivaldi
+		`C:\Program Files\Vivaldi\Application\vivaldi.exe`,
+		`C:\Program Files (x86)\Vivaldi\Application\vivaldi.exe`,
+
+		// Opera
+		`C:\Program Files\Opera\launcher.exe`,
+		`C:\Program Files (x86)\Opera\launcher.exe`,
+	}
+	for _, path := range paths {
+		if _, err := os.Stat(path); err == nil {
+			return path, true
+		}
+	}
+	return "", false
+}
+
+// detectChromeLinux finds Chrome/Chromium browsers on Linux
+func detectChromeLinux() (string, bool) {
+	paths := []string{
+		// Chrome
+		"/usr/bin/google-chrome",
+		"/usr/bin/google-chrome-stable",
+		"/opt/google/chrome/chrome",
+
+		// Chromium
+		"/usr/bin/chromium",
+		"/usr/bin/chromium-browser",
+		"/snap/bin/chromium",
+
+		// Brave
+		"/usr/bin/brave-browser",
+		"/usr/bin/brave",
+		"/opt/brave.com/brave/brave",
+		"/snap/bin/brave",
+
+		// Edge
+		"/usr/bin/microsoft-edge",
+		"/usr/bin/microsoft-edge-stable",
+		"/opt/microsoft/msedge/msedge",
+
+		// Vivaldi
+		"/usr/bin/vivaldi",
+		"/usr/bin/vivaldi-stable",
+		"/opt/vivaldi/vivaldi",
+
+		// Opera
+		"/usr/bin/opera",
+		"/usr/bin/opera-stable",
+	}
+	for _, path := range paths {
+		if _, err := os.Stat(path); err == nil {
+			return path, true
+		}
+	}
 	return "", false
 }
 

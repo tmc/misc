@@ -102,6 +102,11 @@ const (
 	DiffTypeModified DiffType = "modified"
 )
 
+// String returns the string representation of DiffType
+func (d DiffType) String() string {
+	return string(d)
+}
+
 // DiffSignificance represents how significant a change is
 type DiffSignificance string
 
@@ -110,6 +115,11 @@ const (
 	DiffSignificanceMedium DiffSignificance = "medium"
 	DiffSignificanceLow    DiffSignificance = "low"
 )
+
+// String returns the string representation of DiffSignificance
+func (d DiffSignificance) String() string {
+	return string(d)
+}
 
 // DiffEngine compares HAR captures and generates difference reports
 type DiffEngine struct {

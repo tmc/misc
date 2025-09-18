@@ -111,6 +111,12 @@ func (rg *ReportGenerator) generateHTMLReport(result *DiffResult, options *Repor
 		"styleClass":    rg.getStyleClass,
 		"upper":         strings.ToUpper,
 		"title":         strings.Title,
+		"toString": func(v interface{}) string {
+			if stringer, ok := v.(fmt.Stringer); ok {
+				return stringer.String()
+			}
+			return fmt.Sprintf("%v", v)
+		},
 	}).Parse(htmlTemplate))
 
 	var buf bytes.Buffer
@@ -603,8 +609,8 @@ const htmlTemplate = `<!DOCTYPE html>
         {{if .Result.NetworkDiffs}}
         <h2>Network Changes</h2>
         {{range .Result.NetworkDiffs}}
-        <div class="diff-item {{.Type}} {{styleClass .Significance}}">
-            <strong>{{upper .Type | title}}:</strong> {{.Method}} {{.URL}} 
+        <div class="diff-item {{toString .Type}} {{styleClass .Significance}}">
+            <strong>{{title (upper (toString .Type))}}:</strong> {{.Method}} {{.URL}} 
             <span class="significance">[{{.Significance}}]</span>
             {{if .Changes}}
             <ul class="changes">

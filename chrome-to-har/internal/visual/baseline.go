@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -267,12 +266,12 @@ func (bm *BaselineManager) ImportBaselines(config *VisualTestConfig, archivePath
 // CompareBaselines compares two baselines
 func (bm *BaselineManager) CompareBaselines(testName1, testName2 string, config *VisualTestConfig) (*BaselineComparison, error) {
 	// Load both baselines
-	screenshot1, metadata1, err := bm.LoadBaseline(testName1, config)
+	_, metadata1, err := bm.LoadBaseline(testName1, config)
 	if err != nil {
 		return nil, errors.Wrapf(err, "loading baseline %s", testName1)
 	}
 
-	screenshot2, metadata2, err := bm.LoadBaseline(testName2, config)
+	_, metadata2, err := bm.LoadBaseline(testName2, config)
 	if err != nil {
 		return nil, errors.Wrapf(err, "loading baseline %s", testName2)
 	}

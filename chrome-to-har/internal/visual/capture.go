@@ -9,11 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/chromedp/cdproto/cdp"
-	"github.com/chromedp/cdproto/dom"
 	"github.com/chromedp/cdproto/emulation"
-	"github.com/chromedp/cdproto/page"
-	"github.com/chromedp/cdproto/runtime"
+	cdppage "github.com/chromedp/cdproto/page"
 	"github.com/chromedp/chromedp"
 	"github.com/pkg/errors"
 	"github.com/tmc/misc/chrome-to-har/internal/browser"
@@ -295,13 +292,23 @@ func (sc *ScreenshotCapture) waitForStability(ctx context.Context, page *browser
 func (sc *ScreenshotCapture) captureFullPage(ctx context.Context, page *browser.Page, opts *ScreenshotOptions) ([]byte, error) {
 	var buf []byte
 	
-	action := chromedp.FullScreenshot(&buf, int(opts.Quality))
+	var action chromedp.Action
 	if opts.OmitBackground {
 		action = chromedp.ActionFunc(func(ctx context.Context) error {
-			return page.Screenshot(func(p *page.CaptureScreenshotParams) *page.CaptureScreenshotParams {
-				return p.WithOmitBackground(true).WithQuality(int64(opts.Quality))
-			}).Do(ctx)
+			params := cdppage.CaptureScreenshot().
+				WithFormat(cdppage.CaptureScreenshotFormatPng).
+				WithQuality(int64(opts.Quality)).
+				WithCaptureBeyondViewport(true).
+				WithFromSurface(true)
+			data, err := params.Do(ctx)
+			if err != nil {
+				return err
+			}
+			buf = data
+			return nil
 		})
+	} else {
+		action = chromedp.FullScreenshot(&buf, int(opts.Quality))
 	}
 
 	if err := chromedp.Run(ctx, action); err != nil {
@@ -330,7 +337,11 @@ func (sc *ScreenshotCapture) captureViewport(ctx context.Context, page *browser.
 	action := chromedp.CaptureScreenshot(&buf)
 	if opts.OmitBackground {
 		action = chromedp.ActionFunc(func(ctx context.Context) error {
-			data, err := page.CaptureScreenshot(page.CaptureScreenshotParams{}.WithOmitBackground(true).WithQuality(int64(opts.Quality))).Do(ctx)
+			params := cdppage.CaptureScreenshot().
+				WithFormat(cdppage.CaptureScreenshotFormatPng).
+				WithQuality(int64(opts.Quality)).
+				WithFromSurface(true)
+			data, err := params.Do(ctx)
 			if err != nil {
 				return err
 			}

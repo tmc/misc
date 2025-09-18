@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -403,7 +402,11 @@ func (vcli *VisualCLI) ReportCommand(ctx context.Context, reportPath string) err
 func (vcli *VisualCLI) createBrowser(ctx context.Context) (*browser.Browser, error) {
 	var profileMgr chromeprofiles.ProfileManager
 	if vcli.config.UseProfile {
-		profileMgr = chromeprofiles.NewChromeProfileManager()
+		var err error
+		profileMgr, err = chromeprofiles.NewProfileManager()
+		if err != nil {
+			return nil, errors.Wrap(err, "creating profile manager")
+		}
 	}
 
 	opts := []browser.Option{

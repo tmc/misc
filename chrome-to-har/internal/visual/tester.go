@@ -3,6 +3,7 @@ package visual
 import (
 	"context"
 	"fmt"
+	"image"
 	"log"
 	"os"
 	"path/filepath"
