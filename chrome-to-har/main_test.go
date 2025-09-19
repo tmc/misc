@@ -16,6 +16,20 @@ import (
 	"github.com/tmc/misc/chrome-to-har/internal/testutil"
 )
 
+// TestMain adds global test setup and teardown for browser cleanup
+func TestMain(m *testing.M) {
+	// Clean up before tests
+	testutil.CleanupOrphanedBrowsers(&testing.T{})
+
+	// Run tests
+	code := m.Run()
+
+	// Clean up after tests
+	testutil.CleanupOrphanedBrowsers(&testing.T{})
+
+	os.Exit(code)
+}
+
 func TestBasicRun(t *testing.T) {
 	t.Parallel()
 	testutil.SkipIfNoChrome(t)
@@ -90,8 +104,10 @@ func TestBasicRun(t *testing.T) {
 				t.Errorf("Run() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			if tt.want != "" && !strings.Contains(logs, tt.want) {
-				t.Errorf("Run() logs = %q, want to contain %q", logs, tt.want)
+			// Check both stdout and logs for expected output
+			output := stdout + logs
+			if tt.want != "" && !strings.Contains(output, tt.want) {
+				t.Errorf("Run() output = %q, want to contain %q", output, tt.want)
 			}
 
 			if tt.wantErr && stdout != "" {

@@ -11,7 +11,23 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/tmc/misc/chrome-to-har/internal/testutil"
 )
+
+// TestMain adds global test setup and teardown for browser cleanup
+func TestMain(m *testing.M) {
+	// Clean up before tests
+	testutil.CleanupOrphanedBrowsers(&testing.T{})
+
+	// Run tests
+	code := m.Run()
+
+	// Clean up after tests
+	testutil.CleanupOrphanedBrowsers(&testing.T{})
+
+	os.Exit(code)
+}
 
 // skipIfNoBrowser skips the test if Chrome is not available or if running in short mode
 func skipIfNoBrowser(t testing.TB) {
@@ -139,6 +155,7 @@ func TestChurl_ShowHelp(t *testing.T) {
 func TestChurl_BasicFetch(t *testing.T) {
 	t.Parallel()
 	skipIfNoBrowser(t)
+	defer testutil.CleanupOrphanedBrowsers(t)
 
 	churlPath := buildChurl(t)
 	ts := createTestServer()
@@ -230,6 +247,7 @@ func TestChurl_BasicFetch(t *testing.T) {
 func TestChurl_Headers(t *testing.T) {
 	t.Parallel()
 	skipIfNoBrowser(t)
+	defer testutil.CleanupOrphanedBrowsers(t)
 
 	churlPath := buildChurl(t)
 	ts := createTestServer()
@@ -265,6 +283,7 @@ func TestChurl_Headers(t *testing.T) {
 func TestChurl_Authentication(t *testing.T) {
 	t.Parallel()
 	skipIfNoBrowser(t)
+	defer testutil.CleanupOrphanedBrowsers(t)
 
 	churlPath := buildChurl(t)
 	ts := createTestServer()
@@ -325,6 +344,7 @@ func TestChurl_Authentication(t *testing.T) {
 func TestChurl_OutputFile(t *testing.T) {
 	t.Parallel()
 	skipIfNoBrowser(t)
+	defer testutil.CleanupOrphanedBrowsers(t)
 
 	churlPath := buildChurl(t)
 	ts := createTestServer()
@@ -374,6 +394,7 @@ func TestChurl_OutputFile(t *testing.T) {
 func TestChurl_DynamicContent(t *testing.T) {
 	t.Parallel()
 	skipIfNoBrowser(t)
+	defer testutil.CleanupOrphanedBrowsers(t)
 
 	churlPath := buildChurl(t)
 	ts := createTestServer()
@@ -404,6 +425,7 @@ func TestChurl_DynamicContent(t *testing.T) {
 func TestChurl_WaitSelector(t *testing.T) {
 	t.Parallel()
 	skipIfNoBrowser(t)
+	defer testutil.CleanupOrphanedBrowsers(t)
 
 	churlPath := buildChurl(t)
 	ts := createTestServer()
@@ -434,6 +456,7 @@ func TestChurl_WaitSelector(t *testing.T) {
 func TestChurl_APIEndpoint(t *testing.T) {
 	t.Parallel()
 	skipIfNoBrowser(t)
+	defer testutil.CleanupOrphanedBrowsers(t)
 
 	churlPath := buildChurl(t)
 	ts := createTestServer()
@@ -479,6 +502,7 @@ func TestChurl_APIEndpoint(t *testing.T) {
 func TestChurl_Timeout(t *testing.T) {
 	t.Parallel()
 	skipIfNoBrowser(t)
+	defer testutil.CleanupOrphanedBrowsers(t)
 
 	churlPath := buildChurl(t)
 	ts := createTestServer()
@@ -509,6 +533,7 @@ func TestChurl_Timeout(t *testing.T) {
 func TestChurl_HAR_Output(t *testing.T) {
 	t.Parallel()
 	skipIfNoBrowser(t)
+	defer testutil.CleanupOrphanedBrowsers(t)
 
 	churlPath := buildChurl(t)
 	ts := createTestServer()
@@ -559,6 +584,7 @@ func TestChurl_HAR_Output(t *testing.T) {
 func TestChurl_VerboseMode(t *testing.T) {
 	t.Parallel()
 	skipIfNoBrowser(t)
+	defer testutil.CleanupOrphanedBrowsers(t)
 
 	churlPath := buildChurl(t)
 	ts := createTestServer()
@@ -631,11 +657,3 @@ func BenchmarkChurl_BasicFetch(b *testing.B) {
 	}
 }
 
-// TestMain allows us to do setup/teardown for all tests
-func TestMain(m *testing.M) {
-	// Run tests
-	code := m.Run()
-
-	// Exit with the test result code
-	os.Exit(code)
-}

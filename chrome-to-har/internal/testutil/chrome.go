@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -369,4 +370,67 @@ func GetChromeVersion() (string, error) {
 	}
 
 	return strings.TrimSpace(string(output)), nil
+}
+
+// CleanupOrphanedBrowsers kills any leftover browser processes from tests
+func CleanupOrphanedBrowsers(t testing.TB) {
+	t.Helper()
+
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		return // Only cleanup on Unix-like systems
+	}
+
+	// Kill any headless browser instances
+	browsers := []string{
+		"Brave Browser.*headless",
+		"Google Chrome.*headless",
+		"Chromium.*headless",
+		"chromedp-runner",
+	}
+
+	for _, browser := range browsers {
+		cmd := exec.Command("pkill", "-f", browser)
+		cmd.Run() // Ignore errors - process might not exist
+	}
+
+	// Give processes time to exit
+	time.Sleep(100 * time.Millisecond)
+}
+
+// WithBrowserCleanup runs a function and ensures browser cleanup
+func WithBrowserCleanup(t testing.TB, fn func()) {
+	t.Helper()
+	defer CleanupOrphanedBrowsers(t)
+	fn()
+}
+
+// EnsureNoBrowsersRunning checks that no test browsers are running
+func EnsureNoBrowsersRunning(t testing.TB) {
+	t.Helper()
+
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		return
+	}
+
+	cmd := exec.Command("sh", "-c", "ps aux | grep -E '(Brave|Chrome|Chromium).*headless' | grep -v grep")
+	output, _ := cmd.Output()
+
+	if len(output) > 0 {
+		lines := strings.Split(string(output), "\n")
+		if len(lines) > 1 || (len(lines) == 1 && lines[0] != "") {
+			t.Logf("Warning: Found %d running browser process(es) from tests", len(lines))
+			CleanupOrphanedBrowsers(t)
+		}
+	}
+}
+
+// RunWithTimeout runs a test with a context that has a timeout and cleanup
+func RunWithTimeout(t testing.TB, timeout time.Duration, fn func(context.Context)) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	defer CleanupOrphanedBrowsers(t)
+
+	fn(ctx)
 }
