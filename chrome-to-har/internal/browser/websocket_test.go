@@ -21,9 +21,9 @@ import (
 func skipIfNoChromish(t testing.TB) {
 	t.Helper()
 
-	// Skip browser tests in CI or when explicitly requested
-	if os.Getenv("CI") != "" || os.Getenv("SKIP_BROWSER_TESTS") != "" {
-		t.Skip("Skipping browser test in CI/no-browser environment")
+	// Skip browser tests in CI only
+	if os.Getenv("CI") != "" {
+		t.Skip("Skipping browser test in CI environment")
 	}
 
 	if os.Getenv("CI") == "true" && runtime.GOOS != "linux" {

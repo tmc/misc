@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -15,11 +14,6 @@ import (
 func TestStabilityDetector(t *testing.T) {
 	t.Parallel()
 	testutil.SkipIfNoChrome(t)
-
-	// Skip tests requiring actual Chrome execution
-	if os.Getenv("SKIP_BROWSER_TESTS") != "" {
-		t.Skip("Skipping browser tests")
-	}
 
 	// Create a test server with dynamic content
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -459,10 +453,6 @@ func TestStabilityConfigValidation(t *testing.T) {
 func TestStabilityDetectorLifecycle(t *testing.T) {
 	t.Parallel()
 
-	// Skip tests requiring actual Chrome execution
-	if os.Getenv("SKIP_BROWSER_TESTS") != "" {
-		t.Skip("Skipping browser tests")
-	}
 	testutil.SkipIfNoChrome(t)
 	// Create browser context
 	ctx, cancel := chromedp.NewContext(context.Background())

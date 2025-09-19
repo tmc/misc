@@ -48,10 +48,6 @@ func skipIfNoBrowser(t testing.TB) {
 		t.Skip("Skipping browser test due to chromedp context cancellation issue")
 	}
 
-	// Skip if SKIP_BROWSER_TESTS is set
-	if os.Getenv("SKIP_BROWSER_TESTS") != "" {
-		t.Skip("Skipping browser tests (SKIP_BROWSER_TESTS is set)")
-	}
 
 	// Check if Chrome is available
 	chromePath, found := detectChromePath()
