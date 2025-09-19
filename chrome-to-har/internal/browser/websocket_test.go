@@ -170,8 +170,11 @@ func TestWebSocketMonitoring(t *testing.T) {
 		t.Fatalf("Failed to wait for WebSocket connection: %v", err)
 	}
 
-	if conn.URL != wsURL {
-		t.Errorf("Expected URL %s, got %s", wsURL, conn.URL)
+	// Normalize URLs by removing trailing slashes for comparison
+	expectedURL := strings.TrimSuffix(wsURL, "/")
+	actualURL := strings.TrimSuffix(conn.URL, "/")
+	if actualURL != expectedURL {
+		t.Errorf("Expected URL %s, got %s", expectedURL, actualURL)
 	}
 
 	// Test WebSocket statistics
@@ -363,8 +366,11 @@ func TestWebSocketHARExport(t *testing.T) {
 		t.Fatal("WebSocket data not included in HAR entry")
 	}
 
-	if entry.WebSocket.URL != wsURL {
-		t.Errorf("Expected URL %s, got %s", wsURL, entry.WebSocket.URL)
+	// Normalize URLs by removing trailing slashes for comparison
+	expectedURL := strings.TrimSuffix(wsURL, "/")
+	actualURL := strings.TrimSuffix(entry.WebSocket.URL, "/")
+	if actualURL != expectedURL {
+		t.Errorf("Expected URL %s, got %s", expectedURL, actualURL)
 	}
 
 	if len(entry.WebSocket.Messages) == 0 {

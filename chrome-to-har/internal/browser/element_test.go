@@ -31,15 +31,18 @@ func TestElementQuery(t *testing.T) {
 	element, err := page.QuerySelector("#title")
 	if err != nil {
 		t.Errorf("Failed to query selector: %v", err)
+		return // Don't continue if query failed
 	}
 	if element == nil {
 		t.Error("Element not found")
+		return // Don't continue if element is nil
 	}
 
 	// Get element text
 	text, err := element.GetText()
 	if err != nil {
 		t.Errorf("Failed to get element text: %v", err)
+		return
 	}
 	if text != "Test Page" {
 		t.Errorf("Unexpected element text: got %s, want Test Page", text)

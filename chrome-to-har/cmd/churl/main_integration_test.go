@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -24,7 +25,7 @@ func TestIntegrationChurl_BasicFetch(t *testing.T) {
 	testutil.SkipIfNoChrome(t)
 
 	// Build churl binary
-	churlBinary := buildChurl(t)
+	churlBinary := buildChurlIntegration(t)
 
 	// Create test server
 	mux := http.NewServeMux()
@@ -103,7 +104,7 @@ func TestIntegrationChurl_BasicFetch(t *testing.T) {
 func TestIntegrationChurl_Headers(t *testing.T) {
 	testutil.SkipIfNoChrome(t)
 
-	churlBinary := buildChurl(t)
+	churlBinary := buildChurlIntegration(t)
 
 	// Create test server that echoes headers
 	mux := http.NewServeMux()
@@ -203,7 +204,7 @@ func TestIntegrationChurl_Headers(t *testing.T) {
 func TestIntegrationChurl_PostData(t *testing.T) {
 	testutil.SkipIfNoChrome(t)
 
-	churlBinary := buildChurl(t)
+	churlBinary := buildChurlIntegration(t)
 
 	// Create test server that echoes POST data
 	mux := http.NewServeMux()
@@ -297,7 +298,7 @@ func TestIntegrationChurl_PostData(t *testing.T) {
 func TestIntegrationChurl_WaitForSelector(t *testing.T) {
 	testutil.SkipIfNoChrome(t)
 
-	churlBinary := buildChurl(t)
+	churlBinary := buildChurlIntegration(t)
 
 	// Create test server with dynamic content
 	mux := http.NewServeMux()
@@ -398,7 +399,7 @@ func TestIntegrationChurl_WaitForSelector(t *testing.T) {
 func TestIntegrationChurl_HAR_Output(t *testing.T) {
 	testutil.SkipIfNoChrome(t)
 
-	churlBinary := buildChurl(t)
+	churlBinary := buildChurlIntegration(t)
 
 	// Create test server
 	mux := http.NewServeMux()
@@ -476,7 +477,7 @@ func TestIntegrationChurl_HAR_Output(t *testing.T) {
 func TestIntegrationChurl_Timeout(t *testing.T) {
 	testutil.SkipIfNoChrome(t)
 
-	churlBinary := buildChurl(t)
+	churlBinary := buildChurlIntegration(t)
 
 	// Create test server with slow response
 	mux := http.NewServeMux()
@@ -506,7 +507,7 @@ func TestIntegrationChurl_Timeout(t *testing.T) {
 func TestIntegrationChurl_ExtractSelector(t *testing.T) {
 	testutil.SkipIfNoChrome(t)
 
-	churlBinary := buildChurl(t)
+	churlBinary := buildChurlIntegration(t)
 
 	// Create test server
 	mux := http.NewServeMux()
@@ -594,8 +595,8 @@ func TestIntegrationChurl_ExtractSelector(t *testing.T) {
 	}
 }
 
-// Helper function to build churl binary
-func buildChurl(t *testing.T) string {
+// Helper function to build churl binary for integration tests
+func buildChurlIntegration(t *testing.T) string {
 	t.Helper()
 
 	// Build in temp directory

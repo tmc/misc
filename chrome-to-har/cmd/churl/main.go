@@ -687,11 +687,35 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 			// Extract text nodes
 			var sb strings.Builder
 			for _, line := range strings.Split(text, "\n") {
-				if !strings.HasPrefix(line, "<") {
-					content := strings.TrimSpace(line)
-					if content != "" {
-						sb.WriteString(content)
-						sb.WriteString("\n")
+				line = strings.TrimSpace(line)
+				if line != "" && !strings.HasPrefix(line, "<") {
+					sb.WriteString(line)
+					sb.WriteString("\n")
+				} else if strings.Contains(line, ">") && strings.Contains(line, "<") {
+					// Extract text between tags on the same line
+					for {
+						start := strings.Index(line, ">")
+						if start == -1 {
+							break
+						}
+						end := strings.Index(line[start+1:], "<")
+						if end == -1 {
+							// Text goes to end of line
+							textContent := strings.TrimSpace(line[start+1:])
+							if textContent != "" {
+								sb.WriteString(textContent)
+								sb.WriteString("\n")
+							}
+							break
+						} else {
+							// Text is between tags
+							textContent := strings.TrimSpace(line[start+1 : start+1+end])
+							if textContent != "" {
+								sb.WriteString(textContent)
+								sb.WriteString("\n")
+							}
+							line = line[start+1+end:] // Continue with rest of line
+						}
 					}
 				}
 			}
