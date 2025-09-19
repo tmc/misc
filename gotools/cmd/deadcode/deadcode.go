@@ -7,23 +7,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"go/ast"
-	"go/types"
-	"io"
-	"log"
-	"maps"
 	"os"
-	"path/filepath"
-	"regexp"
-	"runtime"
-	"runtime/pprof"
-	"slices"
-	"sort"
-	"strings"
-	"text/template"
 
-	"golang.org/x/tools/go/callgraph"
-	"golang.org/x/tools/go/callgraph/rta"
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
@@ -37,12 +22,18 @@ var (
 	filterFlag    = flag.String("filter", "<module>", "filter packages")
 	generatedFlag = flag.Bool("generated", false, "include generated code")
 	whyLiveFlag   = flag.String("whylive", "", "explain why function is live")
+	debugFlag     = flag.Bool("debug", false, "enable debug output")
 
 	// New flags for additional analysis
-	typesFlag  = flag.Bool("types", false, "report unreferenced types")
-	ifacesFlag = flag.Bool("ifaces", false, "report unused interfaces")
-	fieldsFlag = flag.Bool("fields", false, "report unused struct fields")
-	allFlag    = flag.Bool("all", false, "enable all dead code checks")
+	typesFlag       = flag.Bool("types", false, "report unreferenced types")
+	ifacesFlag      = flag.Bool("ifaces", false, "report unused interfaces")
+	fieldsFlag      = flag.Bool("fields", false, "report unused struct fields")
+	ifaceMethodFlag = flag.Bool("ifacemethods", false, "report unused interface methods")
+	constantsFlag   = flag.Bool("constants", false, "report unused constants")
+	variablesFlag   = flag.Bool("variables", false, "report unused variables")
+	typeAliasesFlag = flag.Bool("typealiases", false, "report unused type aliases")
+	exportedFlag    = flag.Bool("exported", false, "report exported symbols not used outside their package")
+	allFlag         = flag.Bool("all", false, "enable all dead code checks")
 )
 
 func main() {
@@ -109,6 +100,22 @@ func doCallgraph(dir, gopath string, tests bool, args []string) error {
 	fmt.Fprintf(os.Stderr, "  Dead types: %d\n", len(res.deadTypes))
 	fmt.Fprintf(os.Stderr, "  Dead interfaces: %d\n", len(res.deadIfaces))
 	fmt.Fprintf(os.Stderr, "  Dead fields: %d\n", len(res.deadFields))
+	fmt.Fprintf(os.Stderr, "  Dead interface methods: %d\n", len(res.deadIfaceMethods))
+	fmt.Fprintf(os.Stderr, "  Dead constants: %d\n", len(res.deadConstants))
+	fmt.Fprintf(os.Stderr, "  Dead variables: %d\n", len(res.deadVariables))
+	fmt.Fprintf(os.Stderr, "  Dead type aliases: %d\n", len(res.deadTypeAliases))
+	fmt.Fprintf(os.Stderr, "  Unused exported symbols: %d\n", len(res.deadExported))
+	
+	// DEBUG - print the exact contents of our maps for debugging
+	debugPrintMap("deadFuncs", res.deadFuncs)
+	debugPrintMap("deadTypes", res.deadTypes)
+	debugPrintMap("deadIfaces", res.deadIfaces)
+	debugPrintMap("deadFields", res.deadFields)
+	debugPrintMap("deadIfaceMethods", res.deadIfaceMethods)
+	debugPrintMap("deadConstants", res.deadConstants)
+	debugPrintMap("deadVariables", res.deadVariables)
+	debugPrintMap("deadTypeAliases", res.deadTypeAliases)
+	debugPrintMap("deadExported", res.deadExported)
 
 	// Handle -whylive flag
 	if *whyLiveFlag != "" {
