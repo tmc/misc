@@ -51,7 +51,6 @@ func init() {
 		appName = appName + "-writer"
 	}
 
-
 	cfg := &macgo.Config{
 		AppName:               appName,
 		BundleID:              "github.com.tmc.misc.tee-see-see." + appName, // Unique bundle ID per mode
@@ -75,16 +74,16 @@ func init() {
 func main() {
 	// Define command-line flags
 	var (
-		useSystem = flag.Bool("system", false, "Use system TCC database instead of user database")
-		useUser   = flag.Bool("user", false, "Use user TCC database (default)")
-		dbPath    = flag.String("db", "", "Specify custom TCC database path")
-		help      = flag.Bool("help", false, "Show help message")
-		verbose   = flag.Bool("v", false, "Verbose output")
-		jsonOut   = flag.Bool("json", false, "Output in JSON format")
-		service   = flag.String("service", "", "Filter by service name")
-		client    = flag.String("client", "", "Filter by client/app name")
-		waitFDA   = flag.Bool("wait", true, "Wait for Full Disk Access to be granted")
-		timeout   = flag.Duration("timeout", 30*time.Second, "Timeout for waiting (e.g., 30s, 5m)")
+		useSystem  = flag.Bool("system", false, "Use system TCC database instead of user database")
+		useUser    = flag.Bool("user", false, "Use user TCC database (default)")
+		dbPath     = flag.String("db", "", "Specify custom TCC database path")
+		help       = flag.Bool("help", false, "Show help message")
+		verbose    = flag.Bool("v", false, "Verbose output")
+		jsonOut    = flag.Bool("json", false, "Output in JSON format")
+		service    = flag.String("service", "", "Filter by service name")
+		client     = flag.String("client", "", "Filter by client/app name")
+		waitFDA    = flag.Bool("wait", true, "Wait for Full Disk Access to be granted")
+		timeout    = flag.Duration("timeout", 30*time.Second, "Timeout for waiting (e.g., 30s, 5m)")
 		appVersion = flag.String("app-version", "", "Set application version (default: 1.0.0)")
 
 		// Write mode flags (triggers separate app bundle)
@@ -101,7 +100,6 @@ func main() {
 	if *appVersion != "" {
 		os.Setenv("TEE_SEE_SEE_VERSION", *appVersion)
 	}
-
 
 	// Show help if requested
 	if *help {
