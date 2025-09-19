@@ -249,8 +249,14 @@ func (b *Browser) Navigate(url string) error {
 		log.Printf("Navigating to: %s", url)
 	}
 
-	// Use the browser's context directly for navigation
-	navCtx := b.ctx
+	// Create a navigation context with timeout to prevent hanging
+	// Use a reasonable timeout for navigation operations
+	navTimeout := time.Duration(b.opts.Timeout) * time.Second
+	if navTimeout <= 0 {
+		navTimeout = 60 * time.Second // Default fallback
+	}
+	navCtx, navCancel := context.WithTimeout(b.ctx, navTimeout)
+	defer navCancel()
 
 	// Enable network events if we need to wait for network idle
 	if b.opts.Verbose {
@@ -949,7 +955,13 @@ func (b *Browser) HTTPRequest(method, url, data string, headers map[string]strin
 	}
 
 	// Navigate to the URL (this will trigger our interceptor)
-	navCtx := b.ctx
+	navTimeout := time.Duration(b.opts.Timeout) * time.Second
+	if navTimeout <= 0 {
+		navTimeout = 60 * time.Second // Default fallback
+	}
+	navCtx, navCancel := context.WithTimeout(b.ctx, navTimeout)
+	defer navCancel()
+
 	if err := chromedp.Run(navCtx, chromedp.Navigate(url)); err != nil {
 		return chromeErrors.WithContext(
 			chromeErrors.Wrap(err, chromeErrors.ChromeNavigationError, "failed to navigate with custom method"),
