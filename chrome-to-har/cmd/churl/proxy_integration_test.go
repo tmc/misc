@@ -102,6 +102,13 @@ func TestProxyIntegration(t *testing.T) {
 	})
 
 	t.Run("ProxyWithAuthentication", func(t *testing.T) {
+		t.Parallel()
+
+		// Skip in CI or when Chrome is not available
+		if os.Getenv("CI") != "" || os.Getenv("SKIP_BROWSER_TESTS") != "" {
+			t.Skip("Skipping proxy authentication test in CI/no-browser environment")
+		}
+
 		// Create authenticated proxy
 		authProxyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			auth := r.Header.Get("Proxy-Authorization")

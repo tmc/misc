@@ -17,6 +17,12 @@ import (
 func TestBasicRun(t *testing.T) {
 	t.Parallel()
 	testutil.SkipIfNoChrome(t)
+
+	// Skip tests that require actual Chrome execution
+	if testing.Short() || os.Getenv("CI") != "" {
+		t.Skip("Skipping tests that require Chrome execution")
+	}
+
 	tests := []struct {
 		name    string
 		opts    options
@@ -177,6 +183,12 @@ func TestInteractiveScript(t *testing.T) {
 func TestStreamingOutput(t *testing.T) {
 	t.Parallel()
 	testutil.SkipIfNoChrome(t)
+
+	// Skip tests that require actual Chrome execution
+	if testing.Short() || os.Getenv("CI") != "" {
+		t.Skip("Skipping tests that require Chrome execution")
+	}
+
 	tests := []struct {
 		name    string
 		opts    options

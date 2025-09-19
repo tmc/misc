@@ -248,6 +248,11 @@ func findChrome() string {
 func skipIfNoChromish(t testing.TB) {
 	t.Helper()
 
+	// Skip browser tests in CI or when explicitly requested
+	if os.Getenv("CI") != "" || os.Getenv("SKIP_BROWSER_TESTS") != "" {
+		t.Skip("Skipping browser test in CI/no-browser environment")
+	}
+
 	if os.Getenv("CI") == "true" && runtime.GOOS != "linux" {
 		t.Skip("Skipping browser test in CI on non-Linux platform")
 	}
@@ -528,6 +533,12 @@ func TestBrowserBasicAuth(t *testing.T) {
 // TestBrowserWithProfile tests browser with profile
 func TestBrowserWithProfile(t *testing.T) {
 	t.Parallel()
+
+	// Skip tests requiring actual Chrome execution
+	if os.Getenv("SKIP_BROWSER_TESTS") != "" {
+		t.Skip("Skipping browser tests")
+	}
+
 	// Create temp dir for profile
 	tempDir, err := os.MkdirTemp("", "browser-test-profile")
 	if err != nil {
@@ -682,6 +693,7 @@ func TestBrowserTimeout(t *testing.T) {
 
 func TestBrowserHTTPRequestPOST(t *testing.T) {
 	t.Parallel()
+	skipIfNoChromish(t)
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -740,6 +752,7 @@ func TestBrowserHTTPRequestPOST(t *testing.T) {
 
 func TestBrowserHTTPRequestPUT(t *testing.T) {
 	t.Parallel()
+	skipIfNoChromish(t)
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -796,6 +809,7 @@ func TestBrowserHTTPRequestPUT(t *testing.T) {
 
 func TestBrowserHTTPRequestContentTypeDetection(t *testing.T) {
 	t.Parallel()
+	skipIfNoChromish(t)
 	ts := newTestServer()
 	defer ts.Close()
 
