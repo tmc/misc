@@ -245,13 +245,8 @@ func findChrome() string {
 }
 
 // Test utilities
-func skipIfNoChrome(t testing.TB) {
+func skipIfNoChromish(t testing.TB) {
 	t.Helper()
-
-	// Skip if SKIP_BROWSER_TESTS is set
-	if os.Getenv("SKIP_BROWSER_TESTS") != "" {
-		t.Skip("Skipping browser tests (SKIP_BROWSER_TESTS is set)")
-	}
 
 	if os.Getenv("CI") == "true" && runtime.GOOS != "linux" {
 		t.Skip("Skipping browser test in CI on non-Linux platform")
@@ -259,13 +254,13 @@ func skipIfNoChrome(t testing.TB) {
 
 	chromePath := findChrome()
 	if chromePath == "" {
-		t.Skip("Chrome not found, skipping browser tests")
+		t.Skip("No Chromium-based browser found (Chrome, Brave, Chromium, etc.), skipping browser tests")
 	}
 }
 
 func createTestBrowser(t testing.TB, opts ...browser.Option) (*browser.Browser, func()) {
 	t.Helper()
-	skipIfNoChrome(t)
+	skipIfNoChromish(t)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 

@@ -81,7 +81,7 @@ func TestRemoteDebuggingInfo(t *testing.T) {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
 
-	skipIfNoChrome(t)
+	skipIfNoChromish(t)
 
 	// Start remote Chrome
 	port := 9222
@@ -112,7 +112,7 @@ func TestListTabs(t *testing.T) {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
 
-	skipIfNoChrome(t)
+	skipIfNoChromish(t)
 
 	// Start remote Chrome
 	port := 9223
@@ -151,7 +151,7 @@ func TestConnectToRunningChrome(t *testing.T) {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
 
-	skipIfNoChrome(t)
+	skipIfNoChromish(t)
 
 	// Start remote Chrome
 	port := 9224
@@ -201,7 +201,7 @@ func TestConnectToTab(t *testing.T) {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
 
-	skipIfNoChrome(t)
+	skipIfNoChromish(t)
 
 	// Start remote Chrome
 	port := 9225
@@ -265,7 +265,7 @@ func TestRemoteBrowserOperations(t *testing.T) {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
 
-	skipIfNoChrome(t)
+	skipIfNoChromish(t)
 
 	// Start remote Chrome
 	port := 9226
@@ -331,7 +331,7 @@ func TestRemoteMultipleTabs(t *testing.T) {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
 
-	skipIfNoChrome(t)
+	skipIfNoChromish(t)
 
 	// Start remote Chrome
 	port := 9227
@@ -405,7 +405,7 @@ func TestRemoteMultipleTabs(t *testing.T) {
 
 // TestRemoteErrorHandling tests error handling for remote connections
 func TestRemoteErrorHandling(t *testing.T) {
-	skipIfNoChrome(t)
+	skipIfNoChromish(t)
 
 	ctx := context.Background()
 	profileMgr, _ := chromeprofiles.NewProfileManager()

@@ -440,7 +440,7 @@ func TestPerformanceScreenshots(t *testing.T) {
 
 // BenchmarkBrowserLaunch benchmarks browser launch time
 func BenchmarkBrowserLaunch(b *testing.B) {
-	skipIfNoChrome(b)
+	skipIfNoChromish(b)
 
 	ctx := context.Background()
 	chromePath := findChrome()

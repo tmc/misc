@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -12,7 +14,22 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/tmc/misc/chrome-to-har/internal/chromeprofiles"
+	"github.com/tmc/misc/chrome-to-har/internal/testutil"
 )
+
+// skipIfNoChromish skips the test if no Chromium-based browser is available
+func skipIfNoChromish(t testing.TB) {
+	t.Helper()
+
+	if os.Getenv("CI") == "true" && runtime.GOOS != "linux" {
+		t.Skip("Skipping browser test in CI on non-Linux platform")
+	}
+
+	chromePath := testutil.FindChrome()
+	if chromePath == "" {
+		t.Skip("No Chromium-based browser found (Chrome, Brave, Chromium, etc.), skipping browser tests")
+	}
+}
 
 // TestWebSocketMonitoring tests basic WebSocket monitoring functionality
 func TestWebSocketMonitoring(t *testing.T) {
@@ -29,7 +46,10 @@ func TestWebSocketMonitoring(t *testing.T) {
 		t.Fatalf("Failed to create profile manager: %v", err)
 	}
 
-	b, err := New(ctx, pm)
+	// Get the Chrome path from discovery
+	chromePath := testutil.FindChrome()
+
+	b, err := New(ctx, pm, WithChromePath(chromePath), WithSecurityProfile("permissive"))
 	if err != nil {
 		t.Fatalf("Failed to create browser: %v", err)
 	}
@@ -163,6 +183,8 @@ func TestWebSocketMonitoring(t *testing.T) {
 
 // TestWebSocketWaitConditions tests WebSocket wait conditions
 func TestWebSocketWaitConditions(t *testing.T) {
+	skipIfNoChromish(t)
+
 	// Create test WebSocket server
 	server := createTestWebSocketServer(t)
 	defer server.Close()
@@ -176,7 +198,10 @@ func TestWebSocketWaitConditions(t *testing.T) {
 		t.Fatalf("Failed to create profile manager: %v", err)
 	}
 
-	b, err := New(ctx, pm)
+	// Get the Chrome path from discovery
+	chromePath := testutil.FindChrome()
+
+	b, err := New(ctx, pm, WithChromePath(chromePath), WithSecurityProfile("permissive"))
 	if err != nil {
 		t.Fatalf("Failed to create browser: %v", err)
 	}
@@ -253,6 +278,8 @@ func TestWebSocketWaitConditions(t *testing.T) {
 
 // TestWebSocketHARExport tests WebSocket HAR export functionality
 func TestWebSocketHARExport(t *testing.T) {
+	skipIfNoChromish(t)
+
 	// Create test WebSocket server
 	server := createTestWebSocketServer(t)
 	defer server.Close()
@@ -266,7 +293,10 @@ func TestWebSocketHARExport(t *testing.T) {
 		t.Fatalf("Failed to create profile manager: %v", err)
 	}
 
-	b, err := New(ctx, pm)
+	// Get the Chrome path from discovery
+	chromePath := testutil.FindChrome()
+
+	b, err := New(ctx, pm, WithChromePath(chromePath), WithSecurityProfile("permissive"))
 	if err != nil {
 		t.Fatalf("Failed to create browser: %v", err)
 	}
@@ -344,6 +374,8 @@ func TestWebSocketHARExport(t *testing.T) {
 
 // TestWebSocketPerformanceMonitoring tests WebSocket performance monitoring
 func TestWebSocketPerformanceMonitoring(t *testing.T) {
+	skipIfNoChromish(t)
+
 	// Create test WebSocket server
 	server := createTestWebSocketServer(t)
 	defer server.Close()
@@ -357,7 +389,10 @@ func TestWebSocketPerformanceMonitoring(t *testing.T) {
 		t.Fatalf("Failed to create profile manager: %v", err)
 	}
 
-	b, err := New(ctx, pm)
+	// Get the Chrome path from discovery
+	chromePath := testutil.FindChrome()
+
+	b, err := New(ctx, pm, WithChromePath(chromePath), WithSecurityProfile("permissive"))
 	if err != nil {
 		t.Fatalf("Failed to create browser: %v", err)
 	}
@@ -443,6 +478,8 @@ func TestWebSocketPerformanceMonitoring(t *testing.T) {
 
 // TestWebSocketFiltering tests WebSocket filtering functionality
 func TestWebSocketFiltering(t *testing.T) {
+	skipIfNoChromish(t)
+
 	// Create test WebSocket server
 	server := createTestWebSocketServer(t)
 	defer server.Close()
@@ -456,7 +493,10 @@ func TestWebSocketFiltering(t *testing.T) {
 		t.Fatalf("Failed to create profile manager: %v", err)
 	}
 
-	b, err := New(ctx, pm)
+	// Get the Chrome path from discovery
+	chromePath := testutil.FindChrome()
+
+	b, err := New(ctx, pm, WithChromePath(chromePath), WithSecurityProfile("permissive"))
 	if err != nil {
 		t.Fatalf("Failed to create browser: %v", err)
 	}
@@ -539,7 +579,7 @@ func TestWebSocketFiltering(t *testing.T) {
 
 // TestWebSocketMultipleConnections tests multiple WebSocket connections
 func TestWebSocketMultipleConnections(t *testing.T) {
-	skipIfNoChrome(t)
+	skipIfNoChromish(t)
 
 	// Create multiple test WebSocket servers
 	server1 := createTestWebSocketServer(t)
@@ -557,7 +597,10 @@ func TestWebSocketMultipleConnections(t *testing.T) {
 		t.Fatalf("Failed to create profile manager: %v", err)
 	}
 
-	b, err := New(ctx, pm)
+	// Get the Chrome path from discovery
+	chromePath := testutil.FindChrome()
+
+	b, err := New(ctx, pm, WithChromePath(chromePath), WithSecurityProfile("permissive"))
 	if err != nil {
 		t.Fatalf("Failed to create browser: %v", err)
 	}
