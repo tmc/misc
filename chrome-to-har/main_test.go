@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -189,6 +191,25 @@ func TestStreamingOutput(t *testing.T) {
 		t.Skip("Skipping tests that require Chrome execution")
 	}
 
+	// Create a test HTTP server that will generate network traffic
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		fmt.Fprintf(w, `<!DOCTYPE html>
+			<html>
+			<head><title>Test Page</title></head>
+			<body><h1>Test Content</h1></body>
+			</html>`)
+	}))
+	defer ts.Close()
+
+	// Create a 404 endpoint for testing filtered streaming
+	ts404 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintf(w, "Not Found")
+	}))
+	defer ts404.Close()
+
 	tests := []struct {
 		name    string
 		opts    options
@@ -201,6 +222,7 @@ func TestStreamingOutput(t *testing.T) {
 				profileDir: "Test Profile 1",
 				streaming:  true,
 				headless:   true,
+				startURL:   ts.URL, // Navigate to test server!
 			},
 			want: []string{
 				`"startedDateTime"`,
@@ -214,6 +236,7 @@ func TestStreamingOutput(t *testing.T) {
 				profileDir: "Test Profile 1",
 				streaming:  true,
 				headless:   true,
+				startURL:   ts404.URL, // Navigate to 404 server
 				filter:     "select(.response.status >= 400)",
 			},
 			want: []string{
@@ -229,7 +252,7 @@ func TestStreamingOutput(t *testing.T) {
 				t.Fatalf("Failed to capture output: %v", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			mockPM := testutil.NewMockProfileManager()
