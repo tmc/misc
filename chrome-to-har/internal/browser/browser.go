@@ -198,23 +198,35 @@ func (b *Browser) Launch(ctx context.Context) error {
 	// Store context and cancel functions
 	b.ctx = browserCtx
 	b.cancelFunc = func() {
+		if b.opts.Verbose {
+			log.Printf("Browser context is being canceled!")
+		}
 		browserCancel()
 		allocCancel()
 	}
 
-	// Test connection with a simple evaluation to ensure browser launches properly
+	// Add monitoring for context cancellation if verbose
 	if b.opts.Verbose {
-		log.Println("Testing Chrome connection...")
+		go func() {
+			<-b.ctx.Done()
+			log.Printf("Browser context was canceled: %v", b.ctx.Err())
+		}()
 	}
 
-	testCtx, testCancel := context.WithTimeout(browserCtx, 5*time.Second)
-	defer testCancel()
+	// Test connection with a simple evaluation to ensure browser launches properly
+	// DISABLED FOR DEBUGGING - This seems to interfere with Brave Browser navigation
+	// if b.opts.Verbose {
+	// 	log.Println("Testing Chrome connection...")
+	// }
 
-	var result bool
-	if err := chromedp.Run(testCtx, chromedp.Evaluate(`true`, &result)); err != nil {
-		b.cancelFunc()
-		return errors.Wrap(err, "testing Chrome connection")
-	}
+	// testCtx, testCancel := context.WithTimeout(browserCtx, 5*time.Second)
+	// defer testCancel()
+
+	// var result bool
+	// if err := chromedp.Run(testCtx, chromedp.Evaluate(`true`, &result)); err != nil {
+	// 	b.cancelFunc()
+	// 	return errors.Wrap(err, "testing Chrome connection")
+	// }
 
 	if b.opts.Verbose {
 		log.Printf("Successfully launched Chrome browser")
@@ -249,14 +261,10 @@ func (b *Browser) Navigate(url string) error {
 		log.Printf("Navigating to: %s", url)
 	}
 
-	// Create a navigation context with timeout to prevent hanging
-	// Use a reasonable timeout for navigation operations
-	navTimeout := time.Duration(b.opts.Timeout) * time.Second
-	if navTimeout <= 0 {
-		navTimeout = 60 * time.Second // Default fallback
-	}
-	navCtx, navCancel := context.WithTimeout(b.ctx, navTimeout)
-	defer navCancel()
+	// NOTE: Creating a timeout context from b.ctx causes issues with Brave Browser
+	// For now, we use b.ctx directly for navigation
+	// TODO: Investigate why Brave doesn't handle timeout contexts properly
+	_ = time.Duration(b.opts.Timeout) * time.Second // Keep for future fix
 
 	// Enable network events if we need to wait for network idle
 	if b.opts.Verbose {
@@ -266,30 +274,19 @@ func (b *Browser) Navigate(url string) error {
 		if b.opts.Verbose {
 			log.Printf("Enabling network events...")
 		}
-		if err := chromedp.Run(navCtx, network.Enable()); err != nil {
+		if err := chromedp.Run(b.ctx, network.Enable()); err != nil {
+			if b.opts.Verbose {
+				log.Printf("network.Enable failed: %v", err)
+			}
 			return errors.Wrap(err, "enabling network events")
 		}
-	}
-
-	// Navigate to the URL first, then execute pre-navigation scripts
-	// (Pre-navigation scripts are executed after basic navigation but before waiting for network idle)
-	if b.opts.Verbose {
-		select {
-		case <-navCtx.Done():
-			log.Printf("Navigation context is already done: %v", navCtx.Err())
-		default:
-			log.Printf("Navigation context is active")
-		}
-
-		select {
-		case <-b.ctx.Done():
-			log.Printf("Browser context is already done: %v", b.ctx.Err())
-		default:
-			log.Printf("Browser context is active")
+		if b.opts.Verbose {
+			log.Printf("Successfully enabled network events")
 		}
 	}
 
-	if err := chromedp.Run(navCtx, chromedp.Navigate(url)); err != nil {
+	// Navigate to the URL
+	if err := chromedp.Run(b.ctx, chromedp.Navigate(url)); err != nil {
 		if b.opts.Verbose {
 			log.Printf("Navigation error: %v", err)
 		}
@@ -490,7 +487,7 @@ func (b *Browser) getSecureChromeOptions() []chromedp.ExecAllocatorOption {
 	baseOpts := []chromedp.ExecAllocatorOption{
 		chromedp.NoFirstRun,
 		chromedp.NoDefaultBrowserCheck,
-		chromedp.WSURLReadTimeout(180 * time.Second),
+		// chromedp.WSURLReadTimeout(180 * time.Second), // This seems to cause issues with Brave
 	}
 
 	// Security-focused options based on profile

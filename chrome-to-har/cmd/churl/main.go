@@ -9,9 +9,9 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/signal"
+	// "os/signal"
 	"strings"
-	"syscall"
+	// "syscall"
 	"text/tabwriter"
 	"time"
 
@@ -286,15 +286,16 @@ func main() {
 	defer cancel()
 
 	// Handle interrupt signals
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sigChan
-		if opts.verbose {
-			log.Println("Interrupt received, shutting down...")
-		}
-		cancel()
-	}()
+	// Temporarily disabled for debugging
+	// sigChan := make(chan os.Signal, 1)
+	// signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	// go func() {
+	// 	<-sigChan
+	// 	if opts.verbose {
+	// 		log.Println("Interrupt received, shutting down...")
+	// 	}
+	// 	cancel()
+	// }()
 
 	// Auto-detect Chrome path if not specified
 	if opts.chromePath == "" {
@@ -405,14 +406,14 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		}
 	}
 
-	// Set up browser options
+	// Set up browser options - minimal setup for debugging
 	browserOpts := []browser.Option{
 		browser.WithHeadless(opts.headless),
 		browser.WithTimeout(opts.timeout),
 		browser.WithVerbose(opts.verbose),
-		browser.WithWaitNetworkIdle(opts.waitNetworkIdle),
-		browser.WithStableTimeout(opts.stableTimeout),
-		browser.WithSecurityProfile("permissive"), // Use permissive security for better Brave compatibility
+		browser.WithWaitNetworkIdle(false), // Force disable network idle
+		// browser.WithStableTimeout(opts.stableTimeout),
+		// browser.WithSecurityProfile("permissive"), // Use permissive security for debugging
 	}
 
 	if opts.chromePath != "" {
@@ -590,8 +591,23 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		enableCtx, enableCancel := context.WithTimeout(b.Context(), 30*time.Second)
 		defer enableCancel()
 
+		if opts.verbose {
+			log.Printf("About to enable network monitoring...")
+			log.Printf("Browser context error: %v", b.Context().Err())
+			log.Printf("Enable context deadline: %v", enableCtx.Done())
+		}
+
 		if err := chromedp.Run(enableCtx, network.Enable()); err != nil {
+			if opts.verbose {
+				log.Printf("Network enable failed: %v", err)
+				log.Printf("Enable context error: %v", enableCtx.Err())
+				log.Printf("Browser context error after failure: %v", b.Context().Err())
+			}
 			return chromeErrors.Wrap(err, chromeErrors.NetworkError, "failed to enable network monitoring")
+		}
+
+		if opts.verbose {
+			log.Printf("Successfully enabled network monitoring")
 		}
 
 		// Set up event listener for network events
