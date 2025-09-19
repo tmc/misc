@@ -412,6 +412,7 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 		browser.WithVerbose(opts.verbose),
 		browser.WithWaitNetworkIdle(opts.waitNetworkIdle),
 		browser.WithStableTimeout(opts.stableTimeout),
+		browser.WithSecurityProfile("permissive"), // Use permissive security for better Brave compatibility
 	}
 
 	if opts.chromePath != "" {
@@ -586,7 +587,7 @@ func run(ctx context.Context, pm chromeprofiles.ProfileManager, url string, opts
 			// Context is active
 		}
 
-		enableCtx, enableCancel := context.WithTimeout(b.Context(), 10*time.Second)
+		enableCtx, enableCancel := context.WithTimeout(b.Context(), 30*time.Second)
 		defer enableCancel()
 
 		if err := chromedp.Run(enableCtx, network.Enable()); err != nil {

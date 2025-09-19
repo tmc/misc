@@ -539,6 +539,8 @@ func TestWebSocketFiltering(t *testing.T) {
 
 // TestWebSocketMultipleConnections tests multiple WebSocket connections
 func TestWebSocketMultipleConnections(t *testing.T) {
+	skipIfNoChrome(t)
+
 	// Create multiple test WebSocket servers
 	server1 := createTestWebSocketServer(t)
 	defer server1.Close()
