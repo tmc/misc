@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"log"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -112,10 +116,15 @@ func TestListProfiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			capture, err := testutil.NewOutputCapture()
-			if err != nil {
-				t.Fatalf("Failed to capture output: %v", err)
-			}
+			// Create a buffer to capture output
+			var buf bytes.Buffer
+			oldStdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
+
+			// Capture log output as well
+			logBuf := &bytes.Buffer{}
+			log.SetOutput(logBuf)
 
 			mockPM := testutil.NewMockProfileManager()
 			mockPM.Verbose = tt.verbose
@@ -130,7 +139,13 @@ func TestListProfiles(t *testing.T) {
 				fmt.Printf("  - %s\n", p)
 			}
 
-			stdout, logs := capture.Stop()
+			// Close writer and restore stdout
+			w.Close()
+			os.Stdout = oldStdout
+			io.Copy(&buf, r)
+
+			stdout := buf.String()
+			logs := logBuf.String()
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ListProfiles() error = %v, wantErr %v", err, tt.wantErr)

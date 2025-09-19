@@ -79,6 +79,55 @@ var aliases = map[string]string{
 	"count":        `@count $1`,
 	"attr":         `@attr $1 $2`,
 	"css":          `@css $1 $2`,
+
+	// Network and security
+	"headers":      `Network.getResponseHeaders {"requestId":"$1"}`,
+	"block":        `Network.setBlockedURLs {"urls":["$1"]}`,
+	"throttle":     `Network.emulateNetworkConditions {"offline":false,"downloadThroughput":$1,"uploadThroughput":$2,"latency":$3}`,
+	"offline":      `Network.emulateNetworkConditions {"offline":true}`,
+	"online":       `Network.emulateNetworkConditions {"offline":false}`,
+	"clearcache":   `Network.clearBrowserCache {}`,
+	"clearcookies": `Network.clearBrowserCookies {}`,
+	"setcookie":    `Network.setCookie {"name":"$1","value":"$2","domain":"$3"}`,
+	"deletecookie": `Network.deleteCookies {"name":"$1"}`,
+
+	// Console and logging
+	"console":      `Runtime.enable {}`,
+	"log":          `Runtime.evaluate {"expression":"console.log('$1')"}`,
+	"error":        `Runtime.evaluate {"expression":"console.error('$1')"}`,
+	"warn":         `Runtime.evaluate {"expression":"console.warn('$1')"}`,
+	"clear_console": `Runtime.evaluate {"expression":"console.clear()"}`,
+
+	// Storage
+	"localstorage":   `Runtime.evaluate {"expression":"JSON.stringify(localStorage)"}`,
+	"sessionstorage": `Runtime.evaluate {"expression":"JSON.stringify(sessionStorage)"}`,
+	"setlocal":       `Runtime.evaluate {"expression":"localStorage.setItem('$1', '$2')"}`,
+	"setsession":     `Runtime.evaluate {"expression":"sessionStorage.setItem('$1', '$2')"}`,
+	"clearlocal":     `Runtime.evaluate {"expression":"localStorage.clear()"}`,
+	"clearsession":   `Runtime.evaluate {"expression":"sessionStorage.clear()"}`,
+
+	// Page manipulation
+	"scrollto":     `Runtime.evaluate {"expression":"window.scrollTo($1, $2)"}`,
+	"scrollby":     `Runtime.evaluate {"expression":"window.scrollBy($1, $2)"}`,
+	"scrolltop":    `Runtime.evaluate {"expression":"window.scrollTo(0, 0)"}`,
+	"scrollbottom": `Runtime.evaluate {"expression":"window.scrollTo(0, document.body.scrollHeight)"}`,
+	"zoomin":       `Emulation.setPageScaleFactor {"pageScaleFactor":$1}`,
+	"zoomreset":    `Emulation.setPageScaleFactor {"pageScaleFactor":1}`,
+	"darkmode":     `Emulation.setEmulatedMedia {"features":[{"name":"prefers-color-scheme","value":"dark"}]}`,
+	"lightmode":    `Emulation.setEmulatedMedia {"features":[{"name":"prefers-color-scheme","value":"light"}]}`,
+
+	// Viewport and display
+	"viewport":     `Emulation.setDeviceMetricsOverride {"width":$1,"height":$2,"deviceScaleFactor":1,"mobile":false}`,
+	"fullscreen":   `Emulation.setDeviceMetricsOverride {"width":1920,"height":1080,"deviceScaleFactor":1,"mobile":false}`,
+	"tablet":       `Emulation.setDeviceMetricsOverride {"width":768,"height":1024,"deviceScaleFactor":2,"mobile":true}`,
+
+	// Advanced debugging
+	"heap":         `HeapProfiler.takeHeapSnapshot {}`,
+	"startcpu":     `Profiler.start {}`,
+	"stopcpu":      `Profiler.stop {}`,
+	"memory":       `Runtime.evaluate {"expression":"performance.memory"}`,
+	"timing":       `Runtime.evaluate {"expression":"JSON.stringify(performance.timing)"}`,
+	"paint":        `Runtime.evaluate {"expression":"JSON.stringify(performance.getEntriesByType('paint'))"}`,
 	"route":        `@route $1 $2`,
 	"waitrequest":  `@waitrequest $1`,
 	"waitresponse": `@waitresponse $1`,

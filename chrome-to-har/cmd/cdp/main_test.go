@@ -205,11 +205,35 @@ func TestCDP_AliasExpansion(t *testing.T) {
 		alias    string
 		expected string
 	}{
+		// Basic navigation
 		{"goto", `Page.navigate {"url":"$1"}`},
 		{"title", `Runtime.evaluate {"expression":"document.title"}`},
 		{"reload", `Page.reload {}`},
 		{"screenshot", `Page.captureScreenshot {}`},
 		{"mobile", `Emulation.setDeviceMetricsOverride {"width":375,"height":812,"deviceScaleFactor":3,"mobile":true}`},
+
+		// Network commands
+		{"offline", `Network.emulateNetworkConditions {"offline":true}`},
+		{"online", `Network.emulateNetworkConditions {"offline":false}`},
+		{"clearcache", `Network.clearBrowserCache {}`},
+		{"clearcookies", `Network.clearBrowserCookies {}`},
+
+		// Storage commands
+		{"localstorage", `Runtime.evaluate {"expression":"JSON.stringify(localStorage)"}`},
+		{"clearlocal", `Runtime.evaluate {"expression":"localStorage.clear()"}`},
+
+		// Page manipulation
+		{"scrolltop", `Runtime.evaluate {"expression":"window.scrollTo(0, 0)"}`},
+		{"scrollbottom", `Runtime.evaluate {"expression":"window.scrollTo(0, document.body.scrollHeight)"}`},
+		{"darkmode", `Emulation.setEmulatedMedia {"features":[{"name":"prefers-color-scheme","value":"dark"}]}`},
+
+		// Viewport
+		{"fullscreen", `Emulation.setDeviceMetricsOverride {"width":1920,"height":1080,"deviceScaleFactor":1,"mobile":false}`},
+		{"tablet", `Emulation.setDeviceMetricsOverride {"width":768,"height":1024,"deviceScaleFactor":2,"mobile":true}`},
+
+		// Debugging
+		{"memory", `Runtime.evaluate {"expression":"performance.memory"}`},
+		{"timing", `Runtime.evaluate {"expression":"JSON.stringify(performance.timing)"}`},
 	}
 
 	for _, tt := range tests {
