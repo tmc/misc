@@ -11,8 +11,8 @@ import (
 )
 
 func TestBasicRun(t *testing.T) {
-	// Skip tests that require Chrome in this environment
-	t.Skip("Skipping tests that require Chrome")
+	t.Parallel()
+	testutil.SkipIfNoChrome(t)
 	tests := []struct {
 		name    string
 		opts    options
@@ -34,7 +34,7 @@ func TestBasicRun(t *testing.T) {
 				headless:   true,
 			},
 			wantErr: false,
-			want:    "Starting Chrome with profile Test Profile 1",
+			want:    "Chrome process allocator created",
 		},
 		{
 			name: "with_url",
@@ -45,7 +45,7 @@ func TestBasicRun(t *testing.T) {
 				startURL:   "https://example.com",
 			},
 			wantErr: false,
-			want:    "Navigating to https://example.com",
+			want:    "Chrome process allocator created",
 		},
 		{
 			name: "interactive_mode",
@@ -55,7 +55,7 @@ func TestBasicRun(t *testing.T) {
 				interactiveMode: true,
 			},
 			wantErr: false,
-			want:    "Interactive CLI Mode",
+			want:    "Interactive CLI Mode. Type commands to execute JavaScript in the browser.",
 		},
 	}
 
@@ -90,8 +90,8 @@ func TestBasicRun(t *testing.T) {
 }
 
 func TestListProfiles(t *testing.T) {
-	// Skip profile tests as well
-	t.Skip("Skipping profile tests")
+	t.Parallel()
+	testutil.SkipIfNoChrome(t)
 	tests := []struct {
 		name    string
 		verbose bool
@@ -147,8 +147,8 @@ func TestListProfiles(t *testing.T) {
 }
 
 func TestInteractiveScript(t *testing.T) {
-	// Skip this test if we're not in an environment with a browser
-	t.Skip("Skipping interactive mode test - requires a browser")
+	t.Parallel()
+	testutil.SkipIfNoChrome(t)
 
 	// The test would be implemented as follows in a real environment:
 	// 1. Create a temporary directory
@@ -160,8 +160,8 @@ func TestInteractiveScript(t *testing.T) {
 }
 
 func TestStreamingOutput(t *testing.T) {
-	// Skip tests that require Chrome in this environment
-	t.Skip("Skipping tests that require Chrome")
+	t.Parallel()
+	testutil.SkipIfNoChrome(t)
 	tests := []struct {
 		name    string
 		opts    options

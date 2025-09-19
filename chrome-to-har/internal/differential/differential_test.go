@@ -11,6 +11,7 @@ import (
 )
 
 func TestCaptureManager(t *testing.T) {
+	t.Parallel()
 	// Create temporary directory for testing
 	tmpDir := filepath.Join(os.TempDir(), "chrome-to-har-test")
 	defer os.RemoveAll(tmpDir)
@@ -101,6 +102,7 @@ func TestCaptureManager(t *testing.T) {
 }
 
 func TestDiffEngine(t *testing.T) {
+	t.Parallel()
 	de := NewDiffEngine(true)
 
 	// Create test HAR data
@@ -160,6 +162,7 @@ func TestDiffEngine(t *testing.T) {
 }
 
 func TestReportGenerator(t *testing.T) {
+	t.Parallel()
 	rg := NewReportGenerator(true)
 
 	// Create test diff result
@@ -255,6 +258,7 @@ func TestReportGenerator(t *testing.T) {
 }
 
 func TestStateTracker(t *testing.T) {
+	t.Parallel()
 	// Note: This test would require a real Chrome context to work properly
 	// For now, we'll test the basic functionality without Chrome
 
@@ -322,6 +326,7 @@ func TestStateTracker(t *testing.T) {
 }
 
 func TestDifferentialController(t *testing.T) {
+	t.Parallel()
 	// Create temporary directory for testing
 	tmpDir := filepath.Join(os.TempDir(), "chrome-to-har-controller-test")
 	defer os.RemoveAll(tmpDir)

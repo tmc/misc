@@ -7,6 +7,7 @@ import (
 )
 
 func TestChromeError(t *testing.T) {
+	t.Parallel()
 	t.Run("New", func(t *testing.T) {
 		err := New(ChromeLaunchError, "failed to launch Chrome")
 
@@ -82,6 +83,7 @@ func TestChromeError(t *testing.T) {
 }
 
 func TestErrorTypes(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		errorType ErrorType
 		retryable bool
@@ -108,6 +110,7 @@ func TestErrorTypes(t *testing.T) {
 }
 
 func TestIsType(t *testing.T) {
+	t.Parallel()
 	err := New(ChromeLaunchError, "launch failed")
 
 	if !IsType(err, ChromeLaunchError) {
@@ -126,6 +129,7 @@ func TestIsType(t *testing.T) {
 }
 
 func TestIsRetryable(t *testing.T) {
+	t.Parallel()
 	retryableErr := New(ChromeTimeoutError, "timeout")
 	nonRetryableErr := New(ValidationError, "validation failed")
 
@@ -145,6 +149,7 @@ func TestIsRetryable(t *testing.T) {
 }
 
 func TestGetUserMessage(t *testing.T) {
+	t.Parallel()
 	chromeErr := New(ChromeLaunchError, "failed to launch")
 	regularErr := errors.New("regular error")
 
@@ -161,6 +166,7 @@ func TestGetUserMessage(t *testing.T) {
 }
 
 func TestGetSuggestions(t *testing.T) {
+	t.Parallel()
 	chromeErr := New(ChromeLaunchError, "failed to launch")
 	regularErr := errors.New("regular error")
 
@@ -177,6 +183,7 @@ func TestGetSuggestions(t *testing.T) {
 }
 
 func TestFormatError(t *testing.T) {
+	t.Parallel()
 	err := WithContext(
 		New(ChromeLaunchError, "failed to launch"),
 		"debug_port", 9222,
@@ -199,6 +206,7 @@ func TestFormatError(t *testing.T) {
 }
 
 func TestNewValidationError(t *testing.T) {
+	t.Parallel()
 	err := NewValidationError("username", "cannot be empty")
 
 	if err.Type != ValidationError {
@@ -215,6 +223,7 @@ func TestNewValidationError(t *testing.T) {
 }
 
 func TestFileError(t *testing.T) {
+	t.Parallel()
 	originalErr := errors.New("permission denied")
 	err := FileError("write", "/tmp/test.txt", originalErr)
 
@@ -232,6 +241,7 @@ func TestFileError(t *testing.T) {
 }
 
 func TestNewNetworkError(t *testing.T) {
+	t.Parallel()
 	originalErr := errors.New("connection refused")
 	err := NewNetworkError("fetch", "https://example.com", originalErr)
 
@@ -249,6 +259,7 @@ func TestNewNetworkError(t *testing.T) {
 }
 
 func TestNewChromeError(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name     string
 		err      error
@@ -297,6 +308,7 @@ func TestNewChromeError(t *testing.T) {
 }
 
 func TestErrorUnwrapping(t *testing.T) {
+	t.Parallel()
 	originalErr := errors.New("original error")
 	wrappedErr := Wrap(originalErr, NetworkError, "network failed")
 
@@ -311,6 +323,7 @@ func TestErrorUnwrapping(t *testing.T) {
 }
 
 func TestErrorIs(t *testing.T) {
+	t.Parallel()
 	err1 := New(ChromeLaunchError, "launch failed")
 	err2 := New(ChromeLaunchError, "launch failed")
 	err3 := New(NetworkError, "network failed")

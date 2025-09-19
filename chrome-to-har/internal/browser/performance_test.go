@@ -59,6 +59,7 @@ func (w *testingBWrapper) Logf(format string, args ...interface{}) {
 
 // TestPerformanceMultipleNavigations tests rapid sequential navigations
 func TestPerformanceMultipleNavigations(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("Skipping performance test in short mode")
 	}
@@ -95,6 +96,7 @@ func TestPerformanceMultipleNavigations(t *testing.T) {
 
 // TestPerformanceConcurrentPages tests multiple pages operating concurrently
 func TestPerformanceConcurrentPages(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("Skipping performance test in short mode")
 	}
@@ -166,6 +168,7 @@ func TestPerformanceConcurrentPages(t *testing.T) {
 
 // TestPerformanceLargeDOM tests handling of large DOM trees
 func TestPerformanceLargeDOM(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("Skipping performance test in short mode")
 	}
@@ -222,6 +225,7 @@ func TestPerformanceLargeDOM(t *testing.T) {
 
 // TestPerformanceMemoryLeaks tests for memory leaks during repeated operations
 func TestPerformanceMemoryLeaks(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("Skipping performance test in short mode")
 	}
@@ -288,6 +292,7 @@ func TestPerformanceMemoryLeaks(t *testing.T) {
 
 // TestPerformanceScriptExecution tests JavaScript execution performance
 func TestPerformanceScriptExecution(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("Skipping performance test in short mode")
 	}
@@ -333,6 +338,7 @@ func TestPerformanceScriptExecution(t *testing.T) {
 
 // TestPerformanceNetworkLoad tests performance with heavy network activity
 func TestPerformanceNetworkLoad(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("Skipping performance test in short mode")
 	}
@@ -392,6 +398,7 @@ func TestPerformanceNetworkLoad(t *testing.T) {
 
 // TestPerformanceScreenshots tests screenshot performance
 func TestPerformanceScreenshots(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		t.Skip("Skipping performance test in short mode")
 	}

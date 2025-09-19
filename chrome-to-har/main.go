@@ -22,6 +22,7 @@ import (
 	"github.com/tmc/misc/chrome-to-har/internal/blocking"
 	"github.com/tmc/misc/chrome-to-har/internal/chromeprofiles"
 	"github.com/tmc/misc/chrome-to-har/internal/differential"
+	"github.com/tmc/misc/chrome-to-har/internal/discovery"
 	chromeErrors "github.com/tmc/misc/chrome-to-har/internal/errors"
 	"github.com/tmc/misc/chrome-to-har/internal/recorder"
 )
@@ -403,12 +404,11 @@ func (r *Runner) Run(ctx context.Context, opts options) error {
 			log.Printf("Using Chrome at: %s", opts.chromePath)
 		}
 	} else {
-		// Use default Chrome path for macOS as fallback
-		defaultPath := "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-		if _, err := os.Stat(defaultPath); err == nil {
-			copts = append(copts, chromedp.ExecPath(defaultPath))
+		// Use browser discovery system to find best available browser
+		if browserPath := discovery.FindBestBrowser(); browserPath != "" {
+			copts = append(copts, chromedp.ExecPath(browserPath))
 			if opts.verbose {
-				log.Printf("Using default Chrome path: %s", defaultPath)
+				log.Printf("Using discovered browser at: %s", browserPath)
 			}
 		}
 	}

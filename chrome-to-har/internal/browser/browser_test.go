@@ -302,6 +302,7 @@ func createTestBrowser(t testing.TB, opts ...browser.Option) (*browser.Browser, 
 
 // TestBrowserLaunch tests basic browser launching
 func TestBrowserLaunch(t *testing.T) {
+	t.Parallel()
 	b, cleanup := createTestBrowser(t)
 	defer cleanup()
 
@@ -319,6 +320,7 @@ func TestBrowserLaunch(t *testing.T) {
 
 // TestBrowserNavigation tests page navigation
 func TestBrowserNavigation(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -356,6 +358,7 @@ func TestBrowserNavigation(t *testing.T) {
 
 // TestBrowserGetHTML tests HTML retrieval
 func TestBrowserGetHTML(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -384,6 +387,7 @@ func TestBrowserGetHTML(t *testing.T) {
 
 // TestBrowserTitle tests title retrieval
 func TestBrowserTitle(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -407,6 +411,7 @@ func TestBrowserTitle(t *testing.T) {
 
 // TestBrowserWaitForSelector tests waiting for elements
 func TestBrowserWaitForSelector(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -427,6 +432,7 @@ func TestBrowserWaitForSelector(t *testing.T) {
 
 // TestBrowserExecuteScript tests JavaScript execution
 func TestBrowserExecuteScript(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -462,6 +468,7 @@ func TestBrowserExecuteScript(t *testing.T) {
 
 // TestBrowserHeaders tests custom header setting
 func TestBrowserHeaders(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -488,6 +495,7 @@ func TestBrowserHeaders(t *testing.T) {
 
 // TestBrowserBasicAuth tests basic authentication
 func TestBrowserBasicAuth(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -519,6 +527,7 @@ func TestBrowserBasicAuth(t *testing.T) {
 
 // TestBrowserWithProfile tests browser with profile
 func TestBrowserWithProfile(t *testing.T) {
+	t.Parallel()
 	// Create temp dir for profile
 	tempDir, err := os.MkdirTemp("", "browser-test-profile")
 	if err != nil {
@@ -574,6 +583,7 @@ func TestBrowserWithProfile(t *testing.T) {
 
 // TestBrowserMultipleNavigations tests multiple page navigations
 func TestBrowserMultipleNavigations(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -610,6 +620,7 @@ func TestBrowserMultipleNavigations(t *testing.T) {
 
 // TestBrowserNetworkIdle tests network idle waiting
 func TestBrowserNetworkIdle(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -644,6 +655,7 @@ func TestBrowserNetworkIdle(t *testing.T) {
 
 // TestBrowserTimeout tests operation timeouts
 func TestBrowserTimeout(t *testing.T) {
+	t.Parallel()
 	b, cleanup := createTestBrowser(t,
 		browser.WithTimeout(2),           // 2 second timeout
 		browser.WithNavigationTimeout(1), // 1 second navigation timeout
@@ -669,6 +681,7 @@ func TestBrowserTimeout(t *testing.T) {
 }
 
 func TestBrowserHTTPRequestPOST(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -726,6 +739,7 @@ func TestBrowserHTTPRequestPOST(t *testing.T) {
 }
 
 func TestBrowserHTTPRequestPUT(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 
@@ -781,6 +795,7 @@ func TestBrowserHTTPRequestPUT(t *testing.T) {
 }
 
 func TestBrowserHTTPRequestContentTypeDetection(t *testing.T) {
+	t.Parallel()
 	ts := newTestServer()
 	defer ts.Close()
 

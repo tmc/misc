@@ -9,6 +9,7 @@ import (
 )
 
 func TestCreateSecureTempDir(t *testing.T) {
+	t.Parallel()
 	// Test basic functionality
 	dir, err := CreateSecureTempDir("test-")
 	if err != nil {
@@ -38,6 +39,7 @@ func TestCreateSecureTempDir(t *testing.T) {
 }
 
 func TestSecureWriteFile(t *testing.T) {
+	t.Parallel()
 	// Create test directory
 	dir, err := CreateSecureTempDir("test-")
 	if err != nil {
@@ -81,6 +83,7 @@ func TestSecureWriteFile(t *testing.T) {
 }
 
 func TestSecureWriteFileTooBig(t *testing.T) {
+	t.Parallel()
 	// Create test directory
 	dir, err := CreateSecureTempDir("test-")
 	if err != nil {
@@ -99,6 +102,7 @@ func TestSecureWriteFileTooBig(t *testing.T) {
 }
 
 func TestSecureCopyFile(t *testing.T) {
+	t.Parallel()
 	// Create test directory
 	dir, err := CreateSecureTempDir("test-")
 	if err != nil {
@@ -146,6 +150,7 @@ func TestSecureCopyFile(t *testing.T) {
 }
 
 func TestSecureCopyFileTooBig(t *testing.T) {
+	t.Parallel()
 	// Create test directory
 	dir, err := CreateSecureTempDir("test-")
 	if err != nil {
@@ -168,6 +173,7 @@ func TestSecureCopyFileTooBig(t *testing.T) {
 }
 
 func TestSecureCopyDir(t *testing.T) {
+	t.Parallel()
 	// Create test directory
 	dir, err := CreateSecureTempDir("test-")
 	if err != nil {
@@ -232,6 +238,7 @@ func TestSecureCopyDir(t *testing.T) {
 }
 
 func TestSecureRemoveAll(t *testing.T) {
+	t.Parallel()
 	// Create test directory
 	dir, err := CreateSecureTempDir("test-")
 	if err != nil {
@@ -256,6 +263,7 @@ func TestSecureRemoveAll(t *testing.T) {
 }
 
 func TestLockFile(t *testing.T) {
+	t.Parallel()
 	// Create test directory
 	dir, err := CreateSecureTempDir("test-")
 	if err != nil {
@@ -292,6 +300,7 @@ func TestLockFile(t *testing.T) {
 }
 
 func TestBuildDomainFilterQuery(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		domains []string
@@ -338,6 +347,7 @@ func TestBuildDomainFilterQuery(t *testing.T) {
 }
 
 func TestIsSecurePermissions(t *testing.T) {
+	t.Parallel()
 	// Create test directory
 	dir, err := CreateSecureTempDir("test-")
 	if err != nil {
@@ -389,6 +399,7 @@ func TestIsSecurePermissions(t *testing.T) {
 }
 
 func TestEnsureSecurePermissions(t *testing.T) {
+	t.Parallel()
 	// Create test directory
 	dir, err := CreateSecureTempDir("test-")
 	if err != nil {
@@ -419,6 +430,7 @@ func TestEnsureSecurePermissions(t *testing.T) {
 }
 
 func TestCleanupHandler(t *testing.T) {
+	t.Parallel()
 	// Create test directory
 	dir, err := CreateSecureTempDir("test-")
 	if err != nil {

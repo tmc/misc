@@ -77,6 +77,7 @@ func startRemoteChrome(t *testing.T, port int) (*exec.Cmd, func()) {
 
 // TestRemoteDebuggingInfo tests getting remote debugging info
 func TestRemoteDebuggingInfo(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
@@ -108,6 +109,7 @@ func TestRemoteDebuggingInfo(t *testing.T) {
 
 // TestListTabs tests listing Chrome tabs
 func TestListTabs(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
@@ -147,6 +149,7 @@ func TestListTabs(t *testing.T) {
 
 // TestConnectToRunningChrome tests connecting to an already running Chrome
 func TestConnectToRunningChrome(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
@@ -197,6 +200,7 @@ func TestConnectToRunningChrome(t *testing.T) {
 
 // TestConnectToTab tests connecting to a specific tab
 func TestConnectToTab(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
@@ -261,6 +265,7 @@ func TestConnectToTab(t *testing.T) {
 
 // TestRemoteBrowserOperations tests various operations on remote browser
 func TestRemoteBrowserOperations(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
@@ -327,6 +332,7 @@ func TestRemoteBrowserOperations(t *testing.T) {
 
 // TestRemoteMultipleTabs tests working with multiple tabs in remote Chrome
 func TestRemoteMultipleTabs(t *testing.T) {
+	t.Parallel()
 	if runtime.GOOS == "windows" {
 		t.Skip("Remote Chrome tests unreliable on Windows")
 	}
@@ -405,6 +411,7 @@ func TestRemoteMultipleTabs(t *testing.T) {
 
 // TestRemoteErrorHandling tests error handling for remote connections
 func TestRemoteErrorHandling(t *testing.T) {
+	t.Parallel()
 	skipIfNoChromish(t)
 
 	ctx := context.Background()

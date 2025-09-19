@@ -80,6 +80,7 @@ func buildChurl(t testing.TB) string {
 }
 
 func TestChurl_Build(t *testing.T) {
+	t.Parallel()
 	churlPath := buildChurl(t)
 
 	// Verify the binary exists
@@ -89,6 +90,7 @@ func TestChurl_Build(t *testing.T) {
 }
 
 func TestChurl_ShowHelp(t *testing.T) {
+	t.Parallel()
 	churlPath := buildChurl(t)
 
 	tests := []struct {
@@ -135,6 +137,7 @@ func TestChurl_ShowHelp(t *testing.T) {
 }
 
 func TestChurl_BasicFetch(t *testing.T) {
+	t.Parallel()
 	skipIfNoBrowser(t)
 
 	churlPath := buildChurl(t)
@@ -225,6 +228,7 @@ func TestChurl_BasicFetch(t *testing.T) {
 }
 
 func TestChurl_Headers(t *testing.T) {
+	t.Parallel()
 	skipIfNoBrowser(t)
 
 	churlPath := buildChurl(t)
@@ -259,6 +263,7 @@ func TestChurl_Headers(t *testing.T) {
 }
 
 func TestChurl_Authentication(t *testing.T) {
+	t.Parallel()
 	skipIfNoBrowser(t)
 
 	churlPath := buildChurl(t)
@@ -318,6 +323,7 @@ func TestChurl_Authentication(t *testing.T) {
 }
 
 func TestChurl_OutputFile(t *testing.T) {
+	t.Parallel()
 	skipIfNoBrowser(t)
 
 	churlPath := buildChurl(t)
@@ -339,9 +345,14 @@ func TestChurl_OutputFile(t *testing.T) {
 		ts.URL,
 	)
 
-	output, err := cmd.CombinedOutput()
+	// Separate stdout and stderr
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
 	if err != nil {
-		t.Fatalf("Failed to run churl: %v\nOutput: %s", err, string(output))
+		t.Fatalf("Failed to run churl: %v\nStdout: %s\nStderr: %s", err, stdout.String(), stderr.String())
 	}
 
 	// Verify the output file was created
@@ -355,12 +366,13 @@ func TestChurl_OutputFile(t *testing.T) {
 	}
 
 	// Verify stdout is empty (output went to file)
-	if len(output) > 0 {
-		t.Errorf("Expected empty stdout when using -o, but got:\n%s", string(output))
+	if stdout.Len() > 0 {
+		t.Errorf("Expected empty stdout when using -o, but got:\n%s", stdout.String())
 	}
 }
 
 func TestChurl_DynamicContent(t *testing.T) {
+	t.Parallel()
 	skipIfNoBrowser(t)
 
 	churlPath := buildChurl(t)
@@ -390,6 +402,7 @@ func TestChurl_DynamicContent(t *testing.T) {
 }
 
 func TestChurl_WaitSelector(t *testing.T) {
+	t.Parallel()
 	skipIfNoBrowser(t)
 
 	churlPath := buildChurl(t)
@@ -419,6 +432,7 @@ func TestChurl_WaitSelector(t *testing.T) {
 }
 
 func TestChurl_APIEndpoint(t *testing.T) {
+	t.Parallel()
 	skipIfNoBrowser(t)
 
 	churlPath := buildChurl(t)
@@ -435,15 +449,20 @@ func TestChurl_APIEndpoint(t *testing.T) {
 		ts.URL+"/api/data",
 	)
 
-	output, err := cmd.CombinedOutput()
+	// Separate stdout and stderr to avoid contamination
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
 	if err != nil {
-		t.Fatalf("Failed to run churl: %v\nOutput: %s", err, string(output))
+		t.Fatalf("Failed to run churl: %v\nStdout: %s\nStderr: %s", err, stdout.String(), stderr.String())
 	}
 
-	// Parse the JSON output
+	// Parse the JSON output from stdout only
 	var result map[string]interface{}
-	if err := json.Unmarshal(output, &result); err != nil {
-		t.Fatalf("Failed to parse JSON output: %v\nOutput: %s", err, string(output))
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil {
+		t.Fatalf("Failed to parse JSON output: %v\nStdout: %s\nStderr: %s", err, stdout.String(), stderr.String())
 	}
 
 	// Verify the content contains the API response
@@ -458,6 +477,7 @@ func TestChurl_APIEndpoint(t *testing.T) {
 }
 
 func TestChurl_Timeout(t *testing.T) {
+	t.Parallel()
 	skipIfNoBrowser(t)
 
 	churlPath := buildChurl(t)
@@ -487,6 +507,7 @@ func TestChurl_Timeout(t *testing.T) {
 }
 
 func TestChurl_HAR_Output(t *testing.T) {
+	t.Parallel()
 	skipIfNoBrowser(t)
 
 	churlPath := buildChurl(t)
@@ -503,15 +524,20 @@ func TestChurl_HAR_Output(t *testing.T) {
 		ts.URL,
 	)
 
-	output, err := cmd.CombinedOutput()
+	// Separate stdout and stderr to avoid contamination
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
 	if err != nil {
-		t.Fatalf("Failed to run churl: %v\nOutput: %s", err, string(output))
+		t.Fatalf("Failed to run churl: %v\nStdout: %s\nStderr: %s", err, stdout.String(), stderr.String())
 	}
 
-	// Parse the HAR output
+	// Parse the HAR output from stdout only
 	var har map[string]interface{}
-	if err := json.Unmarshal(output, &har); err != nil {
-		t.Fatalf("Failed to parse HAR output: %v\nOutput: %s", err, string(output))
+	if err := json.Unmarshal(stdout.Bytes(), &har); err != nil {
+		t.Fatalf("Failed to parse HAR output: %v\nStdout: %s\nStderr: %s", err, stdout.String(), stderr.String())
 	}
 
 	// Verify HAR structure
@@ -531,6 +557,7 @@ func TestChurl_HAR_Output(t *testing.T) {
 
 // TestChurl_VerboseMode tests verbose logging
 func TestChurl_VerboseMode(t *testing.T) {
+	t.Parallel()
 	skipIfNoBrowser(t)
 
 	churlPath := buildChurl(t)

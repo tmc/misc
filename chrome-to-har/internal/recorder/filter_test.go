@@ -7,6 +7,7 @@ import (
 )
 
 func TestJQFilter(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		entry   *har.Entry

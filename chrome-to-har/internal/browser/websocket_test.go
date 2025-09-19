@@ -186,6 +186,7 @@ func TestWebSocketMonitoring(t *testing.T) {
 
 // TestWebSocketWaitConditions tests WebSocket wait conditions
 func TestWebSocketWaitConditions(t *testing.T) {
+	t.Parallel()
 	skipIfNoChromish(t)
 
 	// Create test WebSocket server
@@ -281,6 +282,7 @@ func TestWebSocketWaitConditions(t *testing.T) {
 
 // TestWebSocketHARExport tests WebSocket HAR export functionality
 func TestWebSocketHARExport(t *testing.T) {
+	t.Parallel()
 	skipIfNoChromish(t)
 
 	// Create test WebSocket server
@@ -380,6 +382,7 @@ func TestWebSocketHARExport(t *testing.T) {
 
 // TestWebSocketPerformanceMonitoring tests WebSocket performance monitoring
 func TestWebSocketPerformanceMonitoring(t *testing.T) {
+	t.Parallel()
 	skipIfNoChromish(t)
 
 	// Create test WebSocket server
@@ -484,6 +487,7 @@ func TestWebSocketPerformanceMonitoring(t *testing.T) {
 
 // TestWebSocketFiltering tests WebSocket filtering functionality
 func TestWebSocketFiltering(t *testing.T) {
+	t.Parallel()
 	skipIfNoChromish(t)
 
 	// Create test WebSocket server
@@ -585,6 +589,7 @@ func TestWebSocketFiltering(t *testing.T) {
 
 // TestWebSocketMultipleConnections tests multiple WebSocket connections
 func TestWebSocketMultipleConnections(t *testing.T) {
+	t.Parallel()
 	skipIfNoChromish(t)
 
 	// Create multiple test WebSocket servers

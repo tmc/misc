@@ -19,6 +19,7 @@ import (
 
 // TestStressLongRunningSession tests browser under prolonged usage
 func TestStressLongRunningSession(t *testing.T) {
+	t.Parallel()
 	skipIfNoChromish(t)
 
 	ts := newTestServer()
@@ -85,6 +86,7 @@ func TestStressLongRunningSession(t *testing.T) {
 
 // TestStressMassiveConcurrency tests with many concurrent browser instances
 func TestStressMassiveConcurrency(t *testing.T) {
+	t.Parallel()
 	skipIfNoChromish(t)
 
 	ts := newTestServer()
@@ -179,6 +181,7 @@ func TestStressMassiveConcurrency(t *testing.T) {
 
 // TestStressResourceExhaustion tests behavior under resource constraints
 func TestStressResourceExhaustion(t *testing.T) {
+	t.Parallel()
 	skipIfNoChromish(t)
 
 	ts := newTestServer()
@@ -244,6 +247,7 @@ func TestStressResourceExhaustion(t *testing.T) {
 
 // TestStressNetworkHeavyLoad tests with intensive network activity
 func TestStressNetworkHeavyLoad(t *testing.T) {
+	t.Parallel()
 	skipIfNoChromish(t)
 
 	ts := newTestServer()

@@ -6,6 +6,7 @@ import (
 )
 
 func TestValidateProfileName(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   string
@@ -36,6 +37,7 @@ func TestValidateProfileName(t *testing.T) {
 }
 
 func TestValidateURL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name             string
 		url              string
@@ -65,6 +67,7 @@ func TestValidateURL(t *testing.T) {
 }
 
 func TestValidateHostname(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		hostname string
@@ -95,6 +98,7 @@ func TestValidateHostname(t *testing.T) {
 }
 
 func TestValidatePort(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		port    int
@@ -122,6 +126,7 @@ func TestValidatePort(t *testing.T) {
 }
 
 func TestValidateJavaScript(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name           string
 		script         string
@@ -154,6 +159,7 @@ func TestValidateJavaScript(t *testing.T) {
 }
 
 func TestValidateTimeout(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		timeout int
@@ -177,6 +183,7 @@ func TestValidateTimeout(t *testing.T) {
 }
 
 func TestValidateHeaders(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		headers map[string]string
@@ -211,6 +218,7 @@ func TestValidateHeaders(t *testing.T) {
 }
 
 func TestSanitizeFilename(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		filename string
@@ -245,6 +253,7 @@ func TestSanitizeFilename(t *testing.T) {
 }
 
 func TestValidateRemoteHosts(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name         string
 		host         string
@@ -269,6 +278,7 @@ func TestValidateRemoteHosts(t *testing.T) {
 }
 
 func TestValidateProxyURL(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		proxyURL string
@@ -296,6 +306,7 @@ func TestValidateProxyURL(t *testing.T) {
 }
 
 func TestValidatePath(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name        string
 		path        string
@@ -322,6 +333,7 @@ func TestValidatePath(t *testing.T) {
 }
 
 func TestValidateUserAgent(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		userAgent string

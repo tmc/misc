@@ -20,6 +20,7 @@ import (
 )
 
 func TestIntegration_BasicHARCapture(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	// Create test server
@@ -158,6 +159,7 @@ func TestIntegration_BasicHARCapture(t *testing.T) {
 }
 
 func TestIntegration_StreamingMode(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	// Create test server with delayed responses
@@ -256,6 +258,7 @@ func TestIntegration_StreamingMode(t *testing.T) {
 }
 
 func TestIntegration_FilteredCapture(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	// Create test server
@@ -382,6 +385,7 @@ func TestIntegration_FilteredCapture(t *testing.T) {
 }
 
 func TestIntegration_RemoteChrome(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	// Start Chrome with remote debugging
@@ -452,6 +456,7 @@ func TestIntegration_RemoteChrome(t *testing.T) {
 }
 
 func TestIntegration_NetworkIdle(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	// Create test server with delayed loading
@@ -545,6 +550,7 @@ func TestIntegration_NetworkIdle(t *testing.T) {
 }
 
 func TestIntegration_LargePayload(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	// Create test server with large responses

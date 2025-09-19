@@ -18,6 +18,7 @@ func timeToMonotonicTime(t time.Time) *cdp.MonotonicTime {
 }
 
 func TestRecorderStreaming(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		streaming bool

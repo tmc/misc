@@ -22,6 +22,7 @@ import (
 )
 
 func TestIntegrationChurl_BasicFetch(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	// Build churl binary
@@ -102,6 +103,7 @@ func TestIntegrationChurl_BasicFetch(t *testing.T) {
 }
 
 func TestIntegrationChurl_Headers(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	churlBinary := buildChurlIntegration(t)
@@ -202,6 +204,7 @@ func TestIntegrationChurl_Headers(t *testing.T) {
 }
 
 func TestIntegrationChurl_PostData(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	churlBinary := buildChurlIntegration(t)
@@ -296,6 +299,7 @@ func TestIntegrationChurl_PostData(t *testing.T) {
 }
 
 func TestIntegrationChurl_WaitForSelector(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	churlBinary := buildChurlIntegration(t)
@@ -397,6 +401,7 @@ func TestIntegrationChurl_WaitForSelector(t *testing.T) {
 }
 
 func TestIntegrationChurl_HAR_Output(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	churlBinary := buildChurlIntegration(t)
@@ -475,6 +480,7 @@ func TestIntegrationChurl_HAR_Output(t *testing.T) {
 }
 
 func TestIntegrationChurl_Timeout(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	churlBinary := buildChurlIntegration(t)
@@ -505,6 +511,7 @@ func TestIntegrationChurl_Timeout(t *testing.T) {
 }
 
 func TestIntegrationChurl_ExtractSelector(t *testing.T) {
+	t.Parallel()
 	testutil.SkipIfNoChrome(t)
 
 	churlBinary := buildChurlIntegration(t)

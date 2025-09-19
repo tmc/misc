@@ -8,6 +8,7 @@ import (
 )
 
 func TestChurl_SimpleDebug(t *testing.T) {
+	t.Parallel()
 	skipIfNoBrowser(t)
 
 	churlPath := buildChurl(t)
