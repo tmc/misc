@@ -229,7 +229,3 @@ func gatherDirectoryInfo(path string, options exampleOptions) (string, string, e
 	return stdout.String(), stderr.String(), err
 }
 
-// FormatJSON is a helper to format any value as JSON
-func FormatJSON(v interface{}) string {
-	return ctx.FormatJSON(toolName, "capabilities", fmt.Sprintf("%v", v), "", nil)
-}

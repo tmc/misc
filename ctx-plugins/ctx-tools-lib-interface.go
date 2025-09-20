@@ -153,7 +153,7 @@ func WriteOutput(w io.Writer, opts Options, tool, cmd, stdout, stderr string, er
 
 // PrintOutput writes the formatted output to stdout.
 func PrintOutput(opts Options, tool, cmd, stdout, stderr string, err error) {
-	WriteOutput(os.Stdout, opts, tool, cmd, stdout, stderr, err)
+	_ = WriteOutput(os.Stdout, opts, tool, cmd, stdout, stderr, err)
 }
 
 // ReadOptionsFromEnv reads options from environment variables.
@@ -190,6 +190,15 @@ func ReadOptionsFromEnv(toolName string) Options {
 	}
 
 	return opts
+}
+
+// FormatJSON marshals the given value to indented JSON.
+func FormatJSON(v interface{}) string {
+	jsonBytes, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return fmt.Sprintf(`{"error": "JSON marshaling error: %s"}`, err)
+	}
+	return string(jsonBytes)
 }
 
 // ExecuteCommand is a utility function to execute shell commands.
