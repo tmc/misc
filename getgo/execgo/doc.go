@@ -1,6 +1,5 @@
-```doc.go
 /*
-Package getgo provides functionality to download and install the Go programming language toolchain.
+Package execgo provides functionality to execute Go code directly.
 
 getgo simplifies the process of obtaining and setting up the Go development environment
 by automating the download and installation of the official Go distribution.
@@ -43,5 +42,4 @@ After installation, users should add the Go binary directory to their PATH:
 For more details see: https://golang.org/doc/install
 
 */
-package getgo
-```
+package execgo

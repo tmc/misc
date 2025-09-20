@@ -1,4 +1,3 @@
-```doc.go
 /*
 Package getgo provides functionality to download and install the Go programming language toolchain.
 
@@ -44,4 +43,3 @@ For more details see: https://golang.org/doc/install
 
 */
 package getgo
-```
