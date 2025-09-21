@@ -744,6 +744,8 @@ func main() {
 		tabID       string
 		harFile     string
 		interactive bool
+		command     string
+		enhanced    bool
 	)
 
 	flag.StringVar(&url, "url", "about:blank", "URL to navigate to on start")
@@ -764,8 +766,16 @@ func main() {
 	flag.StringVar(&tabID, "tab", "", "Target specific tab ID")
 	flag.StringVar(&harFile, "har", "", "Save HAR file to this path")
 	flag.BoolVar(&interactive, "interactive", false, "Keep browser open for interaction")
+	flag.StringVar(&command, "command", "", "Execute a single CDP command")
+	flag.BoolVar(&enhanced, "enhanced", false, "Use enhanced command mode with better commands")
 
 	flag.Parse()
+
+	// Handle enhanced command mode
+	if enhanced || command != "" {
+		handleEnhancedMode(command, enhanced, verbose, chromePath)
+		return
+	}
 
 	// Handle browser discovery and listing
 	if listBrowsers {
@@ -1668,4 +1678,198 @@ func printEnhancedCommands() {
 	fmt.Println("  @route <pattern> <action>  - Intercept requests (abort/log)")
 
 	fmt.Println("\nNote: These commands are only available when connected to remote Chrome")
+}
+
+// handleEnhancedMode handles the new enhanced command mode
+func handleEnhancedMode(command string, interactive bool, verbose bool, chromePath string) {
+	registry := NewCommandRegistry()
+	help := NewHelpSystem(registry)
+
+	// If no command specified, show help and optionally enter interactive mode
+	if command == "" {
+		if interactive {
+			// Set up Chrome context for interactive mode
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			// Try to connect to existing Chrome or launch new one
+			chromeCtx, chromeCancel, err := setupChromeForEnhanced(ctx, verbose, chromePath)
+			if err != nil {
+				log.Fatalf("Failed to setup Chrome: %v", err)
+			}
+			defer chromeCancel()
+
+			// Start interactive mode
+			im := NewInteractiveMode(chromeCtx, verbose)
+			if err := im.Run(); err != nil {
+				log.Fatalf("Interactive mode error: %v", err)
+			}
+		} else {
+			help.ShowHelp(nil)
+		}
+		return
+	}
+
+	// Execute single command
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Set up Chrome context
+	chromeCtx, chromeCancel, err := setupChromeForEnhanced(ctx, verbose, chromePath)
+	if err != nil {
+		log.Fatalf("Failed to setup Chrome: %v", err)
+	}
+	defer chromeCancel()
+
+	// Parse and execute command
+	parts := strings.Fields(command)
+	if len(parts) == 0 {
+		fmt.Println("No command specified")
+		return
+	}
+
+	cmdName := parts[0]
+	args := parts[1:]
+
+	// Check for special commands
+	switch cmdName {
+	case "help", "h":
+		help.ShowHelp(args)
+		return
+	case "list":
+		help.ListCommands()
+		return
+	case "search":
+		if len(args) > 0 {
+			help.SearchCommands(strings.Join(args, " "))
+		} else {
+			fmt.Println("Usage: search <term>")
+		}
+		return
+	}
+
+	// Execute command
+	if cmd, found := registry.GetCommand(cmdName); found {
+		if verbose {
+			fmt.Printf("Executing: %s %v\n", cmdName, args)
+		}
+		if err := cmd.Handler(chromeCtx, args); err != nil {
+			log.Fatalf("Command failed: %v", err)
+		}
+	} else {
+		completions := help.GetCompletions(cmdName)
+		if len(completions) > 0 {
+			fmt.Printf("Unknown command '%s'. Did you mean:\n", cmdName)
+			for _, c := range completions {
+				fmt.Printf("  • %s\n", c)
+			}
+		} else {
+			fmt.Printf("Unknown command: %s\n", cmdName)
+			fmt.Println("Use 'help' to see available commands")
+		}
+	}
+}
+
+// setupChromeForEnhanced sets up Chrome context for enhanced commands
+func setupChromeForEnhanced(ctx context.Context, verbose bool, chromePath string) (context.Context, context.CancelFunc, error) {
+	// Check for existing Chrome instances first
+	debugPorts := []int{9222, 9223, 9224, 9225}
+	for _, port := range debugPorts {
+		if checkRunningChrome(port) {
+			if verbose {
+				log.Printf("Connecting to existing Chrome on port %d", port)
+			}
+
+			remoteURL := fmt.Sprintf("ws://localhost:%d", port)
+			allocCtx, allocCancel := chromedp.NewRemoteAllocator(ctx, remoteURL)
+
+			var opts []chromedp.ContextOption
+			if verbose {
+				opts = append(opts, chromedp.WithLogf(log.Printf))
+			}
+
+			browserCtx, browserCancel := chromedp.NewContext(allocCtx, opts...)
+
+			// Test connection
+			testCtx, testCancel := context.WithTimeout(browserCtx, 5*time.Second)
+			if err := chromedp.Run(testCtx, chromedp.Evaluate("1+1", nil)); err != nil {
+				testCancel()
+				browserCancel()
+				allocCancel()
+				continue // Try next port
+			}
+			testCancel()
+
+			// Return combined cancel function
+			cancel := func() {
+				browserCancel()
+				allocCancel()
+			}
+
+			return browserCtx, cancel, nil
+		}
+	}
+
+	// Auto-discover browser if no running Chrome found
+	var selectedPath string = chromePath
+	if chromePath == "" {
+		candidates, err := discoverBrowsers(verbose)
+		if err == nil && len(candidates) > 0 {
+			best := selectBestBrowser(candidates, verbose)
+			if best.Path != "" {
+				selectedPath = best.Path
+				if verbose {
+					log.Printf("Auto-selected browser: %s at %s", best.Name, selectedPath)
+				}
+			}
+		}
+	}
+
+	// Launch new Chrome instance
+	if verbose {
+		log.Println("Launching new Chrome instance...")
+	}
+
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.Flag("remote-debugging-port", "9222"),
+		chromedp.NoFirstRun,
+		chromedp.NoDefaultBrowserCheck,
+	)
+
+	// Override Chrome executable if we have a specific path
+	if selectedPath != "" {
+		opts = append(chromedp.DefaultExecAllocatorOptions[:],
+			chromedp.ExecPath(selectedPath),
+			chromedp.Flag("remote-debugging-port", "9222"),
+			chromedp.NoFirstRun,
+			chromedp.NoDefaultBrowserCheck,
+		)
+	}
+
+	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
+
+	var browserOpts []chromedp.ContextOption
+	if verbose {
+		browserOpts = append(browserOpts, chromedp.WithLogf(log.Printf))
+	}
+
+	browserCtx, browserCancel := chromedp.NewContext(allocCtx, browserOpts...)
+
+	// Test that Chrome starts successfully
+	testCtx, testCancel := context.WithTimeout(browserCtx, 10*time.Second)
+	if err := chromedp.Run(testCtx, chromedp.Navigate("about:blank")); err != nil {
+		testCancel()
+		browserCancel()
+		allocCancel()
+		return nil, nil, errors.Wrap(err, "failed to start Chrome")
+	}
+	testCancel()
+
+	// Return combined cancel function
+	cancel := func() {
+		browserCancel()
+		allocCancel()
+	}
+
+	return browserCtx, cancel, nil
 }
