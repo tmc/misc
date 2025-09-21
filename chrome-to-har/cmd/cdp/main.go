@@ -1680,6 +1680,23 @@ func printEnhancedCommands() {
 	fmt.Println("\nNote: These commands are only available when connected to remote Chrome")
 }
 
+// isNonBrowserCommand checks if a command can run without browser setup
+func isNonBrowserCommand(cmdName string) bool {
+	nonBrowserCommands := map[string]bool{
+		"help":   true,
+		"h":      true,
+		"?":      true,
+		"list":   true,
+		"ls":     true,
+		"search": true,
+		"find":   true,
+		"quick":  true,
+		"qr":     true,
+		"ref":    true,
+	}
+	return nonBrowserCommands[cmdName]
+}
+
 // handleEnhancedMode handles the new enhanced command mode
 func handleEnhancedMode(command string, interactive bool, verbose bool, chromePath string) {
 	registry := NewCommandRegistry()
@@ -1710,18 +1727,7 @@ func handleEnhancedMode(command string, interactive bool, verbose bool, chromePa
 		return
 	}
 
-	// Execute single command
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	// Set up Chrome context
-	chromeCtx, chromeCancel, err := setupChromeForEnhanced(ctx, verbose, chromePath)
-	if err != nil {
-		log.Fatalf("Failed to setup Chrome: %v", err)
-	}
-	defer chromeCancel()
-
-	// Parse and execute command
+	// Parse command first
 	parts := strings.Fields(command)
 	if len(parts) == 0 {
 		fmt.Println("No command specified")
@@ -1730,6 +1736,40 @@ func handleEnhancedMode(command string, interactive bool, verbose bool, chromePa
 
 	cmdName := parts[0]
 	args := parts[1:]
+
+	// Check if this is a non-browser command (help, list, search)
+	if isNonBrowserCommand(cmdName) {
+		// Execute without setting up browser
+		if cmdName == "help" {
+			if len(args) > 0 {
+				help.ShowHelp(args)
+			} else {
+				help.ShowHelp(nil)
+			}
+		} else if cmdName == "list" || cmdName == "ls" {
+			help.ListCommands()
+		} else if cmdName == "search" || cmdName == "find" {
+			if len(args) > 0 {
+				help.SearchCommands(strings.Join(args, " "))
+			} else {
+				fmt.Println("Usage: search <term>")
+			}
+		} else if cmdName == "quick" || cmdName == "qr" || cmdName == "ref" {
+			help.ShowQuickReference()
+		}
+		return
+	}
+
+	// Execute single command that requires browser
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	// Set up Chrome context
+	chromeCtx, chromeCancel, err := setupChromeForEnhanced(ctx, verbose, chromePath)
+	if err != nil {
+		log.Fatalf("Failed to setup Chrome: %v", err)
+	}
+	defer chromeCancel()
 
 	// Check for special commands
 	switch cmdName {
