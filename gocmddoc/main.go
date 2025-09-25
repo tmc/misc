@@ -308,10 +308,10 @@ func formatDoc(doc string) string {
 	return postprocessConsoleBlocks(markdown)
 }
 
-// preprocessConsoleBlocks converts shell-like blocks to placeholders before parsing
+// preprocessConsoleBlocks converts shell-like blocks and mermaid blocks to placeholders before parsing
 func preprocessConsoleBlocks(doc string) string {
-	// Support multiple shell-like language types
-	shellLanguages := []string{"console", "sh-session", "bash", "shell", "ShellSession"}
+	// Support multiple shell-like language types and mermaid
+	shellLanguages := []string{"console", "sh-session", "bash", "shell", "ShellSession", "mermaid"}
 
 	counter := 0
 	result := doc

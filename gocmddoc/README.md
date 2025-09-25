@@ -151,6 +151,40 @@ The tool provides intelligent formatting:
   - Adds pkg.go.dev badge for Go packages
   - Includes installation instructions with Go PATH setup
   - Supports additional shields/badges for GitHub projects
+  - Preserves shell/console code blocks with proper syntax highlighting
+  - Preserves Mermaid diagram blocks for rendering flowcharts and diagrams
+
+## Special Code Blocks
+
+The tool preserves special code block types with their language identifiers:
+
+Shell/console blocks for command examples:
+
+```console
+
+go install github.com/user/repo@latest
+
+```
+
+```bash
+
+export PATH="$PATH:$HOME/go/bin"
+source ~/.bashrc
+
+```
+
+Mermaid blocks for diagrams:
+
+```mermaid
+
+graph TD
+    A[Start] --> B{Check}
+    B -->|Yes| C[Process]
+    B -->|No| D[End]
+
+```
+
+These blocks maintain their syntax highlighting and can be rendered properly by Markdown viewers that support these features (like GitHub or specialized tools like md2html).
 
 ## Go Generate
 
