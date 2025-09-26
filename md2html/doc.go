@@ -110,5 +110,5 @@
 // md2html uses Goldmark's secure defaults and does not allow unsafe HTML
 // by default. All rendering is done server-side with proper HTML escaping.
 //
-//go:generate go run github.com/tmc/misc/gocmddoc@latest -o README.md
+//go:generate gocmddoc -o README.md
 package main

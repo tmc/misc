@@ -1,0 +1,223 @@
+{{define "styles"}}
+<style>
+    /* GitHub Primer color system - Auto light/dark */
+    :root {
+        /* Light theme (default) */
+        --color-canvas-default: #ffffff;
+        --color-canvas-subtle: #f6f8fa;
+        --color-canvas-inset: #eff2f5;
+        --color-fg-default: #1f2328;
+        --color-fg-muted: #656d76;
+        --color-fg-subtle: #6e7781;
+        --color-fg-on-emphasis: #ffffff;
+        --color-border-default: #d0d7de;
+        --color-border-muted: #d8dee4;
+        --color-border-subtle: rgba(31, 35, 40, 0.15);
+        --color-shadow-small: 0 1px 0 rgba(31, 35, 40, 0.04);
+        --color-shadow-medium: 0 3px 6px rgba(140, 149, 159, 0.15);
+        --color-neutral-muted: rgba(175, 184, 193, 0.2);
+        --color-accent-fg: #0969da;
+        --color-accent-emphasis: #0969da;
+        --color-accent-muted: rgba(84, 174, 255, 0.4);
+        --color-accent-subtle: #ddf4ff;
+        --color-success-fg: #1a7f37;
+        --color-success-emphasis: #1f883d;
+        --color-attention-fg: #9a6700;
+        --color-attention-emphasis: #bf8700;
+        --color-attention-subtle: #fff8c5;
+        --color-danger-fg: #cf222e;
+        --color-danger-emphasis: #da3633;
+        --color-danger-muted: rgba(255, 129, 130, 0.4);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            /* Dark theme */
+            --color-canvas-default: #0d1117;
+            --color-canvas-subtle: #161b22;
+            --color-canvas-inset: #010409;
+            --color-fg-default: #e6edf3;
+            --color-fg-muted: #7d8590;
+            --color-fg-subtle: #6e7681;
+            --color-fg-on-emphasis: #ffffff;
+            --color-border-default: #30363d;
+            --color-border-muted: #21262d;
+            --color-border-subtle: rgba(240, 246, 252, 0.1);
+            --color-shadow-small: 0 0 transparent;
+            --color-shadow-medium: 0 3px 6px #010409;
+            --color-neutral-muted: rgba(110, 118, 129, 0.4);
+            --color-accent-fg: #58a6ff;
+            --color-accent-emphasis: #1f6feb;
+            --color-accent-muted: rgba(56, 139, 253, 0.4);
+            --color-accent-subtle: rgba(56, 139, 253, 0.1);
+            --color-success-fg: #3fb950;
+            --color-success-emphasis: #238636;
+            --color-attention-fg: #d29922;
+            --color-attention-emphasis: #9e6a03;
+            --color-attention-subtle: rgba(187, 128, 9, 0.15);
+            --color-danger-fg: #f85149;
+            --color-danger-emphasis: #da3633;
+            --color-danger-muted: rgba(248, 81, 73, 0.4);
+            --color-success-subtle: rgba(46, 160, 67, 0.15);
+            --color-danger-subtle: rgba(248, 81, 73, 0.15);
+            --color-done-fg: #a371f7;
+            --color-done-subtle: rgba(163, 113, 247, 0.15);
+        }
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        line-height: 1.6;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
+        background: var(--color-canvas-default);
+        color: var(--color-fg-default);
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        margin-top: 1.5em;
+        margin-bottom: 0.5em;
+        font-weight: 600;
+        color: var(--color-fg-default);
+    }
+
+    h1 {
+        font-size: 2em;
+        border-bottom: 1px solid var(--color-border-muted);
+        padding-bottom: 0.3em;
+    }
+    h2 {
+        font-size: 1.5em;
+        border-bottom: 1px solid var(--color-border-muted);
+        padding-bottom: 0.3em;
+    }
+    h3 { font-size: 1.25em; }
+
+    code {
+        background: var(--color-neutral-subtle);
+        color: var(--color-fg-default);
+        padding: 0.2em 0.4em;
+        border-radius: 3px;
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+        font-size: 85%;
+    }
+
+    pre {
+        background: var(--color-canvas-subtle);
+        border: 1px solid var(--color-border-default);
+        border-radius: 6px;
+        padding: 16px;
+        overflow-x: auto;
+        line-height: 1.45;
+    }
+
+    pre code {
+        background: none;
+        color: var(--color-fg-default);
+        padding: 0;
+        font-size: 100%;
+    }
+
+    blockquote {
+        border-left: 4px solid var(--color-border-default);
+        padding-left: 16px;
+        margin-left: 0;
+        color: var(--color-fg-muted);
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 16px 0;
+    }
+
+    th, td {
+        border: 1px solid var(--color-border-default);
+        padding: 8px 13px;
+        text-align: left;
+    }
+
+    th {
+        background: var(--color-canvas-subtle);
+        font-weight: 600;
+    }
+
+    a {
+        color: var(--color-accent-emphasis);
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    /* Connection status - adapts to theme */
+    .connection-status {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        background: var(--color-success-emphasis);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        z-index: 1000;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .connection-status.disconnected {
+        background: var(--color-danger-emphasis);
+    }
+
+    /* GitHub-style alerts (via goldmark-admonitions) */
+    .admonition {
+        padding: 1em;
+        margin: 16px 0;
+        border-left: .25em solid;
+        border-radius: 6px;
+    }
+
+    .admonition > :first-child {
+        margin-top: 0;
+    }
+
+    .admonition > :last-child {
+        margin-bottom: 0;
+    }
+
+    .admonition.note {
+        border-left-color: var(--color-accent-emphasis);
+        background-color: var(--color-accent-subtle);
+    }
+
+    .admonition.tip {
+        border-left-color: var(--color-success-emphasis);
+        background-color: var(--color-success-subtle);
+    }
+
+    .admonition.important {
+        border-left-color: var(--color-done-fg);
+        background-color: var(--color-done-subtle);
+    }
+
+    .admonition.warning {
+        border-left-color: var(--color-attention-emphasis);
+        background-color: var(--color-attention-subtle);
+    }
+
+    .admonition.danger {
+        border-left-color: var(--color-danger-emphasis);
+        background-color: var(--color-danger-subtle);
+    }
+
+    .admonition-title {
+        font-weight: 600;
+        margin-bottom: 0.5em;
+    }
+
+    {{.CustomCSS}}
+    {{.ChromaCSS}}
+</style>
+{{end}}

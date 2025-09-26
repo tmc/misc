@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"embed"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -10,47 +12,136 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
+	"gopkg.in/yaml.v2"
+
+	"github.com/alecthomas/chroma/v2/styles"
 	"github.com/fsnotify/fsnotify"
-	admonitions "github.com/stefanfritsch/goldmark-admonitions"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
-	highlighting "github.com/yuin/goldmark-highlighting/v2"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
-	"github.com/alecthomas/chroma/v2/styles"
-	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
+	"github.com/yuin/goldmark/text"
 	"go.abhg.dev/goldmark/toc"
+
+	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
+	admonitions "github.com/stefanfritsch/goldmark-admonitions"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
+	meta "github.com/yuin/goldmark-meta"
 )
 
 //go:embed templates
 var templates embed.FS
 
 var (
-	flagInput   = flag.String("input", "", "input file (default: directory listing)")
-	flagHTTP    = flag.String("http", ":8080", "HTTP server bind address")
-	flagOpen    = flag.Bool("open", false, "automatically open browser")
-	flagVerbose = flag.Bool("v", false, "verbose logging")
-	flagTitle   = flag.String("title", "Markdown Preview", "HTML title")
-	flagCSS     = flag.String("css", "", "path to custom CSS file")
-	flagDepth   = flag.Int("depth", 2, "directory traversal depth for listings (minimum 2)")
-	flagTOC     = flag.Bool("toc", true, "generate table of contents")
+	flagInput             = flag.String("input", "", "input file (default: directory listing)")
+	flagHTTP              = flag.String("http", ":8080", "HTTP server bind address")
+	flagOpen              = flag.Bool("open", false, "automatically open browser")
+	flagVerbose           = flag.Bool("v", false, "verbose logging")
+	flagTitle             = flag.String("title", "Markdown Preview", "HTML title")
+	flagCSS               = flag.String("css", "", "path to custom CSS file")
+	flagDepth             = flag.Int("depth", 2, "directory traversal depth for listings (minimum 2)")
+	flagTOC               = flag.Bool("toc", false, "generate table of contents")
+	flagAllowUnsafe       = flag.Bool("allow-unsafe", false, "allow unsafe HTML in markdown (use with caution)")
+	flagTemplateDir       = flag.String("templates", "", "path to custom template directory (overrides embedded templates)")
+	flagDataJSON          = flag.String("data-json", "", "path to JSON file to load as template data (available as .Data)")
+	flagRenderFrontmatter = flag.Bool("render-frontmatter", false, "render YAML frontmatter as part of the document content")
+	flagIndex             = flag.String("index", "", "default file to serve for root path (e.g., README.md, index.md)")
 )
 
-
 type server struct {
-	mu          sync.RWMutex
-	content     string
-	clients     map[chan string]bool
-	clientsMu   sync.RWMutex
-	cssContent  string
-	inputPath   string
+	mu         sync.RWMutex
+	content    string
+	clients    map[chan string]bool
+	clientsMu  sync.RWMutex
+	cssContent string
+	inputPath  string
+	jsonData   interface{} // Generic JSON data for templates
+	shutdownCh chan struct{}
+
+	// Batched reload management
+	reloadPending bool
+	reloadTimer   *time.Timer
+	reloadTimerMu sync.Mutex
+}
+
+type DocumentData struct {
+	Content     string
+	Frontmatter map[string]interface{}
+}
+
+func loadJSONFile(filename string) (interface{}, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	var jsonData interface{}
+	if err := json.Unmarshal(data, &jsonData); err != nil {
+		return nil, err
+	}
+
+	return jsonData, nil
+}
+
+func parseFrontmatter(content string) (DocumentData, error) {
+	// Use goldmark to parse frontmatter
+	md := goldmark.New(goldmark.WithExtensions(meta.Meta))
+	context := parser.NewContext()
+
+	// Parse to extract metadata
+	md.Parser().Parse(text.NewReader([]byte(content)), parser.WithContext(context))
+
+	// Get metadata
+	metaData := meta.Get(context)
+	if metaData == nil {
+		metaData = make(map[string]interface{})
+	}
+
+	// Strip frontmatter from content manually (goldmark-meta doesn't do this for us)
+	strippedContent := stripFrontmatter(content)
+
+	return DocumentData{
+		Content:     strippedContent,
+		Frontmatter: metaData,
+	}, nil
+}
+
+func stripFrontmatter(content string) string {
+	// Check for YAML frontmatter
+	if !strings.HasPrefix(content, "---\n") {
+		return content
+	}
+
+	// Find the closing delimiter
+	lines := strings.Split(content, "\n")
+	var frontmatterEnd int
+	for i := 1; i < len(lines); i++ {
+		if lines[i] == "---" {
+			frontmatterEnd = i
+			break
+		}
+	}
+
+	if frontmatterEnd == 0 {
+		// No closing delimiter found, treat as regular content
+		return content
+	}
+
+	// Extract content after frontmatter
+	if frontmatterEnd+1 < len(lines) {
+		return strings.Join(lines[frontmatterEnd+1:], "\n")
+	}
+	return ""
 }
 
 func main() {
@@ -58,11 +149,24 @@ func main() {
 	runServer()
 }
 
-
 func runServer() {
 	s := &server{
-		clients:   make(map[chan string]bool),
-		inputPath: *flagInput,
+		clients:    make(map[chan string]bool),
+		inputPath:  *flagInput,
+		shutdownCh: make(chan struct{}),
+	}
+
+	// Load JSON data if provided
+	if *flagDataJSON != "" {
+		jsonData, err := loadJSONFile(*flagDataJSON)
+		if err != nil {
+			log.Printf("Error loading JSON data file: %v", err)
+		} else {
+			s.jsonData = jsonData
+			if *flagVerbose {
+				log.Printf("Loaded JSON data from: %s", *flagDataJSON)
+			}
+		}
 	}
 
 	// Load initial content
@@ -95,11 +199,18 @@ func runServer() {
 		go s.watchDirectory()
 	}
 
-	http.HandleFunc("/", s.handleIndex)
-	http.HandleFunc("/events", s.handleSSE)
-	http.HandleFunc("/raw", s.handleRaw)
+	// Setup HTTP handlers
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", s.handleIndex)
+	mux.HandleFunc("/events", s.handleSSE)
+	mux.HandleFunc("/raw", s.handleRaw)
 
 	addr := *flagHTTP
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: mux,
+	}
+
 	// Format URL for display and browser opening
 	displayURL := formatServerURL(addr)
 	log.Printf("Server starting on %s", displayURL)
@@ -113,7 +224,44 @@ func runServer() {
 		}()
 	}
 
-	log.Fatal(http.ListenAndServe(addr, nil))
+	// Setup graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-sigChan
+		log.Println("Shutting down server...")
+
+		// Close shutdown channel to notify all goroutines
+		close(s.shutdownCh)
+
+		// Send shutdown signal to all clients
+		s.clientsMu.Lock()
+		for client := range s.clients {
+			select {
+			case client <- "shutdown":
+			default:
+				// Channel is full or closed, skip
+			}
+		}
+		// Clear the clients map
+		s.clients = make(map[chan string]bool)
+		s.clientsMu.Unlock()
+
+		// Shutdown server with timeout
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Printf("Server shutdown error: %v", err)
+		}
+		os.Exit(0)
+	}()
+
+	// Start server
+	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		log.Fatal(err)
+	}
 }
 
 func (s *server) watchFiles() {
@@ -202,14 +350,70 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	css := s.cssContent
 	s.mu.RUnlock()
 
-	// Check if a specific file is requested via query parameter
+	// Check if root path and index file is specified
+	if r.URL.Path == "/" && *flagIndex != "" {
+		if fileContent, err := os.ReadFile(*flagIndex); err == nil {
+			doc, err := parseFrontmatter(string(fileContent))
+			if err != nil {
+				log.Printf("Error parsing frontmatter in %s: %v", *flagIndex, err)
+				doc = DocumentData{Content: string(fileContent), Frontmatter: make(map[string]interface{})}
+			}
+			html := renderDocument(doc, *flagIndex, css, *flagIndex)
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.Write([]byte(html))
+			return
+		} else if *flagVerbose {
+			log.Printf("Index file %s not found, falling back to directory listing", *flagIndex)
+		}
+	}
+
+	// Check if a specific file is requested via clean URL path
+	if r.URL.Path != "/" {
+		filePath := strings.TrimPrefix(r.URL.Path, "/")
+
+		// Try the path as-is if it ends with .md
+		var candidates []string
+		if strings.HasSuffix(filePath, ".md") || strings.HasSuffix(filePath, ".markdown") {
+			candidates = append(candidates, filePath)
+		} else {
+			// Try adding .md extension
+			candidates = append(candidates, filePath+".md")
+			candidates = append(candidates, filePath+".markdown")
+		}
+
+		for _, candidate := range candidates {
+			if fileContent, err := os.ReadFile(candidate); err == nil {
+				doc, err := parseFrontmatter(string(fileContent))
+				if err != nil {
+					log.Printf("Error parsing frontmatter in %s: %v", candidate, err)
+					doc = DocumentData{Content: string(fileContent), Frontmatter: make(map[string]interface{})}
+				}
+				html := renderDocument(doc, candidate, css, candidate)
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.Write([]byte(html))
+				return
+			}
+		}
+
+		// File not found
+		http.Error(w, fmt.Sprintf("File not found: %s", filePath), http.StatusNotFound)
+		return
+	}
+
+	// Check if a specific file is requested via query parameter (for backward compatibility)
 	if file := r.URL.Query().Get("file"); file != "" {
 		content, err := os.ReadFile(file)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error reading file %s: %v", file, err), http.StatusNotFound)
 			return
 		}
-		html := renderHTMLWithLiveReload(string(content), file, css)
+
+		doc, err := parseFrontmatter(string(content))
+		if err != nil {
+			log.Printf("Error parsing frontmatter in %s: %v", file, err)
+			doc = DocumentData{Content: string(content), Frontmatter: make(map[string]interface{})}
+		}
+		html := renderDocument(doc, file, css, file)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write([]byte(html))
 		return
@@ -229,13 +433,19 @@ func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		html := renderHTMLWithLiveReload(listing, "Directory Listing", css)
+		doc := DocumentData{Content: listing, Frontmatter: make(map[string]interface{})}
+		html := renderDocument(doc, "Directory Listing", css, wd)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.Write([]byte(html))
 		return
 	}
 
-	html := renderHTMLWithLiveReload(content, *flagTitle, css)
+	doc, err := parseFrontmatter(content)
+	if err != nil {
+		log.Printf("Error parsing frontmatter: %v", err)
+		doc = DocumentData{Content: content, Frontmatter: make(map[string]interface{})}
+	}
+	html := renderDocument(doc, *flagTitle, css, "")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(html))
 }
@@ -267,20 +477,33 @@ func (s *server) handleSSE(w http.ResponseWriter, r *http.Request) {
 		s.clientsMu.Lock()
 		delete(s.clients, clientChan)
 		s.clientsMu.Unlock()
-		close(clientChan)
 	}()
 
 	// Keep connection alive
 	fmt.Fprintf(w, "data: connected\n\n")
 	w.(http.Flusher).Flush()
 
+	// Create a local copy of shutdown channel to avoid panic
+	shutdownCh := s.shutdownCh
+
 	// Listen for updates
 	for {
 		select {
-		case msg := <-clientChan:
+		case msg, ok := <-clientChan:
+			if !ok {
+				// Channel closed, server shutting down
+				fmt.Fprintf(w, "data: shutdown\n\n")
+				w.(http.Flusher).Flush()
+				return
+			}
 			fmt.Fprintf(w, "data: %s\n\n", msg)
 			w.(http.Flusher).Flush()
 		case <-r.Context().Done():
+			return
+		case <-shutdownCh:
+			// Server is shutting down
+			fmt.Fprintf(w, "data: shutdown\n\n")
+			w.(http.Flusher).Flush()
 			return
 		}
 	}
@@ -331,11 +554,11 @@ func (s *server) watchDirectory() {
 
 			// Check if it's a markdown file change
 			if strings.HasSuffix(strings.ToLower(event.Name), ".md") ||
-			   strings.HasSuffix(strings.ToLower(event.Name), ".markdown") {
+				strings.HasSuffix(strings.ToLower(event.Name), ".markdown") {
 				if event.Op&fsnotify.Write == fsnotify.Write ||
-				   event.Op&fsnotify.Create == fsnotify.Create ||
-				   event.Op&fsnotify.Remove == fsnotify.Remove ||
-				   event.Op&fsnotify.Chmod == fsnotify.Chmod {
+					event.Op&fsnotify.Create == fsnotify.Create ||
+					event.Op&fsnotify.Remove == fsnotify.Remove ||
+					event.Op&fsnotify.Chmod == fsnotify.Chmod {
 					// Debounce rapid changes
 					time.Sleep(100 * time.Millisecond)
 
@@ -357,6 +580,12 @@ func (s *server) watchDirectory() {
 }
 
 func (s *server) notifyClients() {
+	select {
+	case <-time.After(50 * time.Millisecond):
+	default:
+		return // debounce
+	}
+
 	s.clientsMu.RLock()
 	defer s.clientsMu.RUnlock()
 
@@ -379,9 +608,19 @@ func (s *server) notifyClients() {
 }
 
 func generateChromaCSS() string {
-	style := styles.Get("github")
-	if style == nil {
-		style = styles.Fallback
+	// Get light theme (github)
+	lightStyle := styles.Get("github")
+	if lightStyle == nil {
+		lightStyle = styles.Fallback
+	}
+
+	// Get dark theme (github-dark)
+	darkStyle := styles.Get("github-dark")
+	if darkStyle == nil {
+		darkStyle = styles.Get("dracula") // fallback dark theme
+		if darkStyle == nil {
+			darkStyle = lightStyle
+		}
 	}
 
 	formatter := chromahtml.New(
@@ -390,9 +629,18 @@ func generateChromaCSS() string {
 	)
 
 	var buf bytes.Buffer
-	if err := formatter.WriteCSS(&buf, style); err != nil {
+
+	// Generate light theme CSS
+	if err := formatter.WriteCSS(&buf, lightStyle); err != nil {
 		return ""
 	}
+
+	// Add dark theme CSS with media query
+	buf.WriteString("\n@media (prefers-color-scheme: dark) {\n")
+	if err := formatter.WriteCSS(&buf, darkStyle); err != nil {
+		return buf.String()
+	}
+	buf.WriteString("\n}\n")
 
 	return buf.String()
 }
@@ -464,72 +712,161 @@ func convertGitHubAlerts(markdown string) string {
 	return strings.Join(result, "\n")
 }
 
+func preprocessHTMLBlocks(markdown string) string {
+	lines := strings.Split(markdown, "\n")
+	var result []string
+	inHTMLBlock := false
+	blockDepth := 0
+
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+
+		// Check for opening HTML tags
+		if strings.HasPrefix(trimmedLine, "<") && !strings.HasPrefix(trimmedLine, "</") &&
+			!strings.HasSuffix(trimmedLine, "/>") {
+			// Simple HTML block detection (could be improved)
+			if strings.Contains(trimmedLine, "<div") || strings.Contains(trimmedLine, "<dl") ||
+				strings.Contains(trimmedLine, "<table") || strings.Contains(trimmedLine, "<section") {
+				inHTMLBlock = true
+				blockDepth++
+			}
+		}
+
+		// Check for closing HTML tags
+		if strings.HasPrefix(trimmedLine, "</") {
+			if strings.Contains(trimmedLine, "</div>") || strings.Contains(trimmedLine, "</dl>") ||
+				strings.Contains(trimmedLine, "</table>") || strings.Contains(trimmedLine, "</section>") {
+				blockDepth--
+				if blockDepth <= 0 {
+					inHTMLBlock = false
+					blockDepth = 0
+				}
+			}
+		}
+
+		// Remove indentation inside HTML blocks
+		if inHTMLBlock {
+			result = append(result, trimmedLine)
+		} else {
+			result = append(result, line)
+		}
+	}
+
+	return strings.Join(result, "\n")
+}
+
 func markdownToHTML(markdown string) string {
+	return markdownToHTMLWithContext(markdown, "")
+}
+
+func markdownToHTMLWithContext(markdown, filePath string) string {
 	// Convert GitHub alerts to admonitions format
 	markdown = convertGitHubAlerts(markdown)
 
+	// Preprocess HTML blocks when unsafe HTML is allowed
+	if *flagAllowUnsafe {
+		markdown = preprocessHTMLBlocks(markdown)
+	}
+
 	// Core secure extensions
 	extensions := []goldmark.Extender{
-		extension.GFM, // GitHub Flavored Markdown (tables, strikethrough, linkify, task lists)
+		extension.GFM, // GitHub Flavored Markdown
 		extension.Footnote,
+		meta.Meta, // YAML frontmatter support
 		highlighting.NewHighlighting(
-			highlighting.WithStyle("github"), // Secure, well-tested GitHub style
+			highlighting.WithStyle("github"),
 			highlighting.WithFormatOptions(
-				chromahtml.WithLineNumbers(false), // Disabled for cleaner output
-				chromahtml.WithClasses(true),      // Use CSS classes instead of inline styles
+				chromahtml.WithLineNumbers(false),
+				chromahtml.WithClasses(true),
 			),
 		),
 		&admonitions.Extender{},
 	}
 
-	// Build markdown processor
-	var tocRenderer *toc.Extender
+	// Add TOC if requested
 	if *flagTOC {
-		tocRenderer = &toc.Extender{
-			MinDepth: 1, // Include h1 like GitHub
-			MaxDepth: 6, // Include all heading levels like GitHub
-			Compact:  false, // Show full hierarchy like GitHub
-		}
-		extensions = append(extensions, tocRenderer)
+		extensions = append(extensions, &toc.Extender{
+			MinDepth: 1,
+			MaxDepth: 6,
+			Compact:  false,
+		})
 	}
 
+	// Build markdown processor
 	md := goldmark.New(
 		goldmark.WithExtensions(extensions...),
-		goldmark.WithParserOptions(
-			parser.WithAutoHeadingID(), // Required for TOC functionality
-		),
-		goldmark.WithRendererOptions(
-			html.WithXHTML(), // More secure than HTML5 mode
-			// Removed html.WithUnsafe() for better security
-		),
+		func() goldmark.Option {
+			if *flagAllowUnsafe {
+				return goldmark.WithParserOptions(
+					parser.WithAutoHeadingID(),
+					parser.WithAttribute(),
+				)
+			}
+			return goldmark.WithParserOptions(parser.WithAutoHeadingID())
+		}(),
+		func() goldmark.Option {
+			if *flagAllowUnsafe {
+				return goldmark.WithRendererOptions(
+					html.WithXHTML(),
+					html.WithUnsafe(),
+					html.WithHardWraps(),
+				)
+			}
+			return goldmark.WithRendererOptions(html.WithXHTML())
+		}(),
 	)
 
-	// Render markdown content (TOC extension handles TOC automatically)
 	source := []byte(markdown)
+
+	// If we have a file path, parse and modify links
+	if filePath != "" {
+		doc := md.Parser().Parse(text.NewReader(source))
+
+		// Walk through AST and modify relative links
+		ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+			if !entering {
+				return ast.WalkContinue, nil
+			}
+
+			if link, ok := n.(*ast.Link); ok {
+				href := string(link.Destination)
+
+				// Skip external links and anchors
+				if strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") ||
+					strings.HasPrefix(href, "#") || strings.HasPrefix(href, "mailto:") ||
+					strings.HasPrefix(href, "tel:") {
+					return ast.WalkContinue, nil
+				}
+
+				if strings.HasPrefix(href, "/") {
+					// Absolute path - keep as is
+					link.Destination = []byte(href)
+				} else if strings.HasSuffix(href, ".md") || strings.HasSuffix(href, ".markdown") {
+					// Relative markdown path - convert to clean URL
+					filename := filepath.Base(href)
+					urlPath := "/" + strings.TrimSuffix(strings.TrimSuffix(filename, ".md"), ".markdown")
+					link.Destination = []byte(urlPath)
+				}
+			}
+			return ast.WalkContinue, nil
+		})
+
+		// Render the modified AST
+		var buf bytes.Buffer
+		if err := md.Renderer().Render(&buf, source, doc); err != nil {
+			return fmt.Sprintf("<p>Error rendering markdown: %v</p>", err)
+		}
+		return buf.String()
+	}
+
+	// Simple conversion without link modification
 	var buf bytes.Buffer
 	if err := md.Convert(source, &buf); err != nil {
 		return fmt.Sprintf("<p>Error rendering markdown: %v</p>", err)
 	}
-
 	return buf.String()
 }
 
-func hasHTML(content string) bool {
-	return strings.Contains(content, "<") && strings.Contains(content, ">")
-}
-
-func processWithHTML2MD(content string) string {
-	// Try to use html2md if it exists
-	cmd := exec.Command("html2md")
-	cmd.Stdin = strings.NewReader(content)
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
-	if err := cmd.Run(); err == nil {
-		return out.String()
-	}
-	return ""
-}
 
 func formatServerURL(addr string) string {
 	// If address starts with ":", prepend localhost
@@ -554,6 +891,17 @@ func generateDirectoryListing(dir string) (string, error) {
 	})
 
 	var buf strings.Builder
+
+	// Check for index.md and include its content if present
+	indexFile := filepath.Join(dir, "index.md")
+	if _, err := os.Stat(indexFile); err == nil {
+		content, err := os.ReadFile(indexFile)
+		if err == nil {
+			buf.WriteString(string(content))
+			buf.WriteString("\n\n---\n\n")
+		}
+	}
+
 	buf.WriteString(fmt.Sprintf("# Directory Listing: %s\n\n", dir))
 
 	if len(files) == 0 {
@@ -562,8 +910,17 @@ func generateDirectoryListing(dir string) (string, error) {
 	}
 
 	for _, file := range files {
-		buf.WriteString(fmt.Sprintf("- [%s](?file=%s) (%d bytes, modified %s)\n",
-			file.RelPath, file.RelPath, file.Size, file.ModTime.Format("2006-01-02 15:04:05")))
+		// Convert file path to clean URL
+		cleanURL := "/" + file.RelPath
+		if strings.HasSuffix(cleanURL, ".md") {
+			cleanURL = strings.TrimSuffix(cleanURL, ".md")
+		}
+		if strings.HasSuffix(cleanURL, ".markdown") {
+			cleanURL = strings.TrimSuffix(cleanURL, ".markdown")
+		}
+
+		buf.WriteString(fmt.Sprintf("- [%s](%s) (%d bytes, modified %s)\n",
+			file.RelPath, cleanURL, file.Size, file.ModTime.Format("2006-01-02 15:04:05")))
 	}
 
 	return buf.String(), nil
@@ -632,381 +989,129 @@ func openBrowser(url string) bool {
 	return cmd.Start() == nil
 }
 
-func renderHTML(markdown, title, customCSS string) string {
-	html := markdownToHTML(markdown)
 
-	tmplStr := `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.Title}}</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-            color: #333;
-            transition: opacity 0.1s ease;
-        }
-        h1, h2, h3, h4, h5, h6 {
-            margin-top: 1.5em;
-            margin-bottom: 0.5em;
-        }
-        code {
-            background: #f4f4f4;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
-        }
-        pre {
-            background: #f4f4f4;
-            padding: 1em;
-            border-radius: 5px;
-            overflow-x: auto;
-        }
-        pre code {
-            background: none;
-            padding: 0;
-        }
-        blockquote {
-            border-left: 4px solid #ddd;
-            padding-left: 1em;
-            margin-left: 0;
-            color: #666;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 1em 0;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background: #f4f4f4;
-        }
-        img {
-            max-width: 100%;
-        }
-        a {
-            color: #0366d6;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        {{.CustomCSS}}
-    </style>
-</head>
-<body>
-    {{.Content}}
-</body>
-</html>`
+func renderDocument(doc DocumentData, title, customCSS, filePath string) string {
+	content := doc.Content
+	if *flagRenderFrontmatter && len(doc.Frontmatter) > 0 {
+		if frontmatterYAML, err := yaml.Marshal(doc.Frontmatter); err == nil {
+			content = "```yaml\n" + string(frontmatterYAML) + "```\n\n" + content
+		}
+	}
 
-	tmpl := template.Must(template.New("html").Parse(tmplStr))
+	var html string
+	if filePath != "" {
+		html = markdownToHTMLWithContext(content, filePath)
+	} else {
+		html = markdownToHTML(content)
+	}
+
+	return renderTemplate(html, title, customCSS, true, doc.Frontmatter)
+}
+
+func loadAllTemplates() (*template.Template, error) {
+	// Create template with helper functions
+	// Start with embedded templates using ParseFS
+	tmpl, err := template.New("root").Funcs(template.FuncMap{
+		"default": func(defaultValue, value interface{}) interface{} {
+			if value == nil {
+				return defaultValue
+			}
+			if s, ok := value.(string); ok && s == "" {
+				return defaultValue
+			}
+			return value
+		},
+		"loadJSON": func(filename string) interface{} {
+			data, err := loadJSONFile(filename)
+			if err != nil {
+				log.Printf("Error loading JSON file %s: %v", filename, err)
+				return nil
+			}
+			return data
+		},
+		"replace": func(old, new, s string) string {
+			return strings.ReplaceAll(s, old, new)
+		},
+	}).ParseFS(templates, "templates/*.html", "templates/*/*.html")
+
+	if err != nil {
+		log.Printf("Error parsing embedded templates: %v", err)
+		tmpl = template.New("root") // fallback to empty template
+	}
+
+	// Load custom templates (override embedded ones)
+	if *flagTemplateDir != "" {
+		customPattern1 := filepath.Join(*flagTemplateDir, "*.html")
+		customPattern2 := filepath.Join(*flagTemplateDir, "*", "*.html")
+		if customTmpl, err := tmpl.ParseGlob(customPattern1); err == nil {
+			tmpl = customTmpl
+		}
+		if customTmpl, err := tmpl.ParseGlob(customPattern2); err == nil {
+			tmpl = customTmpl
+		}
+	}
+
+	return tmpl, nil
+}
+
+func renderTemplate(htmlContent, title, customCSS string, liveReload bool, frontmatter map[string]interface{}) string {
+	// Load all templates
+	tmpl, err := loadAllTemplates()
+	if err != nil {
+		log.Printf("Error loading templates: %v", err)
+		return fmt.Sprintf("<p>Template loading error: %v</p>", err)
+	}
+
+	// Use "layout" as the standard template name
+	templateName := "layout"
+
+	// If layout doesn't exist, fall back to other common names
+	if tmpl.Lookup(templateName) == nil {
+		// Try other standard names
+		for _, name := range []string{"docs.html", "page.html", "live-reload.html"} {
+			if tmpl.Lookup(name) != nil {
+				templateName = name
+				break
+			}
+		}
+	}
+
+	// If still no template found, error out
+	if tmpl.Lookup(templateName) == nil {
+		return "<p>No template found. Expected 'layout' template"
+	}
 
 	var buf bytes.Buffer
 	data := struct {
-		Title     string
-		Content   template.HTML
-		CustomCSS template.CSS
-		ChromaCSS template.CSS
-		Verbose   bool
+		Title       string
+		Content     template.HTML
+		CustomCSS   template.CSS
+		ChromaCSS   template.CSS
+		Verbose     bool
+		LiveReload  bool
+		Frontmatter map[string]interface{}
 	}{
-		Title:     title,
-		Content:   template.HTML(html),
-		CustomCSS: template.CSS(customCSS),
-		ChromaCSS: template.CSS(generateChromaCSS()),
-		Verbose:   *flagVerbose,
+		Title:       title,
+		Content:     template.HTML(htmlContent),
+		CustomCSS:   template.CSS(customCSS),
+		ChromaCSS:   template.CSS(generateChromaCSS()),
+		Verbose:     *flagVerbose,
+		LiveReload:  liveReload,
+		Frontmatter: frontmatter,
 	}
 
-	tmpl.Execute(&buf, data)
+	// Try to execute the selected template, fall back to base if it exists
+	err = tmpl.ExecuteTemplate(&buf, templateName, data)
+	if err != nil {
+		// Try base template as fallback
+		if tmpl.Lookup("base") != nil {
+			err = tmpl.ExecuteTemplate(&buf, "base", data)
+		}
+		if err != nil {
+			log.Printf("Error executing template: %v", err)
+			return fmt.Sprintf("<p>Template execution error: %v</p>", err)
+		}
+	}
 	return buf.String()
 }
 
-func renderHTMLWithLiveReload(markdown, title, customCSS string) string {
-	html := markdownToHTML(markdown)
-
-	tmplStr := `<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.Title}}</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
-            color: #333;
-            transition: opacity 0.1s ease;
-        }
-        h1, h2, h3, h4, h5, h6 {
-            margin-top: 1.5em;
-            margin-bottom: 0.5em;
-        }
-        code {
-            background: #f4f4f4;
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
-        }
-        pre {
-            background: #f4f4f4;
-            padding: 1em;
-            border-radius: 5px;
-            overflow-x: auto;
-        }
-        pre code {
-            background: none;
-            padding: 0;
-        }
-        blockquote {
-            border-left: 4px solid #ddd;
-            padding-left: 1em;
-            margin-left: 0;
-            color: #666;
-        }
-        table {
-            border-collapse: collapse;
-            width: 100%;
-            margin: 1em 0;
-        }
-        th, td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background: #f4f4f4;
-        }
-        img {
-            max-width: 100%;
-        }
-        a {
-            color: #0366d6;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        .connection-status {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            padding: 5px 10px;
-            border-radius: 3px;
-            font-size: 12px;
-            background: #28a745;
-            color: white;
-        }
-        .connection-status.disconnected {
-            background: #dc3545;
-        }
-        /* GitHub-style Table of Contents */
-        #table-of-contents {
-            background: #f6f8fa;
-            border: 1px solid #d0d7de;
-            border-radius: 6px;
-            padding: 16px;
-            margin: 16px 0;
-        }
-        #table-of-contents h2 {
-            margin-top: 0;
-            margin-bottom: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            color: #24292f;
-        }
-        #table-of-contents ul {
-            list-style: none;
-            padding-left: 0;
-            margin: 0;
-        }
-        #table-of-contents li {
-            margin: 4px 0;
-        }
-        #table-of-contents a {
-            color: #0969da;
-            text-decoration: none;
-            font-size: 14px;
-        }
-        #table-of-contents a:hover {
-            text-decoration: underline;
-        }
-        #table-of-contents ul ul {
-            padding-left: 16px;
-        }
-        /* GitHub Alerts - exact GitHub styles */
-        :root {
-            --color-note: #0969da;
-            --color-tip: #1a7f37;
-            --color-warning: #9a6700;
-            --color-severe: #bc4c00;
-            --color-caution: #d1242f;
-            --color-important: #8250df;
-        }
-
-        /* Map goldmark-admonitions classes to GitHub alert styles */
-        .admonition {
-            padding: 0.5rem 1rem;
-            margin-bottom: 16px;
-            color: inherit;
-            border-left: .25em solid #888;
-        }
-
-        .admonition > :first-child {
-            margin-top: 0;
-            display: flex;
-            font-weight: 500;
-            align-items: center;
-            line-height: 1;
-        }
-
-        .admonition > :last-child {
-            margin-bottom: 0;
-        }
-
-        .adm-note {
-            border-left-color: var(--color-note);
-        }
-
-        .adm-note > :first-child {
-            color: var(--color-note);
-        }
-
-        .adm-tip {
-            border-left-color: var(--color-tip);
-        }
-
-        .adm-tip > :first-child {
-            color: var(--color-tip);
-        }
-
-        .adm-important {
-            border-left-color: var(--color-important);
-        }
-
-        .adm-important > :first-child {
-            color: var(--color-important);
-        }
-
-        .adm-warning {
-            border-left-color: var(--color-warning);
-        }
-
-        .adm-warning > :first-child {
-            color: var(--color-warning);
-        }
-
-        .adm-danger {
-            border-left-color: var(--color-caution);
-        }
-
-        .adm-danger > :first-child {
-            color: var(--color-caution);
-        }
-        {{.CustomCSS}}
-        {{.ChromaCSS}}
-    </style>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <script>
-        window.MathJax = {
-            tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']]
-            }
-        };
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Mermaid
-            mermaid.initialize({
-                startOnLoad: false,
-                theme: 'default',
-                securityLevel: 'loose'
-            });
-
-            // Convert code blocks with language-mermaid to mermaid diagrams
-            document.querySelectorAll('code.language-mermaid').forEach((block, index) => {
-                const div = document.createElement('div');
-                div.className = 'mermaid';
-                div.textContent = block.textContent;
-                div.id = 'mermaid-' + index;
-                block.parentElement.replaceWith(div);
-            });
-
-            // Render all mermaid diagrams
-            mermaid.run();
-        });
-    </script>
-</head>
-<body>
-    <div id="status" class="connection-status">Connected</div>
-    {{.Content}}
-    <script>
-        (function() {
-            const status = document.getElementById('status');
-            const contentContainer = document.querySelector('body');
-
-            // Create EventSource for SSE
-            const eventSource = new EventSource('/events');
-
-            eventSource.onopen = function() {
-                {{if .Verbose}}console.log('SSE connected');{{end}}
-                status.textContent = 'Connected';
-                status.classList.remove('disconnected');
-            };
-
-            eventSource.onmessage = function(event) {
-                {{if .Verbose}}console.log('SSE message:', event.data);{{end}}
-                if (event.data === 'reload') {
-                    {{if .Verbose}}console.log('Reloading page...');{{end}}
-                    document.body.style.opacity = '0.8';
-                    setTimeout(() => {
-                        location.reload();
-                    }, 100);
-                }
-            };
-
-            eventSource.onerror = function() {
-                {{if .Verbose}}console.log('SSE error, reconnecting...');{{end}}
-                status.textContent = 'Reconnecting...';
-                status.classList.add('disconnected');
-                setTimeout(function() {
-                    window.location.reload();
-                }, 1000);
-            };
-        })();
-    </script>
-</body>
-</html>`
-
-	tmpl := template.Must(template.New("html").Parse(tmplStr))
-
-	var buf bytes.Buffer
-	data := struct {
-		Title     string
-		Content   template.HTML
-		CustomCSS template.CSS
-		ChromaCSS template.CSS
-		Verbose   bool
-	}{
-		Title:     title,
-		Content:   template.HTML(html),
-		CustomCSS: template.CSS(customCSS),
-		ChromaCSS: template.CSS(generateChromaCSS()),
-		Verbose:   *flagVerbose,
-	}
-
-	tmpl.Execute(&buf, data)
-	return buf.String()
-}

@@ -1,0 +1,5 @@
+# Simple server test
+
+# Test basic functionality without embedded files - just use the md2html help
+exec md2html -h
+stderr 'Usage of md2html'

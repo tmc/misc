@@ -1,0 +1,90 @@
+{{define "scripts"}}
+{{template "mathjax-script" .}}
+{{template "mermaid-script" .}}
+{{if .LiveReload}}{{template "livereload-script" .}}{{end}}
+{{end}}
+
+{{define "mathjax-script"}}
+<!-- MathJax support -->
+<script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script>
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']],
+            displayMath: [['$$', '$$'], ['\\[', '\\]']]
+        }
+    };
+</script>
+{{end}}
+
+{{define "mermaid-script"}}
+<!-- Mermaid support -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'default',
+            securityLevel: 'loose'
+        });
+
+        const mermaidBlocks = document.querySelectorAll('pre > code.language-mermaid');
+        mermaidBlocks.forEach(async (block, index) => {
+            const pre = block.parentElement;
+            const graphDefinition = block.textContent;
+
+            const div = document.createElement('div');
+            div.className = 'mermaid';
+            div.id = 'mermaid-' + index;
+
+            try {
+                const { svg } = await mermaid.render('mermaid-svg-' + index, graphDefinition);
+                div.innerHTML = svg;
+                pre.replaceWith(div);
+            } catch (error) {
+                console.error('Mermaid rendering error:', error);
+            }
+        });
+    });
+</script>
+{{end}}
+
+{{define "livereload-script"}}
+<!-- Live reload functionality -->
+<script>
+    (function() {
+        const status = document.getElementById('status');
+        if (!status) return;
+
+        const eventSource = new EventSource('/events');
+
+        eventSource.onopen = function() {
+            status.textContent = 'Connected';
+            status.classList.remove('disconnected');
+        };
+
+        eventSource.onmessage = function(event) {
+            if (event.data === 'reload') {
+                setTimeout(() => window.location.reload(), 100);
+            } else if (event.data === 'shutdown') {
+                status.textContent = 'Server shutdown';
+                status.classList.add('disconnected');
+                eventSource.close();
+            }
+        };
+
+        eventSource.onerror = function(e) {
+            status.textContent = 'Disconnected';
+            status.classList.add('disconnected');
+
+            if (eventSource.readyState === EventSource.CLOSED) {
+                setTimeout(function() {
+                    fetch('/events', { method: 'HEAD' })
+                        .then(() => window.location.reload())
+                        .catch(() => {});
+                }, 2000);
+            }
+        };
+    })();
+</script>
+{{end}}

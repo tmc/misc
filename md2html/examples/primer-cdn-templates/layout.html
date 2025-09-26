@@ -1,0 +1,18 @@
+{{define "layout"}}
+<!DOCTYPE html>
+<html data-color-mode="auto">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    {{template "styles" .}}
+</head>
+<body>
+    {{template "header" .}}
+    <article class="markdown-body">
+        {{template "content" .}}
+    </article>
+    {{template "scripts" .}}
+</body>
+</html>
+{{end}}

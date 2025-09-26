@@ -1,0 +1,42 @@
+# Test GitHub-style alerts rendering
+
+# Start server with the alerts file
+exec md2html -input alerts.md -http :8093 &
+sleep 1s
+
+# Test alerts are rendered with proper CSS classes
+exec curl -s http://localhost:8093/
+stdout 'class="admonition adm-note"'
+
+exec curl -s http://localhost:8093/
+stdout 'class="admonition adm-tip"'
+
+exec curl -s http://localhost:8093/
+stdout 'class="admonition adm-important"'
+
+exec curl -s http://localhost:8093/
+stdout 'class="admonition adm-warning"'
+
+exec curl -s http://localhost:8093/
+stdout 'class="admonition adm-danger"'
+
+# Cleanup
+exec pkill -f 'md2html.*8093'
+
+-- alerts.md --
+# GitHub Alerts Test
+
+> [!NOTE]
+> This is a note alert.
+
+> [!TIP]
+> This is a tip alert.
+
+> [!IMPORTANT]
+> This is important.
+
+> [!WARNING]
+> This is a warning.
+
+> [!CAUTION]
+> This is a caution alert.

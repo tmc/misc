@@ -1,0 +1,51 @@
+# Test markdown rendering with embedded test files
+
+# Start server in background on port 8090
+exec md2html -input test.md -http :8090 &
+
+# Wait for server to start
+sleep 2s
+
+# Test basic HTML rendering
+exec curl -s http://localhost:8090/raw
+stdout '<h1.*>Test Document</h1>'
+stdout '<h2.*>Features</h2>'
+stdout '<strong>bold</strong>'
+stdout '<em>italic</em>'
+stdout '<code.*>inline code</code>'
+
+# Test that code blocks are highlighted
+stdout '<pre.*class="chroma".*><code>'
+
+# Clean up
+exec pkill md2html
+
+-- test.md --
+# Test Document
+
+This document tests various **bold** and *italic* formatting.
+
+## Features
+
+Here are some features:
+
+- List item 1
+- List item 2
+- `inline code`
+
+### Code Block
+
+```go
+func main() {
+    fmt.Println("Hello, World!")
+}
+```
+
+### Table
+
+| Name | Value |
+|------|-------|
+| Test | 123   |
+
+> [!NOTE]
+> This is a GitHub-style alert.

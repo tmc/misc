@@ -1,0 +1,34 @@
+# Test code syntax highlighting
+
+# Start server
+exec md2html -input code.md -http :8097 &
+sleep 1s
+
+# Test that Chroma CSS is included
+exec curl -s http://localhost:8097/
+stdout 'chroma'
+
+# Test that code blocks are rendered
+exec curl -s http://localhost:8097/
+stdout 'Hello, World!'
+
+# Cleanup
+exec pkill -f 'md2html.*8097'
+
+-- code.md --
+# Code Examples
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello, World!")
+}
+```
+
+```python
+def hello():
+    print("Hello from Python")
+```

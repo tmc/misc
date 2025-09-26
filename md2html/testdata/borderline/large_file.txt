@@ -1,0 +1,20 @@
+# Test handling of large markdown files
+
+# Create a large markdown file (10000 lines)
+python3 -c "for i in range(10000): print(f'Line {i}: This is a test line with some **bold** text and *italic* text.')" > large.md
+
+# Start server with large file
+md2html -input large.md -http :9001 &
+sleep 2s
+
+# Test that server responds (might be slow)
+curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://localhost:9001/
+stdout '200'
+
+# Test that content is actually rendered
+curl -s http://localhost:9001/ | grep 'Line 9999'
+stdout 'Line 9999'
+
+# Cleanup
+pkill -f 'md2html.*9001'
+rm large.md

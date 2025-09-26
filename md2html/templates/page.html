@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+
+    {{block "styles" .}}
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            color: #24292e;
+            background: #fff;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+            font-weight: 600;
+        }
+
+        h1 { font-size: 2em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+        h2 { font-size: 1.5em; border-bottom: 1px solid #eaecef; padding-bottom: 0.3em; }
+        h3 { font-size: 1.25em; }
+
+        code {
+            background: rgba(175, 184, 193, 0.2);
+            padding: 0.2em 0.4em;
+            border-radius: 3px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+            font-size: 85%;
+        }
+
+        pre {
+            background: #f6f8fa;
+            border: 1px solid #e1e4e8;
+            border-radius: 6px;
+            padding: 16px;
+            overflow-x: auto;
+            line-height: 1.45;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 100%;
+        }
+
+        blockquote {
+            border-left: 4px solid #dfe2e5;
+            padding-left: 16px;
+            margin-left: 0;
+            color: #6a737d;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 16px 0;
+        }
+
+        th, td {
+            border: 1px solid #e1e4e8;
+            padding: 8px 13px;
+            text-align: left;
+        }
+
+        th {
+            background: #f6f8fa;
+            font-weight: 600;
+        }
+
+        a {
+            color: #0366d6;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Connection status for live reload */
+        .connection-status {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            background: #28a745;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            z-index: 1000;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        .connection-status.disconnected {
+            background: #dc3545;
+        }
+
+        {{.CustomCSS}}
+        {{.ChromaCSS}}
+    </style>
+    {{end}}
+</head>
+<body>
+    {{block "header" .}}
+    {{if .LiveReload}}<div id="status" class="connection-status">Connected</div>{{end}}
+    {{end}}
+
+    {{block "content" .}}
+    {{.Content}}
+    {{end}}
+
+    {{block "scripts" .}}
+    <!-- MathJax support -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
+
+    <!-- Mermaid support -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'default',
+                securityLevel: 'loose'
+            });
+
+            const mermaidBlocks = document.querySelectorAll('pre > code.language-mermaid');
+            mermaidBlocks.forEach(async (block, index) => {
+                const pre = block.parentElement;
+                const graphDefinition = block.textContent;
+
+                const div = document.createElement('div');
+                div.className = 'mermaid';
+                div.id = 'mermaid-' + index;
+
+                try {
+                    const { svg } = await mermaid.render('mermaid-svg-' + index, graphDefinition);
+                    div.innerHTML = svg;
+                    pre.replaceWith(div);
+                } catch (error) {
+                    console.error('Mermaid rendering error:', error);
+                }
+            });
+        });
+    </script>
+
+    <!-- Live reload functionality - conditionally included -->
+    {{if .LiveReload}}
+    <script>
+        (function() {
+            const status = document.getElementById('status');
+            if (!status) return;
+
+            const eventSource = new EventSource('/events');
+
+            eventSource.onopen = function() {
+                status.textContent = 'Connected';
+                status.classList.remove('disconnected');
+            };
+
+            eventSource.onmessage = function(event) {
+                if (event.data === 'reload') {
+                    setTimeout(() => window.location.reload(), 100);
+                } else if (event.data === 'shutdown') {
+                    status.textContent = 'Server shutdown';
+                    status.classList.add('disconnected');
+                    eventSource.close();
+                }
+            };
+
+            eventSource.onerror = function(e) {
+                status.textContent = 'Disconnected';
+                status.classList.add('disconnected');
+
+                if (eventSource.readyState === EventSource.CLOSED) {
+                    setTimeout(function() {
+                        fetch('/events', { method: 'HEAD' })
+                            .then(() => window.location.reload())
+                            .catch(() => {});
+                    }, 2000);
+                }
+            };
+        })();
+    </script>
+    {{end}}
+    {{end}}
+</body>
+</html>

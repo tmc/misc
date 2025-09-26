@@ -1,0 +1,510 @@
+{{define "base"}}<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Title}}</title>
+    {{template "styles" .}}
+    {{template "head-scripts" .}}
+</head>
+<body>
+    {{template "body-content" .}}
+    {{template "scripts" .}}
+</body>
+</html>{{end}}
+
+{{define "styles"}}
+    <style>
+        :root {
+            /* Light theme colors (GitHub default) */
+            --color-canvas-default: #ffffff;
+            --color-canvas-subtle: #f6f8fa;
+            --color-border-default: #d0d7de;
+            --color-border-muted: #d8dee4;
+            --color-fg-default: #1f2328;
+            --color-fg-muted: #656d76;
+            --color-fg-subtle: #6e7781;
+            --color-accent-emphasis: #0969da;
+            --color-success-emphasis: #1a7f37;
+            --color-danger-emphasis: #cf222e;
+            --color-neutral-subtle: rgba(175, 184, 193, 0.2);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                /* Dark theme colors (GitHub dark) */
+                --color-canvas-default: #0d1117;
+                --color-canvas-subtle: #161b22;
+                --color-border-default: #30363d;
+                --color-border-muted: #21262d;
+                --color-fg-default: #e6edf3;
+                --color-fg-muted: #7d8590;
+                --color-fg-subtle: #8b949e;
+                --color-accent-emphasis: #2f81f7;
+                --color-success-emphasis: #3fb950;
+                --color-danger-emphasis: #f85149;
+                --color-neutral-subtle: rgba(110, 118, 129, 0.1);
+            }
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: var(--color-canvas-default);
+            color: var(--color-fg-default);
+            transition: opacity 0.1s ease;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        code {
+            background: var(--color-neutral-subtle);
+            color: var(--color-fg-default);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+        }
+        pre {
+            background: var(--color-canvas-subtle);
+            border: 1px solid var(--color-border-default);
+            padding: 1em;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        pre code {
+            background: none;
+            color: var(--color-fg-default);
+            padding: 0;
+        }
+        blockquote {
+            border-left: 4px solid var(--color-border-default);
+            padding-left: 1em;
+            margin-left: 0;
+            color: var(--color-fg-muted);
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1em 0;
+        }
+        th, td {
+            border: 1px solid var(--color-border-default);
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: var(--color-canvas-subtle);
+        }
+        img {
+            max-width: 100%;
+        }
+        a {
+            color: var(--color-accent-emphasis);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            background: var(--color-success-emphasis);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        .connection-status.disconnected {
+            background: var(--color-danger-emphasis);
+        }
+
+        /* GitHub-style Table of Contents */
+        #table-of-contents {
+            background: var(--color-canvas-subtle);
+            border: 1px solid var(--color-border-default);
+            border-radius: 6px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        #table-of-contents h2 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-fg-default);
+        }
+        #table-of-contents ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+        #table-of-contents li {
+            margin: 4px 0;
+        }
+        #table-of-contents a {
+            color: var(--color-accent-emphasis);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        #table-of-contents a:hover {
+            text-decoration: underline;
+        }
+        #table-of-contents ul ul {
+            padding-left: 16px;
+        }
+
+        /* GitHub Alerts - exact GitHub styles */
+        :root {
+            --color-note: #0969da;
+            --color-tip: #1a7f37;
+            --color-warning: #9a6700;
+            --color-severe: #bc4c00;
+            --color-caution: #d1242f;
+            --color-important: #8250df;
+        }
+
+        /* Map goldmark-admonitions classes to GitHub alert styles */
+        .admonition {
+            padding: 0.5rem 1rem;
+            margin-bottom: 16px;
+            color: inherit;
+            border-left: .25em solid #888;
+        }
+
+        .admonition > :first-child {
+            margin-top: 0;
+            display: flex;
+            font-weight: 500;
+            align-items: center;
+            line-height: 1;
+        }
+
+        .admonition > :last-child {
+            margin-bottom: 0;
+        }
+
+        .adm-note {
+            border-left-color: var(--color-note);
+        }
+
+        .adm-note > :first-child {
+            color: var(--color-note);
+        }
+
+        .adm-tip {
+            border-left-color: var(--color-tip);
+        }
+
+        .adm-tip > :first-child {
+            color: var(--color-tip);
+        }
+
+        .adm-important {
+            border-left-color: var(--color-important);
+        }
+
+        .adm-important > :first-child {
+            color: var(--color-important);
+        }
+
+        .adm-warning {
+            border-left-color: var(--color-warning);
+        }
+
+        .adm-warning > :first-child {
+            color: var(--color-warning);
+        }
+
+        .adm-danger {
+            border-left-color: var(--color-caution);
+        }
+
+        .adm-danger > :first-child {
+            color: var(--color-caution);
+        }
+
+        /* Sidebar Layout */
+        .docs-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: #161b22;
+            border-right: 1px solid #30363d;
+            overflow-y: auto;
+            position: fixed;
+            height: 100vh;
+            padding: 16px;
+            color: #e6edf3;
+        }
+
+        .sidebar-header h1 {
+            color: #f0f6fc;
+            font-size: 18px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .sidebar-toc {
+            margin-top: 16px;
+        }
+
+        .sidebar-toc ul {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .sidebar-toc li {
+            margin: 4px 0;
+        }
+
+        .sidebar-toc a {
+            display: block;
+            color: #7d8590;
+            text-decoration: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 13px;
+            transition: all 0.15s ease;
+        }
+
+        .sidebar-toc a:hover {
+            color: #58a6ff;
+            background: #21262d;
+        }
+
+        .sidebar-toc a.active {
+            color: #f0f6fc;
+            background: #1f6feb;
+        }
+
+        .sidebar-toc .level-1 {
+            font-weight: 600;
+        }
+
+        .sidebar-toc .level-2 {
+            margin-left: 12px;
+            font-size: 12px;
+        }
+
+        .sidebar-toc .level-3 {
+            margin-left: 24px;
+            font-size: 11px;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 32px 48px;
+            max-width: calc(100% - 280px);
+        }
+
+        /* Dark theme when sidebar is enabled */
+        .docs-layout {
+            background: #0d1117;
+            color: #e6edf3;
+        }
+
+        .docs-layout h1, .docs-layout h2, .docs-layout h3, .docs-layout h4, .docs-layout h5, .docs-layout h6 {
+            color: #f0f6fc;
+        }
+
+        .docs-layout a {
+            color: #58a6ff;
+        }
+
+        .docs-layout a:hover {
+            color: #79c0ff;
+        }
+
+        .docs-layout code {
+            background: #21262d;
+            color: #e6edf3;
+        }
+
+        .docs-layout pre {
+            background: #161b22;
+            border: 1px solid #30363d;
+        }
+
+        .docs-layout #table-of-contents {
+            background: #161b22;
+            border: 1px solid #30363d;
+        }
+
+        .docs-layout blockquote {
+            border-left-color: #30363d;
+            color: #7d8590;
+        }
+
+        .docs-layout table {
+            border: 1px solid #30363d;
+        }
+
+        .docs-layout th, .docs-layout td {
+            border-bottom: 1px solid #30363d;
+        }
+
+        .docs-layout th {
+            background: #21262d;
+            color: #f0f6fc;
+        }
+
+        /* Responsive sidebar */
+        @media (max-width: 1024px) {
+            .sidebar {
+                width: 240px;
+            }
+            .main-content {
+                margin-left: 240px;
+                max-width: calc(100% - 240px);
+                padding: 24px 32px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .docs-layout {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                position: static;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid #30363d;
+            }
+            .main-content {
+                margin-left: 0;
+                max-width: 100%;
+                padding: 16px 20px;
+            }
+        }
+
+        {{.CustomCSS}}
+        {{.ChromaCSS}}
+    </style>
+{{end}}
+
+{{define "head-scripts"}}
+    <!-- Optional scripts can be included by child templates -->
+{{end}}
+
+{{define "scripts"}}
+    <!-- MathJax support - always included -->
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            }
+        };
+    </script>
+
+    <!-- Mermaid support - always included -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'default',
+                securityLevel: 'loose'
+            });
+
+            const mermaidBlocks = document.querySelectorAll('pre > code.language-mermaid');
+            mermaidBlocks.forEach(async (block, index) => {
+                const pre = block.parentElement;
+                const graphDefinition = block.textContent;
+
+                const div = document.createElement('div');
+                div.className = 'mermaid';
+                div.id = 'mermaid-' + index;
+
+                try {
+                    const { svg } = await mermaid.render('mermaid-svg-' + index, graphDefinition);
+                    div.innerHTML = svg;
+                    pre.replaceWith(div);
+                } catch (error) {
+                    console.error('Mermaid rendering error:', error);
+                }
+            });
+        });
+    </script>
+
+    <!-- Live reload functionality - conditionally included -->
+    {{if .LiveReload}}
+    <script>
+        (function() {
+            const status = document.getElementById('status');
+            if (!status) return;
+
+            const eventSource = new EventSource('/events');
+
+            eventSource.onopen = function() {
+                status.textContent = 'Connected';
+                status.classList.remove('disconnected');
+            };
+
+            eventSource.onmessage = function(event) {
+                if (event.data === 'reload') {
+                    setTimeout(() => window.location.reload(), 100);
+                } else if (event.data === 'shutdown') {
+                    status.textContent = 'Server shutdown';
+                    status.classList.add('disconnected');
+                    eventSource.close();
+                }
+            };
+
+            eventSource.onerror = function(e) {
+                status.textContent = 'Disconnected';
+                status.classList.add('disconnected');
+
+                if (eventSource.readyState === EventSource.CLOSED) {
+                    setTimeout(function() {
+                        fetch('/events', { method: 'HEAD' })
+                            .then(() => window.location.reload())
+                            .catch(() => {});
+                    }, 2000);
+                }
+            };
+        })();
+    </script>
+    {{end}}
+{{end}}
+
+{{define "body-content"}}
+    {{if .EnableSidebar}}
+    <div class="docs-layout">
+        <nav class="sidebar" id="sidebar">
+            {{template "sidebar-content" .}}
+        </nav>
+        <main class="main-content">
+            {{.Content}}
+        </main>
+    </div>
+    {{else}}
+    {{.Content}}
+    {{end}}
+{{end}}
+
+{{define "sidebar-content"}}
+    <div class="sidebar-header">
+        <h1>{{.SidebarTitle | default "Documentation"}}</h1>
+    </div>
+    <div class="sidebar-toc" id="sidebar-toc">
+        <!-- TOC will be generated by JavaScript -->
+    </div>
+{{end}}

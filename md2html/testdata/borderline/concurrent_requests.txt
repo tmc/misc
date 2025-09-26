@@ -1,0 +1,16 @@
+# Test server handling of concurrent requests
+
+# Create test file
+echo '# Concurrent Test' > concurrent.md
+
+# Start server
+md2html -input concurrent.md -http :9002 &
+sleep 1s
+
+# Send 50 concurrent requests
+sh -c 'for i in $(seq 1 50); do curl -s -o /dev/null -w "%{http_code}\n" http://localhost:9002/ & done; wait' | grep -c 200
+stdout '50'
+
+# Cleanup
+pkill -f 'md2html.*9002'
+rm concurrent.md

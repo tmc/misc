@@ -1,0 +1,20 @@
+# Test basic md2html functionality without server
+
+# Test help output
+exec md2html -h
+stderr 'Usage of md2html'
+
+# Create a simple test file
+echo '# Test' > test_basic.md
+
+# Start server briefly to test it works
+exec md2html -input test_basic.md -http :8099 &
+sleep 1s
+
+# Test server responds
+exec curl -s -o /dev/null -w '%{http_code}' http://localhost:8099/
+stdout '200'
+
+# Cleanup
+exec pkill md2html
+rm test_basic.md
