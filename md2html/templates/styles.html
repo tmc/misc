@@ -1,0 +1,224 @@
+{{define "styles"}}
+<style>
+    /* Minimal GitHub-style CSS with light/dark mode support */
+    :root {
+        /* Core colors - Light mode */
+        --fg: #24292e;
+        --fg-muted: #6a737d;
+        --bg: #ffffff;
+        --bg-subtle: #f6f8fa;
+        --border: #e1e4e8;
+        --accent: #0366d6;
+
+        /* Alert colors */
+        --note: #0366d6;
+        --note-bg: #f1f8ff;
+        --success: #28a745;
+        --success-bg: #f0fff4;
+        --important: #6f42c1;
+        --important-bg: #f5f0ff;
+        --warning: #f9c513;
+        --warning-bg: #fffbdd;
+        --danger: #d73a49;
+        --danger-bg: #ffeef0;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            /* Core colors - Dark mode */
+            --fg: #e6edf3;
+            --fg-muted: #7d8590;
+            --bg: #0d1117;
+            --bg-subtle: #161b22;
+            --border: #30363d;
+            --accent: #58a6ff;
+
+            /* Alert colors */
+            --note: #2f81f7;
+            --note-bg: rgba(56, 139, 253, 0.1);
+            --success: #3fb950;
+            --success-bg: rgba(46, 160, 67, 0.1);
+            --important: #a371f7;
+            --important-bg: rgba(163, 113, 247, 0.1);
+            --warning: #d29922;
+            --warning-bg: rgba(187, 128, 9, 0.1);
+            --danger: #f85149;
+            --danger-bg: rgba(248, 81, 73, 0.1);
+        }
+    }
+
+    /* Base styles */
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.5;
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 45px;
+        color: var(--fg);
+        background: var(--bg);
+    }
+
+    @media (max-width: 767px) {
+        body { padding: 15px; }
+    }
+
+    /* Headings */
+    h1, h2, h3, h4, h5, h6 {
+        margin-top: 24px;
+        margin-bottom: 16px;
+        font-weight: 600;
+        line-height: 1.25;
+    }
+
+    h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: .3em; }
+    h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: .3em; }
+    h3 { font-size: 1.25em; }
+    h4 { font-size: 1em; }
+    h5 { font-size: .875em; }
+    h6 { font-size: .85em; color: var(--fg-muted); }
+
+    /* Text elements */
+    p { margin: 0 0 16px; }
+
+    a {
+        color: var(--accent);
+        text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    code {
+        padding: .2em .4em;
+        margin: 0;
+        font-size: 85%;
+        background: rgba(175, 184, 193, 0.2);
+        border-radius: 6px;
+        font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+
+    pre {
+        padding: 16px;
+        overflow: auto;
+        font-size: 85%;
+        line-height: 1.45;
+        background: var(--bg-subtle);
+        border-radius: 6px;
+    }
+
+    pre code {
+        display: inline;
+        padding: 0;
+        margin: 0;
+        background: transparent;
+        border: 0;
+        font-size: 100%;
+    }
+
+    blockquote {
+        padding: 0 1em;
+        color: var(--fg-muted);
+        border-left: .25em solid var(--border);
+        margin: 0 0 16px 0;
+    }
+
+    blockquote > :first-child { margin-top: 0; }
+    blockquote > :last-child { margin-bottom: 0; }
+
+    /* Tables */
+    table {
+        display: block;
+        width: 100%;
+        overflow: auto;
+        border-spacing: 0;
+        border-collapse: collapse;
+        margin-bottom: 16px;
+    }
+
+    th { font-weight: 600; }
+
+    th, td {
+        padding: 6px 13px;
+        border: 1px solid var(--border);
+    }
+
+    tr { background: var(--bg); }
+    tr:nth-child(2n) { background: var(--bg-subtle); }
+
+    /* Lists */
+    ul, ol {
+        padding-left: 2em;
+        margin: 0 0 16px;
+    }
+
+    li > p { margin-top: 16px; }
+
+    hr {
+        height: .25em;
+        padding: 0;
+        margin: 24px 0;
+        background: var(--border);
+        border: 0;
+    }
+
+    img { max-width: 100%; }
+
+    /* GitHub Alerts (admonitions) */
+    .admonition {
+        padding: 1em;
+        margin: 16px 0;
+        border-left: .25em solid;
+        border-radius: 6px;
+    }
+
+    .admonition > :first-child { margin-top: 0; }
+    .admonition > :last-child { margin-bottom: 0; }
+
+    .adm-note {
+        border-left-color: var(--note);
+        background: var(--note-bg);
+    }
+
+    .adm-tip {
+        border-left-color: var(--success);
+        background: var(--success-bg);
+    }
+
+    .adm-important {
+        border-left-color: var(--important);
+        background: var(--important-bg);
+    }
+
+    .adm-warning {
+        border-left-color: var(--warning);
+        background: var(--warning-bg);
+    }
+
+    .adm-danger, .adm-caution {
+        border-left-color: var(--danger);
+        background: var(--danger-bg);
+    }
+
+    /* Live reload indicator */
+    .connection-status {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        background: var(--success);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        z-index: 1000;
+    }
+
+    .connection-status.disconnected {
+        background: var(--danger);
+    }
+
+    {{.CustomCSS}}
+    {{.ChromaCSS}}
+</style>
+{{end}}
+
+{{define "status-styles"}}{{end}}

@@ -1,0 +1,67 @@
+# Test deeply nested markdown structures
+
+# Create deeply nested markdown
+cat <<'EOF' > nested.md
+# Level 1
+
+## Level 2
+
+### Level 3
+
+#### Level 4
+
+##### Level 5
+
+###### Level 6
+
+- List item 1
+  - Nested item 1.1
+    - Nested item 1.1.1
+      - Nested item 1.1.1.1
+        - Nested item 1.1.1.1.1
+          - Nested item 1.1.1.1.1.1
+            - Nested item 1.1.1.1.1.1.1
+              - Nested item 1.1.1.1.1.1.1.1
+                - Nested item 1.1.1.1.1.1.1.1.1
+                  - Nested item 1.1.1.1.1.1.1.1.1.1
+
+> Blockquote level 1
+> > Blockquote level 2
+> > > Blockquote level 3
+> > > > Blockquote level 4
+> > > > > Blockquote level 5
+
+```
+Code block with nested structures
+{
+    "level1": {
+        "level2": {
+            "level3": {
+                "level4": {
+                    "level5": "deep"
+                }
+            }
+        }
+    }
+}
+```
+EOF
+
+# Start server
+md2html -input nested.md -http :9003 &
+sleep 1s
+
+# Test all heading levels are rendered
+curl -s http://localhost:9003/ | grep '<h1'
+stdout '<h1'
+
+curl -s http://localhost:9003/ | grep '<h6'
+stdout '<h6'
+
+# Test nested lists are rendered
+curl -s http://localhost:9003/ | grep 'Nested item 1.1.1.1.1.1.1.1.1.1'
+stdout 'Nested item'
+
+# Cleanup
+pkill -f 'md2html.*9003'
+rm nested.md

@@ -1,0 +1,35 @@
+{{define "mermaid-scripts"}}
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Mermaid
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: 'default',
+                securityLevel: 'loose'
+            });
+
+            // Convert code blocks with language-mermaid to mermaid diagrams
+            const mermaidBlocks = document.querySelectorAll('pre > code.language-mermaid');
+            mermaidBlocks.forEach(async (block, index) => {
+                const pre = block.parentElement;
+                const graphDefinition = block.textContent;
+
+                // Create a div for the mermaid diagram
+                const div = document.createElement('div');
+                div.className = 'mermaid';
+                div.id = 'mermaid-' + index;
+
+                // Render the diagram
+                try {
+                    const { svg } = await mermaid.render('mermaid-svg-' + index, graphDefinition);
+                    div.innerHTML = svg;
+                    pre.replaceWith(div);
+                } catch (error) {
+                    console.error('Mermaid rendering error:', error);
+                    // Keep the original code block if rendering fails
+                }
+            });
+        });
+    </script>
+{{end}}

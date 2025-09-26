@@ -146,21 +146,19 @@ The server watches for changes to markdown files in the current directory and al
 
 Inline math: $E = mc^2$
 
-Display math:
-
-$$
-\int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
-$$
+Display math: $$ \\int\_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi} $$
 
 ## Mermaid Diagrams
 
 Create diagrams using Mermaid syntax:
 
 ```mermaid
+
 graph TD
     A[Start] --> B{Decision}
     B -->|Yes| C[Continue]
     B -->|No| D[Stop]
+
 ```
 
 ## Security

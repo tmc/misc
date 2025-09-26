@@ -1,0 +1,45 @@
+{{define "styles"}}
+<link rel="stylesheet" href="https://unpkg.com/@primer/css@21.3.5/dist/primer.css">
+<style>
+    body {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 45px;
+    }
+
+    @media (max-width: 767px) {
+        body {
+            padding: 15px;
+        }
+    }
+
+    /* Additional overrides for markdown content */
+    .markdown-body {
+        box-sizing: border-box;
+        min-width: 200px;
+        max-width: 980px;
+        margin: 0 auto;
+    }
+
+    /* Connection status for live reload */
+    .connection-status {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        background: var(--color-success-emphasis, #1f883d);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        z-index: 1000;
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .connection-status.disconnected {
+        background: var(--color-danger-emphasis, #da3633);
+    }
+
+    {{.CustomCSS}}
+    {{.ChromaCSS}}
+</style>
+{{end}}

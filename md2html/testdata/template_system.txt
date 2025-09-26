@@ -1,0 +1,33 @@
+# Test template system with custom templates
+
+# Create custom template directory
+mkdir custom-templates
+
+# Start server with custom templates
+exec md2html -input template_test.md -templates custom-templates -http :8094 &
+sleep 1s
+
+# Check custom styles are applied
+exec curl -s http://localhost:8094/
+stdout 'background: #123456'
+
+# Test that template includes custom CSS class
+exec curl -s http://localhost:8094/
+stdout 'custom-test'
+
+# Cleanup
+exec pkill -f 'md2html.*8094'
+rm -rf custom-templates
+
+-- template_test.md --
+# Custom Template Test
+
+This page uses custom templates.
+
+-- custom-templates/styles.html --
+{{define "styles"}}
+<style>
+    body { background: #123456; }
+    .custom-test { color: red; }
+</style>
+{{end}}

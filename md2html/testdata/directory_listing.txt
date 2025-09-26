@@ -1,0 +1,49 @@
+# Test directory listing functionality
+
+# Change to test directory
+cd testdir
+
+# Start server in directory listing mode (no input file)
+exec md2html -http :8092 &
+
+# Wait for server
+sleep 1s
+
+# Test directory listing appears
+exec curl -s http://localhost:8092/
+stdout 'Directory Listing'
+stdout 'file1\.md'
+stdout 'file2\.md'
+
+# Test index.md content is included at top
+stdout '<h1.*>Welcome</h1>'
+
+# Test individual file access via clean URLs
+exec curl -s http://localhost:8092/file1
+stdout '<h1.*>File One</h1>'
+
+exec curl -s http://localhost:8092/file2
+stdout '<h1.*>File Two</h1>'
+
+# Clean up
+exec pkill md2html
+
+-- testdir/index.md --
+# Welcome
+
+This is the index page for testing directory listings.
+
+-- testdir/file1.md --
+# File One
+
+This is the first test file.
+
+-- testdir/file2.md --
+# File Two
+
+This is the second test file.
+
+-- testdir/subdir/nested.md --
+# Nested File
+
+This file is in a subdirectory.
