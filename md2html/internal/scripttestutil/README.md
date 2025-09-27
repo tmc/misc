@@ -11,17 +11,30 @@ The script framework sends SIGKILL to background processes, preventing:
 
 ## Solution
 
+`BackgroundCmd` is a drop-in replacement for `script.Program` that sends SIGTERM instead of SIGKILL:
+
 ```go
-// In your test - matches script.Program signature exactly
+// Basic usage - SIGTERM on cancel, no wait delay
 engine.Cmds["myserver"] = scripttestutil.BackgroundCmd(exe, nil, 0)
 
-// In your TestMain
+// Custom shutdown signal with 2 second wait
+engine.Cmds["myapp"] = scripttestutil.BackgroundCmd(exe, func(cmd *exec.Cmd) error {
+    return cmd.Process.Signal(os.Interrupt)
+}, 2*time.Second)
+
+// TestMain helper for dual-mode execution
 func TestMain(m *testing.M) {
     scripttestutil.TestMain(m, func() {
         // Run your main program
     })
 }
 ```
+
+### Parameters
+
+- **prog**: Program to run (name, absolute path, or relative path)
+- **cancel**: Optional cancellation function. If nil, sends SIGTERM. If provided, receives *exec.Cmd for custom logic.
+- **waitDelay**: Time to wait after cancellation before forcing kill (passed to exec.Cmd.WaitDelay)
 
 ## Example
 
@@ -52,4 +65,12 @@ func TestScripts(t *testing.T) {
 }
 ```
 
-BackgroundCmd has the same signature as script.Program but sends SIGTERM instead of SIGKILL and treats exit code 0 as success.
+### Key Differences from script.Program
+
+| Aspect | script.Program | BackgroundCmd |
+|--------|---------------|---------------|
+| Default cancel behavior | Sends SIGKILL immediately | Sends SIGTERM for graceful shutdown |
+| Exit code 0 handling | Error if context cancelled | Success even if context cancelled |
+| Coverage collection | Lost (process killed) | Preserved (clean exit) |
+| Resource cleanup | Not possible | Allowed via signal handlers |
+| Use case | Short-lived commands | Long-running servers |
