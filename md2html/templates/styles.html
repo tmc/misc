@@ -103,6 +103,7 @@
         font-size: 85%;
         line-height: 1.45;
         background: var(--bg-subtle);
+        border: 1px solid var(--border);
         border-radius: 6px;
     }
 
@@ -162,6 +163,24 @@
     }
 
     img { max-width: 100%; }
+
+    /* Responsive Mermaid diagrams */
+    .mermaid {
+        max-width: 100%;
+        overflow-x: auto;
+        margin: 16px 0;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 16px;
+        background: var(--bg-subtle);
+    }
+
+    .mermaid svg {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }
 
     /* GitHub Alerts (admonitions) */
     .admonition {
