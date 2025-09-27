@@ -1,14 +1,14 @@
 # Test GitHub-style alerts rendering
 
 # Start server with the alerts file
-md2html -http :8193 alerts.md
+md2html -http :8393 alerts.md &
 sleep 1s
 
 # Test alerts are rendered with proper CSS classes
-exec curl -s http://localhost:8193/
+curl -s http://localhost:8393/
 stdout 'class="admonition adm-note"'
 
-exec curl -s http://localhost:8193/
+curl -s http://localhost:8393/
 stdout 'class="admonition adm-tip"'
 
 # Cleanup

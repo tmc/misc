@@ -12,7 +12,7 @@ md2html -http :9017 entry_test.md &
 sleep 1s
 
 # Verify server started
-exec curl -s -o /dev/null -w '%{http_code}' http://localhost:9017/
+curl -s -o /dev/null -w '%{http_code}' http://localhost:9017/
 stdout '200'
 
 # Clean up background process

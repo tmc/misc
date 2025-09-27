@@ -1,7 +1,7 @@
 # Test that live content doesn't appear in static HTML generation
 
 # Generate static HTML files
-md2html -html static_output static_test_dir -html-ext html
+md2html -html static_output -html-ext html
 exists static_output/index.html
 exists static_output/test.html
 

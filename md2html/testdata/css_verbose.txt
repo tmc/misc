@@ -1,15 +1,15 @@
 # Test CSS loading and verbose mode
 
 # Start server with custom CSS file and verbose mode
-md2html -css doc.md -v -http :9011 &
+md2html -css custom.css -v -http :9011 doc.md &
 sleep 1s
 
 # Custom CSS should be included in the output
-exec curl -s http://localhost:9011/
+curl -s http://localhost:9011/
 stdout 'background: #f0f0f0'
 
 # Test with non-existent CSS file (error path)
-md2html -css doc.md -v -http :9012 &
+md2html -css nonexistent.css -v -http :9012 doc.md &
 sleep 200ms
 
 # Test verbose mode with directory depth

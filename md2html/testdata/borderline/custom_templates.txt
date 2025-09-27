@@ -1,19 +1,19 @@
 # Test custom template loading and rendering
 
 # Start server with custom templates directory
-md2html -input doc.md -templates my-templates -http :9004 &
+md2html -templates my-templates -http :9004 &
 sleep 1s
 
 # Verify custom template is being used
-exec curl -s http://localhost:9004/
+curl -s http://localhost:9004/
 stdout 'Custom Template Loaded'
 
 # Test with non-existent template directory (should fall back to embedded)
-md2html -input doc.md -templates nonexistent-dir -http :9005 &
+md2html -templates nonexistent-dir -http :9005 &
 sleep 1s
 
 # Should still work with embedded templates
-exec curl -s http://localhost:9005/
+curl -s http://localhost:9005/
 stdout '<!DOCTYPE html>'
 
 # Clean up background process

@@ -5,11 +5,11 @@ md2html -http :8097 code.md &
 sleep 1s
 
 # Test that Chroma CSS is included
-exec curl -s http://localhost:8097/
+curl -s http://localhost:8097/
 stdout 'chroma'
 
 # Test that code blocks are rendered
-exec curl -s http://localhost:8097/
+curl -s http://localhost:8097/
 stdout 'Hello, World!'
 
 # Clean up background process

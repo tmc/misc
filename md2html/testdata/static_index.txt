@@ -3,7 +3,7 @@
 # Test generating static HTML with custom index
 md2html -html output -index INDEX.md
 exists output/index.html
-exec grep -q 'Welcome to Documentation' output/index.html
+grep -q 'Welcome to Documentation' output/index.html
 
 # Clean and test TOC generation when README exists but no -index specified
 rm -rf output
@@ -16,7 +16,7 @@ rm -rf output
 rm INDEX.md README.md
 md2html -html output
 exists output/index.html
-exec grep -q 'Directory Listing' output/index.html
+grep -q 'Directory Listing' output/index.html
 
 # Clean up
 rm -rf output

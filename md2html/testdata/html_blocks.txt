@@ -4,18 +4,21 @@
 md2html -http :9009 html_test.md &
 sleep 1s
 
-# Verify HTML blocks are processed correctly
-exec curl -s http://localhost:9009/
-stdout '<div class="custom-block">'
-stdout '<table'
-stdout '<section'
+# Verify HTML blocks are NOT rendered without -allow-unsafe (security default)
+curl -s http://localhost:9009/
+! stdout '<div class="custom-block">'
+! stdout '<table'
+! stdout '<section'
 
 # Test with unsafe HTML allowed
-md2html -allow-unsafe html_test.md :9010 &
+md2html -allow-unsafe -http :9010 html_test.md &
 sleep 1s
 
 # Should render HTML blocks when unsafe is allowed
-exec curl -s http://localhost:9010/
+curl -s http://localhost:9010/
+stdout '<div class="custom-block">'
+stdout '<table'
+stdout '<section'
 stdout '<script>'
 
 # Clean up background process

@@ -1,7 +1,7 @@
 # Test static HTML generation
 
 # Test static HTML generation with html extension
-md2html -html output testsite -html-ext html
+md2html -html output -html-ext html testsite
 exists output/index.html
 exists output/README.html
 exists output/about.html
@@ -16,8 +16,8 @@ grep '<title>' output/docs/guide.html
 grep 'This is documentation' output/docs/guide.html
 
 # Verify links are properly converted
-grep 'href="/about"' output/README.html
-grep 'href="/README"' output/about.html
+grep 'href="/about.html"' output/README.html
+grep 'href="/README.html"' output/about.html
 
 # Cleanup
 rm -rf testsite output

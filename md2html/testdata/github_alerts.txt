@@ -5,19 +5,19 @@ md2html -http :8093 alerts.md &
 sleep 1s
 
 # Test alerts are rendered with proper CSS classes
-exec curl -s http://localhost:8093/
+curl -s http://localhost:8093/
 stdout 'class="admonition adm-note"'
 
-exec curl -s http://localhost:8093/
+curl -s http://localhost:8093/
 stdout 'class="admonition adm-tip"'
 
-exec curl -s http://localhost:8093/
+curl -s http://localhost:8093/
 stdout 'class="admonition adm-important"'
 
-exec curl -s http://localhost:8093/
+curl -s http://localhost:8093/
 stdout 'class="admonition adm-warning"'
 
-exec curl -s http://localhost:8093/
+curl -s http://localhost:8093/
 stdout 'class="admonition adm-danger"'
 
 # Clean up background process

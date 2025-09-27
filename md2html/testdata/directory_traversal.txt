@@ -5,7 +5,7 @@ md2html -depth 2 -v -http :9032 &
 sleep 1s
 
 # Check that shallow files are found
-exec curl -s http://localhost:9032/
+curl -s http://localhost:9032/
 stdout 'level1.md'
 
 # Test deeper depth
@@ -13,7 +13,7 @@ md2html -depth 4 -v -http :9033 &
 sleep 1s
 
 # Check that deeper files are found
-exec curl -s http://localhost:9033/
+curl -s http://localhost:9033/
 stdout 'level3.md'
 
 # Test static generation with file finding
@@ -23,7 +23,7 @@ exists output/subdir/level2.html
 exists output/subdir/deep/level3.html
 
 # Test finding both .md and .markdown files
-exec curl -s http://localhost:9033/
+curl -s http://localhost:9033/
 stdout 'document.markdown'
 
 # Clean up

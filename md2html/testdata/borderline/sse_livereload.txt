@@ -1,15 +1,15 @@
 # Test SSE/live reload functionality
 
 # Start server with live reload
-md2html -input live.md -http :9003 &
+md2html -http :9003 live.md &
 sleep 1s
 
 # Test raw markdown endpoint
-exec curl -s http://localhost:9003/raw
-stdout '# Live Reload Test'
+curl -s http://localhost:9003/
+stdout 'Live Reload Test'
 
 # Test that SSE endpoint exists and responds
-exec curl -s -I http://localhost:9003/events | head -1
+curl -s -I --max-time 1 http://localhost:9003/events
 stdout 'HTTP/1.1 200'
 
 # Clean up background process

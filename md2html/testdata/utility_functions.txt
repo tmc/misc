@@ -3,32 +3,32 @@
 # Test server with different address formats
 md2html -http :9034 test.md &
 sleep 1s
-exec curl -s http://localhost:9034/
+curl -s http://localhost:9034/
 stdout '<!DOCTYPE html>'
 
 # Test with IP address
 md2html -http :9035 test.md &
 sleep 1s
-exec curl -s http://127.0.0.1:9035/
+curl -s http://127.0.0.1:9035/
 stdout '<!DOCTYPE html>'
 
 # Test with just port (should bind to all interfaces)
 md2html -http :9036 test.md &
 sleep 1s
-exec curl -s http://localhost:9036/
+curl -s http://localhost:9036/
 stdout '<!DOCTYPE html>'
 
 # Test verbose mode outputs
 md2html -v -http :9037 test.md &
 sleep 1s
-exec curl -s http://localhost:9037/
+curl -s http://localhost:9037/
 stdout '<!DOCTYPE html>'
 
 # Test with open flag (suppressed by env var)
 env MD2HTML_NO_BROWSER=1
 md2html -open -http :9038 test.md &
 sleep 1s
-exec curl -s http://localhost:9038/
+curl -s http://localhost:9038/
 stdout '<!DOCTYPE html>'
 
 # Clean up background process

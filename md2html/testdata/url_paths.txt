@@ -5,27 +5,27 @@ md2html -http :9016 &
 sleep 1s
 
 # Test accessing files with .md extension in URL
-exec curl -s http://localhost:9016/readme.md
+curl -s http://localhost:9016/readme.md
 stdout 'Main README'
 
 # Test accessing files without extension (should add .md)
-exec curl -s http://localhost:9016/readme
+curl -s http://localhost:9016/readme
 stdout 'Main README'
 
 # Test accessing files with .markdown extension
-exec curl -s http://localhost:9016/guide.markdown
+curl -s http://localhost:9016/guide.markdown
 stdout 'User Guide'
 
 # Test accessing files without extension (should try .markdown too)
-exec curl -s http://localhost:9016/guide
+curl -s http://localhost:9016/guide
 stdout 'User Guide'
 
 # Test 404 for non-existent file
-exec curl -s -o /dev/null -w '%{http_code}' http://localhost:9016/nonexistent
+curl -s -o /dev/null -w '%{http_code}' http://localhost:9016/nonexistent
 stdout '404'
 
 # Test nested path access
-exec curl -s http://localhost:9016/docs/api
+curl -s http://localhost:9016/docs/api
 stdout 'API Documentation'
 
 -- readme.md --

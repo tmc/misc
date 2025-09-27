@@ -8,7 +8,6 @@ import (
 
 	"github.com/tmc/misc/md2html/internal/scripttestutil"
 	"rsc.io/script"
-	"rsc.io/script/scripttest"
 )
 
 var borderline = flag.Bool("include-borderline-tests", false, "run borderline tests that may be slow or push limits")
@@ -18,6 +17,8 @@ func TestScripts(t *testing.T) {
 	engine := script.NewEngine()
 	engine.Cmds["md2html"] = scripttestutil.BackgroundCmd(exe, nil, 0)
 	engine.Cmds["curl"] = script.Program("curl", nil, 0)
+	// remove Exec:
+	delete(engine.Cmds, "exec")
 
 	env := []string{
 		"PATH=" + os.Getenv("PATH"),
@@ -27,9 +28,9 @@ func TestScripts(t *testing.T) {
 	if gcd := os.Getenv("GOCOVERDIR"); gcd != "" {
 		env = append(env, "GOCOVERDIR="+gcd)
 	}
-	scripttest.Test(t, context.Background(), engine, env, "testdata/*.txt")
-
+	// Use TestWithOptions which respects the -scripttest-sequential flag
+	scripttestutil.TestWithOptions(t, context.Background(), engine, env, "testdata/*.txt")
 	if *borderline {
-		scripttest.Test(t, context.Background(), engine, env, "testdata/borderline/*.txt")
+		scripttestutil.TestWithOptions(t, context.Background(), engine, env, "testdata/borderline/*.txt")
 	}
 }

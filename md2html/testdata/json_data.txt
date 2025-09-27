@@ -1,19 +1,19 @@
 # Test JSON data loading functionality
 
 # Start server with JSON data file
-md2html -data-json test_json.md -http :9001 &
+md2html -data-json test_data.json -http :9001 test_json.md &
 sleep 1s
 
 # Verify server started and JSON is loaded
-exec curl -s http://localhost:9001/ | head -20
+curl -s http://localhost:9001/
 stdout '<!DOCTYPE html>'
 
 # Test with invalid JSON file (error path)
-md2html -data-json test_json.md -http :9002 &
+md2html -data-json bad.json -http :9002 test_json.md &
 sleep 200ms
 
 # Test with non-existent JSON file (error path)
-md2html -data-json test_json.md -http :9103 &
+md2html -data-json nonexistent.json -http :9103 test_json.md &
 sleep 200ms
 
 # Clean up background process

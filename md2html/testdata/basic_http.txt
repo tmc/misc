@@ -4,7 +4,7 @@ md2html -v -http :9081 simple.md &
 sleep 1s
 
 # Test basic content
-# exec curl -s http://localhost:9081/
+# curl -s http://localhost:9081/
 # stdout '<!DOCTYPE html>'
 # stdout 'Simple Page'
 
