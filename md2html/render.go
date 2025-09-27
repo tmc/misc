@@ -18,6 +18,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
 	"github.com/yuin/goldmark/text"
 	"go.abhg.dev/goldmark/toc"
@@ -45,12 +46,19 @@ func generateChromaCSS() string {
 	)
 
 	var buf bytes.Buffer
+
+	// Write dark theme CSS with media query
+	buf.WriteString("@media (prefers-color-scheme: dark) {\n")
+	if err := formatter.WriteCSS(&buf, darkStyle); err != nil {
+		return ""
+	}
+	buf.WriteString("\n}\n")
+
+	// Write light theme CSS with media query (and as default)
+	buf.WriteString("\n@media (prefers-color-scheme: light), (prefers-color-scheme: no-preference) {\n")
 	if err := formatter.WriteCSS(&buf, lightStyle); err != nil {
 		return ""
 	}
-
-	buf.WriteString("\n@media (prefers-color-scheme: dark) {\n")
-	formatter.WriteCSS(&buf, darkStyle)
 	buf.WriteString("\n}\n")
 
 	return buf.String()
@@ -167,22 +175,19 @@ func markdownToHTMLWithContext(cfg Config, markdown, filePath string) string {
 		parserOpts = append(parserOpts, parser.WithAttribute())
 	}
 
+	rendererOpts := []renderer.Option{
+		html.WithXHTML(),
+		html.WithHardWraps(),
+	}
+	if cfg.AllowUnsafe {
+		rendererOpts = append(rendererOpts, html.WithUnsafe())
+	}
+
 	md := goldmark.New(
 		goldmark.WithExtensions(extensions...),
 		goldmark.WithParserOptions(parserOpts...),
-		goldmark.WithRendererOptions(
-			html.WithXHTML(),
-			html.WithUnsafe(),
-			html.WithHardWraps(),
-		),
+		goldmark.WithRendererOptions(rendererOpts...),
 	)
-	if !cfg.AllowUnsafe {
-		md = goldmark.New(
-			goldmark.WithExtensions(extensions...),
-			goldmark.WithParserOptions(parserOpts...),
-			goldmark.WithRendererOptions(html.WithXHTML()),
-		)
-	}
 
 	source := []byte(markdown)
 

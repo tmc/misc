@@ -17,7 +17,7 @@ curl -s http://localhost:9033/
 stdout 'level3.md'
 
 # Test static generation with file finding
-md2html -html output -v
+md2html -html output -html-ext html -v
 exists output/level1.html
 exists output/subdir/level2.html
 exists output/subdir/deep/level3.html
