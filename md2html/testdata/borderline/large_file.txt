@@ -18,3 +18,6 @@ stdout 'Line 9999'
 # Cleanup
 pkill -f 'md2html.*9001'
 rm large.md
+
+# Clean up background process
+wait

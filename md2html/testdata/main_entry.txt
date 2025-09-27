@@ -1,0 +1,28 @@
+# Test main entry point and run function
+
+# Test main() with help flag
+md2html -h
+stderr 'Usage of'
+
+# Test main() with server mode
+md2html -http :9042 entry.md &
+sleep 1s
+exec curl -s http://localhost:9042/
+stdout 'Entry Point Test'
+
+# Test main() with static HTML generation
+md2html -html test_output
+exists test_output/index.html
+exists test_output/entry.html
+
+# Test main() with bad arguments (error path)
+! md2html -http :invalid_port
+stderr 'invalid'
+
+# Clean up background process
+rm -rf test_output
+
+-- entry.md --
+# Entry Point Test
+
+This tests the main() and run() functions directly.

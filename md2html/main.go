@@ -3,13 +3,12 @@ package main
 import (
 	"bytes"
 	"context"
-	"embed"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
-	"net/http"
+	"log/slog"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -17,871 +16,162 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	"gopkg.in/yaml.v2"
-
-	"github.com/alecthomas/chroma/v2/styles"
-	"github.com/fsnotify/fsnotify"
-	"github.com/yuin/goldmark"
-	"github.com/yuin/goldmark/ast"
-	"github.com/yuin/goldmark/extension"
-	"github.com/yuin/goldmark/parser"
-	"github.com/yuin/goldmark/renderer/html"
-	"github.com/yuin/goldmark/text"
-	"go.abhg.dev/goldmark/toc"
-
-	chromahtml "github.com/alecthomas/chroma/v2/formatters/html"
-	admonitions "github.com/stefanfritsch/goldmark-admonitions"
-	highlighting "github.com/yuin/goldmark-highlighting/v2"
-	meta "github.com/yuin/goldmark-meta"
 )
-
-//go:embed templates
-var templates embed.FS
 
 var (
-	flagInput             = flag.String("input", "", "input file (default: directory listing)")
-	flagHTTP              = flag.String("http", ":8080", "HTTP server bind address")
-	flagOpen              = flag.Bool("open", false, "automatically open browser")
-	flagVerbose           = flag.Bool("v", false, "verbose logging")
-	flagTitle             = flag.String("title", "Markdown Preview", "HTML title")
-	flagCSS               = flag.String("css", "", "path to custom CSS file")
-	flagDepth             = flag.Int("depth", 2, "directory traversal depth for listings (minimum 2)")
-	flagTOC               = flag.Bool("toc", false, "generate table of contents")
-	flagAllowUnsafe       = flag.Bool("allow-unsafe", false, "allow unsafe HTML in markdown (use with caution)")
-	flagTemplateDir       = flag.String("templates", "", "path to custom template directory (overrides embedded templates)")
-	flagDataJSON          = flag.String("data-json", "", "path to JSON file to load as template data (available as .Data)")
-	flagRenderFrontmatter = flag.Bool("render-frontmatter", false, "render YAML frontmatter as part of the document content")
-	flagIndex             = flag.String("index", "", "default file to serve for root path (e.g., README.md, index.md)")
+	flags = flag.NewFlagSet("md2html", flag.ExitOnError)
+
+	flagHTTP              = flags.String("http", "", "HTTP server bind address")
+	flagHTML              = flags.String("html", "", "output directory for static HTML generation (disables server mode)")
+	flagOpen              = flags.Bool("open", false, "automatically open browser")
+	flagVerbose           = flags.Bool("v", false, "verbose logging")
+	flagTitle             = flags.String("title", "Markdown Preview", "HTML title")
+	flagCSS               = flags.String("css", "", "path to custom CSS file")
+	flagDepth             = flags.Int("depth", 2, "directory traversal depth for listings (minimum 2)")
+	flagTOC               = flags.Bool("toc", false, "generate table of contents")
+	flagAllowUnsafe       = flags.Bool("allow-unsafe", false, "allow unsafe HTML in markdown (use with caution)")
+	flagTemplateDir       = flags.String("templates", "", "path to custom template directory (overrides embedded templates)")
+	flagDataJSON          = flags.String("data-json", "", "path to JSON file to load as template data (available as .Data)")
+	flagRenderFrontmatter = flags.Bool("render-frontmatter", false, "render YAML frontmatter as part of the document content")
+	flagIndex             = flags.String("index", "", "default file to serve for root path (e.g., README.md, index.md)")
+	flagHTMLExt           = flags.String("html-ext", "", "file extension for generated HTML files (e.g., 'html' for .html, empty for no extension except index.html)")
 )
 
-type server struct {
-	mu         sync.RWMutex
-	content    string
-	clients    map[chan string]bool
-	clientsMu  sync.RWMutex
-	cssContent string
-	inputPath  string
-	jsonData   interface{} // Generic JSON data for templates
-	shutdownCh chan struct{}
-
-	// Batched reload management
-	reloadPending bool
-	reloadTimer   *time.Timer
-	reloadTimerMu sync.Mutex
+type Config struct {
+	Source            string // file, directory, or "-" for stdin
+	HTTP              string
+	HTML              string
+	Open              bool
+	Verbose           bool
+	Title             string
+	CSS               string
+	Depth             int
+	TOC               bool
+	AllowUnsafe       bool
+	TemplateDir       string
+	DataJSON          string
+	RenderFrontmatter bool
+	Index             string
+	HTMLExt           string
 }
 
-type DocumentData struct {
-	Content     string
-	Frontmatter map[string]interface{}
-}
-
-func loadJSONFile(filename string) (interface{}, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
+// configFromFlags creates a Config from current global flag values
+func configFromFlags(fs *flag.FlagSet) Config {
+	return Config{
+		HTTP:              fs.Lookup("http").Value.String(),
+		HTML:              fs.Lookup("html").Value.String(),
+		Open:              fs.Lookup("open").Value.String() == "true",
+		Verbose:           fs.Lookup("v").Value.String() == "true",
+		Title:             fs.Lookup("title").Value.String(),
+		CSS:               fs.Lookup("css").Value.String(),
+		Depth:             int(fs.Lookup("depth").Value.(flag.Getter).Get().(int)),
+		TOC:               fs.Lookup("toc").Value.String() == "true",
+		AllowUnsafe:       fs.Lookup("allow-unsafe").Value.String() == "true",
+		TemplateDir:       fs.Lookup("templates").Value.String(),
+		DataJSON:          fs.Lookup("data-json").Value.String(),
+		RenderFrontmatter: fs.Lookup("render-frontmatter").Value.String() == "true",
+		Index:             fs.Lookup("index").Value.String(),
+		HTMLExt:           fs.Lookup("html-ext").Value.String(),
 	}
-
-	var jsonData interface{}
-	if err := json.Unmarshal(data, &jsonData); err != nil {
-		return nil, err
-	}
-
-	return jsonData, nil
-}
-
-func parseFrontmatter(content string) (DocumentData, error) {
-	// Use goldmark to parse frontmatter
-	md := goldmark.New(goldmark.WithExtensions(meta.Meta))
-	context := parser.NewContext()
-
-	// Parse to extract metadata
-	md.Parser().Parse(text.NewReader([]byte(content)), parser.WithContext(context))
-
-	// Get metadata
-	metaData := meta.Get(context)
-	if metaData == nil {
-		metaData = make(map[string]interface{})
-	}
-
-	// Strip frontmatter from content manually (goldmark-meta doesn't do this for us)
-	strippedContent := stripFrontmatter(content)
-
-	return DocumentData{
-		Content:     strippedContent,
-		Frontmatter: metaData,
-	}, nil
-}
-
-func stripFrontmatter(content string) string {
-	// Check for YAML frontmatter
-	if !strings.HasPrefix(content, "---\n") {
-		return content
-	}
-
-	// Find the closing delimiter
-	lines := strings.Split(content, "\n")
-	var frontmatterEnd int
-	for i := 1; i < len(lines); i++ {
-		if lines[i] == "---" {
-			frontmatterEnd = i
-			break
-		}
-	}
-
-	if frontmatterEnd == 0 {
-		// No closing delimiter found, treat as regular content
-		return content
-	}
-
-	// Extract content after frontmatter
-	if frontmatterEnd+1 < len(lines) {
-		return strings.Join(lines[frontmatterEnd+1:], "\n")
-	}
-	return ""
 }
 
 func main() {
-	flag.Parse()
-	runServer()
-}
-
-func runServer() {
-	s := &server{
-		clients:    make(map[chan string]bool),
-		inputPath:  *flagInput,
-		shutdownCh: make(chan struct{}),
-	}
-
-	// Load JSON data if provided
-	if *flagDataJSON != "" {
-		jsonData, err := loadJSONFile(*flagDataJSON)
-		if err != nil {
-			log.Printf("Error loading JSON data file: %v", err)
-		} else {
-			s.jsonData = jsonData
-			if *flagVerbose {
-				log.Printf("Loaded JSON data from: %s", *flagDataJSON)
-			}
-		}
-	}
-
-	// Load initial content
-	if *flagInput != "" {
-		content, err := os.ReadFile(*flagInput)
-		if err != nil {
-			log.Printf("Error reading initial file: %v", err)
-		} else {
-			s.mu.Lock()
-			s.content = string(content)
-			s.mu.Unlock()
-		}
-	}
-
-	// Load CSS if provided
-	if *flagCSS != "" {
-		css, err := os.ReadFile(*flagCSS)
-		if err != nil {
-			log.Printf("Error reading CSS file: %v", err)
-		} else {
-			s.cssContent = string(css)
-		}
-	}
-
-	// Set up file watching
-	if *flagInput != "" {
-		go s.watchFiles()
-	} else {
-		// Watch directory for changes when showing directory listing
-		go s.watchDirectory()
-	}
-
-	// Setup HTTP handlers
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", s.handleIndex)
-	mux.HandleFunc("/events", s.handleSSE)
-	mux.HandleFunc("/raw", s.handleRaw)
-
-	addr := *flagHTTP
-	srv := &http.Server{
-		Addr:    addr,
-		Handler: mux,
-	}
-
-	// Format URL for display and browser opening
-	displayURL := formatServerURL(addr)
-	log.Printf("Server starting on %s", displayURL)
-
-	// Open browser if requested
-	if *flagOpen {
-		go func() {
-			if !openBrowser(displayURL) {
-				log.Printf("Failed to open browser. Please visit %s", displayURL)
-			}
-		}()
-	}
-
-	// Setup graceful shutdown
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-
-	go func() {
-		<-sigChan
-		log.Println("Shutting down server...")
-
-		// Close shutdown channel to notify all goroutines
-		close(s.shutdownCh)
-
-		// Send shutdown signal to all clients
-		s.clientsMu.Lock()
-		for client := range s.clients {
-			select {
-			case client <- "shutdown":
-			default:
-				// Channel is full or closed, skip
-			}
-		}
-		// Clear the clients map
-		s.clients = make(map[chan string]bool)
-		s.clientsMu.Unlock()
-
-		// Shutdown server with timeout
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		if err := srv.Shutdown(ctx); err != nil {
-			log.Printf("Server shutdown error: %v", err)
-		}
-		os.Exit(0)
-	}()
-
-	// Start server
-	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+	flags.Parse(os.Args[1:])
+	ctx := context.Background()
+	logger := slog.Default()
+	cfg := configFromFlags(flags)
+	if err := run(ctx, cfg, logger, os.Stdout, flags.Args()); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func (s *server) watchFiles() {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Printf("Error creating watcher: %v", err)
-		return
-	}
-	defer watcher.Close()
+func run(ctx context.Context, cfg Config, logger *slog.Logger, out io.Writer, args []string) error {
+	// Set up signal handling
+	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	// Watch the directory containing the markdown file (handles atomic replacements)
-	dir := filepath.Dir(*flagInput)
-	if dir == "" {
-		dir = "."
+	// Handle positional arguments
+	if len(args) > 0 {
+		cfg.Source = args[0]
 	}
-	err = watcher.Add(dir)
-	if err != nil {
-		log.Printf("Error watching directory: %v", err)
-		return
+	if len(args) > 1 {
+		return fmt.Errorf("too many positional arguments")
 	}
 
-	// Watch CSS file directory if provided
-	if *flagCSS != "" {
-		cssDir := filepath.Dir(*flagCSS)
-		if cssDir == "" {
-			cssDir = "."
+	// Configure logger level based on verbose flag
+	if cfg.Verbose {
+		// Create a new logger with debug level when verbose is enabled
+		opts := &slog.HandlerOptions{
+			Level: slog.LevelDebug,
 		}
-		if cssDir != dir {
-			err = watcher.Add(cssDir)
-			if err != nil {
-				log.Printf("Error watching CSS directory: %v", err)
-			}
-		}
+		handler := slog.NewTextHandler(os.Stderr, opts)
+		logger = slog.New(handler)
 	}
 
-	for {
-		select {
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-			if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-				// Debounce rapid changes
-				time.Sleep(100 * time.Millisecond)
+	// TODO: clean up handling stdin and choosing between modes
 
-				eventFile := filepath.Base(event.Name)
-				inputFile := filepath.Base(*flagInput)
-
-				if eventFile == inputFile {
-					if *flagVerbose {
-						log.Printf("Detected change to %s, updating content", inputFile)
-					}
-					content, err := os.ReadFile(*flagInput)
-					if err != nil {
-						log.Printf("Error reading file: %v", err)
-						continue
-					}
-					s.mu.Lock()
-					s.content = string(content)
-					s.mu.Unlock()
-					s.notifyClients()
-				} else if *flagCSS != "" && eventFile == filepath.Base(*flagCSS) {
-					css, err := os.ReadFile(*flagCSS)
-					if err != nil {
-						log.Printf("Error reading CSS file: %v", err)
-						continue
-					}
-					s.mu.Lock()
-					s.cssContent = string(css)
-					s.mu.Unlock()
-					s.notifyClients()
-				}
-			}
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
-			}
-			log.Printf("Watcher error: %v", err)
-		}
-	}
-}
-
-func (s *server) handleIndex(w http.ResponseWriter, r *http.Request) {
-	s.mu.RLock()
-	content := s.content
-	css := s.cssContent
-	s.mu.RUnlock()
-
-	// Check if root path and index file is specified
-	if r.URL.Path == "/" && *flagIndex != "" {
-		if fileContent, err := os.ReadFile(*flagIndex); err == nil {
-			doc, err := parseFrontmatter(string(fileContent))
-			if err != nil {
-				log.Printf("Error parsing frontmatter in %s: %v", *flagIndex, err)
-				doc = DocumentData{Content: string(fileContent), Frontmatter: make(map[string]interface{})}
-			}
-			html := renderDocument(doc, *flagIndex, css, *flagIndex)
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.Write([]byte(html))
-			return
-		} else if *flagVerbose {
-			log.Printf("Index file %s not found, falling back to directory listing", *flagIndex)
-		}
+	// If -html flag is provided, generate static HTML
+	if cfg.HTML != "" {
+		return generateStaticHTML(ctx, cfg, logger)
 	}
 
-	// Check if a specific file is requested via clean URL path
-	if r.URL.Path != "/" {
-		filePath := strings.TrimPrefix(r.URL.Path, "/")
-
-		// Try the path as-is if it ends with .md
-		var candidates []string
-		if strings.HasSuffix(filePath, ".md") || strings.HasSuffix(filePath, ".markdown") {
-			candidates = append(candidates, filePath)
-		} else {
-			// Try adding .md extension
-			candidates = append(candidates, filePath+".md")
-			candidates = append(candidates, filePath+".markdown")
+	// If -http flag is provided, run server
+	if cfg.HTTP != "" {
+		logger.Info("Starting server", "address", cfg.HTTP)
+		err := runServer(ctx, cfg, logger)
+		// Don't treat context cancellation as an error (graceful shutdown)
+		if err == context.Canceled {
+			return nil
 		}
-
-		for _, candidate := range candidates {
-			if fileContent, err := os.ReadFile(candidate); err == nil {
-				doc, err := parseFrontmatter(string(fileContent))
-				if err != nil {
-					log.Printf("Error parsing frontmatter in %s: %v", candidate, err)
-					doc = DocumentData{Content: string(fileContent), Frontmatter: make(map[string]interface{})}
-				}
-				html := renderDocument(doc, candidate, css, candidate)
-				w.Header().Set("Content-Type", "text/html; charset=utf-8")
-				w.Write([]byte(html))
-				return
-			}
-		}
-
-		// File not found
-		http.Error(w, fmt.Sprintf("File not found: %s", filePath), http.StatusNotFound)
-		return
+		return err
 	}
 
-	// Check if a specific file is requested via query parameter (for backward compatibility)
-	if file := r.URL.Query().Get("file"); file != "" {
-		content, err := os.ReadFile(file)
+	// If source is provided but no mode specified, convert to HTML and output to stdout
+	if cfg.Source != "" && cfg.Source != "." {
+		// Read the markdown file
+		content, err := os.ReadFile(cfg.Source)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error reading file %s: %v", file, err), http.StatusNotFound)
-			return
+			return fmt.Errorf("error reading file: %w", err)
 		}
 
+		// Convert to HTML
 		doc, err := parseFrontmatter(string(content))
 		if err != nil {
-			log.Printf("Error parsing frontmatter in %s: %v", file, err)
+			logger.Error("Error parsing frontmatter", "error", err)
 			doc = DocumentData{Content: string(content), Frontmatter: make(map[string]interface{})}
 		}
-		html := renderDocument(doc, file, css, file)
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(html))
-		return
-	}
 
-	// If no input file specified and content is empty, show directory listing
-	if *flagInput == "" && content == "" {
-		wd, err := os.Getwd()
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error getting working directory: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		listing, err := generateDirectoryListing(wd)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error generating directory listing: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		doc := DocumentData{Content: listing, Frontmatter: make(map[string]interface{})}
-		html := renderDocument(doc, "Directory Listing", css, wd)
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(html))
-		return
-	}
-
-	doc, err := parseFrontmatter(content)
-	if err != nil {
-		log.Printf("Error parsing frontmatter: %v", err)
-		doc = DocumentData{Content: content, Frontmatter: make(map[string]interface{})}
-	}
-	html := renderDocument(doc, *flagTitle, css, "")
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(html))
-}
-
-func (s *server) handleRaw(w http.ResponseWriter, r *http.Request) {
-	s.mu.RLock()
-	content := s.content
-	s.mu.RUnlock()
-
-	html := markdownToHTML(content)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(html))
-}
-
-func (s *server) handleSSE(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-
-	// Create client channel
-	clientChan := make(chan string, 10)
-
-	s.clientsMu.Lock()
-	s.clients[clientChan] = true
-	s.clientsMu.Unlock()
-
-	defer func() {
-		s.clientsMu.Lock()
-		delete(s.clients, clientChan)
-		s.clientsMu.Unlock()
-	}()
-
-	// Keep connection alive
-	fmt.Fprintf(w, "data: connected\n\n")
-	w.(http.Flusher).Flush()
-
-	// Create a local copy of shutdown channel to avoid panic
-	shutdownCh := s.shutdownCh
-
-	// Listen for updates
-	for {
-		select {
-		case msg, ok := <-clientChan:
-			if !ok {
-				// Channel closed, server shutting down
-				fmt.Fprintf(w, "data: shutdown\n\n")
-				w.(http.Flusher).Flush()
-				return
-			}
-			fmt.Fprintf(w, "data: %s\n\n", msg)
-			w.(http.Flusher).Flush()
-		case <-r.Context().Done():
-			return
-		case <-shutdownCh:
-			// Server is shutting down
-			fmt.Fprintf(w, "data: shutdown\n\n")
-			w.(http.Flusher).Flush()
-			return
-		}
-	}
-}
-
-func (s *server) watchDirectory() {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Printf("Error creating directory watcher: %v", err)
-		return
-	}
-	defer watcher.Close()
-
-	// Watch current directory and all subdirectories recursively
-	err = filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			if err := watcher.Add(path); err != nil {
-				log.Printf("Error watching directory %s: %v", path, err)
-			} else if *flagVerbose {
-				log.Printf("Watching directory: %s", path)
-			}
-		}
+		html := markdownToHTMLWithContext(cfg, doc.Content, cfg.Source)
+		fmt.Fprint(out, html)
 		return nil
-	})
-	if err != nil {
-		log.Printf("Error setting up recursive directory watching: %v", err)
-		return
 	}
 
-	if *flagVerbose {
-		log.Printf("Watching current directory for .md file changes")
-	}
-
-	for {
-		select {
-		case event, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-			if *flagVerbose {
-				log.Printf("Directory event: %s %s (isMarkdown: %v)",
-					event.Op, event.Name,
-					strings.HasSuffix(strings.ToLower(event.Name), ".md") || strings.HasSuffix(strings.ToLower(event.Name), ".markdown"))
-			}
-
-			// Check if it's a markdown file change
-			if strings.HasSuffix(strings.ToLower(event.Name), ".md") ||
-				strings.HasSuffix(strings.ToLower(event.Name), ".markdown") {
-				if event.Op&fsnotify.Write == fsnotify.Write ||
-					event.Op&fsnotify.Create == fsnotify.Create ||
-					event.Op&fsnotify.Remove == fsnotify.Remove ||
-					event.Op&fsnotify.Chmod == fsnotify.Chmod {
-					// Debounce rapid changes
-					time.Sleep(100 * time.Millisecond)
-
-					if *flagVerbose {
-						log.Printf("Markdown file changed: %s %s - notifying clients", event.Op, event.Name)
-					}
-					s.notifyClients()
-				} else if *flagVerbose {
-					log.Printf("Ignoring event %s for %s (not a watched operation)", event.Op, event.Name)
-				}
-			}
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
-			}
-			log.Printf("Directory watcher error: %v", err)
-		}
-	}
+	// Neither -html nor -http provided and no source, show usage
+	flag.Usage()
+	return flag.ErrHelp
 }
 
-func (s *server) notifyClients() {
-	select {
-	case <-time.After(50 * time.Millisecond):
-	default:
-		return // debounce
-	}
-
-	s.clientsMu.RLock()
-	defer s.clientsMu.RUnlock()
-
-	if *flagVerbose {
-		log.Printf("Notifying %d SSE clients", len(s.clients))
-	}
-
-	for clientChan := range s.clients {
-		select {
-		case clientChan <- "reload":
-			if *flagVerbose {
-				log.Printf("Sent reload signal to client")
-			}
-		default:
-			if *flagVerbose {
-				log.Printf("Client channel full, skipping")
-			}
-		}
-	}
+func runServer(ctx context.Context, cfg Config, logger *slog.Logger) error {
+	s := newServer(cfg, logger)
+	return s.Run(ctx)
 }
-
-func generateChromaCSS() string {
-	// Get light theme (github)
-	lightStyle := styles.Get("github")
-	if lightStyle == nil {
-		lightStyle = styles.Fallback
-	}
-
-	// Get dark theme (github-dark)
-	darkStyle := styles.Get("github-dark")
-	if darkStyle == nil {
-		darkStyle = styles.Get("dracula") // fallback dark theme
-		if darkStyle == nil {
-			darkStyle = lightStyle
-		}
-	}
-
-	formatter := chromahtml.New(
-		chromahtml.WithClasses(true),
-		chromahtml.WithLineNumbers(false),
-	)
-
-	var buf bytes.Buffer
-
-	// Generate light theme CSS
-	if err := formatter.WriteCSS(&buf, lightStyle); err != nil {
-		return ""
-	}
-
-	// Add dark theme CSS with media query
-	buf.WriteString("\n@media (prefers-color-scheme: dark) {\n")
-	if err := formatter.WriteCSS(&buf, darkStyle); err != nil {
-		return buf.String()
-	}
-	buf.WriteString("\n}\n")
-
-	return buf.String()
-}
-
-// convertGitHubAlerts converts GitHub alert syntax to goldmark-admonitions syntax
-func convertGitHubAlerts(markdown string) string {
-	// Map GitHub alert types to admonition types
-	alertMap := map[string]string{
-		"[!NOTE]":      "note",
-		"[!TIP]":       "tip",
-		"[!IMPORTANT]": "important",
-		"[!WARNING]":   "warning",
-		"[!CAUTION]":   "danger", // goldmark-admonitions uses "danger" instead of "caution"
-	}
-
-	lines := strings.Split(markdown, "\n")
-	var result []string
-	inAlert := false
-	currentAlertType := ""
-	alertContent := []string{}
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-
-		// Check if this starts a GitHub alert
-		if strings.HasPrefix(trimmed, "> ") {
-			alertLine := strings.TrimPrefix(trimmed, "> ")
-			for githubType, admonitionType := range alertMap {
-				if strings.HasPrefix(alertLine, githubType) {
-					// Start collecting alert content
-					inAlert = true
-					currentAlertType = admonitionType
-					// Get the title (text after the alert type on the same line)
-					title := strings.TrimSpace(strings.TrimPrefix(alertLine, githubType))
-					if title == "" {
-						title = strings.Title(admonitionType)
-					}
-					alertContent = []string{"!!!" + currentAlertType + " " + title}
-					break
-				}
-			}
-			if inAlert && !strings.Contains(trimmed, "[!") {
-				// This is content within the alert
-				content := strings.TrimPrefix(trimmed, "> ")
-				alertContent = append(alertContent, content)
-			} else if !inAlert {
-				// Regular blockquote, not an alert
-				result = append(result, line)
-			}
-		} else if inAlert {
-			// End of alert block
-			alertContent = append(alertContent, "!!!")
-			result = append(result, alertContent...)
-			result = append(result, line)
-			inAlert = false
-			alertContent = []string{}
-		} else {
-			// Regular line
-			result = append(result, line)
-		}
-	}
-
-	// Handle case where file ends while in alert
-	if inAlert {
-		alertContent = append(alertContent, "!!!")
-		result = append(result, alertContent...)
-	}
-
-	return strings.Join(result, "\n")
-}
-
-func preprocessHTMLBlocks(markdown string) string {
-	lines := strings.Split(markdown, "\n")
-	var result []string
-	inHTMLBlock := false
-	blockDepth := 0
-
-	for _, line := range lines {
-		trimmedLine := strings.TrimSpace(line)
-
-		// Check for opening HTML tags
-		if strings.HasPrefix(trimmedLine, "<") && !strings.HasPrefix(trimmedLine, "</") &&
-			!strings.HasSuffix(trimmedLine, "/>") {
-			// Simple HTML block detection (could be improved)
-			if strings.Contains(trimmedLine, "<div") || strings.Contains(trimmedLine, "<dl") ||
-				strings.Contains(trimmedLine, "<table") || strings.Contains(trimmedLine, "<section") {
-				inHTMLBlock = true
-				blockDepth++
-			}
-		}
-
-		// Check for closing HTML tags
-		if strings.HasPrefix(trimmedLine, "</") {
-			if strings.Contains(trimmedLine, "</div>") || strings.Contains(trimmedLine, "</dl>") ||
-				strings.Contains(trimmedLine, "</table>") || strings.Contains(trimmedLine, "</section>") {
-				blockDepth--
-				if blockDepth <= 0 {
-					inHTMLBlock = false
-					blockDepth = 0
-				}
-			}
-		}
-
-		// Remove indentation inside HTML blocks
-		if inHTMLBlock {
-			result = append(result, trimmedLine)
-		} else {
-			result = append(result, line)
-		}
-	}
-
-	return strings.Join(result, "\n")
-}
-
-func markdownToHTML(markdown string) string {
-	return markdownToHTMLWithContext(markdown, "")
-}
-
-func markdownToHTMLWithContext(markdown, filePath string) string {
-	// Convert GitHub alerts to admonitions format
-	markdown = convertGitHubAlerts(markdown)
-
-	// Preprocess HTML blocks when unsafe HTML is allowed
-	if *flagAllowUnsafe {
-		markdown = preprocessHTMLBlocks(markdown)
-	}
-
-	// Core secure extensions
-	extensions := []goldmark.Extender{
-		extension.GFM, // GitHub Flavored Markdown
-		extension.Footnote,
-		meta.Meta, // YAML frontmatter support
-		highlighting.NewHighlighting(
-			highlighting.WithStyle("github"),
-			highlighting.WithFormatOptions(
-				chromahtml.WithLineNumbers(false),
-				chromahtml.WithClasses(true),
-			),
-		),
-		&admonitions.Extender{},
-	}
-
-	// Add TOC if requested
-	if *flagTOC {
-		extensions = append(extensions, &toc.Extender{
-			MinDepth: 1,
-			MaxDepth: 6,
-			Compact:  false,
-		})
-	}
-
-	// Build markdown processor
-	md := goldmark.New(
-		goldmark.WithExtensions(extensions...),
-		func() goldmark.Option {
-			if *flagAllowUnsafe {
-				return goldmark.WithParserOptions(
-					parser.WithAutoHeadingID(),
-					parser.WithAttribute(),
-				)
-			}
-			return goldmark.WithParserOptions(parser.WithAutoHeadingID())
-		}(),
-		func() goldmark.Option {
-			if *flagAllowUnsafe {
-				return goldmark.WithRendererOptions(
-					html.WithXHTML(),
-					html.WithUnsafe(),
-					html.WithHardWraps(),
-				)
-			}
-			return goldmark.WithRendererOptions(html.WithXHTML())
-		}(),
-	)
-
-	source := []byte(markdown)
-
-	// If we have a file path, parse and modify links
-	if filePath != "" {
-		doc := md.Parser().Parse(text.NewReader(source))
-
-		// Walk through AST and modify relative links
-		ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-			if !entering {
-				return ast.WalkContinue, nil
-			}
-
-			if link, ok := n.(*ast.Link); ok {
-				href := string(link.Destination)
-
-				// Skip external links and anchors
-				if strings.HasPrefix(href, "http://") || strings.HasPrefix(href, "https://") ||
-					strings.HasPrefix(href, "#") || strings.HasPrefix(href, "mailto:") ||
-					strings.HasPrefix(href, "tel:") {
-					return ast.WalkContinue, nil
-				}
-
-				if strings.HasPrefix(href, "/") {
-					// Absolute path - keep as is
-					link.Destination = []byte(href)
-				} else if strings.HasSuffix(href, ".md") || strings.HasSuffix(href, ".markdown") {
-					// Relative markdown path - convert to clean URL
-					filename := filepath.Base(href)
-					urlPath := "/" + strings.TrimSuffix(strings.TrimSuffix(filename, ".md"), ".markdown")
-					link.Destination = []byte(urlPath)
-				}
-			}
-			return ast.WalkContinue, nil
-		})
-
-		// Render the modified AST
-		var buf bytes.Buffer
-		if err := md.Renderer().Render(&buf, source, doc); err != nil {
-			return fmt.Sprintf("<p>Error rendering markdown: %v</p>", err)
-		}
-		return buf.String()
-	}
-
-	// Simple conversion without link modification
-	var buf bytes.Buffer
-	if err := md.Convert(source, &buf); err != nil {
-		return fmt.Sprintf("<p>Error rendering markdown: %v</p>", err)
-	}
-	return buf.String()
-}
-
 
 func formatServerURL(addr string) string {
-	// If address starts with ":", prepend localhost
 	if strings.HasPrefix(addr, ":") {
 		return "http://localhost" + addr
 	}
-	// If address doesn't have a scheme, add http://
 	if !strings.Contains(addr, "://") {
 		return "http://" + addr
 	}
 	return addr
 }
 
-func generateDirectoryListing(dir string) (string, error) {
-	files, err := findMarkdownFiles(dir, *flagDepth)
+func generateDirectoryListing(cfg Config, dir string) (string, error) {
+	files, err := findMarkdownFiles(dir, cfg.Depth)
 	if err != nil {
 		return "", err
 	}
@@ -892,35 +182,26 @@ func generateDirectoryListing(dir string) (string, error) {
 
 	var buf strings.Builder
 
-	// Check for index.md and include its content if present
-	indexFile := filepath.Join(dir, "index.md")
-	if _, err := os.Stat(indexFile); err == nil {
-		content, err := os.ReadFile(indexFile)
-		if err == nil {
-			buf.WriteString(string(content))
-			buf.WriteString("\n\n---\n\n")
-		}
+	if content, err := os.ReadFile(filepath.Join(dir, "index.md")); err == nil {
+		buf.WriteString(string(content) + "\n\n---\n\n")
 	}
 
 	buf.WriteString(fmt.Sprintf("# Directory Listing: %s\n\n", dir))
 
 	if len(files) == 0 {
-		buf.WriteString("*No markdown files found in this directory.*\n")
+		buf.WriteString("*No markdown files found.*\n")
 		return buf.String(), nil
 	}
 
-	for _, file := range files {
-		// Convert file path to clean URL
-		cleanURL := "/" + file.RelPath
-		if strings.HasSuffix(cleanURL, ".md") {
-			cleanURL = strings.TrimSuffix(cleanURL, ".md")
+	for _, f := range files {
+		url := "/" + f.RelPath
+		url = strings.TrimSuffix(url, ".md")
+		url = strings.TrimSuffix(url, ".markdown")
+		if cfg.HTMLExt != "" {
+			url += "." + cfg.HTMLExt
 		}
-		if strings.HasSuffix(cleanURL, ".markdown") {
-			cleanURL = strings.TrimSuffix(cleanURL, ".markdown")
-		}
-
-		buf.WriteString(fmt.Sprintf("- [%s](%s) (%d bytes, modified %s)\n",
-			file.RelPath, cleanURL, file.Size, file.ModTime.Format("2006-01-02 15:04:05")))
+		buf.WriteString(fmt.Sprintf("- [%s](%s) (%d bytes, %s)\n",
+			f.RelPath, url, f.Size, f.ModTime.Format("2006-01-02 15:04")))
 	}
 
 	return buf.String(), nil
@@ -974,6 +255,11 @@ func findMarkdownFiles(rootDir string, maxDepth int) ([]markdownFile, error) {
 }
 
 func openBrowser(url string) bool {
+	// Skip browser opening if environment variable is set (useful for tests)
+	if os.Getenv("MD2HTML_NO_BROWSER") != "" {
+		return true
+	}
+
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":
@@ -985,103 +271,87 @@ func openBrowser(url string) bool {
 	default:
 		return false
 	}
-
 	return cmd.Start() == nil
 }
 
-
-func renderDocument(doc DocumentData, title, customCSS, filePath string) string {
+func renderDocument(cfg Config, doc DocumentData, title, customCSS, filePath string) string {
 	content := doc.Content
-	if *flagRenderFrontmatter && len(doc.Frontmatter) > 0 {
+	if cfg.RenderFrontmatter && len(doc.Frontmatter) > 0 {
 		if frontmatterYAML, err := yaml.Marshal(doc.Frontmatter); err == nil {
 			content = "```yaml\n" + string(frontmatterYAML) + "```\n\n" + content
 		}
 	}
 
-	var html string
-	if filePath != "" {
-		html = markdownToHTMLWithContext(content, filePath)
-	} else {
-		html = markdownToHTML(content)
-	}
-
-	return renderTemplate(html, title, customCSS, true, doc.Frontmatter)
+	html := markdownToHTMLWithContext(cfg, content, filePath)
+	return renderTemplate(cfg, html, title, customCSS, true, doc.Frontmatter)
 }
 
-func loadAllTemplates() (*template.Template, error) {
-	// Create template with helper functions
-	// Start with embedded templates using ParseFS
+func loadAllTemplates(cfg Config) (*template.Template, error) {
 	tmpl, err := template.New("root").Funcs(template.FuncMap{
-		"default": func(defaultValue, value interface{}) interface{} {
-			if value == nil {
-				return defaultValue
+		"default": func(def, val interface{}) interface{} {
+			if val == nil {
+				return def
 			}
-			if s, ok := value.(string); ok && s == "" {
-				return defaultValue
+			if s, ok := val.(string); ok && s == "" {
+				return def
 			}
-			return value
+			return val
 		},
 		"loadJSON": func(filename string) interface{} {
 			data, err := loadJSONFile(filename)
 			if err != nil {
-				log.Printf("Error loading JSON file %s: %v", filename, err)
+				log.Printf("Error loading JSON %s: %v", filename, err)
 				return nil
 			}
 			return data
 		},
-		"replace": func(old, new, s string) string {
-			return strings.ReplaceAll(s, old, new)
-		},
+		"replace": strings.ReplaceAll,
 	}).ParseFS(templates, "templates/*.html", "templates/*/*.html")
 
 	if err != nil {
 		log.Printf("Error parsing embedded templates: %v", err)
-		tmpl = template.New("root") // fallback to empty template
+		tmpl = template.New("root")
 	}
 
-	// Load custom templates (override embedded ones)
-	if *flagTemplateDir != "" {
-		customPattern1 := filepath.Join(*flagTemplateDir, "*.html")
-		customPattern2 := filepath.Join(*flagTemplateDir, "*", "*.html")
-		if customTmpl, err := tmpl.ParseGlob(customPattern1); err == nil {
-			tmpl = customTmpl
-		}
-		if customTmpl, err := tmpl.ParseGlob(customPattern2); err == nil {
-			tmpl = customTmpl
+	if cfg.TemplateDir != "" {
+		for _, pattern := range []string{"*.html", "*/*.html"} {
+			if t, err := tmpl.ParseGlob(filepath.Join(cfg.TemplateDir, pattern)); err == nil {
+				tmpl = t
+			}
 		}
 	}
 
 	return tmpl, nil
 }
 
-func renderTemplate(htmlContent, title, customCSS string, liveReload bool, frontmatter map[string]interface{}) string {
-	// Load all templates
-	tmpl, err := loadAllTemplates()
+func renderTemplate(cfg Config, htmlContent, title, customCSS string, liveReload bool, frontmatter map[string]interface{}) string {
+	tmpl, err := loadAllTemplates(cfg)
 	if err != nil {
 		log.Printf("Error loading templates: %v", err)
 		return fmt.Sprintf("<p>Template loading error: %v</p>", err)
 	}
 
-	// Use "layout" as the standard template name
-	templateName := "layout"
-
-	// If layout doesn't exist, fall back to other common names
-	if tmpl.Lookup(templateName) == nil {
-		// Try other standard names
-		for _, name := range []string{"docs.html", "page.html", "live-reload.html"} {
-			if tmpl.Lookup(name) != nil {
-				templateName = name
+	name := "layout"
+	if tmpl.Lookup(name) == nil {
+		for _, n := range []string{"docs.html", "page.html", "live-reload.html", "base"} {
+			if tmpl.Lookup(n) != nil {
+				name = n
 				break
 			}
 		}
 	}
 
-	// If still no template found, error out
-	if tmpl.Lookup(templateName) == nil {
+	if tmpl.Lookup(name) == nil {
 		return "<p>No template found. Expected 'layout' template"
 	}
 
 	var buf bytes.Buffer
+	// Prepare extension with dot prefix for template use
+	htmlExt := ""
+	if cfg.HTMLExt != "" {
+		htmlExt = "." + cfg.HTMLExt
+	}
+
 	data := struct {
 		Title       string
 		Content     template.HTML
@@ -1089,29 +359,203 @@ func renderTemplate(htmlContent, title, customCSS string, liveReload bool, front
 		ChromaCSS   template.CSS
 		Verbose     bool
 		LiveReload  bool
+		HTMLExt     string
 		Frontmatter map[string]interface{}
 	}{
 		Title:       title,
 		Content:     template.HTML(htmlContent),
 		CustomCSS:   template.CSS(customCSS),
 		ChromaCSS:   template.CSS(generateChromaCSS()),
-		Verbose:     *flagVerbose,
+		Verbose:     cfg.Verbose,
 		LiveReload:  liveReload,
+		HTMLExt:     htmlExt,
 		Frontmatter: frontmatter,
 	}
 
-	// Try to execute the selected template, fall back to base if it exists
-	err = tmpl.ExecuteTemplate(&buf, templateName, data)
-	if err != nil {
-		// Try base template as fallback
-		if tmpl.Lookup("base") != nil {
-			err = tmpl.ExecuteTemplate(&buf, "base", data)
-		}
-		if err != nil {
-			log.Printf("Error executing template: %v", err)
-			return fmt.Sprintf("<p>Template execution error: %v</p>", err)
-		}
+	if err := tmpl.ExecuteTemplate(&buf, name, data); err != nil {
+		log.Printf("Error executing template: %v", err)
+		return fmt.Sprintf("<p>Template execution error: %v</p>", err)
 	}
 	return buf.String()
 }
 
+func generateStaticHTML(ctx context.Context, cfg Config, logger *slog.Logger) error {
+	sourceDir := cfg.Source
+	if sourceDir == "" {
+		sourceDir = "."
+	}
+
+	outputDir := cfg.HTML
+
+	logger.Info("Generating static HTML", "source", sourceDir, "output", outputDir)
+
+	// Create output directory
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return fmt.Errorf("failed to create output directory: %v", err)
+	}
+
+	// Load JSON data if provided
+	if cfg.DataJSON != "" {
+		_, err := loadJSONFile(cfg.DataJSON)
+		if err != nil {
+			logger.Error("Error loading JSON data file", "error", err, "file", cfg.DataJSON)
+		} else {
+			logger.Debug("Loaded JSON data", "file", cfg.DataJSON)
+		}
+	}
+
+	// Load CSS if provided
+	var cssContent string
+	if cfg.CSS != "" {
+		css, err := os.ReadFile(cfg.CSS)
+		if err != nil {
+			logger.Error("Error reading CSS file", "error", err, "file", cfg.CSS)
+		} else {
+			cssContent = string(css)
+			logger.Debug("Loaded CSS content", "file", cfg.CSS)
+		}
+	}
+
+	// Find all markdown files
+	files, err := findMarkdownFiles(sourceDir, 100) // Use high depth for static generation
+	if err != nil {
+		return fmt.Errorf("failed to find markdown files: %v", err)
+	}
+
+	logger.Info("Found markdown files to process", "count", len(files))
+
+	// Process each markdown file
+	for _, file := range files {
+		if err := processMarkdownFile(file, sourceDir, outputDir, cssContent, cfg); err != nil {
+			logger.Error("Error processing file", "error", err, "file", file.RelPath)
+			continue
+		}
+		logger.Debug("Generated file", "file", file.RelPath)
+	}
+
+	// Handle index file if specified
+	if cfg.Index != "" {
+		indexFile := filepath.Join(sourceDir, cfg.Index)
+		if _, err := os.Stat(indexFile); err == nil {
+			if err := processIndexFile(indexFile, outputDir, cssContent, cfg); err != nil {
+				logger.Error("Error processing index file", "error", err, "file", indexFile)
+			} else {
+				logger.Debug("Processed index file", "file", indexFile)
+			}
+		}
+	} else {
+		// Generate table of contents as index.html
+		if err := generateTOCIndex(sourceDir, outputDir, files, cssContent, cfg); err != nil {
+			logger.Error("Error generating TOC index", "error", err)
+		} else {
+			logger.Debug("Generated TOC index")
+		}
+	}
+
+	logger.Info("Static HTML generation completed")
+
+	return nil
+}
+
+func processMarkdownFile(file markdownFile, sourceDir, outputDir, cssContent string, cfg Config) error {
+	sourcePath := filepath.Join(sourceDir, file.RelPath)
+
+	// Read and parse the markdown file
+	content, err := os.ReadFile(sourcePath)
+	if err != nil {
+		return err
+	}
+
+	doc, err := parseFrontmatter(string(content))
+	if err != nil {
+		log.Printf("Error parsing frontmatter in %s: %v", file.RelPath, err)
+		doc = DocumentData{Content: string(content), Frontmatter: make(map[string]interface{})}
+	}
+
+	// Generate HTML content
+	htmlContent := markdownToHTMLWithContext(cfg, doc.Content, file.RelPath)
+
+	// Determine output file path
+	baseName := strings.TrimSuffix(file.RelPath, filepath.Ext(file.RelPath))
+	outputPath := baseName
+	// When HTMLExt is empty, only index gets .html extension
+	// When HTMLExt is set, all files get that extension
+	if cfg.HTMLExt != "" {
+		outputPath = baseName + "." + cfg.HTMLExt
+	}
+	outputPath = filepath.Join(outputDir, outputPath)
+
+	// Create output directory if needed
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		return err
+	}
+
+	// Render with template
+	title := cfg.Title
+	if docTitle, ok := doc.Frontmatter["title"].(string); ok && docTitle != "" {
+		title = docTitle
+	} else {
+		title = strings.TrimSuffix(filepath.Base(file.RelPath), filepath.Ext(file.RelPath))
+	}
+
+	finalHTML := renderTemplate(cfg, htmlContent, title, cssContent, false, doc.Frontmatter)
+
+	// Write output file
+	return os.WriteFile(outputPath, []byte(finalHTML), 0644)
+}
+
+func processIndexFile(indexPath, outputDir, cssContent string, cfg Config) error {
+	content, err := os.ReadFile(indexPath)
+	if err != nil {
+		return err
+	}
+
+	doc, err := parseFrontmatter(string(content))
+	if err != nil {
+		log.Printf("Error parsing frontmatter in index file: %v", err)
+		doc = DocumentData{Content: string(content), Frontmatter: make(map[string]interface{})}
+	}
+
+	htmlContent := markdownToHTMLWithContext(cfg, doc.Content, filepath.Base(indexPath))
+
+	title := cfg.Title
+	if docTitle, ok := doc.Frontmatter["title"].(string); ok && docTitle != "" {
+		title = docTitle
+	}
+
+	finalHTML := renderTemplate(cfg, htmlContent, title, cssContent, false, doc.Frontmatter)
+
+	indexOutputPath := filepath.Join(outputDir, "index.html")
+	return os.WriteFile(indexOutputPath, []byte(finalHTML), 0644)
+}
+
+func generateTOCIndex(sourceDir, outputDir string, files []markdownFile, cssContent string, cfg Config) error {
+	// Generate table of contents markdown
+	var buf strings.Builder
+	buf.WriteString(fmt.Sprintf("# Directory Listing: %s\n\n", sourceDir))
+
+	if len(files) == 0 {
+		buf.WriteString("*No markdown files found.*\n")
+	} else {
+		for _, f := range files {
+			// Generate URL with optional extension based on config
+			url := "/" + strings.TrimSuffix(f.RelPath, filepath.Ext(f.RelPath))
+			if cfg.HTMLExt != "" {
+				url += "." + cfg.HTMLExt
+			}
+			buf.WriteString(fmt.Sprintf("- [%s](%s) (%d bytes, %s)\n",
+				f.RelPath, url, f.Size, f.ModTime.Format("2006-01-02 15:04")))
+		}
+	}
+
+	// Convert to HTML
+	htmlContent := markdownToHTMLWithContext(cfg, buf.String(), "")
+
+	// Render with template
+	doc := DocumentData{Content: buf.String(), Frontmatter: make(map[string]interface{})}
+	finalHTML := renderTemplate(cfg, htmlContent, "Directory Listing", cssContent, false, doc.Frontmatter)
+
+	// Write index.html
+	indexOutputPath := filepath.Join(outputDir, "index.html")
+	return os.WriteFile(indexOutputPath, []byte(finalHTML), 0644)
+}

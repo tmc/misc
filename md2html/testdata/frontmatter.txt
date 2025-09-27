@@ -1,7 +1,7 @@
 # Test YAML frontmatter handling
 
 # Start server normally (frontmatter should be stripped)
-exec md2html -input frontmatter.md -http :8095 &
+md2html -http :8095 frontmatter.md &
 sleep 1s
 
 # Test that frontmatter is not visible in output by default
@@ -12,18 +12,16 @@ exec curl -s http://localhost:8095/
 exec curl -s http://localhost:8095/
 stdout 'Content After Frontmatter'
 
-exec pkill -f 'md2html.*8095'
 
 # Now test with -render-frontmatter flag
-exec md2html -input frontmatter.md -render-frontmatter -http :8096 &
+md2html -render-frontmatter frontmatter.md :8196 &
 sleep 1s
 
 # Test that frontmatter IS visible with flag (rendered as YAML code block)
-exec curl -s http://localhost:8096/
+exec curl -s http://localhost:8196/
 stdout 'Test Author'
 
-# Cleanup
-exec pkill -f 'md2html.*8096'
+# Clean up background process
 
 -- frontmatter.md --
 ---

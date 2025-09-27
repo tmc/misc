@@ -1,0 +1,14 @@
+# Test single markdown file rendering
+
+md2html -http :9080 test.md &
+sleep 1s
+
+exec curl -s http://localhost:9080/
+stdout '<!DOCTYPE html>'
+stdout 'Hello World'
+
+
+-- test.md --
+# Hello World
+
+This is a test markdown file.

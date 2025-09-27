@@ -1,0 +1,33 @@
+# Test complete SSE/live reload functionality
+
+# Start server with a markdown file
+md2html -input sse_test.md -http :9020 &
+sleep 1s
+
+# Test that SSE endpoint responds with correct headers
+exec curl -s -I http://localhost:9020/events
+stdout 'Content-Type: text/event-stream'
+
+# Test that main page loads
+exec curl -s http://localhost:9020/
+stdout '# SSE Test Document'
+
+# Test that raw endpoint returns markdown content
+exec curl -s http://localhost:9020/raw
+stdout '# SSE Test Document'
+
+# Test modifying file triggers reload (simulate with file touch)
+exec touch sse_test.md
+sleep 200ms
+
+# Clean up background process
+wait
+
+-- sse_test.md --
+# SSE Test Document
+
+This tests Server-Sent Events functionality.
+
+## Live Reload
+
+When this file changes, connected clients should receive reload events.

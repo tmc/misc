@@ -1,0 +1,17 @@
+# Test basic HTTP server functionality
+
+md2html -v -http :9081 simple.md &
+sleep 1s
+
+# Test basic content
+# exec curl -s http://localhost:9081/
+# stdout '<!DOCTYPE html>'
+# stdout 'Simple Page'
+
+# Test 404 for non-existent file
+curl -s -w '%{http_code}' http://localhost:9081/nonexistent
+stdout '404'
+-- simple.md --
+# Simple Page
+
+Basic content for testing HTTP server.

@@ -1,0 +1,23 @@
+# Test entry point functions (main and run)
+
+# This test exercises the actual main() and run() functions
+# by building and running the binary directly
+
+# Test help flag through main entry point
+md2html -h
+stderr 'Usage of'
+
+# Test running with input file
+md2html -http :9017 entry_test.md &
+sleep 1s
+
+# Verify server started
+exec curl -s -o /dev/null -w '%{http_code}' http://localhost:9017/
+stdout '200'
+
+# Clean up background process
+
+-- entry_test.md --
+# Test Entry Point
+
+This tests the entry point functionality.

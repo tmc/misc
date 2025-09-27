@@ -1,0 +1,42 @@
+# Test static HTML generation
+
+# Test static HTML generation with html extension
+md2html -html output testsite -html-ext html
+exists output/index.html
+exists output/README.html
+exists output/about.html
+exists output/docs/guide.html
+
+# Verify content contains expected HTML
+grep '<title>' output/README.html
+grep 'Welcome to the test site' output/README.html
+grep '<title>' output/about.html
+grep 'This is the about page' output/about.html
+grep '<title>' output/docs/guide.html
+grep 'This is documentation' output/docs/guide.html
+
+# Verify links are properly converted
+grep 'href="/about"' output/README.html
+grep 'href="/README"' output/about.html
+
+# Cleanup
+rm -rf testsite output
+
+-- testsite/README.md --
+# Home Page
+
+Welcome to the test site.
+
+[About](about.md)
+
+-- testsite/about.md --
+# About
+
+This is the about page.
+
+[Back to Home](README.md)
+
+-- testsite/docs/guide.md --
+# Documentation
+
+This is documentation.

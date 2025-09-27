@@ -1,2 +1,2 @@
 # Test that md2html binary is available
-exec md2html -h
+md2html -h
