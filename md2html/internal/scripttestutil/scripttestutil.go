@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -17,61 +18,80 @@ import (
 // The signature matches script.Program for drop-in replacement.
 func BackgroundCmd(prog string, cancel func(*exec.Cmd) error, waitDelay time.Duration) script.Cmd {
 	return script.Command(
-		script.CmdUsage{Summary: "run " + prog, Async: true},
-		bgExec(prog, cancel, waitDelay),
+		script.CmdUsage{
+			Summary: "run " + filepath.Base(prog),
+			Async:   true,
+		},
+		func(s *script.State, args ...string) (script.WaitFunc, error) {
+			// If prog is an absolute path or contains separators, use it directly.
+			// Otherwise look it up in PATH.
+			name := prog
+			path := prog
+			if !filepath.IsAbs(prog) && !strings.Contains(prog, string(filepath.Separator)) {
+				var err error
+				path, err = exec.LookPath(prog)
+				if err != nil {
+					return nil, err
+				}
+			}
+			return startBackgroundCommand(s, name, path, args, cancel, waitDelay)
+		},
 	)
 }
 
-func bgExec(prog string, cancel func(*exec.Cmd) error, waitDelay time.Duration) func(*script.State, ...string) (script.WaitFunc, error) {
-	return func(s *script.State, args ...string) (script.WaitFunc, error) {
-		// Use CommandContext to integrate with script's context
-		cmd := exec.CommandContext(s.Context(), prog, args...)
-		cmd.Dir = s.Getwd()
-		cmd.Env = s.Environ()
-		cmd.WaitDelay = waitDelay
+// startBackgroundCommand starts a command with graceful shutdown support.
+// It follows the same pattern as script's startCommand but defaults to SIGTERM.
+func startBackgroundCommand(s *script.State, name, path string, args []string, cancel func(*exec.Cmd) error, waitDelay time.Duration) (script.WaitFunc, error) {
+	var stdout, stderr strings.Builder
 
-		// Set cancel function - default to SIGTERM for graceful shutdown
-		if cancel == nil {
-			cmd.Cancel = func() error {
+	cmd := exec.CommandContext(s.Context(), path, args...)
+	cmd.Args[0] = name
+	cmd.Dir = s.Getwd()
+	cmd.Env = s.Environ()
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	cmd.WaitDelay = waitDelay
+
+	// Set cancel function - default to SIGTERM for graceful shutdown
+	if cancel == nil {
+		cmd.Cancel = func() error {
+			if cmd.Process != nil {
 				return cmd.Process.Signal(syscall.SIGTERM)
 			}
-		} else {
-			cmd.Cancel = func() error {
-				return cancel(cmd)
-			}
+			return nil
 		}
-
-		// Ensure GOCOVERDIR is set
-		if gcd := os.Getenv("GOCOVERDIR"); gcd != "" && cmd.Env != nil {
-			found := false
-			for _, e := range cmd.Env {
-				if strings.HasPrefix(e, "GOCOVERDIR=") {
-					found = true
-					break
-				}
-			}
-			if !found {
-				cmd.Env = append(cmd.Env, "GOCOVERDIR="+gcd)
-			}
-		}
-
-		var stdout, stderr strings.Builder
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-
-		if err := cmd.Start(); err != nil {
-			return nil, err
-		}
-
-		return func(s *script.State) (string, string, error) {
-			err := cmd.Wait()
-			// Exit 0 is success even if context cancelled
-			if err == context.Canceled && cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 0 {
-				err = nil
-			}
-			return stdout.String(), stderr.String(), err
-		}, nil
+	} else {
+		cmd.Cancel = func() error { return cancel(cmd) }
 	}
+
+	// Ensure GOCOVERDIR is set for coverage collection
+	if gcd := os.Getenv("GOCOVERDIR"); gcd != "" {
+		found := false
+		for i, e := range cmd.Env {
+			if strings.HasPrefix(e, "GOCOVERDIR=") {
+				cmd.Env[i] = "GOCOVERDIR=" + gcd
+				found = true
+				break
+			}
+		}
+		if !found {
+			cmd.Env = append(cmd.Env, "GOCOVERDIR="+gcd)
+		}
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+
+	wait := func(s *script.State) (string, string, error) {
+		err := cmd.Wait()
+		// Treat exit code 0 as success even if context was cancelled
+		if err == context.Canceled && cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 0 {
+			err = nil
+		}
+		return stdout.String(), stderr.String(), err
+	}
+	return wait, nil
 }
 
 // TestMain runs m.Run() normally, or runs mainFunc if invoked without -test flags.
