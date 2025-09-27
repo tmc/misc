@@ -14,18 +14,32 @@ import (
 
 // BackgroundCmd returns a command that runs prog in the background
 // and sends SIGTERM on context cancellation for graceful shutdown.
-func BackgroundCmd(prog string) script.Cmd {
+// The signature matches script.Program for drop-in replacement.
+func BackgroundCmd(prog string, cancel func(*exec.Cmd) error, waitDelay time.Duration) script.Cmd {
 	return script.Command(
 		script.CmdUsage{Summary: "run " + prog, Async: true},
-		bgExec(prog),
+		bgExec(prog, cancel, waitDelay),
 	)
 }
 
-func bgExec(prog string) func(*script.State, ...string) (script.WaitFunc, error) {
+func bgExec(prog string, cancel func(*exec.Cmd) error, waitDelay time.Duration) func(*script.State, ...string) (script.WaitFunc, error) {
 	return func(s *script.State, args ...string) (script.WaitFunc, error) {
-		cmd := exec.Command(prog, args...)
+		// Use CommandContext to integrate with script's context
+		cmd := exec.CommandContext(s.Context(), prog, args...)
 		cmd.Dir = s.Getwd()
 		cmd.Env = s.Environ()
+		cmd.WaitDelay = waitDelay
+
+		// Set cancel function - default to SIGTERM for graceful shutdown
+		if cancel == nil {
+			cmd.Cancel = func() error {
+				return cmd.Process.Signal(syscall.SIGTERM)
+			}
+		} else {
+			cmd.Cancel = func() error {
+				return cancel(cmd)
+			}
+		}
 
 		// Ensure GOCOVERDIR is set
 		if gcd := os.Getenv("GOCOVERDIR"); gcd != "" && cmd.Env != nil {
@@ -50,16 +64,9 @@ func bgExec(prog string) func(*script.State, ...string) (script.WaitFunc, error)
 		}
 
 		return func(s *script.State) (string, string, error) {
-			select {
-			case <-s.Context().Done():
-				cmd.Process.Signal(syscall.SIGTERM)
-				time.AfterFunc(2*time.Second, func() { cmd.Process.Kill() })
-			default:
-			}
-
 			err := cmd.Wait()
 			// Exit 0 is success even if context cancelled
-			if err == context.Canceled && cmd.ProcessState.ExitCode() == 0 {
+			if err == context.Canceled && cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 0 {
 				err = nil
 			}
 			return stdout.String(), stderr.String(), err

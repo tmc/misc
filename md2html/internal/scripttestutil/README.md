@@ -12,8 +12,8 @@ The script framework sends SIGKILL to background processes, preventing:
 ## Solution
 
 ```go
-// In your test
-engine.Cmds["myserver"] = scripttestutil.BackgroundCmd(exe)
+// In your test - matches script.Program signature exactly
+engine.Cmds["myserver"] = scripttestutil.BackgroundCmd(exe, nil, 0)
 
 // In your TestMain
 func TestMain(m *testing.M) {
@@ -43,7 +43,7 @@ func TestScripts(t *testing.T) {
     exe, _ := os.Executable()
 
     engine := script.NewEngine()
-    engine.Cmds["server"] = scripttestutil.BackgroundCmd(exe)
+    engine.Cmds["server"] = scripttestutil.BackgroundCmd(exe, nil, 0)
     engine.Cmds["curl"] = script.Program("curl", nil, 0)
 
     env := []string{"PATH=" + os.Getenv("PATH")}
@@ -52,4 +52,4 @@ func TestScripts(t *testing.T) {
 }
 ```
 
-The BackgroundCmd sends SIGTERM instead of SIGKILL and treats exit code 0 as success.
+BackgroundCmd has the same signature as script.Program but sends SIGTERM instead of SIGKILL and treats exit code 0 as success.

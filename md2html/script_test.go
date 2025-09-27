@@ -16,7 +16,7 @@ var borderline = flag.Bool("include-borderline-tests", false, "run borderline te
 func TestScripts(t *testing.T) {
 	exe, _ := os.Executable()
 	engine := script.NewEngine()
-	engine.Cmds["md2html"] = scripttestutil.BackgroundCmd(exe)
+	engine.Cmds["md2html"] = scripttestutil.BackgroundCmd(exe, nil, 0)
 	engine.Cmds["curl"] = script.Program("curl", nil, 0)
 
 	env := []string{
