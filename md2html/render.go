@@ -175,10 +175,7 @@ func markdownToHTMLWithContext(cfg Config, markdown, filePath string) string {
 		parserOpts = append(parserOpts, parser.WithAttribute())
 	}
 
-	rendererOpts := []renderer.Option{
-		html.WithXHTML(),
-		html.WithHardWraps(),
-	}
+	rendererOpts := []renderer.Option{html.WithXHTML(), html.WithHardWraps()}
 	if cfg.AllowUnsafe {
 		rendererOpts = append(rendererOpts, html.WithUnsafe())
 	}

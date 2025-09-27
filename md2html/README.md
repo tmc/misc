@@ -10,7 +10,7 @@ It provides a local web server that renders markdown files with GitHub-compatibl
 <details>
 <summary><b>Prerequisites: Go Installation</b></summary>
 
-You'll need Go 1.22 or later. [Install Go](https://go.dev/doc/install) if you haven't already.
+You'll need Go 1.25 or later. [Install Go](https://go.dev/doc/install) if you haven't already.
 
 <details>
 <summary><b>Setting up your PATH</b></summary>
@@ -155,9 +155,9 @@ Create diagrams using Mermaid syntax:
 ```mermaid
 
 graph TD
-    A[Start] --> B{Decision}
-    B -->|Yes| C[Continue]
-    B -->|No| D[Stop]
+	A[Start] --> B{Decision}
+	B -->|Yes| C[Continue]
+	B -->|No| D[Stop]
 
 ```
 
