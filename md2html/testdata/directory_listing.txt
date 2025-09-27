@@ -4,7 +4,7 @@
 cd testdir
 
 # Start server in directory listing mode (no input file)
-exec md2html -http :8092 &
+md2html -http :8092 &
 
 # Wait for server
 sleep 1s
@@ -25,8 +25,7 @@ stdout '<h1.*>File One</h1>'
 exec curl -s http://localhost:8092/file2
 stdout '<h1.*>File Two</h1>'
 
-# Clean up
-exec pkill md2html
+# Clean up background process
 
 -- testdir/index.md --
 # Welcome

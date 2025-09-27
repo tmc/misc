@@ -1,0 +1,55 @@
+# Test HTML block preprocessing
+
+# Start server with markdown containing HTML blocks
+md2html -http :9009 html_test.md &
+sleep 1s
+
+# Verify HTML blocks are processed correctly
+exec curl -s http://localhost:9009/
+stdout '<div class="custom-block">'
+stdout '<table'
+stdout '<section'
+
+# Test with unsafe HTML allowed
+md2html -allow-unsafe html_test.md :9010 &
+sleep 1s
+
+# Should render HTML blocks when unsafe is allowed
+exec curl -s http://localhost:9010/
+stdout '<script>'
+
+# Clean up background process
+
+-- html_test.md --
+# Document with HTML Blocks
+
+Regular markdown paragraph.
+
+<div class="custom-block">
+  <p>This is an HTML block</p>
+  <span>With nested elements</span>
+</div>
+
+More markdown content.
+
+<table>
+  <tr>
+    <td>Cell 1</td>
+    <td>Cell 2</td>
+  </tr>
+</table>
+
+<section id="special">
+  <h2>Section Title</h2>
+  <p>Section content</p>
+</section>
+
+<dl>
+  <dt>Term</dt>
+  <dd>Definition</dd>
+</dl>
+
+<script>
+  // This script should only appear with -allow-unsafe
+  console.log("Test");
+</script>

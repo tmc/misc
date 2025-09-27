@@ -1,0 +1,56 @@
+# Test error handling paths
+
+# Test with non-existent input file (error path)
+md2html -input nonexistent.md -http :9023 &
+sleep 200ms
+
+# Test with invalid port (error path)
+md2html -http :99999 &
+sleep 200ms
+
+# Test with invalid JSON data file
+md2html -input doc.md -data-json invalid.json -v -http :9024 &
+sleep 200ms
+
+# Test with non-existent CSS file
+md2html -input doc.md -css nonexistent.css -v -http :9025 &
+sleep 200ms
+
+# Test with non-existent template directory
+md2html -input doc.md -templates nonexistent-templates -v -http :9026 &
+sleep 200ms
+
+# Test with invalid depth parameter
+md2html -depth 1 -v -http :9027 &
+sleep 200ms
+
+# Test frontmatter parsing error
+md2html -input bad_frontmatter.md -http :9028 &
+sleep 1s
+exec curl -s http://localhost:9028/
+stdout '<!DOCTYPE html>'
+
+# Test static HTML with non-existent output dir parent
+md2html -html /nonexistent/path/output -input doc.md
+sleep 200ms
+
+# Clean up background process
+wait
+
+-- doc.md --
+# Test Document
+
+Simple test document.
+
+-- invalid.json --
+{invalid json content here}
+
+-- bad_frontmatter.md --
+---
+title: Test
+invalid_yaml: [unclosed array
+---
+
+# Document with Bad Frontmatter
+
+This has invalid YAML frontmatter.

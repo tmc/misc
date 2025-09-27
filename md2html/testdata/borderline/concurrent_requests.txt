@@ -14,3 +14,6 @@ stdout '50'
 # Cleanup
 pkill -f 'md2html.*9002'
 rm concurrent.md
+
+# Clean up background process
+wait

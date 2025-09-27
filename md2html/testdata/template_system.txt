@@ -4,20 +4,21 @@
 mkdir custom-templates
 
 # Start server with custom templates
-exec md2html -input template_test.md -templates custom-templates -http :8094 &
+md2html -templates template_test.md -http :8294 &
 sleep 1s
 
 # Check custom styles are applied
-exec curl -s http://localhost:8094/
+exec curl -s http://localhost:8294/
 stdout 'background: #123456'
 
 # Test that template includes custom CSS class
-exec curl -s http://localhost:8094/
+exec curl -s http://localhost:8294/
 stdout 'custom-test'
 
 # Cleanup
-exec pkill -f 'md2html.*8094'
 rm -rf custom-templates
+
+# Clean up background process
 
 -- template_test.md --
 # Custom Template Test

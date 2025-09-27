@@ -65,3 +65,6 @@ stdout 'Nested item'
 # Cleanup
 pkill -f 'md2html.*9003'
 rm nested.md
+
+# Clean up background process
+wait

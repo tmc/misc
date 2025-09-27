@@ -1,0 +1,52 @@
+# Test index file serving functionality
+
+# Start server with index file specified
+md2html -index README.md :9006 &
+sleep 1s
+
+# Root should serve the index file
+exec curl -s http://localhost:9006/
+stdout 'Project README'
+
+# Test with non-existent index file (should fall back to directory listing)
+md2html -index nonexistent.md :9007 &
+sleep 1s
+
+# Should show directory listing when index doesn't exist
+exec curl -s http://localhost:9007/
+stdout '<!DOCTYPE html>'
+
+# Test directory with multiple markdown files
+md2html -index index.md :9008 &
+sleep 1s
+
+# Should serve index.md for root
+exec curl -s http://localhost:9008/
+stdout 'Index Page'
+
+# Clean up background process
+
+-- README.md --
+# Project README
+
+This is the main README file that should be served as the index.
+
+## Features
+
+- Feature 1
+- Feature 2
+
+-- index.md --
+# Index Page
+
+This is an index.md file used as the default page.
+
+-- other.md --
+# Other Document
+
+This is another document in the directory.
+
+-- subdir/nested.md --
+# Nested Document
+
+This is a document in a subdirectory.

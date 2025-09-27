@@ -1,7 +1,7 @@
 # Test code syntax highlighting
 
 # Start server
-exec md2html -input code.md -http :8097 &
+md2html -http :8097 code.md &
 sleep 1s
 
 # Test that Chroma CSS is included
@@ -12,8 +12,7 @@ stdout 'chroma'
 exec curl -s http://localhost:8097/
 stdout 'Hello, World!'
 
-# Cleanup
-exec pkill -f 'md2html.*8097'
+# Clean up background process
 
 -- code.md --
 # Code Examples

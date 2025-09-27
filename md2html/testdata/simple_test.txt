@@ -1,0 +1,6 @@
+# Simple test without help or background
+md2html simple.md
+stdout 'Hello'
+
+-- simple.md --
+Hello World

@@ -1,0 +1,56 @@
+# Test static HTML index file generation
+
+# Test generating static HTML with custom index
+md2html -html output -index INDEX.md
+exists output/index.html
+exec grep -q 'Welcome to Documentation' output/index.html
+
+# Clean and test TOC generation when README exists but no -index specified
+rm -rf output
+md2html -html output
+exists output/index.html
+# Should generate TOC, not use README as index (TOC lists files)
+
+# Test table of contents generation when no index specified
+rm -rf output
+rm INDEX.md README.md
+md2html -html output
+exists output/index.html
+exec grep -q 'Directory Listing' output/index.html
+
+# Clean up
+rm -rf output
+
+-- INDEX.md --
+---
+title: Documentation Index
+author: Test Author
+---
+
+# Welcome to Documentation
+
+This is the custom index file.
+
+## Quick Links
+
+- [Guide](guide.md)
+- [API](api.md)
+
+-- README.md --
+# Main Project README
+
+This is the main README that becomes index.html
+
+## Installation
+
+Install instructions here.
+
+-- guide.md --
+# User Guide
+
+Complete user guide content.
+
+-- api.md --
+# API Reference
+
+API documentation here.

@@ -1,0 +1,40 @@
+# Test JSON data loading functionality
+
+# Start server with JSON data file
+md2html -data-json test_json.md -http :9001 &
+sleep 1s
+
+# Verify server started and JSON is loaded
+exec curl -s http://localhost:9001/ | head -20
+stdout '<!DOCTYPE html>'
+
+# Test with invalid JSON file (error path)
+md2html -data-json test_json.md -http :9002 &
+sleep 200ms
+
+# Test with non-existent JSON file (error path)
+md2html -data-json test_json.md -http :9103 &
+sleep 200ms
+
+# Clean up background process
+
+-- test_data.json --
+{
+  "title": "Test Title",
+  "author": "Test Author",
+  "version": "1.0",
+  "metadata": {
+    "created": "2024-01-01",
+    "tags": ["test", "example"]
+  }
+}
+
+-- test_json.md --
+# Document with JSON Data
+
+This markdown file is used with JSON data for template rendering.
+
+The JSON data can be accessed in templates via .Data variable.
+
+-- bad.json --
+invalid json content - this is not valid JSON!

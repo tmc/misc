@@ -1,0 +1,79 @@
+# Test HTML block preprocessing in depth
+
+# Test with various HTML blocks
+md2html -http :9021 complex_html.md &
+sleep 1s
+
+# Verify HTML blocks are processed
+exec curl -s http://localhost:9021/
+stdout '<div class="container">'
+stdout '<section id="main">'
+stdout '<dl>'
+stdout '<table'
+
+# Test with allow-unsafe flag for script tags
+md2html -allow-unsafe complex_html.md :9022 &
+sleep 1s
+
+exec curl -s http://localhost:9022/
+stdout '<script'
+stdout 'console.log'
+
+# Clean up background process
+
+-- complex_html.md --
+# Document with Complex HTML
+
+Regular markdown paragraph before HTML.
+
+<div class="container">
+  <div class="row">
+    <div class="col">
+      <p>Nested HTML structure</p>
+      <span>With multiple levels</span>
+    </div>
+  </div>
+</div>
+
+More markdown between blocks.
+
+<section id="main">
+  <header>
+    <h2>Section Header</h2>
+  </header>
+  <article>
+    <p>Article content</p>
+  </article>
+</section>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>Column 1</th>
+      <th>Column 2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Data 1</td>
+      <td>Data 2</td>
+    </tr>
+  </tbody>
+</table>
+
+<dl>
+  <dt>Definition Term</dt>
+  <dd>Definition description with <em>emphasis</em></dd>
+  <dt>Another Term</dt>
+  <dd>Another description</dd>
+</dl>
+
+<script type="text/javascript">
+  // This should only appear with allow-unsafe
+  console.log("Script executed");
+  function testFunction() {
+    return "test";
+  }
+</script>
+
+Final markdown paragraph.
