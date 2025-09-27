@@ -6,7 +6,7 @@ sleep 1s
 
 # Should include table of contents
 curl -s http://localhost:9014/
-stdout 'id="toc"'
+stdout 'id="table-of-contents"'
 
 # Test frontmatter rendering
 md2html -render-frontmatter -http :9015 doc_with_frontmatter.md &
@@ -14,7 +14,8 @@ sleep 1s
 
 # Frontmatter should be visible as YAML block
 curl -s http://localhost:9015/
-stdout 'language-yaml'
+stdout 'Test Author'
+stdout 'Document with Frontmatter'
 
 # Clean up background process
 

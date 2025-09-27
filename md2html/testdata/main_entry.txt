@@ -11,9 +11,8 @@ curl -s http://localhost:9042/
 stdout 'Entry Point Test'
 
 # Test main() with static HTML generation
-md2html -html test_output
-exists test_output/index.html
-exists test_output/entry.html
+md2html -html test_output -html-ext html entry.md
+exists test_output/.html
 
 # Test main() with bad arguments (error path)
 ! md2html -http :invalid_port

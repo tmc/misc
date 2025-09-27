@@ -1,21 +1,24 @@
 # Test HTML block preprocessing in depth
 
-# Test with various HTML blocks
+# Test with various HTML blocks (should be sanitized by default)
 md2html -http :9021 complex_html.md &
 sleep 1s
 
-# Verify HTML blocks are processed
+# Verify HTML blocks are sanitized (security default)
 curl -s http://localhost:9021/
-stdout '<div class="container">'
-stdout '<section id="main">'
-stdout '<dl>'
-stdout '<table'
+! stdout '<div class="container">'
+! stdout '<section id="main">'
+stdout '<!-- raw HTML omitted -->'
 
-# Test with allow-unsafe flag for script tags
+# Test with allow-unsafe flag for all HTML blocks
 md2html -allow-unsafe -http :9022 complex_html.md &
 sleep 1s
 
 curl -s http://localhost:9022/
+stdout '<div class="container">'
+stdout '<section id="main">'
+stdout '<dl>'
+stdout '<table'
 stdout '<script'
 stdout 'console.log'
 
