@@ -1,26 +1,26 @@
 # Test template loading and rendering edge cases
 
 # Test with malformed template directory structure
-md2html -input doc.md -templates bad-templates -http :9039 &
+md2html -templates bad-templates -http :9039 &
 sleep 1s
 
 # Should fall back to embedded templates
-exec curl -s http://localhost:9039/
+curl -s http://localhost:9039/
 stdout '<!DOCTYPE html>'
 
 # Test with data JSON in templates
-md2html -input doc.md -data-json data.json -templates data-templates -http :9040 &
+md2html -data-json data.json -templates data-templates -http :9040 &
 sleep 1s
 
 # Verify JSON data is accessible in template
-exec curl -s http://localhost:9040/
+curl -s http://localhost:9040/
 stdout 'Test Value'
 
 # Test template with various names
-md2html -input doc.md -templates named-templates -http :9041 &
+md2html -templates named-templates -http :9041 &
 sleep 1s
 
-exec curl -s http://localhost:9041/
+curl -s http://localhost:9041/
 stdout 'Custom Layout Template'
 
 # Clean up background process

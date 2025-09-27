@@ -440,7 +440,6 @@ func (s *server) Run(ctx context.Context) error {
 
 	// Format URL for display and browser opening
 	displayURL := formatServerURL(s.config.HTTP)
-	s.logger.Info("Server starting", "url", displayURL)
 
 	// Open browser if requested
 	if s.config.Open {
@@ -456,12 +455,8 @@ func (s *server) Run(ctx context.Context) error {
 	idleConnsClosed := make(chan struct{})
 	go func() {
 		<-ctx.Done()
-
-		s.logger.Info("Shutting down server")
-
 		// Close shutdown channel to notify all goroutines
 		close(s.shutdownCh)
-
 		// Send shutdown signal to all clients
 		s.clientsMu.Lock()
 		for client := range s.clients {

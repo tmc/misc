@@ -4,7 +4,7 @@
 python3 -c "for i in range(10000): print(f'Line {i}: This is a test line with some **bold** text and *italic* text.')" > large.md
 
 # Start server with large file
-md2html -input large.md -http :9001 &
+md2html -http :9001 &
 sleep 2s
 
 # Test that server responds (might be slow)

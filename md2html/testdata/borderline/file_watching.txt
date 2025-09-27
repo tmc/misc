@@ -1,11 +1,11 @@
 # Test file watching functionality
 
 # Start server with file watching
-md2html -input watch_test.md -v -http :9029 &
+md2html -v -http :9029 &
 sleep 1s
 
 # Initial content check
-exec curl -s http://localhost:9029/
+curl -s http://localhost:9029/
 stdout 'Initial Content'
 
 # Modify the file to trigger watch
@@ -14,15 +14,15 @@ echo 'This file was modified' >> watch_test.md
 sleep 2s
 
 # Check that server detected the change
-exec curl -s http://localhost:9029/raw
+curl -s http://localhost:9029/raw
 stdout 'Modified Content'
 
 # Test CSS file watching
-md2html -input watch_test.md -css watch.css -v -http :9030 &
+md2html -css watch.css -v -http :9030 &
 sleep 1s
 
 # Verify CSS is loaded
-exec curl -s http://localhost:9030/
+curl -s http://localhost:9030/
 stdout 'color: blue'
 
 # Modify CSS file
@@ -38,7 +38,7 @@ echo '# New File' > new_file.md
 sleep 1s
 
 # Access the new file
-exec curl -s http://localhost:9031/new_file
+curl -s http://localhost:9031/new_file
 stdout 'New File'
 
 # Clean up

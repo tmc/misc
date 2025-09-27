@@ -10,7 +10,7 @@ md2html -http :8092 &
 sleep 1s
 
 # Test directory listing appears
-exec curl -s http://localhost:8092/
+curl -s http://localhost:8092/
 stdout 'Directory Listing'
 stdout 'file1\.md'
 stdout 'file2\.md'
@@ -19,10 +19,10 @@ stdout 'file2\.md'
 stdout '<h1.*>Welcome</h1>'
 
 # Test individual file access via clean URLs
-exec curl -s http://localhost:8092/file1
+curl -s http://localhost:8092/file1
 stdout '<h1.*>File One</h1>'
 
-exec curl -s http://localhost:8092/file2
+curl -s http://localhost:8092/file2
 stdout '<h1.*>File Two</h1>'
 
 # Clean up background process

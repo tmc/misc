@@ -4,7 +4,7 @@
 echo '# Concurrent Test' > concurrent.md
 
 # Start server
-md2html -input concurrent.md -http :9002 &
+md2html -http :9002 &
 sleep 1s
 
 # Send 50 concurrent requests

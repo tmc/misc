@@ -7,7 +7,7 @@ md2html -http :8090 test.md &
 sleep 2s
 
 # Test basic HTML rendering
-exec curl -s http://localhost:8090/raw
+curl -s http://localhost:8090/raw
 stdout '<h1.*>Test Document</h1>'
 stdout '<h2.*>Features</h2>'
 stdout '<strong>bold</strong>'

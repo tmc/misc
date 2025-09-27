@@ -5,7 +5,7 @@ md2html -http :8099 test_basic.md &
 sleep 2s
 
 # Test server responds
-exec curl -s -w '%{http_code}' http://localhost:8099/
+curl -s -w '%{http_code}' http://localhost:8099/
 stdout '200'
 stdout 'hello'
 

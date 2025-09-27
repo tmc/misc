@@ -2,6 +2,7 @@
 package scripttestutil
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -10,9 +11,12 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"testing"
 	"time"
 
+	"golang.org/x/tools/txtar"
 	"rsc.io/script"
+	"rsc.io/script/scripttest"
 )
 
 // BackgroundCmd returns a command that runs prog in the background
@@ -75,6 +79,7 @@ func BackgroundCmd(prog string, cancel func(*exec.Cmd) error, waitDelay time.Dur
 //   - Exit code 0 with context.Canceled is treated as success
 //   - Ensures GOCOVERDIR is set for test coverage collection
 //   - Handles ETXTBSY errors by retrying (executable still being written)
+//   - Detects early failures (within 500ms) and reports them immediately
 //
 // This allows background servers to shut down cleanly, write coverage data,
 // and exit successfully when the test ends.
@@ -139,6 +144,10 @@ func startBackgroundCommand(s *script.State, name, path string, args []string, c
 
 	wait := func(s *script.State) (string, string, error) {
 		err := cmd.Wait()
+
+		// For flag errors, just pass through the original error since
+		// the script test framework will show stderr anyway
+
 		// Treat exit code 0 as success even if context was cancelled
 		if err == context.Canceled && cmd.ProcessState != nil && cmd.ProcessState.ExitCode() == 0 {
 			err = nil
@@ -162,6 +171,100 @@ func TestMain(m interface{ Run() int }, mainFunc func()) {
 
 	mainFunc()
 	os.Exit(0)
+}
+
+// Test is a drop-in replacement for scripttest.Test that runs tests sequentially
+// instead of in parallel. This helps avoid port conflicts and other issues that
+// can occur when multiple server instances try to bind to the same resources.
+//
+// This is a copy of scripttest.Test with the t.Parallel() call removed.
+func Test(t *testing.T, ctx context.Context, engine *script.Engine, env []string, pattern string) {
+	gracePeriod := 100 * time.Millisecond
+	if deadline, ok := t.Deadline(); ok {
+		timeout := time.Until(deadline)
+
+		// If time allows, increase the termination grace period to 5% of the
+		// remaining time.
+		if gp := timeout / 20; gp > gracePeriod {
+			gracePeriod = gp
+		}
+
+		// When we run commands that execute subprocesses, we want to reserve two
+		// grace periods to clean up. We will send the first termination signal when
+		// the context expires, then wait one grace period for the process to
+		// produce whatever useful output it can (such as a stack trace). After the
+		// first grace period expires, we'll escalate to os.Kill, leaving the second
+		// grace period for the test function to record its output before the test
+		// process itself terminates.
+		timeout -= 2 * gracePeriod
+
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		t.Cleanup(cancel)
+	}
+
+	files, _ := filepath.Glob(pattern)
+	if len(files) == 0 {
+		t.Fatal("no testdata")
+	}
+	for _, file := range files {
+		file := file
+		name := strings.TrimSuffix(filepath.Base(file), ".txt")
+		t.Run(name, func(t *testing.T) {
+			// NOTE: No t.Parallel() call here - this is the key difference
+			// from scripttest.Test to avoid port conflicts
+
+			workdir := t.TempDir()
+			s, err := script.NewState(ctx, workdir, env)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Unpack archive.
+			a, err := txtar.ParseFile(file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			initScriptDirs(t, s)
+			if err := s.ExtractFiles(a); err != nil {
+				t.Fatal(err)
+			}
+
+			t.Log(time.Now().UTC().Format(time.RFC3339))
+			work, _ := s.LookupEnv("WORK")
+			t.Logf("$WORK=%s", work)
+
+			// Use scripttest.Run to execute the test
+			scripttest.Run(t, engine, s, file, bytes.NewReader(a.Comment))
+		})
+	}
+}
+
+// initScriptDirs initializes the script directories for testing.
+func initScriptDirs(t testing.TB, s *script.State) {
+	must := func(err error) {
+		if err != nil {
+			t.Helper()
+			t.Fatal(err)
+		}
+	}
+
+	work := s.Getwd()
+	must(s.Setenv("WORK", work))
+	must(os.MkdirAll(filepath.Join(work, "tmp"), 0777))
+	must(s.Setenv(tempEnvName(), filepath.Join(work, "tmp")))
+}
+
+// tempEnvName returns the environment variable name for temp directory.
+func tempEnvName() string {
+	switch runtime.GOOS {
+	case "windows":
+		return "TMP"
+	case "plan9":
+		return "TMPDIR" // actually plan 9 doesn't have one at all but this is fine
+	default:
+		return "TMPDIR"
+	}
 }
 
 // isETXTBSY reports whether err is a "text file busy" error (ETXTBSY).

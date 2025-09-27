@@ -3,7 +3,7 @@
 md2html -http :9080 test.md &
 sleep 1s
 
-exec curl -s http://localhost:9080/
+curl -s http://localhost:9080/
 stdout '<!DOCTYPE html>'
 stdout 'Hello World'
 

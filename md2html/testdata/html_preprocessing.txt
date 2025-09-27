@@ -5,17 +5,17 @@ md2html -http :9021 complex_html.md &
 sleep 1s
 
 # Verify HTML blocks are processed
-exec curl -s http://localhost:9021/
+curl -s http://localhost:9021/
 stdout '<div class="container">'
 stdout '<section id="main">'
 stdout '<dl>'
 stdout '<table'
 
 # Test with allow-unsafe flag for script tags
-md2html -allow-unsafe complex_html.md :9022 &
+md2html -allow-unsafe -http :9022 complex_html.md &
 sleep 1s
 
-exec curl -s http://localhost:9022/
+curl -s http://localhost:9022/
 stdout '<script'
 stdout 'console.log'
 

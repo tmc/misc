@@ -1,19 +1,19 @@
 # Test TOC generation and frontmatter rendering
 
 # Test with TOC enabled
-md2html -toc doc_with_headers.md :9014 &
+md2html -toc -http :9014 doc_with_headers.md &
 sleep 1s
 
 # Should include table of contents
-exec curl -s http://localhost:9014/
+curl -s http://localhost:9014/
 stdout 'id="toc"'
 
 # Test frontmatter rendering
-md2html -render-frontmatter doc_with_frontmatter.md :9015 &
+md2html -render-frontmatter -http :9015 doc_with_frontmatter.md &
 sleep 1s
 
 # Frontmatter should be visible as YAML block
-exec curl -s http://localhost:9015/
+curl -s http://localhost:9015/
 stdout 'language-yaml'
 
 # Clean up background process

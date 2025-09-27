@@ -7,7 +7,7 @@ stderr 'Usage of'
 # Test main() with server mode
 md2html -http :9042 entry.md &
 sleep 1s
-exec curl -s http://localhost:9042/
+curl -s http://localhost:9042/
 stdout 'Entry Point Test'
 
 # Test main() with static HTML generation

@@ -48,7 +48,7 @@ Code block with nested structures
 EOF
 
 # Start server
-md2html -input nested.md -http :9003 &
+md2html -http :9003 &
 sleep 1s
 
 # Test all heading levels are rendered
