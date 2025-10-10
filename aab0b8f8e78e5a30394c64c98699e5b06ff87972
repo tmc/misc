@@ -16,3 +16,8 @@ iTerm2 Session Evaluation (2025-10-10T16:45:57.969160):
   SessionID: 91E259D9
   Directory: /Users/tmc/go/src/github.com/tmc/misc/claude-agents
   Last Command: idle
+
+iTerm2 Session Evaluation (2025-10-10T16:45:57.982561):
+  SessionID: C71DE317
+  Directory: /Users/tmc/go/src/github.com/tmc/misc/claude-agents
+  Last Command: gemini -s -i "you are a meta-meta agent, this session did not behave well, I want you to use it2 to get buffer information and hypothesize on how to improve. Start by running it2 session list --scope tab, examine your own session id, and find your nearest sessioni and investigate it." -y
