@@ -71,3 +71,8 @@ iTerm2 Session Evaluation (2025-10-10T16:45:58.130373):
   SessionID: 0A6E9C2C
   Directory: /Users/tmc/go/src/github.com/tmc/misc/claude-agents
   Last Command: idle
+
+iTerm2 Session Evaluation (2025-10-10T16:45:58.144455):
+  SessionID: 4E8BE811
+  Directory: /Users/tmc/go/src/github.com/tmc/misc/claude-agents
+  Last Command: gemini -y -i 'we are in a mess with a tree of it2 tasks -- use it2 to visualize the current tab as a tree and then attach a git note describing succinctly what happened with each session'
