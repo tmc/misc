@@ -1,0 +1,8 @@
+it2 session analysis
+
+User initiated a session to visualize and understand a complex tree of it2 tasks.
+
+- Visualized the it2 session tree using 'it2 session list --scope=tab --format=tree'.
+- The session involved a broadcast message from 'David' instructing agents to establish and share their hypothesis, role, and understanding of the user's intent.
+- The session encountered a critical error, failing to launch new Gemini sessions due to an iTerm2 API connection failure.
+- Background agent logs indicate a long-running process related to agent governance and coordination.
