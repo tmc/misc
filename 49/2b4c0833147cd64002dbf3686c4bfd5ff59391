@@ -1,0 +1,14 @@
+Commit: 492b4c0833147cd64002dbf3686c4bfd5ff59391
+Date: 2025-10-20
+Claude Code: sonnet-4-5-20250929
+TTY:
+PID: 73270
+Session: w0t0p5:CFF3A1DA-3267-4D8B-A419-17CEDDD26A56
+
+Note: This commit actually contains testdata organization work (chrome-to-har-129).
+The commit message was auto-generated and references unrelated changes.
+Actual changes:
+- Moved analysis docs from /tmp/ to testdata/analysis/2025-10-20/
+- Organized HAR files into testdata/har-files/ by date
+- Created README files for documentation
+- Updated .gitignore to exclude binary test data
