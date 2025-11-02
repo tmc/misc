@@ -300,7 +300,7 @@ func createLLM() (llms.Model, error) {
 	if os.Getenv("ANTHROPIC_API_KEY") != "" {
 		anthropicModel := os.Getenv("AI_ANTHROPIC_MODEL")
 		if anthropicModel == "" {
-			anthropicModel = "claude-3-7-sonnet-latest" // Default to latest Claude 3.7 Sonnet
+			anthropicModel = "claude-sonnet-4-5"
 		}
 
 		llm, err := anthropic.New(anthropic.WithModel(anthropicModel))
