@@ -8,23 +8,20 @@ import (
 )
 
 func TestGenerate(t *testing.T) {
-	type args struct {
-		templateDir string
-	}
 	tests := []struct {
 		name    string
-		args    args
+		opts    Options
 		want    *Generator
 		wantErr bool
 	}{
-		{"basics", args{templateDir: "."}, &Generator{TemplateDir: "."}, false},
-		{"bad-directory", args{templateDir: "testdata/non-existent"}, &Generator{TemplateDir: "testdata/non-existent"}, true},
+		{"basics", Options{TemplateDir: "."}, &Generator{TemplateDir: "."}, false},
+		{"bad-directory", Options{TemplateDir: "testdata/non-existent"}, &Generator{TemplateDir: "testdata/non-existent"}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := NewGenerator(tt.args.templateDir)
+			g := NewGenerator(tt.opts)
 			if diff := cmp.Diff(tt.want, g, cmpopts.IgnoreUnexported(*g)); diff != "" {
-				t.Errorf("newGenerator() mismatch (-want +got):\n%s", diff)
+				t.Errorf("NewGenerator() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
