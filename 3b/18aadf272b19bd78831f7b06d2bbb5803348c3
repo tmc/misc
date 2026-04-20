@@ -1,0 +1,8 @@
+author: claude-code
+version: 2.1.111
+model: claude-opus-4-7 (1M context)
+tty: not a tty
+pid: 14059
+iterm_session_id: w0t5p8:3FCCAC3B-C40E-40F3-9FFB-85787E874781
+date: 2026-04-20T20:52:06Z
+notes: generic reflection primitives (oneofSet, repeatedMessages/Scalars, enumValueOf/enumValuesOf, goOneofDiscriminator) + parsePathTemplate; groundwork for google.api convenience layer in follow-up commit
