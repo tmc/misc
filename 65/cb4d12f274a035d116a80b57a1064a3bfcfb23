@@ -1,0 +1,8 @@
+author: claude-code
+version: 2.1.111
+model: claude-opus-4-7 (1M context)
+tty: not a tty
+pid: 14059
+iterm_session_id: w0t5p8:3FCCAC3B-C40E-40F3-9FFB-85787E874781
+date: 2026-04-20T21:16:40Z
+notes: commit 3 of the a2a codegen request (0547D228). Import accumulator + end-to-end googleapi example. SetCurrent added mid-work because the sibling-package adapter pattern is the primary use case and the default Current (proto pb path) was eliding qualifications. Pre-scan pattern required in the template because text/template is single-pass; documented in the template header.
