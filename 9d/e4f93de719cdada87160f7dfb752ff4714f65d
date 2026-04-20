@@ -1,0 +1,8 @@
+author: claude-code
+version: 2.1.111
+model: claude-opus-4-7 (1M context)
+tty: not a tty
+pid: 14059
+iterm_session_id: w0t5p8:3FCCAC3B-C40E-40F3-9FFB-85787E874781
+date: 2026-04-20T21:00:16Z
+notes: thin google.api helpers (hasHTTPRule, httpBindings, fieldBehavior, methodSignatures) over the generic primitives from 3b18aadf; inline HttpRule fixture avoids genproto dep
