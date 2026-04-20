@@ -1,0 +1,8 @@
+claude-code: 2.1.111 (Claude Code)
+model: claude-opus-4-7[1m]
+tty: not a tty
+not-a-tty
+pid: 52322
+iterm_session: w0t5p8:3FCCAC3B-C40E-40F3-9FFB-85787E874781
+date: 2026-04-20T20:12:34Z
+note: amended from 917fe4c8; tightened default pattern and added -pattern/-builtin flags
