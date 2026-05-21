@@ -1,0 +1,10 @@
+commit: 3286da443ae76c4f2e2b4e3c3e7cf57976dc26d4
+date: 2026-05-21T23:20:31Z
+agent: codex
+version: codex-cli
+model: GPT-5
+tty: not a tty
+pid: 30534
+ITERM_SESSION_ID: w1t13p8:9359185F-6C90-4A35-ADE2-1A1ABDB1F1BD
+rewrites: 662f4f67 + dropped wip 8fbee6c0
+backup: backup/wanix-head-cleanup-20260521T232014Z
