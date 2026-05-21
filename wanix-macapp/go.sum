@@ -1,0 +1,6 @@
+github.com/ebitengine/purego v0.10.0 h1:QIw4xfpWT6GWTzaW5XEKy3HXoqrJGx1ijYHzTF0/ISU=
+github.com/ebitengine/purego v0.10.0/go.mod h1:iIjxzd6CiRiOG0UyXP+V1+jWqUXVjPKLAI0mRfJZTmQ=
+github.com/tmc/apple v0.6.9 h1:xXCwuLc72dk+2bdnlO2TFDBMuq8iIi8tA2dks5wUPsw=
+github.com/tmc/apple v0.6.9/go.mod h1:yy3A4tLBZYBCTu5xG52ZdtaAfzpRdTsuH5sXZn3MjSs=
+github.com/tmc/macgo v0.1.3 h1:zxrzmJOH7Z9b43IDxzM21TlJF0W88RCjfi2YeJhs0Pw=
+github.com/tmc/macgo v0.1.3/go.mod h1:X6P77neg6ent0JsJDbnhC64pks1izaAANCU5J21PH34=
