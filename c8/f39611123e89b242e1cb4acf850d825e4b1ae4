@@ -1,0 +1,9 @@
+commit: c8f39611123e89b242e1cb4acf850d825e4b1ae4
+date: 2026-05-21T23:26:11Z
+agent: codex
+version: codex-cli
+model: GPT-5
+tty: not a tty
+pid: 42157
+ITERM_SESSION_ID: w1t13p8:9359185F-6C90-4A35-ADE2-1A1ABDB1F1BD
+deps: github.com/tmc/apple v0.6.9; github.com/tmc/macgo v0.1.3; no local replace
