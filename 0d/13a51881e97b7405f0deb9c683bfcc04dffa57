@@ -1,0 +1,10 @@
+commit: 0d13a51881e97b7405f0deb9c683bfcc04dffa57
+date: 2026-05-22T22:11:33Z
+agent: codex
+claude-code-version: n/a
+model: GPT-5
+tty: not a tty
+n/a
+pid: 67153
+iterm-session-id: w1t13p8:9359185F-6C90-4A35-ADE2-1A1ABDB1F1BD
+verification: go test ./...; git diff --check; go run ./cmd/wanix-macapp host -assets-dir /Volumes/tmc/go/src/github.com/tmc/wanix-worktree-native-shell/dist -rc-wasm /Volumes/tmc/go/src/github.com/tmc/wanix-worktree-native-shell/rc/rc.wasm -self-test -visible=false -ready-timeout=60s (blocked: runtime ready timeout)
