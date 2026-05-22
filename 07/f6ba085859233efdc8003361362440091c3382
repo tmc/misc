@@ -1,0 +1,13 @@
+commit: 07f6ba085859233efdc8003361362440091c3382
+date: 2026-05-22T20:40:10Z
+agent: codex
+version: codex-cli
+model: GPT-5
+tty: not a tty
+pid: 48530
+ITERM_SESSION_ID: w1t13p8:9359185F-6C90-4A35-ADE2-1A1ABDB1F1BD
+notebook: 2a57b95a-81f3-429b-864b-db67d7647ec3
+current-design-source: 0777c1d9-a3dd-4d80-9fa6-f855b1b0681c
+toolkit-source: fe990dc7-dad6-4245-a076-4eeb267d528f
+artifact: /Users/tmc/.plan9-fs-designs/apple-framework-fs-apis/apple-framework-fs-apis.txtar
+notebook-verdict: comprehensive and right Plan 9 design, no required changes remain
