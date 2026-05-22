@@ -1,0 +1,10 @@
+commit: 3250f6d8bf228cc2400d7dd4c3f2d3eff4380fee
+date: 2026-05-22T21:04:30Z
+agent: codex
+claude-code-version: n/a
+model: GPT-5
+tty: not a tty
+n/a
+pid: 80959
+iterm-session-id: w1t13p8:9359185F-6C90-4A35-ADE2-1A1ABDB1F1BD
+verification: go test ./...; git diff --check
