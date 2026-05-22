@@ -1,0 +1,11 @@
+commit: 237e5e9bf7345afcc7e457a614f0d72cbd76eb20
+date: 2026-05-22T18:19:52Z
+agent: codex
+version: codex-cli
+model: GPT-5
+tty: not a tty
+pid: 39934
+ITERM_SESSION_ID: w1t13p8:9359185F-6C90-4A35-ADE2-1A1ABDB1F1BD
+skill: /Users/tmc/go/src/github.com/tmc/skills/skills/plan9-fs-api-design
+notebook: 2a57b95a-81f3-429b-864b-db67d7647ec3
+artifact: /Users/tmc/.plan9-fs-designs/wanix-macos-desktop/wanix-macos-desktop.txtar
