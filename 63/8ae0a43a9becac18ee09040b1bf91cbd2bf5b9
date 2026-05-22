@@ -1,0 +1,11 @@
+commit: 638ae0a43a9becac18ee09040b1bf91cbd2bf5b9
+date: 2026-05-22T20:07:39Z
+agent: codex
+version: codex-cli
+model: GPT-5
+tty: not a tty
+pid: 91595
+ITERM_SESSION_ID: w1t13p8:9359185F-6C90-4A35-ADE2-1A1ABDB1F1BD
+notebook: 2a57b95a-81f3-429b-864b-db67d7647ec3
+source: fe990dc7-dad6-4245-a076-4eeb267d528f
+artifact: /Users/tmc/.plan9-fs-designs/apple-framework-fs-apis/apple-framework-fs-apis.txtar
