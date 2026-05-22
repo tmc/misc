@@ -1,0 +1,9 @@
+commit: d680152717538a3d186851c1ffc8a066cc1712aa
+date: 2026-05-22T16:24:34Z
+agent: codex
+version: codex-cli
+model: GPT-5
+tty: not a tty
+pid: 82683
+ITERM_SESSION_ID: w1t13p8:9359185F-6C90-4A35-ADE2-1A1ABDB1F1BD
+change: simplify Wanix desktop namespace; remove unimplemented dialog API; canonicalize window paths
