@@ -96,6 +96,40 @@ prior_context_body() {
         "$1"
 }
 
+check_probe_verdict() {
+    # args: <probe-name> <output-file>
+    #
+    # Probe 03 is the adversarial repair gate for the accepted tree. Later
+    # probes are deterministic from that tree, so continuing after a blocking
+    # verdict only turns a known-bad contract into polished prose.
+    local name="$1" out="$2"
+    case "$name" in
+        03-critique-adversarial)
+            if grep -q '^Blocking verdict: REPAIR BEFORE SEMANTICS' "$out"; then
+                if [ "${ALLOW_TREE_REPAIR:-0}" = "1" ]; then
+                    echo "warning: $name requests repair; continuing because ALLOW_TREE_REPAIR=1" >&2
+                else
+                    echo "BLOCKED by $name; inspect $out before continuing." >&2
+                    exit 4
+                fi
+            fi
+            ;;
+    esac
+}
+
+check_prior_verdicts() {
+    # args: <current-probe-name>
+    # A targeted resume at 04-* or later must not skip past an already-known
+    # bad tree. If probe 03 is absent, let the selected run proceed.
+    local name="$1" f
+    case "$name" in
+        04-*|05*-*|06-*|07-*|08-*|09-*)
+            f="$WORK/probes/03-critique-adversarial.md"
+            [ -s "$f" ] && check_probe_verdict "03-critique-adversarial" "$f"
+            ;;
+    esac
+}
+
 run_one() {
     # args: <prompt-file> <out-file>
     #
@@ -145,12 +179,14 @@ shopt -s nullglob
 for P in "$SKILL_DIR"/prompts/$GLOB; do
     name=$(basename "$P" .md)
     out="$WORK/probes/$name.md"
+    check_prior_verdicts "$name"
     if [ -s "$out" ] && [ "$(wc -c < "$out")" -ge "$MIN_BYTES" ]; then
         echo "skip $name (already exists)" >&2
         if [ "$name" = "00-source-audit" ] && grep -q '^Decision: BLOCKED' "$out"; then
             echo "BLOCKED by existing source audit; inspect $out before continuing." >&2
             exit 3
         fi
+        check_probe_verdict "$name" "$out"
         continue
     fi
 
@@ -176,6 +212,7 @@ for P in "$SKILL_DIR"/prompts/$GLOB; do
             if "$SKILL_DIR/scripts/derive.sh" "$SLUG" "$name" > "$out" 2> "$out.stderr"; then
                 bytes=$(wc -c < "$out")
                 echo "  $name produced $bytes bytes" >&2
+                check_probe_verdict "$name" "$out"
                 break
             fi
             echo "  $name deterministic renderer failed; falling back to NotebookLM" >&2
@@ -202,6 +239,7 @@ for P in "$SKILL_DIR"/prompts/$GLOB; do
             echo "BLOCKED by source audit; inspect $out before continuing." >&2
             exit 3
         fi
+        check_probe_verdict "$name" "$out"
         break
     done
 

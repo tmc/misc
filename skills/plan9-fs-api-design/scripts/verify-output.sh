@@ -38,6 +38,41 @@ contains() {
     grep -Fq "$1" "$2"
 }
 
+tree_placeholder_rows() {
+    # args: <markdown-file>
+    # Tree node names must be paths, not prose placeholders. Comments such as
+    # "(mandatory) unused in this API" are legitimate on mandatory files, so
+    # inspect only the node token, not trailing annotations.
+    awk '
+        /^###[[:space:]]+2\./ || /^##[[:space:]]+2\./ { in2=1; next }
+        in2 && /^###[[:space:]]+/ { in2=0; fence=0 }
+        in2 && /^##[[:space:]]+/ { in2=0; fence=0 }
+        in2 && /^```/ { fence = !fence; next }
+        in2 && fence {
+            line=$0
+            gsub(/├──|└──|\|--|`--|\\--/, "+--", line)
+            if (line ~ /^\/[^[:space:]]+/) {
+                node=line
+                sub(/[[:space:]].*/, "", node)
+            } else {
+                pos=index(line, "+--")
+                if (pos == 0)
+                    next
+                node=substr(line, pos+3)
+                sub(/^[[:space:]]+/, "", node)
+                sub(/[[:space:]]*(←|<-).*/, "", node)
+                sub(/[[:space:]]+[(].*/, "", node)
+                gsub(/^[[:space:]]+|[[:space:]]+$/, "", node)
+            }
+            sub(/\/$/, "", node)
+            l=tolower(node)
+            gsub(/[[:space:]_-]+/, " ", l)
+            if (l == "n/a" || l == "na" || l == "not applicable" || l == "placeholder")
+                print $0
+        }
+    ' "$1"
+}
+
 # tree_paths_from - literal-id absolute paths from a markdown tree, kept as a
 # thin alias over the shared parser for the final-document comparison.
 tree_paths_from() {
@@ -48,6 +83,44 @@ tree_paths_from() {
 # the $id/$n template form used by the prose sections of the final document.
 contract_paths() {
     tree_paths "$WORK/probes/02b-refine-decomposition.md"
+}
+
+structural_leaf_dirs() {
+    # args: <newline-separated paths>
+    # Some names are namespace families in this skill's contract. When they
+    # appear, they should have children; otherwise a model has probably put a
+    # whole unavailable feature family into the tree as a placeholder.
+    printf '%s\n' "$1" | awk '
+        NF {
+            path[++n]=$0
+        }
+        END {
+            for (i=1; i<=n; i++) {
+                p=path[i]
+                structural=0
+                split(p, part, "/")
+                if (part[2] != "" && part[3] == "model" && part[4] == "")
+                    structural=1
+                if (p ~ /\/\$id\/(ctx|in|prompt|tools)$/)
+                    structural=1
+                if (p ~ /\/tools\/(\$NAME|[^\/]+)\/interact$/)
+                    structural=1
+                if (!structural)
+                    continue
+
+                child=0
+                prefix=p "/"
+                for (j=1; j<=n; j++) {
+                    if (index(path[j], prefix) == 1) {
+                        child=1
+                        break
+                    }
+                }
+                if (!child)
+                    print p
+            }
+        }
+    '
 }
 
 echo "document: $DOC"
@@ -93,6 +166,22 @@ if [ -f "$WORK/probes/00-source-audit.md" ] &&
     fail=1
 fi
 
+if [ -f "$WORK/probes/03-critique-adversarial.md" ] &&
+   grep -q '^Blocking verdict: REPAIR BEFORE SEMANTICS' "$WORK/probes/03-critique-adversarial.md"; then
+    echo "probe 03 requires tree repair before synthesis" >&2
+    fail=1
+fi
+
+for tree_doc in "$WORK/probes/02b-refine-decomposition.md" "$DOC"; do
+    [ -f "$tree_doc" ] || continue
+    placeholder_rows=$(tree_placeholder_rows "$tree_doc")
+    if [ -n "$placeholder_rows" ]; then
+        echo "filesystem tree contains placeholder rows in $tree_doc:" >&2
+        printf '%s\n' "$placeholder_rows" >&2
+        fail=1
+    fi
+done
+
 # Contract-path gate. Every path in the authoritative 02b tree (with example
 # ids normalized to $id/$n) must appear in the final document — either in its
 # tree block or, for per-file leaf paths, as a section-3 semantics header. This
@@ -103,6 +192,13 @@ final_tree=$(tree_paths "$DOC" || true)
 # Section-3 headers in the doc, e.g. "#### `/llm/$id/ctl` - ...".
 section3_paths=$(grep -Eo '^#### `[^`]+`' "$DOC" | sed -E 's/^#### `//; s/`$//' || true)
 if [ -n "$paths" ]; then
+    leaf_dirs=$(structural_leaf_dirs "$paths" || true)
+    if [ -n "$leaf_dirs" ]; then
+        echo "filesystem tree contains structural families without children:" >&2
+        printf '%s\n' "$leaf_dirs" >&2
+        fail=1
+    fi
+
     while IFS= read -r p; do
         [ -n "$p" ] || continue
         if printf '%s\n' "$final_tree" | grep -Fxq "$p" ||
@@ -240,7 +336,14 @@ if [ -n "$section4_rows" ]; then
         fail=1
     fi
 
-    contract_folded=$(printf '%s\n' "$paths" | fold | fold | fold | sort -u)
+    contract_folded=$(
+        {
+            printf '%s\n' "$paths"
+            printf '%s\n' "$section3_paths"
+        } |
+        fold | fold | fold |
+        sort -u
+    )
     section4_missing_paths=$(
         printf '%s\n' "$section4_rows" |
         awk -F'|' '{ print $3 }' |
