@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tmc/misc/wanix-macapp/internal/applefs"
 )
 
 func TestMIME(t *testing.T) {
@@ -41,16 +43,81 @@ func TestAssetsOpenBootstrap(t *testing.T) {
 	text := string(asset.Data)
 	for _, want := range []string{
 		`<wanix-bind dst="term" src="#term">`,
+		`<wanix-bind dst="macos" src="#macos">`,
+		`<wanix-bind dst="mnt/macos" src="#macos">`,
 		`<wanix-bind type="fetch" dst="rc.wasm" src="./rc.wasm">`,
 		`<wanix-task id="rc" cmd="rc.wasm" type="gojs" wd="web" term start>`,
 		`<wanix-term path="#task/rc/term">`,
+		`<script type="module" src="./wanix.min.js"></script>`,
+		`<script>`,
+		`customElements.whenDefined("wanix-system")`,
+		`waitForRuntimeHooks`,
+		`ensureNamespace`,
+		`wanix bootstrap timeout`,
+		`wanix-system ready event timeout`,
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("bootstrap missing %s", want)
 		}
 	}
-	if !strings.Contains(NativeBridgeScript, `alert/show`) {
-		t.Fatal("native bridge missing alert/show")
+	if !strings.Contains(NativeBridgeScript, `native.fs`) {
+		t.Fatal("native bridge missing native fs transport")
+	}
+}
+
+func TestNativeBridgeDesktopSurface(t *testing.T) {
+	tests := []struct {
+		name string
+		want string
+	}{
+		{"native fs read", `"readFile"`},
+		{"native fs write", `"writeFile"`},
+		{"native fs readdir", `"readDir"`},
+		{"native fs cache", `__wanixHydrateMacOSFS`},
+		{"native fs reply", `__wanixNativeFSReply`},
+		{"native fs refresh after write", `refreshAfterWrite`},
+		{"clone schema injection", `__wanixCloneSchemas`},
+		{"initial fs injection", `__wanixInitialMacOSFS`},
+		{"global clone ids", `globalCloneNext`},
+		{"cache update hook", `_updateCache`},
+		{"cache append hook", `_appendCache`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !strings.Contains(NativeBridgeScript, tt.want) {
+				t.Fatalf("native bridge missing %s", tt.want)
+			}
+		})
+	}
+	for _, old := range []string{`legacy =`, `legacy(name)`, `fps `, `duration `, `format `} {
+		if strings.Contains(NativeBridgeScript, old) {
+			t.Fatalf("native bridge still has Apple-specific routing %s", old)
+		}
+	}
+	for _, old := range []string{`"app/name"`, `"dialog/open/ctl"`, `"dialog/open/result"`, `"dialog.open"`, `"window/0/title"`, `"window/0/ctl"`, `"alert/show"`, `"alert.show"`} {
+		if strings.Contains(NativeBridgeScript, old) {
+			t.Fatalf("native bridge still exposes %s", old)
+		}
+	}
+}
+
+func TestNativeBridgeScriptInjectsCloneSchemas(t *testing.T) {
+	script := nativeBridgeScript(applefs.NewRoot())
+	if strings.Contains(script, "__WANIX_CLONE_SCHEMAS__") {
+		t.Fatal("native bridge script still contains clone schema placeholder")
+	}
+	if strings.Contains(script, "__WANIX_INITIAL_FS__") {
+		t.Fatal("native bridge script still contains initial fs placeholder")
+	}
+	for _, want := range []string{`"appkit/alert"`, `"alert"`, `"vision"`, `"ax/app"`} {
+		if !strings.Contains(script, want) {
+			t.Fatalf("native bridge script missing schema %s", want)
+		}
+	}
+	for _, want := range []string{`"appkit"`, `"notify"`, `"touchid"`, `"status"`} {
+		if !strings.Contains(script, want) {
+			t.Fatalf("native bridge script missing initial fs %s", want)
+		}
 	}
 }
 
@@ -95,5 +162,18 @@ func TestAssetsOpenRejectsEscapes(t *testing.T) {
 	}
 	if got := string(asset.Data); got != "inside" {
 		t.Fatalf("inside asset = %q, want inside", got)
+	}
+}
+
+func TestAssetServerSummary(t *testing.T) {
+	var s assetServer
+	if got := s.Summary(); got != "no asset requests" {
+		t.Fatalf("empty summary = %q", got)
+	}
+	s.record("/")
+	s.record("/wanix.js")
+	s.record("/wanix.js")
+	if got := s.Summary(); got != "/:1, /wanix.js:2" {
+		t.Fatalf("summary = %q", got)
 	}
 }

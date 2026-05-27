@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/tmc/apple/appkit"
 	"github.com/tmc/apple/objc"
@@ -54,14 +55,12 @@ Commands:
   build     build a small .app bundle around this launcher
   run       open a built .app bundle
 
-The host mounts a Plan 9-style macOS namespace at /mnt/macos:
-  /mnt/macos/app/name
-  /mnt/macos/app/activate
-  /mnt/macos/app/quit
-  /mnt/macos/window/0/title
-  /mnt/macos/window/0/ctl
-  /mnt/macos/pasteboard/text
-  /mnt/macos/dialog/open
+The host mounts a Plan 9-style macOS namespace at macos:
+  macos/app/ctl
+  macos/window/title
+  macos/window/ctl
+  macos/pasteboard/text
+  macos/alert/clone
 `)
 }
 
@@ -73,6 +72,7 @@ func runHost(args []string) error {
 	visible := fs.Bool("visible", true, "show the WebKit window")
 	inspectable := fs.Bool("inspectable", true, "allow Safari Web Inspector")
 	selfTest := fs.Bool("self-test", false, "run a fail-closed runtime check")
+	readyTimeout := fs.Duration("ready-timeout", 15*time.Second, "maximum time to wait for the Wanix runtime during -self-test")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -86,13 +86,14 @@ func runHost(args []string) error {
 		return fmt.Errorf("rc.wasm not found; run make -C <wanix>/rc build or pass -rc-wasm")
 	}
 	appkit.RunApp(func(app appkit.NSApplication, delegate appkit.NSApplicationDelegateObject) {
-		host := webkithost.New(webkithost.Config{AssetsDir: *assetsDir, RCPath: *rcWASM, URL: *url, Visible: *visible, Inspectable: *inspectable})
+		host := webkithost.New(webkithost.Config{AssetsDir: *assetsDir, RCPath: *rcWASM, URL: *url, Visible: *visible, Inspectable: *inspectable, ReadyTimeout: *readyTimeout})
 		app.SetMainMenu(buildMenuBar())
 		if err := host.Load(); err != nil {
 			log.Printf("load failed: %v", err)
 			app.Terminate(nil)
 			os.Exit(1)
 		}
+		app.Activate()
 		if *selfTest {
 			go func() {
 				if err := host.SelfTest(context.Background()); err != nil {
@@ -105,7 +106,6 @@ func runHost(args []string) error {
 				app.Terminate(nil)
 			}()
 		}
-		app.Activate()
 	})
 	return nil
 }

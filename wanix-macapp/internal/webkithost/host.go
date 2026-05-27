@@ -6,16 +6,20 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/tmc/apple/appkit"
+	"github.com/tmc/apple/applicationservices"
 	"github.com/tmc/apple/corefoundation"
 	"github.com/tmc/apple/foundation"
 	"github.com/tmc/apple/objectivec"
 	"github.com/tmc/apple/webkit"
+	"github.com/tmc/misc/wanix-macapp/internal/applefs"
 )
 
 // Config controls a WebKit-backed Wanix host.
@@ -30,18 +34,31 @@ type Config struct {
 
 // Host owns the WebKit view and native bridge objects.
 type Host struct {
-	cfg        Config
-	window     appkit.NSWindow
-	webView    webkit.WKWebView
-	controller webkit.WKUserContentController
-	bridge     webkit.WKScriptMessageHandlerObject
-	server     *assetServer
-	mainLoop   foundation.NSRunLoop
-	ready      chan Message
-	errors     chan Message
-	pendingMu  sync.Mutex
-	pending    map[string]chan Message
-	commandID  atomic.Uint64
+	cfg         Config
+	window      appkit.NSWindow
+	webView     webkit.WKWebView
+	controller  webkit.WKUserContentController
+	bridge      webkit.WKScriptMessageHandlerObject
+	server      *assetServer
+	mainLoop    foundation.NSRunLoop
+	ready       chan Message
+	errors      chan Message
+	pendingMu   sync.Mutex
+	pending     map[string]chan Message
+	commandID   atomic.Uint64
+	appleFS     *applefs.Root
+	indicatorMu sync.Mutex
+	indicators  map[string]appkit.NSStatusItem
+	speechMu    sync.Mutex
+	speech      map[string]speechSynth
+	axMu        sync.Mutex
+	axElements  map[string]applicationservices.AXUIElementRef
+	vzMu        sync.Mutex
+	vzVMs       map[string]vzSession
+	micMu       sync.Mutex
+	micStreams  map[string]context.CancelFunc
+	screenMu    sync.Mutex
+	screenRuns  map[string]context.CancelFunc
 }
 
 // New creates a host. It must be called on the AppKit main thread.
@@ -50,18 +67,32 @@ func New(cfg Config) *Host {
 		cfg.ReadyTimeout = 15 * time.Second
 	}
 	h := &Host{
-		cfg:      cfg,
-		mainLoop: foundation.GetRunLoopClass().MainRunLoop(),
-		ready:    make(chan Message, 1),
-		errors:   make(chan Message, 16),
-		pending:  make(map[string]chan Message),
+		cfg:        cfg,
+		mainLoop:   foundation.GetRunLoopClass().MainRunLoop(),
+		ready:      make(chan Message, 1),
+		errors:     make(chan Message, 16),
+		pending:    make(map[string]chan Message),
+		appleFS:    applefs.NewRoot(),
+		indicators: make(map[string]appkit.NSStatusItem),
+		speech:     make(map[string]speechSynth),
+		axElements: make(map[string]applicationservices.AXUIElementRef),
+		vzVMs:      make(map[string]vzSession),
+		micStreams: make(map[string]context.CancelFunc),
+		screenRuns: make(map[string]context.CancelFunc),
 	}
 	h.bridge = NewBridge(h.handleMessage)
+	h.appleFS.Host = nativeAppleHost{h: h}
+	h.appleFS.OnWrite = func(name string, data []byte) {
+		h.updateMacOSCache(name, data, false)
+	}
+	h.appleFS.OnAppend = func(name string, data []byte) {
+		h.updateMacOSCache(name, data, true)
+	}
 
 	h.controller = webkit.NewWKUserContentController()
 	h.controller.AddScriptMessageHandlerName(h.bridge, "wanix")
 	h.controller.AddUserScript(webkit.NewUserScriptWithSourceInjectionTimeForMainFrameOnly(
-		NativeBridgeScript,
+		nativeBridgeScript(h.appleFS),
 		webkit.WKUserScriptInjectionTimeAtDocumentStart,
 		true,
 	))
@@ -73,20 +104,99 @@ func New(cfg Config) *Host {
 	h.webView = webkit.GetWKWebViewClass().Alloc().InitWithFrameConfiguration(frame, wcfg)
 	h.webView.SetInspectable(cfg.Inspectable)
 
+	h.window = appkit.GetNSWindowClass().Alloc().InitWithContentRectStyleMaskBackingDefer(
+		frame,
+		appkit.NSWindowStyleMaskTitled|appkit.NSWindowStyleMaskClosable|appkit.NSWindowStyleMaskMiniaturizable|appkit.NSWindowStyleMaskResizable,
+		appkit.NSBackingStoreBuffered,
+		false,
+	)
+	h.window.SetTitle("Wanix")
+	h.window.SetContentView(h.webView)
+	h.window.Center()
 	if cfg.Visible {
-		h.window = appkit.GetNSWindowClass().Alloc().InitWithContentRectStyleMaskBackingDefer(
-			frame,
-			appkit.NSWindowStyleMaskTitled|appkit.NSWindowStyleMaskClosable|appkit.NSWindowStyleMaskMiniaturizable|appkit.NSWindowStyleMaskResizable,
-			appkit.NSBackingStoreBuffered,
-			false,
-		)
-		h.window.SetTitle("Wanix")
-		h.window.SetContentView(h.webView)
-		h.window.Center()
 		h.window.MakeKeyAndOrderFront(nil)
 	}
 
 	return h
+}
+
+func nativeBridgeScript(root *applefs.Root) string {
+	cloneData, err := json.Marshal(root.CloneSchemas())
+	if err != nil {
+		cloneData = []byte("{}")
+	}
+	initialData, err := json.Marshal(snapshotAppleFS(root, 3))
+	if err != nil {
+		initialData = []byte(`{"dirs":{},"files":{}}`)
+	}
+	script := strings.Replace(NativeBridgeScript, "__WANIX_CLONE_SCHEMAS__", string(cloneData), 1)
+	return strings.Replace(script, "__WANIX_INITIAL_FS__", string(initialData), 1)
+}
+
+type appleFSSnapshot struct {
+	Dirs  map[string][]applefs.Entry `json:"dirs"`
+	Files map[string]string          `json:"files"`
+}
+
+func snapshotAppleFS(root *applefs.Root, depth int) appleFSSnapshot {
+	snap := appleFSSnapshot{
+		Dirs:  make(map[string][]applefs.Entry),
+		Files: make(map[string]string),
+	}
+	snapshotAppleFSDir(root, snap, "", depth)
+	return snap
+}
+
+func snapshotAppleFSDir(root *applefs.Root, snap appleFSSnapshot, name string, depth int) {
+	readName := name
+	if readName == "" {
+		readName = "."
+	}
+	entries, err := root.ReadDir(readName)
+	if err != nil {
+		return
+	}
+	snap.Dirs[name] = entries
+	for _, entry := range entries {
+		child := entry.Name
+		if name != "" {
+			child = name + "/" + entry.Name
+		}
+		if entry.Dir {
+			if depth > 0 {
+				snapshotAppleFSDir(root, snap, child, depth-1)
+			}
+			continue
+		}
+		data, err := root.ReadFile(child)
+		if err == nil {
+			snap.Files[child] = base64.StdEncoding.EncodeToString(data)
+		}
+	}
+}
+
+func (h *Host) updateMacOSCache(name string, data []byte, append bool) {
+	if h.webView.GetID() == 0 {
+		return
+	}
+	jsName, err := jsString(name)
+	if err != nil {
+		return
+	}
+	jsData, err := jsString(base64.StdEncoding.EncodeToString(data))
+	if err != nil {
+		return
+	}
+	method := "_updateCache"
+	if append {
+		method = "_appendCache"
+	}
+	h.performOnMain(func() {
+		h.webView.EvaluateJavaScriptCompletionHandler(
+			`window.__wanixMacOSFS && window.__wanixMacOSFS.`+method+`(`+jsName+`, `+jsData+`)`,
+			nil,
+		)
+	})
 }
 
 // Load starts the Wanix bootstrap document.
@@ -125,9 +235,70 @@ func (h *Host) WaitReady(ctx context.Context) (Message, error) {
 		case msg := <-h.errors:
 			return Message{}, fmt.Errorf("runtime error: %s", msg.Message)
 		case <-ctx.Done():
-			return Message{}, fmt.Errorf("wanix system ready timeout: %w", ctx.Err())
+			msg, ok := h.readyBySnapshot()
+			if ok {
+				return msg, nil
+			}
+			return Message{}, fmt.Errorf("wanix system ready timeout after assets %s; page %s: %w", h.server.Summary(), h.readySnapshot(), ctx.Err())
 		}
 	}
+}
+
+func (h *Host) readyBySnapshot() (Message, bool) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	result, err := h.Eval(ctx, `JSON.stringify({
+  isReady: !!(document.getElementById("system") && document.getElementById("system").isReady),
+  capabilities: {
+    wasm: typeof WebAssembly !== "undefined",
+    worker: typeof Worker !== "undefined",
+    messageChannel: typeof MessageChannel !== "undefined",
+    blob: typeof Blob !== "undefined",
+    fetch: typeof fetch !== "undefined",
+    sharedArrayBuffer: typeof SharedArrayBuffer !== "undefined",
+    crossOriginIsolated: !!globalThis.crossOriginIsolated
+  }
+})`)
+	if err != nil {
+		return Message{}, false
+	}
+	var status struct {
+		IsReady      bool            `json:"isReady"`
+		Capabilities map[string]bool `json:"capabilities"`
+	}
+	if err := jsonUnmarshalString(result, &status); err != nil || !status.IsReady {
+		return Message{}, false
+	}
+	return Message{Type: "ready", Capabilities: status.Capabilities}, true
+}
+
+func (h *Host) readySnapshot() string {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	result, err := h.Eval(ctx, `JSON.stringify({
+  readyState: document.readyState,
+  location: String(location.href),
+  hasWebkit: !!(window.webkit && window.webkit.messageHandlers),
+  hasWanixHandler: !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.wanix),
+  hasSystem: !!document.getElementById("system"),
+  isReady: !!(document.getElementById("system") && document.getElementById("system").isReady),
+  hasRoot: !!(document.getElementById("system") && document.getElementById("system")._root),
+  systemReadyType: String(document.getElementById("system") && typeof document.getElementById("system")._ready),
+  setupNamespaceType: String(document.getElementById("system") && typeof document.getElementById("system")._setupNamespace),
+  openPortType: String(document.getElementById("system") && typeof document.getElementById("system")._openPort),
+  setupNamespaceText: String(document.getElementById("system") && document.getElementById("system")._setupNamespace).slice(0, 80),
+  openPortText: String(document.getElementById("system") && document.getElementById("system")._openPort).slice(0, 80),
+  wasmReadyType: String(document.getElementById("system") && typeof document.getElementById("system")._wasmReady),
+  controllerStarted: !!window.wanixHostControllerStarted,
+  ensureStarted: !!window.wanixHostEnsureNamespaceStarted,
+  runtimeHooksReady: !!window.wanixHostRuntimeHooksReady,
+  namespaceEnsured: !!window.wanixHostNamespaceEnsured,
+  wanixGlobalKeys: window.__wanix ? Object.keys(window.__wanix).join(",") : ""
+})`)
+	if err != nil {
+		return "snapshot error: " + err.Error()
+	}
+	return result
 }
 
 // Eval evaluates JavaScript in the WebKit view.
@@ -229,17 +400,159 @@ func (h *Host) SelfTest(ctx context.Context) error {
 	if err := h.FileByteRoundTrip(ctx, "tmp/bytes.bin", []byte{0, 1, 2, 127, 128, 255}); err != nil {
 		return err
 	}
-	status, err := h.ReadFile(ctx, "mnt/macos/status")
+	status, err := h.ReadFile(ctx, "macos/status")
 	if err != nil {
 		return fmt.Errorf("macos namespace status: %w", err)
 	}
-	if !bytes.Contains([]byte(status), []byte(`"api":"macos"`)) {
+	if !bytes.Contains([]byte(status), []byte("api macos\n")) {
 		return fmt.Errorf("macos namespace status: %q", status)
 	}
-	if err := h.WriteFile(ctx, "mnt/macos/window/0/title", "Wanix Native Self-Test\n"); err != nil {
+	if legacy, err := h.ReadFile(ctx, "mnt/macos/status"); err != nil {
+		return fmt.Errorf("legacy macos namespace status: %w", err)
+	} else if !bytes.Contains([]byte(legacy), []byte("api macos\n")) {
+		return fmt.Errorf("legacy macos namespace status: %q", legacy)
+	}
+	if err := h.WriteFile(ctx, "macos/window/title", "Wanix Native Self-Test\n"); err != nil {
 		return fmt.Errorf("macos namespace title: %w", err)
 	}
+	if err := h.selfTestAppleFS(ctx); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (h *Host) selfTestAppleFS(ctx context.Context) error {
+	entries, err := h.ReadMacOSDir(ctx, "")
+	if err != nil {
+		return fmt.Errorf("macos namespace readdir: %w", err)
+	}
+	seen := make(map[string]bool)
+	for _, entry := range entries {
+		if entry.Dir {
+			seen[entry.Name] = true
+		}
+	}
+	for _, name := range []string{
+		"appkit", "notify", "touchid", "vision", "image", "document",
+		"speech", "mic", "screen", "ax", "keychain", "reachability", "vz",
+	} {
+		if !seen[name] {
+			return fmt.Errorf("macos namespace missing %s in %v", name, entries)
+		}
+	}
+	checks := []struct {
+		path string
+		want string
+	}{
+		{"macos/appkit/status", "api appkit\n"},
+		{"macos/vision/status", "status ok\n"},
+		{"macos/speech/voices", "["},
+		{"macos/reachability/status", "api reachability\n"},
+		{"macos/vz/status", "api vz\n"},
+	}
+	for _, check := range checks {
+		data, err := h.ReadFile(ctx, check.path)
+		if err != nil {
+			return fmt.Errorf("read %s: %w", check.path, err)
+		}
+		if !bytes.Contains([]byte(data), []byte(check.want)) {
+			return fmt.Errorf("read %s: missing %q in %q", check.path, check.want, data)
+		}
+	}
+	if err := h.selfTestCloneSurfaces(ctx); err != nil {
+		return err
+	}
+	if os.Getenv("WANIX_MACAPP_SELFTEST_LIVE") == "1" {
+		if err := h.selfTestLiveAppleFS(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (h *Host) selfTestCloneSurfaces(ctx context.Context) error {
+	visionID, err := h.cloneID(ctx, "macos/vision/clone")
+	if err != nil {
+		return err
+	}
+	if err := h.WriteFile(ctx, "macos/vision/"+visionID+"/format", "json\n"); err != nil {
+		return fmt.Errorf("vision format: %w", err)
+	}
+	if data, err := h.ReadFile(ctx, "macos/vision/"+visionID+"/format"); err != nil || data != "json\n" {
+		return fmt.Errorf("vision format round trip: got %q err %v", data, err)
+	}
+
+	screenID, err := h.cloneID(ctx, "macos/screen/clone")
+	if err != nil {
+		return err
+	}
+	if err := h.WriteFile(ctx, "macos/screen/"+screenID+"/ctl", "fps 2\n"); err != nil {
+		return fmt.Errorf("screen fps ctl: %w", err)
+	}
+	if data, err := h.ReadFile(ctx, "macos/screen/"+screenID+"/fps"); err != nil || data != "2\n" {
+		return fmt.Errorf("screen fps round trip: got %q err %v", data, err)
+	}
+
+	micID, err := h.cloneID(ctx, "macos/mic/clone")
+	if err != nil {
+		return err
+	}
+	if err := h.WriteFile(ctx, "macos/mic/"+micID+"/ctl", "duration 100ms\n"); err != nil {
+		return fmt.Errorf("mic duration ctl: %w", err)
+	}
+	if data, err := h.ReadFile(ctx, "macos/mic/"+micID+"/duration"); err != nil || data != "100ms\n" {
+		return fmt.Errorf("mic duration round trip: got %q err %v", data, err)
+	}
+
+	vzID, err := h.cloneID(ctx, "macos/vz/clone")
+	if err != nil {
+		return err
+	}
+	cfg := `{"cpus":1,"memoryMiB":512,"bootMode":"efi"}` + "\n"
+	if err := h.WriteFile(ctx, "macos/vz/"+vzID+"/config", cfg); err != nil {
+		return fmt.Errorf("vz config: %w", err)
+	}
+	if data, err := h.ReadFile(ctx, "macos/vz/"+vzID+"/config"); err != nil || data != cfg {
+		return fmt.Errorf("vz config round trip: got %q err %v", data, err)
+	}
+	return nil
+}
+
+func (h *Host) selfTestLiveAppleFS(ctx context.Context) error {
+	micID, err := h.cloneID(ctx, "macos/mic/clone")
+	if err != nil {
+		return err
+	}
+	if err := h.WriteFile(ctx, "macos/mic/"+micID+"/ctl", "duration 100ms\n"); err != nil {
+		return err
+	}
+	if err := h.WriteFile(ctx, "macos/mic/"+micID+"/ctl", "oneshot\n"); err != nil {
+		return fmt.Errorf("mic oneshot: %w", err)
+	}
+	if disk := os.Getenv("WANIX_MACAPP_SELFTEST_VZ_DISK"); disk != "" {
+		vzID, err := h.cloneID(ctx, "macos/vz/clone")
+		if err != nil {
+			return err
+		}
+		if err := h.WriteFile(ctx, "macos/vz/"+vzID+"/config", `{"cpus":1,"memoryMiB":1024,"bootMode":"efi","readOnly":true}`+"\n"); err != nil {
+			return err
+		}
+		if err := h.WriteFile(ctx, "macos/vz/"+vzID+"/disk", disk+"\n"); err != nil {
+			return err
+		}
+		if err := h.WriteFile(ctx, "macos/vz/"+vzID+"/ctl", "validate\n"); err != nil {
+			return fmt.Errorf("vz validate: %w", err)
+		}
+	}
+	return nil
+}
+
+func (h *Host) cloneID(ctx context.Context, path string) (string, error) {
+	id, err := h.ReadFile(ctx, path)
+	if err != nil {
+		return "", fmt.Errorf("clone %s: %w", path, err)
+	}
+	return strings.TrimSpace(id), nil
 }
 
 // FileRoundTrip writes and reads a file through the Wanix root handle.
@@ -294,7 +607,7 @@ func (h *Host) WriteFileBytes(ctx context.Context, path string, data []byte) err
   const binary = atob(encoded);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  if (!name.startsWith("mnt/macos/")) {
+  if (!name.startsWith("macos/") && !name.startsWith("mnt/macos/")) {
     await root.makeDirAll(name.split("/").slice(0, -1).join("/") || ".");
   }
   await root.writeFile(name, bytes);
@@ -337,9 +650,51 @@ func (h *Host) ReadFileBytes(ctx context.Context, path string) ([]byte, error) {
 	return data, nil
 }
 
+// ReadMacOSDir reads the hydrated macOS hostfs cache in the WebKit page.
+func (h *Host) ReadMacOSDir(ctx context.Context, path string) ([]appleFSEntry, error) {
+	name, err := jsString(path)
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.EvalAsync(ctx, `return JSON.stringify(window.__wanixMacOSFS.readDir(`+name+`));`)
+	if err != nil {
+		return nil, err
+	}
+	var entries []appleFSEntry
+	if err := jsonUnmarshalString(result, &entries); err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+// ReadDir reads a directory through the Wanix root handle.
+func (h *Host) ReadDir(ctx context.Context, path string) ([]appleFSEntry, error) {
+	name, err := jsString(path)
+	if err != nil {
+		return nil, err
+	}
+	script := fmt.Sprintf(`
+  const root = document.getElementById("system").root;
+  return JSON.stringify(await root.readDir(%s));
+`, name)
+	result, err := h.EvalAsync(ctx, script)
+	if err != nil {
+		return nil, err
+	}
+	var entries []appleFSEntry
+	if err := jsonUnmarshalString(result, &entries); err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
 func (h *Host) handleMessage(msg Message) {
 	if msg.Type == "native.call" {
 		h.handleNativeCall(msg)
+		return
+	}
+	if msg.Type == "native.fs" {
+		h.handleNativeFS(msg)
 		return
 	}
 	if msg.ID != "" {
