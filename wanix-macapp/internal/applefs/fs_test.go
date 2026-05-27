@@ -1,6 +1,7 @@
 package applefs
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -103,6 +104,25 @@ func TestAppendFile(t *testing.T) {
 	}
 	if got := readString(t, root, "mic/"+id+"/data"); got != "" {
 		t.Fatalf("drained data = %q, want empty", got)
+	}
+}
+
+func TestReadDirJSONUsesEmptyArrays(t *testing.T) {
+	root := NewRoot()
+	root.Mount(NewService("empty").Dir("child"))
+	entries, err := root.ReadDir("empty/child")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entries == nil {
+		t.Fatal("empty directory returned nil entries")
+	}
+	data, err := json.Marshal(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != "[]" {
+		t.Fatalf("empty directory JSON = %s, want []", data)
 	}
 }
 
@@ -276,6 +296,9 @@ func TestJobConfigFiles(t *testing.T) {
 	}
 
 	mic := strings.TrimSpace(readString(t, root, "mic/clone"))
+	if err := root.WriteFile("mic/"+mic+"/ctl", []byte("duration 250ms\n")); err != nil {
+		t.Fatal(err)
+	}
 	if err := root.WriteFile("mic/"+mic+"/duration", []byte("250ms\n")); err != nil {
 		t.Fatal(err)
 	}

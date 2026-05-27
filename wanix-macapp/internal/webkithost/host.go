@@ -168,6 +168,9 @@ func snapshotAppleFSDir(root *applefs.Root, snap appleFSSnapshot, name string, d
 			}
 			continue
 		}
+		if entry.Name == "clone" {
+			continue
+		}
 		data, err := root.ReadFile(child)
 		if err == nil {
 			snap.Files[child] = base64.StdEncoding.EncodeToString(data)
@@ -478,8 +481,8 @@ func (h *Host) selfTestCloneSurfaces(ctx context.Context) error {
 	if err := h.WriteFile(ctx, "macos/vision/"+visionID+"/format", "json\n"); err != nil {
 		return fmt.Errorf("vision format: %w", err)
 	}
-	if data, err := h.ReadFile(ctx, "macos/vision/"+visionID+"/format"); err != nil || data != "json\n" {
-		return fmt.Errorf("vision format round trip: got %q err %v", data, err)
+	if err := h.waitFile(ctx, "macos/vision/"+visionID+"/format", "json\n"); err != nil {
+		return fmt.Errorf("vision format round trip: %w", err)
 	}
 
 	screenID, err := h.cloneID(ctx, "macos/screen/clone")
@@ -489,8 +492,8 @@ func (h *Host) selfTestCloneSurfaces(ctx context.Context) error {
 	if err := h.WriteFile(ctx, "macos/screen/"+screenID+"/ctl", "fps 2\n"); err != nil {
 		return fmt.Errorf("screen fps ctl: %w", err)
 	}
-	if data, err := h.ReadFile(ctx, "macos/screen/"+screenID+"/fps"); err != nil || data != "2\n" {
-		return fmt.Errorf("screen fps round trip: got %q err %v", data, err)
+	if err := h.waitFile(ctx, "macos/screen/"+screenID+"/fps", "2\n"); err != nil {
+		return fmt.Errorf("screen fps round trip: %w", err)
 	}
 
 	micID, err := h.cloneID(ctx, "macos/mic/clone")
@@ -500,8 +503,8 @@ func (h *Host) selfTestCloneSurfaces(ctx context.Context) error {
 	if err := h.WriteFile(ctx, "macos/mic/"+micID+"/ctl", "duration 100ms\n"); err != nil {
 		return fmt.Errorf("mic duration ctl: %w", err)
 	}
-	if data, err := h.ReadFile(ctx, "macos/mic/"+micID+"/duration"); err != nil || data != "100ms\n" {
-		return fmt.Errorf("mic duration round trip: got %q err %v", data, err)
+	if err := h.waitFile(ctx, "macos/mic/"+micID+"/duration", "100ms\n"); err != nil {
+		return fmt.Errorf("mic duration round trip: %w", err)
 	}
 
 	vzID, err := h.cloneID(ctx, "macos/vz/clone")
@@ -512,10 +515,34 @@ func (h *Host) selfTestCloneSurfaces(ctx context.Context) error {
 	if err := h.WriteFile(ctx, "macos/vz/"+vzID+"/config", cfg); err != nil {
 		return fmt.Errorf("vz config: %w", err)
 	}
-	if data, err := h.ReadFile(ctx, "macos/vz/"+vzID+"/config"); err != nil || data != cfg {
-		return fmt.Errorf("vz config round trip: got %q err %v", data, err)
+	if err := h.waitFile(ctx, "macos/vz/"+vzID+"/config", cfg); err != nil {
+		return fmt.Errorf("vz config round trip: %w", err)
 	}
 	return nil
+}
+
+func (h *Host) waitFile(ctx context.Context, path, want string) error {
+	deadline := time.NewTimer(2 * time.Second)
+	defer deadline.Stop()
+	tick := time.NewTicker(25 * time.Millisecond)
+	defer tick.Stop()
+	var last string
+	var lastErr error
+	for {
+		got, err := h.ReadFile(ctx, path)
+		if err == nil && got == want {
+			return nil
+		}
+		last = got
+		lastErr = err
+		select {
+		case <-tick.C:
+		case <-deadline.C:
+			return fmt.Errorf("%s: got %q err %v", path, last, lastErr)
+		case <-ctx.Done():
+			return fmt.Errorf("%s: got %q err %v: %w", path, last, lastErr, ctx.Err())
+		}
+	}
 }
 
 func (h *Host) selfTestLiveAppleFS(ctx context.Context) error {

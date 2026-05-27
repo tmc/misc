@@ -384,7 +384,7 @@ func streamCtl(state *TextFile) func(string) error {
 			head = verb[:i]
 		}
 		switch head {
-		case "device", "format", "rate", "channels", "target", "fps":
+		case "device", "format", "rate", "channels", "target", "fps", "duration":
 			return state.Write([]byte("status configured\n"))
 		case "start", "oneshot":
 			return state.Write([]byte("status unavailable\n"))

@@ -55,6 +55,9 @@ func TestAssetsOpenBootstrap(t *testing.T) {
 		`ensureNamespace`,
 		`wanix bootstrap timeout`,
 		`wanix-system ready event timeout`,
+		`wasm="./wanix.wasm"`,
+		`getReader()`,
+		`releaseLock()`,
 	} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("bootstrap missing %s", want)
@@ -118,6 +121,18 @@ func TestNativeBridgeScriptInjectsCloneSchemas(t *testing.T) {
 		if !strings.Contains(script, want) {
 			t.Fatalf("native bridge script missing initial fs %s", want)
 		}
+	}
+}
+
+func TestSnapshotAppleFSSkipsCloneAllocation(t *testing.T) {
+	root := applefs.NewRoot()
+	_ = snapshotAppleFS(root, 3)
+	data, err := root.ReadFile("appkit/alert/clone")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id := strings.TrimSpace(string(data)); id != "1" {
+		t.Fatalf("alert clone id after snapshot = %q, want 1", id)
 	}
 }
 

@@ -15,14 +15,15 @@ const NativeBridgeScript = `
     if (!pending) return;
     nativeFSPending.delete(id);
     if (!reply || !reply.ok) {
-      pending.reject(new Error(reply && reply.error || "native fs call failed"));
+      const label = pending.method + (pending.path ? " " + pending.path : "");
+      pending.reject(new Error(label + ": " + (reply && reply.error || "native fs call failed")));
       return;
     }
     pending.resolve(reply.value);
   };
   const nativeFS = (method, params = {}) => new Promise((resolve, reject) => {
     const id = String(++nextNativeFSID);
-    nativeFSPending.set(id, {resolve, reject});
+    nativeFSPending.set(id, {resolve, reject, method, path: params.path || ""});
     post({type: "native.fs", id, method, params});
   });
   const bytesToBase64 = (data) => {
@@ -90,7 +91,12 @@ const NativeBridgeScript = `
   };
   const hydrateMacOSFS = async (name = "", depth = 3) => {
     name = clean(name);
-    const entries = await nativeFS("readDir", {path: name || "."});
+    let entries;
+    try {
+      entries = await nativeFS("readDir", {path: name || "."}) || [];
+    } catch (err) {
+      throw new Error("hydrate readDir " + (name || ".") + ": " + (err && err.message || err));
+    }
     const merged = macDirs.get(name) || [];
     for (const entry of entries) {
       if (!merged.some((old) => old.name === entry.name)) merged.push(entry);
@@ -102,6 +108,7 @@ const NativeBridgeScript = `
       if (entry.dir) {
         if (depth > 0) await hydrateMacOSFS(child, depth - 1);
       } else {
+        if (entry.name === "clone") continue;
         try {
           cacheText(child, new TextDecoder().decode(base64ToBytes(await nativeFS("readFile", {path: child}))));
         } catch (_) {
@@ -118,7 +125,7 @@ const NativeBridgeScript = `
   const refreshCachedDir = async (name) => {
     name = clean(name);
     try {
-      const entries = await nativeFS("readDir", {path: name || "."});
+      const entries = await nativeFS("readDir", {path: name || "."}) || [];
       macDirs.set(name, entries);
       for (const entry of entries) {
         const child = clean(name ? name + "/" + entry.name : entry.name);
@@ -227,7 +234,7 @@ const BootstrapHTML = `<!doctype html>
   </style>
 </head>
 <body>
-  <wanix-system id="system" wasm="./wanix.debug.wasm" debug>
+  <wanix-system id="system" wasm="./wanix.wasm" debug>
     <wanix-bind dst="task" src="#task"></wanix-bind>
     <wanix-bind dst="term" src="#term"></wanix-bind>
     <wanix-bind dst="web" src="#web"></wanix-bind>
@@ -242,6 +249,39 @@ const BootstrapHTML = `<!doctype html>
   <script>
     window.wanixHostControllerStarted = true;
     const post = (msg) => window.webkit.messageHandlers.wanix.postMessage(JSON.stringify(msg));
+    if (typeof ReadableStream !== "undefined" && typeof Response !== "undefined" && typeof fetch === "function") {
+      const fetch0 = window.fetch.bind(window);
+      window.fetch = async (...args) => {
+        const resp = await fetch0(...args);
+        const data = new Uint8Array(await resp.arrayBuffer());
+        const body = () => ({
+          getReader() {
+            let sent = false;
+            return {
+              async read() {
+                if (sent) return {done: true};
+                sent = true;
+                return {value: new Uint8Array(data), done: false};
+              },
+              cancel() {
+                sent = true;
+              },
+              releaseLock() {
+              }
+            };
+          }
+        });
+        return {
+          ok: resp.ok,
+          status: resp.status,
+          statusText: resp.statusText,
+          headers: resp.headers,
+          body: body(),
+          arrayBuffer: async () => data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength),
+          text: async () => new TextDecoder().decode(data)
+        };
+      };
+    }
     const bootTimer = setTimeout(() => post({type: "error", message: "wanix bootstrap timeout"}), 20000);
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     async function waitForRuntimeHooks(system) {
@@ -268,12 +308,37 @@ const BootstrapHTML = `<!doctype html>
       await window.__wanixHydrateMacOSFS("", 3);
       window.wanixHostNamespaceEnsured = true;
     }
+    const describeError = (err) => {
+      if (err instanceof Error) {
+        const parts = [];
+        if (err.name) parts.push(err.name);
+        if (err.message) parts.push(err.message);
+        if (err.stack && !parts.some((part) => err.stack.includes(part))) parts.push(err.stack);
+        if (parts.length) return parts.join(": ");
+      }
+      return String(err && (err.stack || err.message) || err);
+    };
     const postError = (err) => {
-      const message = String(err && (err.stack || err.message) || err);
+      let message;
+      if (err && typeof err === "object" && !(err instanceof Error)) {
+        try {
+          message = JSON.stringify(err);
+        } catch (_) {
+          message = String(err);
+        }
+      } else {
+        message = describeError(err);
+      }
       if (message.includes("Go program has already exited")) return;
       post({type: "error", message});
     };
-    window.addEventListener("error", (event) => postError(event.error || event.message));
+    window.addEventListener("error", (event) => postError({
+      message: event.message,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+      error: event.error && (event.error.stack || event.error.message || String(event.error))
+    }));
     window.addEventListener("unhandledrejection", (event) => postError(event.reason));
     (async () => {
       await customElements.whenDefined("wanix-system");

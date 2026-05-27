@@ -74,7 +74,7 @@ func (s *assetServer) Summary() string {
 	if len(s.seen) == 0 {
 		return "no asset requests"
 	}
-	names := []string{"/", "/wanix.js", "/wanix.debug.wasm", "/rc.wasm"}
+	names := []string{"/", "/wanix.js", "/wanix.wasm", "/wanix.debug.wasm", "/rc.wasm"}
 	var b strings.Builder
 	for _, name := range names {
 		if n := s.seen[name]; n > 0 {

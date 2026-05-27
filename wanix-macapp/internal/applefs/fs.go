@@ -18,8 +18,8 @@ var (
 )
 
 type Entry struct {
-	Name string
-	Dir  bool
+	Name string `json:"name"`
+	Dir  bool   `json:"dir"`
 }
 
 type Host interface {
@@ -62,7 +62,7 @@ func (r *Root) ReadDir(name string) ([]Entry, error) {
 	if name == "." {
 		r.mu.Lock()
 		defer r.mu.Unlock()
-		var out []Entry
+		out := []Entry{}
 		for name := range r.services {
 			out = append(out, Entry{Name: name, Dir: true})
 		}
@@ -253,7 +253,7 @@ func (s *Service) ReadDir(name string) ([]Entry, error) {
 	for file := range s.files {
 		addChild(children, name, file, false)
 	}
-	var out []Entry
+	out := []Entry{}
 	for _, e := range children {
 		out = append(out, e)
 	}
