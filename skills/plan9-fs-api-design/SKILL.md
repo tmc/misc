@@ -152,6 +152,12 @@ Resolve or create the shared notebook:
 NB=$("$SKILL_DIR/scripts/bootstrap-notebook.sh")
 ```
 
+Use `--force` only when the user explicitly asks for a fresh notebook.
+If forced creation hits a NotebookLM account limit, do not delete
+notebooks. Reuse an existing notebook with fresh run-scoped source names,
+set `SOURCE_MATCH` to the new slug plus `^plan9-|^wanix:`, open a fresh
+conversation, and record that reuse caveat in the report.
+
 Sync the API corpus as run-scoped sources:
 
 ```bash

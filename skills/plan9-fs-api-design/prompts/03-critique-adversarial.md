@@ -13,6 +13,11 @@ For session-shaped APIs, the direct session frame is an invariant:
 `$id/data` and `$id/stream` is required, even when the tree also has
 per-operation directories.
 
+Treat the accepted probe-02b tree as the authority for optional families.
+Do not require `model/params`, `model/event`, `prompt/`, `ctx/`, `in/`, or
+`tools/` unless the accepted tree already includes that family and the family
+is structurally incomplete.
+
 Emit:
 
 ## Findings
@@ -28,9 +33,9 @@ Check only:
 - root has no unbacked global files;
 - direct session frame exists;
 - creation-time files freeze after `$id/ctl start`;
-- operation constraints live under `$id/prompt/$n/`;
-- typed inputs are inside `$id/in/` and referenced relatively;
-- tools use `call` and `return`;
+- optional operation scopes are complete when present;
+- typed inputs are inside `$id/in/` and referenced relatively when present;
+- callbacks/tools use `call` and `return` when present;
 - names are current.
 
 End with:

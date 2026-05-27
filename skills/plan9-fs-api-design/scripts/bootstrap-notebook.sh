@@ -57,11 +57,21 @@ fi
 mkdir -p "$PLAN9_FS_HOME"
 
 echo "Creating notebook..." >&2
-NB=$(nlm notebook create 'plan9-fs-api-design' 2>&1 \
-     | grep -oE '[0-9a-f-]{36}' | head -1)
+create_log="$PLAN9_FS_HOME/.notebook-create.out"
+rm -f "$create_log"
+if nlm notebook create 'plan9-fs-api-design' >"$create_log" 2>&1; then
+    :
+else
+    rc=$?
+    echo "nlm notebook create failed:" >&2
+    sed 's/^/  /' "$create_log" >&2
+    exit "$rc"
+fi
+NB=$(grep -oE '[0-9a-f-]{36}' "$create_log" | head -1)
 
 if [ -z "$NB" ]; then
     echo "failed to parse notebook id from nlm notebook create output" >&2
+    sed 's/^/  /' "$create_log" >&2
     exit 1
 fi
 

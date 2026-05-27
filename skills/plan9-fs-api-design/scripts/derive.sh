@@ -37,6 +37,56 @@ require_tree() {
     [ -n "$root" ] || { echo "could not parse root from $tree" >&2; exit 1; }
 }
 
+source_has() {
+    local pat="$1" f
+    for f in "$WORK/source-brief.md" "$WORK/probes/01-survey-api.md"; do
+        [ -f "$f" ] || continue
+        grep -Eiq "$pat" "$f" && return 0
+    done
+    return 1
+}
+
+session_start_verb() {
+    if source_has 'configure\(\)|VideoDecoder|VideoEncoder|AudioDecoder|AudioEncoder|ImageDecoder'; then
+        echo configure
+    elif source_has 'USBDevice\.open|USBDevice|SerialPort\.open|baudRate|open\(\)'; then
+        echo open
+    else
+        echo start
+    fi
+}
+
+opts_payload() {
+    if source_has 'baudRate|dataBits|stopBits|flowControl'; then
+        echo '{"baudRate":115200}'
+    elif source_has 'USBDeviceRequestOptions|vendorId|productId|filters'; then
+        echo '{"filters":[{"vendorId":4660}]}'
+    elif source_has 'VideoDecoderConfig|VideoEncoderConfig|AudioDecoderConfig|AudioEncoderConfig|codec|hardwareAcceleration'; then
+        echo '{"type":"VideoDecoder","codec":"vp8"}'
+    elif source_has 'temperature|topK'; then
+        echo '{"temperature":0.2,"topK":4}'
+    else
+        echo '{"config":"source-backed"}'
+    fi
+}
+
+direct_payload() {
+    if source_has 'USBDevice|transferIn|transferOut|controlTransfer'; then
+        echo '{"transfer":"in","endpoint":1,"length":64}'
+    elif source_has 'baudRate|SerialPort|readable|writable'; then
+        echo 'hello over serial'
+    elif source_has 'EncodedVideoChunk|EncodedAudioChunk|VideoFrame|AudioData'; then
+        echo '{"chunk":{"timestamp":0,"type":"key","data":"@in/frame0"}}'
+    else
+        echo '{"input":"source-backed request"}'
+    fi
+}
+
+has_child_path() {
+    local parent="$1"
+    printf '%s\n' "$PATHS" | grep -Fq "$parent/"
+}
+
 # section - per-file semantics block used by render_05a.
 section() {
     local path="$1" summary="$2" mode="$3" read_sem="$4" write_sem="$5" errors="$6" verbs="${7:-}"
@@ -218,8 +268,8 @@ render_03() {
     add_finding() { findings="${findings}- $1: $2 - $3"$'\n'; }
 
     has_path "$root/clone" || add_finding MISSING "$root/clone" "add the session allocator"
-    has_path "$root/ctl" && add_finding VIOLATES "$root/ctl" "remove unbacked root control; keep service state under model/"
-    has_path "$root/status" && add_finding VIOLATES "$root/status" "remove unbacked root status; keep service state under model/"
+    has_path "$root/ctl" && add_finding VIOLATES "$root/ctl" "remove unbacked root control; keep service state in source-backed child scopes"
+    has_path "$root/status" && add_finding VIOLATES "$root/status" "remove unbacked root status; keep service state in source-backed child scopes"
 
     local p
     for p in ctl data stream status event; do
@@ -227,9 +277,7 @@ render_03() {
     done
 
     if has_path "$root/model"; then
-        has_path "$root/model/availability" || add_finding MISSING "$root/model/availability" "surface service readiness"
-        has_path "$root/model/params" || add_finding MISSING "$root/model/params" "surface service parameters"
-        has_path "$root/model/event" || add_finding MISSING "$root/model/event" "use an event file for model progress"
+        has_child_path "$root/model" || add_finding VIOLATES "$root/model" "replace placeholder family with source-backed service files"
     fi
 
     if has_path "$root/\$id/prompt"; then
@@ -249,7 +297,7 @@ render_03() {
     echo
     echo "Blind spots: this gate checks path shape only; source-level nuance remains in probes 00 and 01."
     echo
-    echo "Checks performed: root clone allocator; no unbacked root ctl/status; direct session ctl/data/stream/status/event; model availability/params/event; prompt operation ctl/body/data/stream/status; tool call/return pipes; typed input control."
+    echo "Checks performed: root clone allocator; no unbacked root ctl/status; direct session ctl/data/stream/status/event; no placeholder service families; prompt operation completeness when present; tool call/return pipes when present; typed input control when present."
     echo
     echo "## Findings"
     echo
@@ -292,12 +340,12 @@ render_04() {
     echo "## Semantics contract for probe 05"
     echo
     echo "- Preserve the direct session frame: $root/clone -> \$id/{ctl,data,stream,status,event}."
-    echo "- Creation-time files such as opts, initial, and tool declarations freeze after \$id/ctl start."
-    echo "- Model readiness, parameters, and progress events stay under $root/model/."
-    echo "- Per-operation prompt body, constraint, data, stream, status, and ctl stay under \$id/prompt/\$n/."
-    echo "- Context window, usage, and measurement stay under \$id/ctx/."
-    echo "- Binary input references are relative to the service namespace, for example @in/img0."
-    echo "- Tool callbacks use call and return pipe pairs matched by call id."
+    echo "- Creation-time files such as opts, initial context, declarations, or configuration freeze after the accepted lifecycle start verb."
+    has_child_path "$root/model" && echo "- Service-wide readiness, limits, and events stay under $root/model/ only when the accepted tree includes those files."
+    has_child_path "$root/\$id/prompt" && echo "- Per-operation prompt body, constraint, data, stream, status, and ctl stay under \$id/prompt/\$n/."
+    has_child_path "$root/\$id/ctx" && echo "- Context window, usage, and measurement stay under \$id/ctx/."
+    has_child_path "$root/\$id/in" && echo "- Binary input references are relative to the service namespace, for example @in/img0."
+    has_child_path "$root/\$id/tools" && echo "- Callback-style APIs use call and return pipe pairs matched by call id."
     echo
     [ "$ready" = "yes" ] && echo "Ready for semantics: yes" || echo "Ready for semantics: $ready"
 }
@@ -312,7 +360,7 @@ render_05a() {
     echo
     echo "### 3. Per-file / per-directory semantics"
     echo
-    echo "General rule: directories are walkable only; files use whole-record reads and writes unless named as streams. Creation-time files freeze after \`\$id/ctl start\`; late writes return \`Estarted\`. Operation input files carry input, \`data\` is complete output, and \`stream\` is incremental output. Callback/tool \`call\` and \`return\` records are matched by call id. Binary references are relative, such as \`@in/img0\`, never host paths."
+    echo "General rule: directories are walkable only; files use whole-record reads and writes unless named as streams. Creation-time files freeze after the lifecycle verb accepted by the source-backed \`ctl\`; late writes return \`Estarted\`. Input files carry request or payload records, \`data\` carries complete payloads, and \`stream\` carries incremental payloads. Callback-style \`call\` and \`return\` records are matched by call id. Relative references such as \`@in/img0\` stay inside the mounted namespace and never name host paths."
     echo
 
     if has_path "$root/clone"; then
@@ -332,23 +380,23 @@ render_05a() {
             "Rejected." \
             "\`Eio\` when parameters cannot be queried; \`Eperm\` on write."
         has_path "$root/model/event" && section "$root/model/event" "service event stream" "0444" \
-            "Blocks until a model/service event is available, then returns one newline-delimited JSON record." \
+            "Blocks until a service event is available, then returns one newline-delimited JSON record." \
             "Rejected." \
             "\`Einterrupted\` when the read is canceled; \`Eperm\` on write."
         has_path "$root/model/ctl" && section "$root/model/ctl" "service control" "0222" \
             "Rejected." \
             "Accepts implementation-supported service verbs. Unsupported verbs fail closed instead of inventing hidden policy." \
             "\`Ebadctl\` for unknown verbs; \`Ebusy\` for incompatible concurrent service work." \
-            "| \`prepare\` | Ask the service to make the model ready if the source API exposes such an action. | \`Ebadctl\` if unsupported. |
+            "| \`prepare\` | Ask the service to prepare backing resources if the source API exposes such an action. | \`Ebadctl\` if unsupported. |
 | \`cancel\` | Cancel an outstanding service preparation action. | \`Enotstarted\` if nothing is pending. |"
     fi
 
     if has_path "$root/\$id/ctl"; then
         section "$root/\$id/ctl" "session lifecycle control" "0222" \
             "Rejected." \
-            "Runs session lifecycle verbs. \`start\` consumes \`opts\`, \`initial\`, and registered tools; \`destroy\` tears down the backing session." \
+            "Runs session lifecycle verbs. The start-like verb consumes source-backed draft files such as \`opts\`, \`initial\`, and registered declarations; \`destroy\` tears down the backing session." \
             "\`Estarted\` for duplicate start or late creation-time mutation; \`Ebadctl\` for unknown verbs; \`Edestroyed\` after destroy." \
-            "| \`start\` | Create the backing live session from the draft directory. | \`Estarted\` if already started; \`Einval\` for malformed options. |
+            "| \`start\` | Create or enter the backing live state from the draft directory when the source API uses a generic start. | \`Estarted\` if already started; \`Einval\` for malformed options. |
 | \`destroy\` | Release the backing session and make further operations fail. | \`Edestroyed\` if already destroyed. |"
     fi
 
@@ -420,7 +468,7 @@ render_05a() {
 | \`remove NAME\` | Drop an unused staged input slot. | \`Enotfound\` if NAME does not exist. |"
         section "$root/\$id/in/NAME" "staged typed input bytes" "0666 before operation start" \
             "Returns staged bytes when the implementation makes slots readable; otherwise rejected." \
-            "Writes the raw bytes for a staged typed input. Prompts refer to the slot with relative names such as \`@in/img0\`." \
+            "Writes raw bytes for a staged typed input. Source-backed payloads refer to the slot with relative names such as \`@in/img0\`." \
             "\`Einval\` for wrong type or oversized payload; \`Estarted\` after the consuming operation starts."
     fi
 
@@ -431,17 +479,13 @@ render_05a() {
             "\`Estarted\` after session start; \`Ebadctl\` for unknown verbs; \`Eexist\` for duplicate names." \
             "| \`new NAME\` | Create a draft tool directory named NAME. | \`Eexist\` if NAME is already present. |
 | \`remove NAME\` | Remove a draft tool directory. | \`Enotfound\` if NAME is absent. |"
-        section "$root/\$id/tools/\$NAME/{description,schema,status}" "tool definition files" "0666 before start, 0444 after start" \
-            "Return the registered tool description, input schema, and active state." \
-            "Set the description and schema before session start." \
-            "\`Estarted\` after start; \`Einval\` for malformed schema; \`Enotfound\` for unknown tool names."
         section "$root/\$id/tools/\$NAME/call" "tool call pipe" "0444" \
-            "Blocks until the model requests this tool, then returns a call-id plus JSON arguments." \
+            "Blocks until the backing API issues this callback, then returns a call-id plus JSON arguments." \
             "Rejected." \
             "\`Einterrupted\` when the read is canceled; \`Edestroyed\` after session destroy."
         section "$root/\$id/tools/\$NAME/return" "tool result pipe" "0222" \
             "Rejected." \
-            "Writes a call-id plus result or error payload to resume the waiting model operation." \
+            "Writes a call-id plus result or error payload to resume the waiting operation." \
             "\`Enotfound\` for an unknown call id; \`Einval\` for malformed results; \`Eperm\` on read."
     fi
 
@@ -558,6 +602,10 @@ function tool_files() {
         root "/$id/tools/$NAME/call",
         root "/$id/tools/$NAME/return")
 }
+function interact_files() {
+    return listed(root "/$id/tools/$NAME/interact/call",
+        root "/$id/tools/$NAME/interact/return")
+}
 function files(surface, kind, owner, scope, pressure) {
     s = key(surface); o = tolower(owner); sc = tolower(scope); p = tolower(pressure)
     if (s == "defaulttopk" || s == "maxtopk" || s == "defaulttemperature" || s == "maxtemperature") return closed(choose(root "/model/params"))
@@ -571,7 +619,8 @@ function files(surface, kind, owner, scope, pressure) {
     if ((s == "schema" || s == "inputschema") && has(o, "tool")) return closed(choose(root "/$id/tools/$NAME/schema"))
     if ((s == "annotations" || s == "readonlyhint" || s == "destructivehint" || s == "idempotenthint" || s == "openworldhint" || s == "untrustedcontenthint") && has(o, "tool")) return closed(choose(root "/$id/tools/$NAME/annotations"))
     if (s == "exposedto" && has(o, "tool")) return closed(choose(root "/$id/tools/$NAME/exposed_to"))
-    if ((s == "execute" || s == "requestuserinteraction") && has(o, "tool")) return listed(root "/$id/tools/$NAME/call", root "/$id/tools/$NAME/return")
+    if (s == "requestuserinteraction" || s == "userinteractioncallback" || has(o, "requestuserinteraction")) return interact_files()
+    if (s == "execute" && has(o, "tool")) return listed(root "/$id/tools/$NAME/call", root "/$id/tools/$NAME/return")
     if (s == "role") return listed(root "/$id/initial", prompt_body())
     if (s == "type" && has(sc, "input item")) return typed_files()
     if (s == "type") return closed(choose(root "/$id/opts", prompt_body()))
@@ -655,17 +704,21 @@ function read_sem(surface, scope, pressure, path) {
     if (s == "measurecontextusage") return "Measured usage from ctx/measure/usage."
     if (s == "initialprompts") return "Staged initial context."
     if (s == "tools") return "Tool definition state plus blocking call records."
+    if (s == "requestuserinteraction" || s == "userinteractioncallback") return "User interaction request/result records."
     if (s == "prefix") return "Message body containing the prefix flag."
     if (s == "signal") return "N/A."
     if (has(p, "clone/session")) return "Allocated session id or cloned session id."
-    if (has(p, "status")) return "Tagged state, scalar limit, usage, or parameter value."
+    if (has(p, "immutable option")) return "Creation-time configuration value from the mapped draft file."
+    if (has(p, "one-shot option")) return "Operation option value staged before the relevant control verb."
+    if (has(p, "status")) return "Status record for the source surface from the mapped status file."
     if (has(p, "event")) return "Blocking event records."
+    if (has(p, "ctl verb")) return "N/A; effects are observed through status or event files."
     if (has(p, "stream")) return "Incremental output chunks."
     if (has(p, "output")) return "Complete output or aggregate session result."
     if (has(p, "call/return")) return "Blocking tool-call request records."
     if (has(p, "input file")) return "Measured usage when paired with an output file; otherwise N/A."
     if (has(p, "typed blob")) return "Written staged bytes when the slot is readable."
-    return "Current configured value when readable; otherwise N/A."
+    return "Mapped source value when the file is readable; otherwise N/A."
 }
 function write_sem(surface, scope, pressure, path) {
     p = tolower(pressure); s = key(surface)
@@ -697,13 +750,14 @@ function write_sem(surface, scope, pressure, path) {
     if (s == "signal") return "Maps cancellation to the relevant ctl abort/destroy verb."
     if (s == "tools") return "Declares tool slots before session start."
     if (s == "execute") return "Writes tool result matched to a pending call id."
+    if (s == "requestuserinteraction" || s == "userinteractioncallback") return "Writes or consumes user-interaction records matched by id."
     if (has(p, "clone/session") || has(p, "status") || has(p, "event") || has(p, "stream") || has(p, "output")) return "N/A."
     if (has(p, "immutable option")) return "Stages creation-time config; freezes after start."
-    if (has(p, "one-shot option")) return "Stages per-operation option consumed by prompt ctl."
+    if (has(p, "one-shot option")) return "Stages per-operation option consumed by the relevant control file."
     if (has(p, "ctl verb")) return "Runs lifecycle verb or abort/destroy action."
-    if (has(p, "typed blob")) return "Stages message fields or typed bytes for relative prompt references."
+    if (has(p, "typed blob")) return "Stages fields or typed bytes for relative namespace references."
     if (has(p, "call/return")) return "Writes tool result matched to a pending call id."
-    if (has(p, "input file")) return "Stages prompt or measurement input."
+    if (has(p, "input file")) return "Stages request or measurement input."
     return "N/A."
 }
 BEGIN {
@@ -749,7 +803,7 @@ END {
 
 render_06() {
     require_tree
-    local tool_name input_name input_type input_file
+    local tool_name input_name input_type input_file start payload opts
     tool_name=$(first_child "$root/\$id/tools" "tool")
     case "$tool_name" in '$'*|'') tool_name="getWeather" ;; esac
     if has_path "$root/\$id/in/img0"; then
@@ -759,6 +813,9 @@ render_06() {
     else
         input_name=$(first_child "$root/\$id/in" "input0"); input_type="blob"; input_file="payload.bin"
     fi
+    start=$(session_start_verb)
+    opts=$(opts_payload)
+    payload=$(direct_payload)
 
     echo "Lens: deterministic rc transcript writer - deriving examples from the accepted namespace."
     echo
@@ -774,13 +831,17 @@ render_06() {
     echo
     echo '```rc'
     echo "id=\`{cat $root/clone}"
-    has_path "$root/\$id/opts" && echo "echo '{\"temperature\":0.2,\"topK\":4}' > $root/\$id/opts"
+    has_path "$root/\$id/opts" && echo "echo '$opts' > $root/\$id/opts"
     has_path "$root/\$id/initial" && echo "echo '[{\"role\":\"system\",\"content\":\"answer tersely\"}]' > $root/\$id/initial"
-    has_path "$root/\$id/ctl" && echo "echo start > $root/\$id/ctl"
+    has_path "$root/\$id/ctl" && echo "echo $start > $root/\$id/ctl"
     if has_path "$root/\$id/data" && has_path "$root/\$id/prompt/clone"; then
         echo "echo 'Explain the design in one sentence.' > $root/\$id/data"
         echo "cat $root/\$id/data"
+    elif has_path "$root/\$id/data"; then
+        echo "echo '$payload' > $root/\$id/data"
+        echo "cat $root/\$id/data"
     fi
+    has_path "$root/\$id/stream" && ! has_path "$root/\$id/prompt/clone" && echo "cat $root/\$id/stream"
     has_path "$root/\$id/status" && echo "cat $root/\$id/status"
     echo '```'
     echo
@@ -790,7 +851,7 @@ render_06() {
         echo
         echo '```rc'
         echo "id=\`{cat $root/clone}"
-        has_path "$root/\$id/ctl" && echo "echo start > $root/\$id/ctl"
+        has_path "$root/\$id/ctl" && echo "echo $start > $root/\$id/ctl"
         echo "n=\`{cat $root/\$id/prompt/clone}"
         has_path "$root/\$id/prompt/\$n/body" && echo "echo '[{\"role\":\"user\",\"content\":\"List three constraints.\"}]' > $root/\$id/prompt/\$n/body"
         has_path "$root/\$id/prompt/\$n/constraint" && echo "echo '{\"type\":\"array\",\"maxItems\":3}' > $root/\$id/prompt/\$n/constraint"
@@ -821,7 +882,7 @@ render_06() {
         echo "id=\`{cat $root/clone}"
         echo "echo new $input_type > $root/\$id/in/ctl"
         echo "cp $input_file $root/\$id/in/$input_name"
-        has_path "$root/\$id/ctl" && echo "echo start > $root/\$id/ctl"
+        has_path "$root/\$id/ctl" && echo "echo $start > $root/\$id/ctl"
         if has_path "$root/\$id/prompt/clone"; then
             echo "n=\`{cat $root/\$id/prompt/clone}"
             echo "echo '[{\"role\":\"user\",\"content\":[\"describe this\",{\"ref\":\"@in/$input_name\"}]}]' > $root/\$id/prompt/\$n/body"
@@ -838,12 +899,17 @@ render_06() {
         echo '```rc'
         echo "id=\`{cat $root/clone}"
         echo "echo new $tool_name > $root/\$id/tools/ctl"
-        has_path "$root/\$id/tools/$tool_name/description" && echo "echo 'Return the current value for a named location.' > $root/\$id/tools/$tool_name/description"
-        has_path "$root/\$id/tools/$tool_name/schema" && echo "echo '{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\"}}}' > $root/\$id/tools/$tool_name/schema"
-        has_path "$root/\$id/ctl" && echo "echo start > $root/\$id/ctl"
-        if has_path "$root/\$id/tools/$tool_name/call"; then
+        has_glob "$root/\$id/tools/*/title" && echo "echo '$tool_name' > $root/\$id/tools/$tool_name/title"
+        has_glob "$root/\$id/tools/*/description" && echo "echo 'Return the current value for a named location.' > $root/\$id/tools/$tool_name/description"
+        has_glob "$root/\$id/tools/*/schema" && echo "echo '{\"type\":\"object\",\"properties\":{\"location\":{\"type\":\"string\"}}}' > $root/\$id/tools/$tool_name/schema"
+        has_path "$root/\$id/ctl" && echo "echo $start > $root/\$id/ctl"
+        if has_glob "$root/\$id/tools/*/call"; then
             echo "cat $root/\$id/tools/$tool_name/call"
-            has_path "$root/\$id/tools/$tool_name/return" && echo "echo '{\"id\":\"call-1\",\"result\":{\"text\":\"72F\"}}' > $root/\$id/tools/$tool_name/return"
+            has_glob "$root/\$id/tools/*/return" && echo "echo '{\"id\":\"call-1\",\"result\":{\"text\":\"72F\"}}' > $root/\$id/tools/$tool_name/return"
+        fi
+        if has_glob "$root/\$id/tools/*/interact/call"; then
+            echo "echo '{\"id\":\"ask-1\",\"message\":\"confirm?\"}' > $root/\$id/tools/$tool_name/interact/call"
+            has_glob "$root/\$id/tools/*/interact/return" && echo "cat $root/\$id/tools/$tool_name/interact/return"
         fi
         echo '```'
         echo
@@ -854,7 +920,7 @@ render_06() {
         echo
         echo '```rc'
         echo "id=\`{cat $root/clone}"
-        has_path "$root/\$id/ctl" && echo "echo start > $root/\$id/ctl"
+        has_path "$root/\$id/ctl" && echo "echo $start > $root/\$id/ctl"
         has_path "$root/\$id/clone" && echo "id2=\`{cat $root/\$id/clone}"
         has_path "$root/\$id/status" && echo "cat $root/\$id/status"
         has_path "$root/\$id/ctl" && echo "echo destroy > $root/\$id/ctl"
@@ -886,19 +952,20 @@ render_07() {
     echo
     echo "#### 1.3 Where the design deviates from pure Plan 9"
     echo
-    echo "The backing API has draft-time options, streaming promises, structured constraints, and callback-style tools. The filesystem keeps those lifecycle boundaries visible rather than hiding them behind one synthetic request file. JSON is used for structured payloads where the source API already exposes structured records; plain files still carry allocation, status, data, stream, and event roles."
+    echo "The backing API has source-specific lifecycle boundaries: draft-time options, streaming promises, explicit operations, events, callbacks, or typed payloads when those appear in the accepted tree. The filesystem keeps those boundaries visible rather than hiding them behind one synthetic request file. JSON is used for structured payloads where the source API already exposes structured records; plain files still carry allocation, status, data, stream, and event roles."
     echo
     echo "### 6. Notes on deviations from pure Plan 9 style"
     echo
     echo "| Supported | Fails closed |"
     echo "|---|---|"
-    echo "| Clone allocation for sessions and operations | Host object identity, function closures, and other values that cannot cross a file boundary |"
-    echo "| Draft-then-start creation with immutable options | Mutating creation-time options after \`$root/\$id/ctl start\` |"
+    echo "| Clone allocation for source-backed session state | Host object identity, function closures, and other values that cannot cross a file boundary |"
+    echo "| Draft-then-live lifecycle with immutable creation-time files | Mutating creation-time files after the accepted start/open/configure verb |"
     echo "| Separate \`ctl\`, \`data\`, \`stream\`, \`status\`, and \`event\` files | Multiplexing unrelated lifecycle states into one opaque request file |"
-    echo "| Service-wide model/provider scope when present in the accepted tree | Loose root-level status/control files not backed by the source lifecycle |"
-    echo "| Per-operation directories for concurrent prompts, appends, measurements, or streams | Interleaving concurrent operation output in one shared stream |"
-    echo "| Relative binary references under \`$root/\$id/in\` | Host file paths, DOM object identity, or ambient process references in prompt payloads |"
-    echo "| Callback/tool \`call\` and \`return\` files | Direct invocation of host functions across the 9P boundary |"
+    has_child_path "$root/model" && echo "| Service-wide readiness or parameter scope when present in the accepted tree | Loose root-level status/control files not backed by the source lifecycle |"
+    has_child_path "$root/\$id/prompt" && echo "| Per-operation directories for concurrent requests, appends, measurements, or streams | Interleaving concurrent operation output in one shared stream |"
+    has_child_path "$root/\$id/in" && echo "| Relative binary references under \`$root/\$id/in\` | Host file paths, DOM object identity, or ambient process references in payloads |"
+    has_child_path "$root/\$id/tools" && echo "| Callback-style \`call\` and \`return\` files | Direct invocation of host functions across the 9P boundary |"
+    true
 }
 
 render_08() {
@@ -911,18 +978,18 @@ render_08() {
     echo
     echo "## Recommendations"
     echo
-    echo "1. Build the smallest session service first: \`$root/clone\`, \`$root/\$id/ctl\`, \`$root/\$id/data\`, \`$root/\$id/status\`, and destroy semantics. This proves allocation, draft state, start, complete output, and cleanup."
-    echo "2. Add streaming, events, and accounting next: \`stream\`, \`event\`, service/model status, and \`ctx/{window,usage,measure}\`. Keep stream reads blocking and status reads non-mutating."
-    echo "3. Add advanced source-backed scopes after the session core is stable: per-operation \`prompt/\$n\`, typed input under \`in/\`, and tool \`call\`/\`return\` pipes. Treat unsupported host objects and callbacks as explicit boundary errors."
+    echo "1. Build the smallest session service first: \`$root/clone\`, \`$root/\$id/ctl\`, \`$root/\$id/data\`, \`$root/\$id/status\`, and teardown semantics. This proves allocation, draft state, the accepted start/open/configure verb, complete payload handling, and cleanup."
+    echo "2. Add only the source-backed optional scopes present in the accepted tree: \`stream\`, \`event\`, service status, accounting directories, typed input directories, operation subdirectories, or callback pipes. Keep stream reads blocking and status reads non-mutating."
+    echo "3. Treat unsupported host objects and callbacks as explicit boundary errors unless the accepted tree gives them call/return or byte/JSON representations."
     echo "4. Harden the service: define error strings, add concurrency tests for multiple sessions and operations, test cancellation and fid cleanup, document JSON payload schemas, and keep source mirrors refreshed before publishing a design update."
     echo
     echo "## Caveats"
     echo
     echo "- The upstream API can still change; refresh the normative source before treating this as a stable wire contract."
     echo "- Browser or runtime availability can vary by platform, hardware, policy, and origin."
-    echo "- Model readiness and preparation progress may not map to a portable imperative command; unsupported service-control verbs must return \`Ebadctl\`."
-    echo "- Concurrent prompts, streams, and tool calls require per-operation isolation; a shared output file would be a correctness bug."
-    echo "- Model output is nondeterministic, so tests should assert file protocol behavior and stable status transitions, not exact generated prose."
+    echo "- Service readiness and preparation progress may not map to a portable imperative command; unsupported service-control verbs must return \`Ebadctl\`."
+    echo "- Concurrent operations, streams, and callbacks require isolation; a shared output file would be a correctness bug when the accepted tree exposes separate scopes."
+    echo "- Backing API output can be nondeterministic or environment-dependent, so tests should assert file protocol behavior and stable status transitions rather than exact payload content."
     echo "- Host objects, functions, DOM nodes, and ambient JavaScript capabilities lose identity at the filesystem boundary and should fail closed unless represented as bytes or JSON."
     echo "- Mount permissions are the security boundary; do not add ad hoc per-call auth files unless the source API has per-call authentication."
     echo "- Source coverage may miss issue-level currentness or implementation quirks; preserve the evidence bundle with every generated manpage."
@@ -953,15 +1020,19 @@ render_09() {
     echo
     echo "## TL;DR"
     echo
-    echo "Treats ${api} as a direct Plan 9 mapping of the whole API, centered on \`${root}/clone -> \$id/{ctl,data,stream,status,event}\`. Draft session files stage creation-time state, \`ctl\` starts and tears down work, \`data\` and \`stream\` expose complete and incremental output, and advanced capabilities live in explicit subdirectories instead of hidden language objects."
+    echo "Treats ${api} as a direct Plan 9 mapping of the whole API, centered on \`${root}/clone -> \$id/{ctl,data,stream,status,event}\`. Draft session files stage creation-time state, \`ctl\` advances and tears down work, \`data\` and \`stream\` expose complete and incremental payloads, and optional capabilities live in explicit subdirectories instead of hidden language objects."
     echo
     echo "## Key Findings"
     echo
     echo "- The accepted tree preserves the direct session frame: \`${root}/clone -> \$id/{ctl,data,stream,status,event}\`."
-    echo "- Creation-time options, initial context, and tools are staged before \`\$id/ctl start\`, then freeze with \`Estarted\` on late writes."
-    echo "- Per-operation directories isolate body, constraint, output, stream, and status for concurrent work."
-    echo "- Context accounting, typed inputs, service readiness, and callback/tool traffic are separate path families rather than overloaded payload fields."
-    echo "- Host objects, function identity, and ambient process references fail closed at the filesystem boundary; bytes, JSON, and relative \`@in/...\` references cross it."
+    has_path "$root/\$id/opts" && echo "- Creation-time options are staged before the accepted start/open/configure verb, then freeze with \`Estarted\` on late writes."
+    has_path "$root/\$id/initial" && echo "- Initial context is a draft file rather than an implicit host object."
+    has_child_path "$root/\$id/prompt" && echo "- Per-operation directories isolate body, constraint, output, stream, and status for concurrent work."
+    has_child_path "$root/\$id/ctx" && echo "- Context accounting is a separate path family rather than an overloaded payload field."
+    has_child_path "$root/\$id/in" && echo "- Typed inputs use relative namespace references such as \`@in/...\` instead of host paths."
+    has_child_path "$root/\$id/tools" && echo "- Callback/tool traffic uses explicit call and return files rather than hidden language callbacks."
+    has_child_path "$root/model" && echo "- Service-wide readiness and limits live under \`${root}/model\` only where the accepted tree includes them."
+    echo "- Host objects, function identity, and ambient process references fail closed at the filesystem boundary; bytes and JSON cross it when the source API supports them."
     echo
     echo "## Details"
     echo

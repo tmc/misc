@@ -276,6 +276,33 @@ split_path_cells() {
         }
     '
 }
+
+contract_folded_all=$(
+    printf '%s\n' "$paths" |
+    fold | fold | fold |
+    sort -u
+)
+
+section3_extra_paths=$(
+    printf '%s\n' "$section3_paths" |
+    split_path_cells |
+    fold | fold | fold |
+    sort -u |
+    while IFS= read -r p; do
+        [ -n "$p" ] || continue
+        [ "${p#/}" != "$p" ] || continue
+        if printf '%s\n' "$contract_folded_all" | grep -Fxq "$p"; then
+            continue
+        fi
+        printf '%s\n' "$p"
+    done
+)
+if [ -n "$section3_extra_paths" ]; then
+    echo "section 3 documents paths absent from the accepted tree:" >&2
+    printf '%s\n' "$section3_extra_paths" >&2
+    fail=1
+fi
+
 covered=$(printf '%s\n' "$section3_paths" | fold | sort -u)
 leafs=$(printf '%s\n' "$paths" | grep -E '/\$(id|n)/' || true)
 if [ -n "$leafs" ]; then
@@ -336,14 +363,7 @@ if [ -n "$section4_rows" ]; then
         fail=1
     fi
 
-    contract_folded=$(
-        {
-            printf '%s\n' "$paths"
-            printf '%s\n' "$section3_paths"
-        } |
-        fold | fold | fold |
-        sort -u
-    )
+    contract_folded="$contract_folded_all"
     section4_missing_paths=$(
         printf '%s\n' "$section4_rows" |
         awk -F'|' '{ print $3 }' |
