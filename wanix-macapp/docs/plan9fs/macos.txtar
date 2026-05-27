@@ -1,0 +1,76 @@
+-- README --
+Evidence bundle for docs/plan9fs/macos(4).md.
+
+This txtar follows the plan9-fs-api-design skill convention: a source brief,
+manifest, probe notes, and the final manpage-style API spec. It is intentionally
+repo-local and docs-only. Implementation files were inspected but not copied in
+full.
+
+-- sources/MANIFEST.md --
+# Source manifest
+
+- README.md: current mounted namespace and canonical `macos` bind.
+- DESIGN.md: prior AppKit-focused Plan 9/Wanix design note.
+- APPLE-FS-APIS.md: prior broad service taxonomy and conventions.
+- internal/applefs/fs.go: synthetic filesystem root, aliases, clone, errors.
+- internal/applefs/services.go: current service tree and ctl verbs.
+- internal/applefs/fs_test.go: mounted-service, clone, alias, fail-closed tests.
+- internal/webkithost/script.go: generic native.fs bridge and bootstrap binds.
+- internal/webkithost/native.go: native dispatch and notify/touchid/appkit handlers.
+- internal/webkithost/native_*.go: service-specific native handlers.
+
+-- source-brief.md --
+# Source brief for macos
+
+## API identity
+
+- Canonical API name: Wanix macOS Apple capability filesystem.
+- Service root: `macos`.
+- Compatibility root: `mnt/macos`.
+- Device: `#macos`.
+
+## Lifecycle facts
+
+- Authority is split by service directory.
+- Stateful work uses clone-allocated session directories.
+- `ctl` files accept explicit verbs and fail closed on unknown verbs.
+- `status`, `result`, and `meta` report tagged text or JSON.
+- `data`, `frames`, `console`, and `event` separate payloads from events.
+- Unsupported high-authority services are read-only policy directories.
+- WebKit is a generic filesystem transport only.
+
+-- probes/00-source-audit.md --
+# Source audit
+
+Decision: PROCEED.
+
+Normative local sources exist for the current tree (`internal/applefs`) and
+native dispatch (`internal/webkithost`). Prose sources exist in README.md,
+DESIGN.md, and APPLE-FS-APIS.md. Change signal is local tests and dirty
+worktree status; no upstream network corpus was required for this repo-local
+spec pass.
+
+Blind spots: live TCC prompts, entitlement-gated VZ start, and OS-specific
+native behavior are not revalidated by this docs-only pass.
+
+-- probes/01-surface-inventory.md --
+# Surface inventory
+
+Relevant service surfaces:
+
+- appkit: app/window/pasteboard singleton files plus alert, picker, indicator clones.
+- notify: service authorization and clone notification requests.
+- touchid: local-auth status, refresh, and clone evaluate.
+- vision: request list and clone jobs with in/out/status/meta.
+- speech: voices, utterance clone settings, status, event.
+- mic: auth/device status and clone capture sessions.
+- screen: shareable display/window lists and clone captures.
+- ax: trust status, app sessions, element sessions.
+- keychain: read-only query/trust clone sessions.
+- reachability: status/proxies and clone checks.
+- image: filters and clone transforms.
+- document: formats and clone extraction jobs.
+- vz: VM clone directories with config/disk/net/status/console/event/report.
+
+-- out/macos(4).md --
+See docs/plan9fs/macos(4).md in the working tree for the final rendered spec.

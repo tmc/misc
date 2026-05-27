@@ -5,6 +5,9 @@ This note summarizes a `plan9-fs-api-design` pass over selected
 
 `~/.plan9-fs-designs/apple-framework-fs-apis/`
 
+The current manpage-style Wanix contract is in
+[`docs/plan9fs/macos(4).md`](docs/plan9fs/macos(4).md).
+
 The design rule is to split by lifecycle and authority boundary, not by Apple
 framework package name. A service should be its own capability when it has its
 own TCC prompt, entitlement, long-lived stream, or host mutation boundary.

@@ -33,6 +33,9 @@ authority boundary stays visible to the guest. The app also binds `#macos` at
 `macos/app`, `macos/window`, `macos/pasteboard`, and `macos/alert` aliases
 remain for the original AppKit surface.
 
+See [`docs/plan9fs/macos(4).md`](docs/plan9fs/macos(4).md) for the full
+Plan 9/Wanix file API contract.
+
 ## Run
 
 Build Wanix browser assets first:
