@@ -6,12 +6,10 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"strings"
-	"unsafe"
-
 	"github.com/tmc/apple/corefoundation"
 	"github.com/tmc/apple/foundation"
 	"github.com/tmc/apple/security"
+	"strings"
 )
 
 type keychainQuery struct {
@@ -224,7 +222,7 @@ func evaluateCertificateTrust(q keychainQuery) (trustResult, error) {
 	if cert == 0 {
 		return trustResult{}, fmt.Errorf("create certificate")
 	}
-	defer corefoundation.CFRelease(unsafe.Pointer(cert))
+	defer corefoundation.CFRelease(cfPtr(cert))
 
 	policy, policyName, err := trustPolicy(q)
 	if err != nil {
@@ -233,24 +231,24 @@ func evaluateCertificateTrust(q keychainQuery) (trustResult, error) {
 	if policy == 0 {
 		return trustResult{}, fmt.Errorf("create policy")
 	}
-	defer corefoundation.CFRelease(unsafe.Pointer(policy))
+	defer corefoundation.CFRelease(cfPtr(policy))
 
 	var trust security.SecTrustRef
-	status := security.SecTrustCreateWithCertificates(unsafe.Pointer(cert), unsafe.Pointer(policy), &trust)
+	status := security.SecTrustCreateWithCertificates(cfPtr(cert), cfPtr(policy), &trust)
 	if status != 0 {
 		return trustResult{}, fmt.Errorf("create trust: osstatus %d", status)
 	}
 	if trust == 0 {
 		return trustResult{}, fmt.Errorf("create trust")
 	}
-	defer corefoundation.CFRelease(unsafe.Pointer(trust))
+	defer corefoundation.CFRelease(cfPtr(trust))
 
 	var cferr corefoundation.CFErrorRef
 	trusted := security.SecTrustEvaluateWithError(trust, &cferr)
 	errText := ""
 	if cferr != 0 {
-		errText = describeCFType(unsafe.Pointer(cferr))
-		corefoundation.CFRelease(unsafe.Pointer(cferr))
+		errText = describeCFType(cfPtr(cferr))
+		corefoundation.CFRelease(cfPtr(cferr))
 	}
 	var trustType security.SecTrustResultType
 	resultStatus := security.SecTrustGetTrustResult(trust, &trustType)
@@ -314,7 +312,7 @@ func trustPolicy(q keychainQuery) (security.SecPolicyRef, string, error) {
 		var host corefoundation.CFStringRef
 		if q.Hostname != "" {
 			host = cfString(q.Hostname)
-			defer corefoundation.CFRelease(unsafe.Pointer(host))
+			defer corefoundation.CFRelease(cfPtr(host))
 		}
 		return security.SecPolicyCreateSSL(true, host), "ssl-server", nil
 	case "ssl-client":
@@ -329,6 +327,6 @@ func describeCFType(v corefoundation.CFTypeRef) string {
 	if desc == 0 {
 		return ""
 	}
-	defer corefoundation.CFRelease(unsafe.Pointer(desc))
+	defer corefoundation.CFRelease(cfPtr(desc))
 	return cfStringValue(desc)
 }

@@ -213,7 +213,7 @@ func captureScreenPNG(target string) ([]byte, error) {
 	if cgImage == 0 {
 		return nil, fmt.Errorf("screen capture returned nil image")
 	}
-	defer corefoundation.CFRelease(corefoundation.CFTypeRef(cgImage))
+	defer corefoundation.CFRelease(cfPtr(cgImage))
 
 	return encodeScreenPNG(cgImage)
 }

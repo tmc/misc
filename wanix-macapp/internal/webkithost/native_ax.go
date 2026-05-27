@@ -46,7 +46,7 @@ func (h *Host) refreshAXStatus() error {
 	if system == 0 {
 		return nil
 	}
-	defer corefoundation.CFRelease(unsafe.Pointer(system))
+	defer corefoundation.CFRelease(cfPtr(system))
 	focused, err := copyAXAttribute(system, "AXFocusedUIElement")
 	if err != nil {
 		_ = h.appleFS.WriteFile("ax/system/focused", []byte("{\"error\":"+quoteJSON(err.Error())+"}\n"))
@@ -62,9 +62,9 @@ func (h *Host) refreshAXStatus() error {
 
 func (h *Host) requestAXTrust() error {
 	key := cfString("AXTrustedCheckOptionPrompt")
-	defer corefoundation.CFRelease(unsafe.Pointer(key))
-	keys := []unsafe.Pointer{unsafe.Pointer(key)}
-	values := []unsafe.Pointer{unsafe.Pointer(corefoundation.KCFBooleanTrue)}
+	defer corefoundation.CFRelease(cfPtr(key))
+	keys := []unsafe.Pointer{cfPtr(key)}
+	values := []unsafe.Pointer{cfPtr(corefoundation.KCFBooleanTrue)}
 	options := corefoundation.CFDictionaryCreate(
 		corefoundation.KCFAllocatorDefault,
 		unsafe.Pointer(&keys[0]),
@@ -76,7 +76,7 @@ func (h *Host) requestAXTrust() error {
 	if options == 0 {
 		return h.refreshAXStatus()
 	}
-	defer corefoundation.CFRelease(unsafe.Pointer(options))
+	defer corefoundation.CFRelease(cfPtr(options))
 	trusted := applicationservices.AXIsProcessTrustedWithOptions(options)
 	return h.appleFS.WriteFile("ax/status", []byte("api ax\ntrusted "+fmt.Sprint(trusted)+"\nprompt true\n"))
 }
@@ -118,7 +118,7 @@ func (h *Host) captureFocusedAXElement(id string) error {
 		_ = h.appleFS.WriteFile("ax/element/"+id+"/result", []byte("status error\nerror "+err.Error()+"\n"))
 		return err
 	}
-	defer corefoundation.CFRelease(unsafe.Pointer(system))
+	defer corefoundation.CFRelease(cfPtr(system))
 	element, err := copyAXAttributeValue(system, "AXFocusedUIElement")
 	if err != nil {
 		_ = h.appleFS.WriteFile("ax/element/"+id+"/result", []byte("status error\nerror "+err.Error()+"\n"))
@@ -139,7 +139,7 @@ func (h *Host) performAXElementAction(id, actionName string) error {
 		return err
 	}
 	action := cfString(actionName)
-	defer corefoundation.CFRelease(unsafe.Pointer(action))
+	defer corefoundation.CFRelease(cfPtr(action))
 	if axerr := applicationservices.AXUIElementPerformAction(element, action); axerr != 0 {
 		err := fmt.Errorf("perform %s: ax error %d", actionName, axerr)
 		_ = h.appleFS.WriteFile("ax/element/"+id+"/result", []byte("status error\nerror "+err.Error()+"\n"))
@@ -190,7 +190,7 @@ func (h *Host) setAXElement(id string, element applicationservices.AXUIElementRe
 	h.axElements[id] = element
 	h.axMu.Unlock()
 	if old != 0 {
-		corefoundation.CFRelease(unsafe.Pointer(old))
+		corefoundation.CFRelease(cfPtr(old))
 	}
 }
 
@@ -207,7 +207,7 @@ func (h *Host) deleteAXElement(id string) {
 	delete(h.axElements, id)
 	h.axMu.Unlock()
 	if element != 0 {
-		corefoundation.CFRelease(unsafe.Pointer(element))
+		corefoundation.CFRelease(cfPtr(element))
 	}
 }
 
@@ -232,7 +232,7 @@ func (h *Host) refreshAXApp(id string) error {
 		_ = h.appleFS.WriteFile("ax/app/"+id+"/status", []byte("status error\nerror "+err.Error()+"\n"))
 		return err
 	}
-	defer corefoundation.CFRelease(unsafe.Pointer(app))
+	defer corefoundation.CFRelease(cfPtr(app))
 	focused, err := copyAXAttribute(app, "AXFocusedUIElement")
 	if err != nil {
 		_ = h.appleFS.WriteFile("ax/app/"+id+"/status", []byte("status error\nerror "+err.Error()+"\n"))
@@ -327,7 +327,7 @@ func copyAXAttribute(element applicationservices.AXUIElementRef, name string) (m
 
 func copyAXAttributeValue(element applicationservices.AXUIElementRef, name string) (corefoundation.CFTypeRef, error) {
 	attr := cfString(name)
-	defer corefoundation.CFRelease(unsafe.Pointer(attr))
+	defer corefoundation.CFRelease(cfPtr(attr))
 
 	var value corefoundation.CFTypeRef
 	if axerr := applicationservices.AXUIElementCopyAttributeValue(element, attr, &value); axerr != 0 {
@@ -341,7 +341,7 @@ func describeAXValue(name string, value corefoundation.CFTypeRef) map[string]str
 	if desc == 0 {
 		return map[string]string{"attribute": name, "value": ""}
 	}
-	defer corefoundation.CFRelease(unsafe.Pointer(desc))
+	defer corefoundation.CFRelease(cfPtr(desc))
 	return map[string]string{"attribute": name, "value": cfStringValue(desc)}
 }
 
@@ -365,7 +365,7 @@ func copyAXActionNames(element applicationservices.AXUIElementRef) ([]string, er
 	if names == 0 {
 		return nil, nil
 	}
-	defer corefoundation.CFRelease(unsafe.Pointer(names))
+	defer corefoundation.CFRelease(cfPtr(names))
 	var out []string
 	for i, n := 0, corefoundation.CFArrayGetCount(names); i < n; i++ {
 		value := corefoundation.CFArrayGetValueAtIndex(names, i)

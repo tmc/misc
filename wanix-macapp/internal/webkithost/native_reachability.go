@@ -194,8 +194,7 @@ func cString(p *byte) string {
 		return ""
 	}
 	var n int
-	for q := uintptr(unsafe.Pointer(p)); *(*byte)(unsafe.Pointer(q)) != 0; q++ {
-		n++
+	for ; *(*byte)(unsafe.Add(unsafe.Pointer(p), n)) != 0; n++ {
 	}
 	return unsafe.String(p, n)
 }
