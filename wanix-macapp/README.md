@@ -76,15 +76,15 @@ validate a VZ disk config, set
 From Wanix, write the native namespace:
 
 ```sh
-echo 'Wanix Native' >macos/window/title
-echo center >macos/window/ctl
-echo 'copied from Wanix' >macos/pasteboard/text
-id=`{cat macos/alert/clone}
-echo 'Hello from rc' >macos/alert/$id/title
-echo 'This alert was opened through #macos.' >macos/alert/$id/message
-echo OK >macos/alert/$id/buttons
-echo show >macos/alert/$id/ctl
-cat macos/alert/$id/result
+echo 'Wanix Native' >macos/appkit/window/title
+echo center >macos/appkit/window/ctl
+echo 'copied from Wanix' >macos/appkit/pasteboard/text
+id=`{cat macos/appkit/alert/clone}
+echo 'Hello from rc' >macos/appkit/alert/$id/title
+echo 'This alert was opened through #macos.' >macos/appkit/alert/$id/message
+echo OK >macos/appkit/alert/$id/buttons
+echo show >macos/appkit/alert/$id/ctl
+cat macos/appkit/alert/$id/result
 cat macos/status
 ```
 
