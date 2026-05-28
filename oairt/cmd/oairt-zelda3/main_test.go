@@ -297,10 +297,12 @@ func TestDefaultInstructionsAvoidFalseZeroHealth(t *testing.T) {
 		"open the chest and collect the lantern first",
 		"Act like a funny Twitch streamer",
 		`Say "chat" rarely`,
+		"Vary your vocabulary across turns",
 		"dismissing any text box or modal dialog",
 		"exiting Link's house through the bottom/south exit",
 		"press buttons to dismiss it before navigating",
 		"Do not head north toward the castle until Link has exited his house",
+		"If an action fails",
 		"Do not say Link is at zero health",
 		"trust the correction and continue playing",
 	} {
