@@ -63,6 +63,7 @@ type config struct {
 	effort       string
 	outputModes  string
 	audio        bool
+	mic          bool
 	instructions string
 	prompt       string
 	framesMax    int
@@ -125,6 +126,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		framesMax:    cfg.framesMax,
 		out:          stdout,
 		err:          stderr,
+		events:       uiEvents,
 	}
 
 	client.On("*", func(e oairt.Event) {
@@ -165,8 +167,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 				fmt.Fprintln(stdout)
 			}
 		case oairt.EventResponseFunctionCallArgumentsDone, oairt.EventResponseOutputItemDone:
-			if call, ok := e.FunctionCall(); ok {
-				postUIEvent(uiEvents, uiEvent{kind: uiTool, text: call.Name})
+			if _, ok := e.FunctionCall(); ok {
 				go bridge.handleFunctionCall(ctx, e)
 			}
 		case oairt.EventError:
@@ -225,7 +226,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 			<-ctx.Done()
 			return
 		}
-		scanStdin(ctx, stdin, client, stderr)
+		scanStdin(ctx, stdin, client, stderr, cfg.mic)
 	}()
 
 	select {
@@ -248,6 +249,7 @@ func parseConfig(args []string) (*config, error) {
 		voice:        "marin",
 		effort:       "low",
 		audio:        true,
+		mic:          true,
 		tui:          true,
 		instructions: defaultInstructions,
 		framesMax:    60,
@@ -263,6 +265,7 @@ func parseConfig(args []string) (*config, error) {
 	fs.StringVar(&cfg.effort, "effort", cfg.effort, "reasoning effort")
 	fs.StringVar(&cfg.outputModes, "output-modalities", "text", "comma-separated output modalities: text,audio")
 	fs.BoolVar(&cfg.audio, "audio", cfg.audio, "play Realtime audio output when audio modality is active")
+	fs.BoolVar(&cfg.mic, "mic", cfg.mic, "enable microphone push-to-talk controls")
 	fs.StringVar(&cfg.instructions, "instructions", cfg.instructions, "session instructions")
 	fs.StringVar(&cfg.prompt, "prompt", "", "initial user prompt")
 	fs.IntVar(&cfg.framesMax, "frames-max", cfg.framesMax, "maximum frames per run_input call")
@@ -409,11 +412,33 @@ func wantsAudio(s string) bool {
 	return false
 }
 
-func scanStdin(ctx context.Context, r io.Reader, sender realtimeSender, stderr io.Writer) {
+func scanStdin(ctx context.Context, r io.Reader, sender realtimeSender, stderr io.Writer, micEnabled bool) {
 	scanner := bufio.NewScanner(r)
+	var mic *micSession
+	defer func() {
+		if mic != nil {
+			if err := mic.Stop(false); err != nil {
+				fmt.Fprintf(stderr, "mic stop: %v\n", err)
+			}
+		}
+	}()
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" {
+			continue
+		}
+		if strings.HasPrefix(line, "/mic") {
+			next, err := handleMicCommand(ctx, sender, mic, line, micEnabled)
+			if err != nil {
+				fmt.Fprintf(stderr, "mic: %v\n", err)
+				continue
+			}
+			mic = next
+			if mic == nil {
+				fmt.Fprintln(stderr, "mic: idle")
+			} else {
+				fmt.Fprintln(stderr, "mic: recording")
+			}
 			continue
 		}
 		if err := sendUserText(sender, line); err != nil {
@@ -431,6 +456,43 @@ func scanStdin(ctx context.Context, r io.Reader, sender realtimeSender, stderr i
 	}
 }
 
+func handleMicCommand(ctx context.Context, sender realtimeSender, mic *micSession, line string, enabled bool) (*micSession, error) {
+	if !enabled {
+		return mic, fmt.Errorf("microphone controls disabled")
+	}
+	switch line {
+	case "/mic", "/mic start", "/mic on":
+		if mic != nil {
+			if err := mic.Stop(true); err != nil {
+				return nil, err
+			}
+			return nil, nil
+		}
+		return startMicSession(ctx, sender)
+	case "/mic stop", "/mic commit", "/mic send", "/mic off":
+		if mic == nil {
+			return nil, nil
+		}
+		if err := mic.Stop(true); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	case "/mic cancel", "/mic clear":
+		if mic == nil {
+			if err := clearInputAudio(sender); err != nil {
+				return nil, err
+			}
+			return nil, nil
+		}
+		if err := mic.Stop(false); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	default:
+		return mic, fmt.Errorf("unknown microphone command %q", line)
+	}
+}
+
 type realtimeSender interface {
 	Send(oairt.Event) error
 }
@@ -443,6 +505,7 @@ type toolBridge struct {
 	framesMax    int
 	out          io.Writer
 	err          io.Writer
+	events       chan<- uiEvent
 }
 
 func (b *toolBridge) handleFunctionCall(ctx context.Context, e oairt.Event) {
@@ -454,6 +517,8 @@ func (b *toolBridge) handleFunctionCall(ctx context.Context, e oairt.Event) {
 	if _, loaded := b.handled.LoadOrStore(call.CallID, true); loaded {
 		return
 	}
+	postUIEvent(b.events, uiEvent{kind: uiTool, text: call.Name})
+	defer postUIEvent(b.events, uiEvent{kind: uiToolDone, text: call.Name})
 	if !b.allowedTools[call.Name] {
 		b.sendToolOutput(call.CallID, map[string]any{"error": "tool not allowed"})
 		return

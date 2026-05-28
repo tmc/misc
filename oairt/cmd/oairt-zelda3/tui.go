@@ -21,6 +21,7 @@ const (
 	uiAssistantDelta
 	uiAssistantDone
 	uiTool
+	uiToolDone
 	uiAudio
 	uiError
 )
@@ -64,9 +65,14 @@ type tuiModel struct {
 	logs       []string
 
 	recording bool
-	mic       *micRecorder
-	micBytes  *atomic.Int64
-	outBytes  int
+	mic       *micSession
+
+	micBytes      *atomic.Int64
+	outBytes      int
+	audioUntil    time.Time
+	activeTools   int
+	currentTool   string
+	completedTool string
 }
 
 var (
@@ -145,9 +151,21 @@ func (m *tuiModel) applyEvent(ev uiEvent) {
 	case uiAssistantDone:
 		m.transcript += "\n"
 	case uiTool:
-		m.addLog("tool: " + ev.text)
+		m.activeTools++
+		m.currentTool = ev.text
+		m.addLog("action start: " + ev.text)
+	case uiToolDone:
+		if m.activeTools > 0 {
+			m.activeTools--
+		}
+		m.completedTool = ev.text
+		if m.activeTools == 0 {
+			m.currentTool = ""
+		}
+		m.addLog("action done: " + ev.text)
 	case uiAudio:
 		m.outBytes += ev.bytes
+		m.audioUntil = audioDeadline(m.audioUntil, ev.bytes)
 	case uiError:
 		m.addLog("error: " + ev.text)
 	}
@@ -218,14 +236,8 @@ func (m *tuiModel) startRecording() {
 		m.micBytes = new(atomic.Int64)
 	}
 	m.micBytes.Store(0)
-	mic := newMicRecorder(24000, func(data []byte) {
-		if len(data) == 0 {
-			return
-		}
-		m.micBytes.Add(int64(len(data)))
-		_ = m.client.SendAudio(data)
-	})
-	if err := mic.Start(m.ctx); err != nil {
+	mic, err := startMicSession(m.ctx, m.client)
+	if err != nil {
 		m.addLog("mic: " + err.Error())
 		return
 	}
@@ -236,24 +248,16 @@ func (m *tuiModel) startRecording() {
 
 func (m *tuiModel) stopRecording(commit bool) error {
 	if m.mic != nil {
-		if err := m.mic.Stop(); err != nil {
+		m.micBytes.Store(m.mic.Bytes())
+		if err := m.mic.Stop(commit); err != nil {
 			m.addLog("mic stop: " + err.Error())
 		}
 		m.mic = nil
 	}
 	m.recording = false
 	if !commit {
-		_ = m.client.Send(oairt.Event{Type: oairt.EventInputAudioBufferClear})
 		m.addLog("mic: canceled")
 		return nil
-	}
-	if err := m.client.Send(oairt.Event{Type: oairt.EventInputAudioBufferCommit}); err != nil {
-		m.addLog("commit audio: " + err.Error())
-		return err
-	}
-	if err := m.client.Send(oairt.Event{Type: oairt.EventResponseCreate}); err != nil {
-		m.addLog("response.create: " + err.Error())
-		return err
 	}
 	m.addLog(fmt.Sprintf("mic: sent %.1fkB", float64(m.currentMicBytes())/1024))
 	return nil
@@ -288,10 +292,16 @@ func (m tuiModel) View() string {
 	if m.recording {
 		status = "recording"
 	}
+	audioStatus := m.audioStatus(time.Now())
+	actionStatus := m.actionStatus()
 	header := lipgloss.JoinHorizontal(lipgloss.Top,
 		titleStyle.Render("oairt zelda3"),
 		" ",
 		statusStyle.Render(status),
+		" ",
+		audioStatus,
+		" ",
+		actionStatus,
 		" ",
 		helpStyle.Render("ctrl+r/space ptt  enter send/commit  esc cancel  q quit"),
 	)
@@ -310,10 +320,18 @@ func (m tuiModel) View() string {
 	if m.recording {
 		meters = errorStyle.Render("REC ") + meters
 	}
-	return lipgloss.JoinVertical(lipgloss.Left, header, transcript, logs, input, meters)
+	lanes := lipgloss.JoinHorizontal(
+		lipgloss.Top,
+		statusStyle.Width(inner/2).Render("audio: "+m.audioLane(time.Now())),
+		helpStyle.Width(inner-inner/2).Render("actions: "+m.actionLane()),
+	)
+	return lipgloss.JoinVertical(lipgloss.Left, header, lanes, transcript, logs, input, meters)
 }
 
 func (m tuiModel) currentMicBytes() int64 {
+	if m.mic != nil {
+		return m.mic.Bytes()
+	}
 	if m.micBytes == nil {
 		return 0
 	}
@@ -329,6 +347,56 @@ func (m tuiModel) renderLogs(max int) string {
 		start = 0
 	}
 	return strings.Join(m.logs[start:], "\n")
+}
+
+func (m tuiModel) audioStatus(now time.Time) string {
+	if m.audioUntil.After(now) {
+		return statusStyle.Render("audio playing")
+	}
+	return helpStyle.Render("audio idle")
+}
+
+func (m tuiModel) actionStatus() string {
+	if m.activeTools > 0 {
+		return statusStyle.Render("action running")
+	}
+	return helpStyle.Render("actions idle")
+}
+
+func (m tuiModel) audioLane(now time.Time) string {
+	if m.audioUntil.After(now) {
+		return fmt.Sprintf("playing, queued for %s", m.audioUntil.Sub(now).Round(100*time.Millisecond))
+	}
+	return "idle"
+}
+
+func (m tuiModel) actionLane() string {
+	if m.activeTools > 0 {
+		if m.currentTool != "" {
+			return fmt.Sprintf("%d running, current %s", m.activeTools, m.currentTool)
+		}
+		return fmt.Sprintf("%d running", m.activeTools)
+	}
+	if m.completedTool != "" {
+		return "idle, last " + m.completedTool
+	}
+	return "idle"
+}
+
+func audioDeadline(until time.Time, n int) time.Time {
+	now := time.Now()
+	if until.Before(now) {
+		until = now
+	}
+	return until.Add(audioDurationForBytes(n))
+}
+
+func audioDurationForBytes(n int) time.Duration {
+	if n <= 0 {
+		return 0
+	}
+	bytesPerSecond := 24000 * audioChannels * audioBitsPerSample / 8
+	return time.Duration(float64(n) / float64(bytesPerSecond) * float64(time.Second))
 }
 
 func trimToLines(s string, max int) string {

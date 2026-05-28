@@ -9,7 +9,7 @@ import (
 
 type micRecorder struct{}
 
-func newMicRecorder(_ int, _ func([]byte)) *micRecorder {
+func newNativeMicRecorder(_ int, _ func([]byte)) *micRecorder {
 	return &micRecorder{}
 }
 

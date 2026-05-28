@@ -30,7 +30,7 @@ type micRecorder struct {
 	started    bool
 }
 
-func newMicRecorder(sampleRate int, callback func([]byte)) *micRecorder {
+func newNativeMicRecorder(sampleRate int, callback func([]byte)) *micRecorder {
 	return &micRecorder{
 		sampleRate: sampleRate,
 		callback:   callback,

@@ -271,6 +271,63 @@ func TestAudioSinkWriteAfterCloseDoesNotStart(t *testing.T) {
 	}
 }
 
+func TestScanStdinMicToggleCommitsAudio(t *testing.T) {
+	restore := stubMicRecorder(t, []byte{0, 1, 2, 3})
+	defer restore()
+
+	sender := &captureSender{}
+	scanStdin(context.Background(), strings.NewReader("/mic\n/mic\n"), sender, io.Discard, true)
+
+	want := []string{
+		oairt.EventInputAudioBufferAppend,
+		oairt.EventInputAudioBufferCommit,
+		oairt.EventResponseCreate,
+	}
+	if len(sender.events) != len(want) {
+		t.Fatalf("sent %d events, want %d: %#v", len(sender.events), len(want), sender.events)
+	}
+	for i, typ := range want {
+		if sender.events[i].Type != typ {
+			t.Fatalf("event %d type = %q, want %q", i, sender.events[i].Type, typ)
+		}
+	}
+	if sender.events[0].Audio == "" {
+		t.Fatal("input_audio_buffer.append missing encoded audio")
+	}
+}
+
+func TestScanStdinMicCancelClearsAudio(t *testing.T) {
+	restore := stubMicRecorder(t, []byte{0, 1})
+	defer restore()
+
+	sender := &captureSender{}
+	scanStdin(context.Background(), strings.NewReader("/mic\n/mic cancel\n"), sender, io.Discard, true)
+
+	want := []string{
+		oairt.EventInputAudioBufferAppend,
+		oairt.EventInputAudioBufferClear,
+	}
+	if len(sender.events) != len(want) {
+		t.Fatalf("sent %d events, want %d: %#v", len(sender.events), len(want), sender.events)
+	}
+	for i, typ := range want {
+		if sender.events[i].Type != typ {
+			t.Fatalf("event %d type = %q, want %q", i, sender.events[i].Type, typ)
+		}
+	}
+}
+
+func TestParseConfigMicFlag(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "test-key")
+	cfg, err := parseConfig([]string{"-mic=false"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.mic {
+		t.Fatal("mic flag = true, want false")
+	}
+}
+
 type captureSender struct {
 	events []oairt.Event
 }
@@ -278,6 +335,31 @@ type captureSender struct {
 func (s *captureSender) Send(e oairt.Event) error {
 	s.events = append(s.events, e)
 	return nil
+}
+
+type fakeMicRecorder struct {
+	data []byte
+	cb   func([]byte)
+}
+
+func (r *fakeMicRecorder) Start(context.Context) error {
+	r.cb(r.data)
+	return nil
+}
+
+func (r *fakeMicRecorder) Stop() error {
+	return nil
+}
+
+func stubMicRecorder(t *testing.T, data []byte) func() {
+	t.Helper()
+	old := newMicRecorder
+	newMicRecorder = func(_ int, cb func([]byte)) micRecorderAPI {
+		return &fakeMicRecorder{data: data, cb: cb}
+	}
+	return func() {
+		newMicRecorder = old
+	}
 }
 
 func writeRPCResult(t *testing.T, w http.ResponseWriter, id int64, result any) {
