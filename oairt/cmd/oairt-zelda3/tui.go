@@ -153,7 +153,6 @@ func (m *tuiModel) applyEvent(ev uiEvent) {
 	case uiTool:
 		m.activeTools++
 		m.currentTool = ev.text
-		m.addLog("action start: " + ev.text)
 	case uiToolDone:
 		if m.activeTools > 0 {
 			m.activeTools--
@@ -162,7 +161,7 @@ func (m *tuiModel) applyEvent(ev uiEvent) {
 		if m.activeTools == 0 {
 			m.currentTool = ""
 		}
-		m.addLog("action done: " + ev.text)
+		m.addLog("tool call: " + ev.text)
 	case uiAudio:
 		m.outBytes += ev.bytes
 		m.audioUntil = audioDeadline(m.audioUntil, ev.bytes)
@@ -323,7 +322,7 @@ func (m tuiModel) View() string {
 	lanes := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		statusStyle.Width(inner/2).Render("audio: "+m.audioLane(time.Now())),
-		helpStyle.Width(inner-inner/2).Render("actions: "+m.actionLane()),
+		helpStyle.Width(inner-inner/2).Render("tool calls: "+m.actionLane()),
 	)
 	return lipgloss.JoinVertical(lipgloss.Left, header, lanes, transcript, logs, input, meters)
 }
@@ -358,9 +357,9 @@ func (m tuiModel) audioStatus(now time.Time) string {
 
 func (m tuiModel) actionStatus() string {
 	if m.activeTools > 0 {
-		return statusStyle.Render("action running")
+		return statusStyle.Render("tool call running")
 	}
-	return helpStyle.Render("actions idle")
+	return helpStyle.Render("tool calls idle")
 }
 
 func (m tuiModel) audioLane(now time.Time) string {

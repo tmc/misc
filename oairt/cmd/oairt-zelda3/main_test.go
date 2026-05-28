@@ -147,6 +147,21 @@ func TestToolDoneDetailSummarizesTextContent(t *testing.T) {
 	}
 }
 
+func TestTUIToolCallLogsOneEntry(t *testing.T) {
+	var m tuiModel
+	m.applyEvent(uiEvent{kind: uiTool, text: "run_input RIGHT 2f"})
+	if len(m.logs) != 0 {
+		t.Fatalf("uiTool logged %d entries, want 0", len(m.logs))
+	}
+	m.applyEvent(uiEvent{kind: uiToolDone, text: "run_input RIGHT 2f -> frame=12"})
+	if len(m.logs) != 1 {
+		t.Fatalf("tool call logged %d entries, want 1", len(m.logs))
+	}
+	if got, want := m.logs[0], "tool call: run_input RIGHT 2f -> frame=12"; got != want {
+		t.Fatalf("log entry = %q, want %q", got, want)
+	}
+}
+
 func TestParseConfigRequiresAPIKey(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "")
 	_, err := parseConfig([]string{"-mcp-url", "http://127.0.0.1:8123/mcp"})
