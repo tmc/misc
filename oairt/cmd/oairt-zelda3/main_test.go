@@ -241,7 +241,8 @@ func TestParseOutputModalitiesNormalizesAudio(t *testing.T) {
 func TestDefaultInstructionsAvoidFalseZeroHealth(t *testing.T) {
 	for _, want := range []string{
 		"find Link's uncle in the castle dungeon",
-		"opening the chest in Link's house",
+		"snagging the lantern from the chest in Link's house",
+		"open the chest and collect the lantern first",
 		"Act like a funny Twitch streamer",
 		`Say "chat" rarely`,
 		"dismissing any text box or modal dialog",
