@@ -90,6 +90,59 @@ func TestBridgeCallsMCPAndSendsFunctionOutput(t *testing.T) {
 	}
 }
 
+func TestBridgeSendsGetFrameAsImageInput(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req rpcRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode rpc: %v", err)
+		}
+		if req.Method != "tools/call" {
+			t.Fatalf("unexpected method %q", req.Method)
+		}
+		writeRPCResult(t, w, req.ID, map[string]any{
+			"content": []map[string]any{
+				{"type": "image", "data": "aGVsbG8=", "mimeType": "image/png"},
+				{"type": "text", "text": "Primary engine frame"},
+			},
+		})
+	}))
+	defer srv.Close()
+
+	sender := &captureSender{}
+	bridge := &toolBridge{
+		mcp:          newMCPClient(srv.URL, 0),
+		sender:       sender,
+		allowedTools: toolNameSet([]mcpTool{{Name: "get_frame"}}),
+	}
+	bridge.handleFunctionCall(context.Background(), oairt.Event{
+		Type:      oairt.EventResponseFunctionCallArgumentsDone,
+		Name:      "get_frame",
+		CallID:    "call_frame",
+		Arguments: `{}`,
+	})
+
+	events := sender.Events()
+	if len(events) != 3 {
+		t.Fatalf("sent %d events, want 3", len(events))
+	}
+	if !strings.Contains(events[0].Item.Output, `"image_sent":true`) {
+		t.Fatalf("function output = %q, want image_sent", events[0].Item.Output)
+	}
+	if strings.Contains(events[0].Item.Output, "aGVsbG8=") {
+		t.Fatalf("function output included raw image data: %q", events[0].Item.Output)
+	}
+	item := events[1].Item
+	if item == nil || len(item.Content) != 2 {
+		t.Fatalf("image user item = %#v, want two content parts", item)
+	}
+	if item.Content[1].Type != oairt.ContentTypeInputImage || item.Content[1].ImageURL != "data:image/png;base64,aGVsbG8=" {
+		t.Fatalf("image content = %#v", item.Content[1])
+	}
+	if events[2].Type != oairt.EventResponseCreate {
+		t.Fatalf("third event = %q, want response.create", events[2].Type)
+	}
+}
+
 func TestBridgeSerializesMutatingTools(t *testing.T) {
 	var active int32
 	var maxActive int32
@@ -284,6 +337,220 @@ func TestSendSessionUpdateUsesCurrentRealtimeShape(t *testing.T) {
 	}
 }
 
+func TestSendInitialContextIncludesFrame(t *testing.T) {
+	var calls []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req rpcRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode rpc: %v", err)
+		}
+		if req.Method != "tools/call" {
+			t.Fatalf("unexpected method %q", req.Method)
+		}
+		var params struct {
+			Name string `json:"name"`
+		}
+		b, _ := json.Marshal(req.Params)
+		if err := json.Unmarshal(b, &params); err != nil {
+			t.Fatalf("decode params: %v", err)
+		}
+		calls = append(calls, params.Name)
+		switch params.Name {
+		case "observe":
+			writeRPCResult(t, w, req.ID, map[string]any{
+				"content": []map[string]any{{"type": "text", "text": "Link in bed"}},
+			})
+		case "get_frame":
+			writeRPCResult(t, w, req.ID, map[string]any{
+				"content": []map[string]any{
+					{"type": "image", "data": "aGVsbG8=", "mimeType": "image/png"},
+					{"type": "text", "text": "Primary engine frame"},
+				},
+			})
+		default:
+			t.Fatalf("unexpected tool %q", params.Name)
+		}
+	}))
+	defer srv.Close()
+
+	sender := &captureSender{}
+	if err := sendInitialContext(context.Background(), sender, newMCPClient(srv.URL, 0), map[string]bool{"get_frame": true}, true); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(calls, ","); got != "observe,get_frame" {
+		t.Fatalf("calls = %q, want observe,get_frame", got)
+	}
+	events := sender.Events()
+	if len(events) != 2 {
+		t.Fatalf("sent %d events, want 2", len(events))
+	}
+	item := events[0].Item
+	if item == nil || len(item.Content) != 2 {
+		t.Fatalf("initial item = %#v, want text and image", item)
+	}
+	if item.Content[0].Type != oairt.ContentTypeInputText || !strings.Contains(item.Content[0].Text, "Initial Zelda3 observation") {
+		t.Fatalf("text content = %#v", item.Content[0])
+	}
+	if item.Content[1].Type != oairt.ContentTypeInputImage || item.Content[1].ImageURL != "data:image/png;base64,aGVsbG8=" {
+		t.Fatalf("image content = %#v", item.Content[1])
+	}
+	if events[1].Type != oairt.EventResponseCreate {
+		t.Fatalf("second event = %q, want response.create", events[1].Type)
+	}
+}
+
+func TestImageDataURLFromMCPFrame(t *testing.T) {
+	got, desc, err := imageDataURLFromMCPFrame(json.RawMessage(`{"content":[{"type":"image","data":"aGVsbG8=","mimeType":"image/png"},{"type":"text","text":"Primary"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "data:image/png;base64,aGVsbG8=" {
+		t.Fatalf("image data URL = %q", got)
+	}
+	if desc != "Primary" {
+		t.Fatalf("description = %q, want Primary", desc)
+	}
+}
+
+func TestLoadSaveSlotCallsMCP(t *testing.T) {
+	var gotName string
+	var gotSlot float64
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req rpcRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode rpc: %v", err)
+		}
+		if req.Method != "tools/call" {
+			t.Fatalf("method = %q, want tools/call", req.Method)
+		}
+		var params struct {
+			Name      string         `json:"name"`
+			Arguments map[string]any `json:"arguments"`
+		}
+		b, _ := json.Marshal(req.Params)
+		if err := json.Unmarshal(b, &params); err != nil {
+			t.Fatalf("decode params: %v", err)
+		}
+		gotName = params.Name
+		gotSlot, _ = params.Arguments["slot"].(float64)
+		writeRPCResult(t, w, req.ID, map[string]any{
+			"content": []map[string]any{{"type": "text", "text": "Loaded save slot 2"}},
+		})
+	}))
+	defer srv.Close()
+
+	if err := loadSaveSlot(context.Background(), newMCPClient(srv.URL, 0), map[string]bool{"load_save_slot": true}, 2); err != nil {
+		t.Fatal(err)
+	}
+	if gotName != "load_save_slot" || gotSlot != 2 {
+		t.Fatalf("call = %s slot %.0f, want load_save_slot 2", gotName, gotSlot)
+	}
+}
+
+func TestRunLoadsSaveSlotBeforeInitialContext(t *testing.T) {
+	var mu sync.Mutex
+	var calls []string
+	mcp := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/health" {
+			w.Header().Set("Content-Type", "application/json")
+			fmt.Fprint(w, `{"status":"ok"}`)
+			return
+		}
+		if r.URL.Path != "/mcp" {
+			http.NotFound(w, r)
+			return
+		}
+		var req rpcRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode rpc: %v", err)
+		}
+		switch req.Method {
+		case "initialize":
+			writeRPCResult(t, w, req.ID, map[string]any{"protocolVersion": "2024-11-05"})
+		case "tools/list":
+			writeRPCResult(t, w, req.ID, map[string]any{"tools": fakeMCPTools()})
+		case "tools/call":
+			var params struct {
+				Name string `json:"name"`
+			}
+			b, _ := json.Marshal(req.Params)
+			if err := json.Unmarshal(b, &params); err != nil {
+				t.Fatalf("decode params: %v", err)
+			}
+			mu.Lock()
+			calls = append(calls, params.Name)
+			mu.Unlock()
+			switch params.Name {
+			case "get_frame":
+				writeRPCResult(t, w, req.ID, map[string]any{
+					"content": []map[string]any{
+						{"type": "image", "data": "aGVsbG8=", "mimeType": "image/png"},
+						{"type": "text", "text": "Primary engine frame"},
+					},
+				})
+			default:
+				writeRPCResult(t, w, req.ID, map[string]any{
+					"content": []map[string]any{{"type": "text", "text": "ok"}},
+				})
+			}
+		default:
+			t.Fatalf("unexpected method %q", req.Method)
+		}
+	}))
+	defer mcp.Close()
+
+	rt := mockrt.New(t, mockrt.Script{
+		mockrt.SendJSON(t, map[string]any{
+			"type":     "session.created",
+			"event_id": "evt_session",
+			"session": map[string]any{
+				"id":    "sess_1",
+				"model": "gpt-realtime-2",
+			},
+		}),
+		{Expect: expectSessionUpdateTools(fakeMCPTools())},
+		{Expect: expectEventType("conversation.item.create")},
+		{Expect: expectEventType("response.create")},
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	errc := make(chan error, 1)
+	pr, pw := io.Pipe()
+	defer pr.Close()
+	defer pw.Close()
+
+	go func() {
+		errc <- run(ctx, []string{
+			"-api-key", "test-key",
+			"-url", rt.URL,
+			"-mcp-url", mcp.URL + "/mcp",
+			"-health-url", mcp.URL + "/health",
+			"-load-save-slot", "2",
+		}, pr, io.Discard, io.Discard)
+	}()
+
+	if err := rt.WaitDone(5 * time.Second); err != nil {
+		t.Fatal(err)
+	}
+	cancel()
+	_ = pw.Close()
+	select {
+	case err := <-errc:
+		if err != nil && err != context.Canceled {
+			t.Fatalf("run: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("run did not exit after cancellation")
+	}
+	mu.Lock()
+	got := strings.Join(calls, ",")
+	mu.Unlock()
+	if got != "load_save_slot,observe,get_frame,release_all_inputs" {
+		t.Fatalf("tool calls = %q, want load_save_slot,observe,get_frame,release_all_inputs", got)
+	}
+}
+
 func TestRunConnectsRealtimeAndMCP(t *testing.T) {
 	mcp := newFakeMCPServer(t)
 	defer mcp.Close()
@@ -435,6 +702,17 @@ func TestParseConfigMicFlag(t *testing.T) {
 	}
 }
 
+func TestParseConfigVisionFlag(t *testing.T) {
+	t.Setenv("OPENAI_API_KEY", "test-key")
+	cfg, err := parseConfig([]string{"-vision=false"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.vision {
+		t.Fatal("vision flag = true, want false")
+	}
+}
+
 type captureSender struct {
 	mu     sync.Mutex
 	events []oairt.Event
@@ -445,6 +723,12 @@ func (s *captureSender) Send(e oairt.Event) error {
 	defer s.mu.Unlock()
 	s.events = append(s.events, e)
 	return nil
+}
+
+func (s *captureSender) Events() []oairt.Event {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]oairt.Event(nil), s.events...)
 }
 
 type fakeMicRecorder struct {
@@ -529,8 +813,17 @@ func newFakeMCPServer(t *testing.T) *httptest.Server {
 			if err := json.Unmarshal(b, &params); err != nil {
 				t.Fatalf("decode params: %v", err)
 			}
-			if params.Name != "observe" && params.Name != "release_all_inputs" {
+			if params.Name != "observe" && params.Name != "get_frame" && params.Name != "load_save_slot" && params.Name != "release_all_inputs" {
 				t.Fatalf("unexpected tool %q", params.Name)
+			}
+			if params.Name == "get_frame" {
+				writeRPCResult(t, w, req.ID, map[string]any{
+					"content": []map[string]any{
+						{"type": "image", "data": "aGVsbG8=", "mimeType": "image/png"},
+						{"type": "text", "text": "Primary engine frame"},
+					},
+				})
+				return
 			}
 			writeRPCResult(t, w, req.ID, map[string]any{
 				"content": []map[string]any{{"type": "text", "text": "frame=1"}},
@@ -566,6 +859,8 @@ func expectSessionUpdateTools(want []mcpTool) func([]byte) error {
 func fakeMCPTools() []mcpTool {
 	return []mcpTool{
 		{Name: "observe", Description: "Observe game", InputSchema: json.RawMessage(`{"type":"object","properties":{}}`)},
+		{Name: "get_frame", Description: "Get frame", InputSchema: json.RawMessage(`{"type":"object","properties":{}}`)},
+		{Name: "load_save_slot", Description: "Load save slot", InputSchema: json.RawMessage(`{"type":"object","properties":{"slot":{"type":"integer","minimum":0,"maximum":9}},"required":["slot"]}`)},
 		{Name: "release_all_inputs", Description: "Release buttons", InputSchema: json.RawMessage(`{"type":"object","properties":{}}`)},
 		{Name: "run_input", Description: "Run input", InputSchema: json.RawMessage(`{"type":"object","properties":{"buttons":{"type":"array","items":{"type":"string"}},"frames":{"type":"integer"}},"required":["buttons","frames"]}`)},
 		{Name: "write_memory", Description: "Write memory", InputSchema: json.RawMessage(`{"type":"object","properties":{"address":{"type":"integer"},"data":{"type":"string"}},"required":["address","data"]}`)},

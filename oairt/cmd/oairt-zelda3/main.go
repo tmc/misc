@@ -377,35 +377,128 @@ func isInteractive(stdin io.Reader, stdout io.Writer) bool {
 	return ok && out == os.Stdout
 }
 
-func sendInitialObservation(ctx context.Context, sender realtimeSender, mcp *mcpClient) error {
-	result, err := mcp.callTool(ctx, "observe", map[string]any{})
-	if err != nil {
-		return fmt.Errorf("observe: %w", err)
+func loadSaveSlot(ctx context.Context, mcp *mcpClient, tools map[string]bool, slot int) error {
+	if !tools["load_save_slot"] {
+		return fmt.Errorf("mcp server missing load_save_slot")
 	}
-	if err := sendUserText(sender, "Initial Zelda3 observation:\n"+string(result)+"\n\nBegin the objective now: find Link's uncle in the castle dungeon. If health fields look wrong, verify visually and keep playing."); err != nil {
-		return err
+	if _, err := mcp.callTool(ctx, "load_save_slot", map[string]any{"slot": slot}); err != nil {
+		return fmt.Errorf("load save slot %d: %w", slot, err)
 	}
 	return nil
 }
 
+func sendInitialContext(ctx context.Context, sender realtimeSender, mcp *mcpClient, tools map[string]bool, includeFrame bool) error {
+	result, err := mcp.callTool(ctx, "observe", map[string]any{})
+	if err != nil {
+		return fmt.Errorf("observe: %w", err)
+	}
+	content := []oairt.ItemContent{{
+		Type: oairt.ContentTypeInputText,
+		Text: "Initial Zelda3 observation:\n" + string(result) + "\n\nBegin the objective now: find Link's uncle in the castle dungeon. If health fields look wrong, verify visually and keep playing.",
+	}}
+	if includeFrame && tools["get_frame"] {
+		frame, err := mcp.callTool(ctx, "get_frame", map[string]any{})
+		if err == nil {
+			imageURL, desc, err := imageDataURLFromMCPFrame(frame)
+			if err == nil {
+				if desc != "" {
+					content[0].Text += "\n\nInitial visual frame: " + desc
+				}
+				content = append(content, oairt.ItemContent{
+					Type:     oairt.ContentTypeInputImage,
+					ImageURL: imageURL,
+				})
+			}
+		} else {
+			content[0].Text += "\n\nInitial visual frame unavailable: " + err.Error()
+		}
+	}
+	return sendUserContent(sender, content)
+}
+
 func sendUserText(sender realtimeSender, text string) error {
+	return sendUserContent(sender, []oairt.ItemContent{{
+		Type: oairt.ContentTypeInputText,
+		Text: text,
+	}})
+}
+
+func sendUserContent(sender realtimeSender, content []oairt.ItemContent) error {
+	if err := sendConversationItem(sender, content); err != nil {
+		return err
+	}
+	return sendResponseCreate(sender)
+}
+
+func sendConversationItem(sender realtimeSender, content []oairt.ItemContent) error {
 	if err := sender.Send(oairt.Event{
 		Type: oairt.EventConversationItemCreate,
 		Item: &oairt.Item{
-			Type: "message",
-			Role: "user",
-			Content: []oairt.ItemContent{{
-				Type: "input_text",
-				Text: text,
-			}},
+			Type:    "message",
+			Role:    "user",
+			Content: content,
 		},
 	}); err != nil {
-		return fmt.Errorf("send user text: %w", err)
+		return fmt.Errorf("send conversation item: %w", err)
 	}
+	return nil
+}
+
+func sendResponseCreate(sender realtimeSender) error {
 	if err := sender.Send(oairt.Event{Type: oairt.EventResponseCreate}); err != nil {
 		return fmt.Errorf("send response.create: %w", err)
 	}
 	return nil
+}
+
+func imageDataURLFromMCPFrame(result json.RawMessage) (string, string, error) {
+	var body struct {
+		Content []struct {
+			Type     string `json:"type"`
+			Data     string `json:"data"`
+			ImageURL string `json:"image_url"`
+			MIMEType string `json:"mimeType"`
+			MimeType string `json:"mime_type"`
+			Text     string `json:"text"`
+		} `json:"content"`
+	}
+	if err := json.Unmarshal(result, &body); err != nil {
+		return "", "", fmt.Errorf("decode frame result: %w", err)
+	}
+	var desc string
+	var imageURL string
+	for _, item := range body.Content {
+		if desc == "" && strings.TrimSpace(item.Text) != "" {
+			desc = strings.TrimSpace(item.Text)
+		}
+		if imageURL != "" || item.Type != "image" {
+			continue
+		}
+		if item.ImageURL != "" {
+			imageURL = item.ImageURL
+			continue
+		}
+		data := strings.TrimSpace(item.Data)
+		if data == "" {
+			continue
+		}
+		if strings.HasPrefix(data, "data:") {
+			imageURL = data
+			continue
+		}
+		mime := item.MIMEType
+		if mime == "" {
+			mime = item.MimeType
+		}
+		if mime == "" {
+			mime = "image/png"
+		}
+		imageURL = "data:" + mime + ";base64," + data
+	}
+	if imageURL != "" {
+		return imageURL, desc, nil
+	}
+	return "", desc, fmt.Errorf("frame result did not include an image")
 }
 
 func parseList(s string) []string {
@@ -581,6 +674,13 @@ func (b *toolBridge) handleFunctionCall(ctx context.Context, e oairt.Event) {
 		return
 	}
 	doneDetail = toolDoneDetail(detail, result, nil, start)
+	if call.Name == "get_frame" {
+		if err := b.sendFrameToolOutput(call.CallID, result); err != nil {
+			fmt.Fprintf(b.err, "send frame output: %v\n", err)
+			b.sendToolOutput(call.CallID, json.RawMessage(result))
+		}
+		return
+	}
 	b.sendToolOutput(call.CallID, json.RawMessage(result))
 }
 
@@ -718,18 +818,44 @@ func truncateText(s string, max int) string {
 }
 
 func (b *toolBridge) sendToolOutput(callID string, v any) {
+	if err := b.sendToolOutputItem(callID, v); err != nil {
+		fmt.Fprintf(b.err, "send tool output: %v\n", err)
+		return
+	}
+	if err := sendResponseCreate(b.sender); err != nil {
+		fmt.Fprintf(b.err, "%v\n", err)
+	}
+}
+
+func (b *toolBridge) sendToolOutputItem(callID string, v any) error {
 	event, err := oairt.FunctionCallOutput(callID, v)
 	if err != nil {
 		event, _ = oairt.FunctionCallOutput(callID, map[string]any{"error": err.Error()})
 	}
-	err = b.sender.Send(event)
+	return b.sender.Send(event)
+}
+
+func (b *toolBridge) sendFrameToolOutput(callID string, result json.RawMessage) error {
+	imageURL, desc, err := imageDataURLFromMCPFrame(result)
 	if err != nil {
-		fmt.Fprintf(b.err, "send tool output: %v\n", err)
-		return
+		return err
 	}
-	if err := b.sender.Send(oairt.Event{Type: oairt.EventResponseCreate}); err != nil {
-		fmt.Fprintf(b.err, "send response.create: %v\n", err)
+	out := map[string]any{"image_sent": true}
+	text := "Screen frame returned by get_frame."
+	if desc != "" {
+		out["description"] = desc
+		text += "\n" + desc
 	}
+	if err := b.sendToolOutputItem(callID, out); err != nil {
+		return fmt.Errorf("send function output: %w", err)
+	}
+	if err := sendConversationItem(b.sender, []oairt.ItemContent{
+		{Type: oairt.ContentTypeInputText, Text: text},
+		{Type: oairt.ContentTypeInputImage, ImageURL: imageURL},
+	}); err != nil {
+		return err
+	}
+	return sendResponseCreate(b.sender)
 }
 
 func (b *toolBridge) checkArgs(name string, args map[string]any) error {
@@ -772,7 +898,7 @@ func intArg(args map[string]any, name string) (int, bool, error) {
 
 func isMutatingTool(name string) bool {
 	switch name {
-	case "run_input", "set_buttons", "release_all_inputs", "restore_snapshot":
+	case "run_input", "set_buttons", "release_all_inputs", "restore_snapshot", "load_game", "load_save_slot", "reset_to_initial_state":
 		return true
 	default:
 		return false
