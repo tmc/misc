@@ -110,6 +110,43 @@ func TestBridgeRejectsOversizedRunInput(t *testing.T) {
 	}
 }
 
+func TestToolCallDetail(t *testing.T) {
+	tests := []struct {
+		name string
+		args map[string]any
+		want string
+	}{
+		{
+			name: "run_input",
+			args: map[string]any{"buttons": []any{"RIGHT", "A"}, "frames": float64(12)},
+			want: "run_input RIGHT+A 12f",
+		},
+		{
+			name: "observe",
+			args: map[string]any{},
+			want: "observe game state",
+		},
+		{
+			name: "read_memory",
+			args: map[string]any{"address": float64(0xF36D)},
+			want: "read_memory $F36D",
+		},
+	}
+	for _, tt := range tests {
+		if got := toolCallDetail(tt.name, tt.args); got != tt.want {
+			t.Fatalf("toolCallDetail(%q) = %q, want %q", tt.name, got, tt.want)
+		}
+	}
+}
+
+func TestToolDoneDetailSummarizesTextContent(t *testing.T) {
+	result := json.RawMessage(`{"content":[{"type":"text","text":"frame=12 link=(1,2) hp=24/24"}]}`)
+	got := toolDoneDetail("run_input RIGHT 2f", result, nil, time.Now())
+	if !strings.Contains(got, "frame=12 link=(1,2) hp=24/24") {
+		t.Fatalf("toolDoneDetail = %q, want result summary", got)
+	}
+}
+
 func TestParseConfigRequiresAPIKey(t *testing.T) {
 	t.Setenv("OPENAI_API_KEY", "")
 	_, err := parseConfig([]string{"-mcp-url", "http://127.0.0.1:8123/mcp"})

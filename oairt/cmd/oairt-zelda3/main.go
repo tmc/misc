@@ -509,6 +509,7 @@ type toolBridge struct {
 }
 
 func (b *toolBridge) handleFunctionCall(ctx context.Context, e oairt.Event) {
+	start := time.Now()
 	call, ok := e.FunctionCall()
 	if !ok {
 		fmt.Fprintf(b.err, "function call: missing function name or call_id\n")
@@ -517,18 +518,29 @@ func (b *toolBridge) handleFunctionCall(ctx context.Context, e oairt.Event) {
 	if _, loaded := b.handled.LoadOrStore(call.CallID, true); loaded {
 		return
 	}
-	postUIEvent(b.events, uiEvent{kind: uiTool, text: call.Name})
-	defer postUIEvent(b.events, uiEvent{kind: uiToolDone, text: call.Name})
 	if !b.allowedTools[call.Name] {
+		detail := toolCallDetail(call.Name, nil)
+		postUIEvent(b.events, uiEvent{kind: uiTool, text: detail})
+		postUIEvent(b.events, uiEvent{kind: uiToolDone, text: detail + " -> not allowed"})
 		b.sendToolOutput(call.CallID, map[string]any{"error": "tool not allowed"})
 		return
 	}
 	args, err := call.ArgumentsObject()
 	if err != nil {
+		detail := toolCallDetail(call.Name, nil)
+		postUIEvent(b.events, uiEvent{kind: uiTool, text: detail})
+		postUIEvent(b.events, uiEvent{kind: uiToolDone, text: detail + " -> bad args"})
 		b.sendToolOutput(call.CallID, map[string]any{"error": err.Error()})
 		return
 	}
+	detail := toolCallDetail(call.Name, args)
+	doneDetail := detail
+	postUIEvent(b.events, uiEvent{kind: uiTool, text: detail})
+	defer func() {
+		postUIEvent(b.events, uiEvent{kind: uiToolDone, text: doneDetail})
+	}()
 	if err := b.checkArgs(call.Name, args); err != nil {
+		doneDetail = toolDoneDetail(detail, nil, err, start)
 		b.sendToolOutput(call.CallID, map[string]any{"error": err.Error()})
 		if isMutatingTool(call.Name) {
 			_ = releaseAll(context.Background(), b.mcp)
@@ -537,13 +549,133 @@ func (b *toolBridge) handleFunctionCall(ctx context.Context, e oairt.Event) {
 	}
 	result, err := b.mcp.callTool(ctx, call.Name, args)
 	if err != nil {
+		doneDetail = toolDoneDetail(detail, nil, err, start)
 		if isMutatingTool(call.Name) {
 			_ = releaseAll(context.Background(), b.mcp)
 		}
 		b.sendToolOutput(call.CallID, map[string]any{"error": err.Error()})
 		return
 	}
+	doneDetail = toolDoneDetail(detail, result, nil, start)
 	b.sendToolOutput(call.CallID, json.RawMessage(result))
+}
+
+func toolCallDetail(name string, args map[string]any) string {
+	switch name {
+	case "run_input":
+		buttons := stringListArg(args, "buttons")
+		if len(buttons) == 0 {
+			buttons = stringListArg(args, "button")
+		}
+		frames, ok, _ := intArg(args, "frames")
+		if !ok {
+			frames, ok, _ = intArg(args, "count")
+		}
+		parts := []string{"run_input"}
+		if len(buttons) > 0 {
+			parts = append(parts, strings.Join(buttons, "+"))
+		}
+		if ok {
+			parts = append(parts, fmt.Sprintf("%df", frames))
+		}
+		return strings.Join(parts, " ")
+	case "set_buttons":
+		buttons := stringListArg(args, "buttons")
+		if len(buttons) == 0 {
+			buttons = stringListArg(args, "pressed")
+		}
+		if len(buttons) == 0 {
+			return name
+		}
+		return "set_buttons " + strings.Join(buttons, "+")
+	case "read_memory", "write_memory":
+		if addr, ok, _ := intArg(args, "address"); ok {
+			return fmt.Sprintf("%s $%04X", name, addr)
+		}
+	case "get_frame":
+		return "get_frame screenshot"
+	case "observe":
+		return "observe game state"
+	case "release_all_inputs":
+		return "release all inputs"
+	}
+	if len(args) == 0 {
+		return name
+	}
+	return name + " " + compactJSON(args, 80)
+}
+
+func toolDoneDetail(detail string, result json.RawMessage, err error, start time.Time) string {
+	elapsed := time.Since(start).Round(10 * time.Millisecond)
+	if err != nil {
+		return fmt.Sprintf("%s -> error: %s (%s)", detail, truncateText(err.Error(), 80), elapsed)
+	}
+	if summary := toolResultSummary(result); summary != "" {
+		return fmt.Sprintf("%s -> %s (%s)", detail, summary, elapsed)
+	}
+	return fmt.Sprintf("%s -> done (%s)", detail, elapsed)
+}
+
+func toolResultSummary(result json.RawMessage) string {
+	var body struct {
+		Content []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"content"`
+	}
+	if err := json.Unmarshal(result, &body); err == nil {
+		for _, item := range body.Content {
+			if strings.TrimSpace(item.Text) != "" {
+				return truncateText(strings.Join(strings.Fields(item.Text), " "), 120)
+			}
+		}
+	}
+	return truncateText(strings.Join(strings.Fields(string(result)), " "), 120)
+}
+
+func stringListArg(args map[string]any, name string) []string {
+	if args == nil {
+		return nil
+	}
+	v, ok := args[name]
+	if !ok {
+		return nil
+	}
+	switch v := v.(type) {
+	case []string:
+		return v
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, x := range v {
+			if s, ok := x.(string); ok && s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	case string:
+		if v != "" {
+			return []string{v}
+		}
+	}
+	return nil
+}
+
+func compactJSON(v any, max int) string {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return truncateText(string(data), max)
+}
+
+func truncateText(s string, max int) string {
+	if max <= 0 || len(s) <= max {
+		return s
+	}
+	if max <= 1 {
+		return s[:max]
+	}
+	return s[:max-1] + "..."
 }
 
 func (b *toolBridge) sendToolOutput(callID string, v any) {
