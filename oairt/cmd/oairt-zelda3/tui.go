@@ -11,7 +11,6 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	oairt "github.com/tmc/misc/oairt"
 )
 
 type uiEventKind int
@@ -41,7 +40,7 @@ func postUIEvent(ch chan<- uiEvent, ev uiEvent) {
 
 type tuiOptions struct {
 	cfg    *config
-	client *oairt.Client
+	sender realtimeSender
 	events <-chan uiEvent
 	stdin  io.Reader
 	stdout io.Writer
@@ -55,7 +54,7 @@ type tickMsg time.Time
 type tuiModel struct {
 	ctx    context.Context
 	cancel context.CancelFunc
-	client *oairt.Client
+	sender realtimeSender
 	events <-chan uiEvent
 
 	width  int
@@ -91,7 +90,7 @@ func runTUI(ctx context.Context, opts tuiOptions) error {
 	m := tuiModel{
 		ctx:      ctx,
 		cancel:   cancel,
-		client:   opts.client,
+		sender:   opts.sender,
 		events:   opts.events,
 		micBytes: new(atomic.Int64),
 	}
@@ -206,7 +205,7 @@ func (m tuiModel) handleKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if text == "" {
 			return m, nil
 		}
-		if err := sendUserText(m.client, text); err != nil {
+		if err := sendUserText(m.sender, text); err != nil {
 			m.addLog("send text: " + err.Error())
 		} else {
 			m.addLog("you: " + text)
@@ -245,7 +244,7 @@ func (m *tuiModel) startRecording() {
 		m.micBytes = new(atomic.Int64)
 	}
 	m.micBytes.Store(0)
-	mic, err := startMicSession(m.ctx, m.client)
+	mic, err := startMicSession(m.ctx, m.sender)
 	if err != nil {
 		m.addLog("mic: " + err.Error())
 		return

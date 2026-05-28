@@ -124,6 +124,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 
 	client := oairt.NewClient(cfg.apiKey, clientOptions(cfg)...)
 	defer client.Close()
+	responses := newResponseGate(client, stderr)
 
 	var audio *audioSink
 	if cfg.audio && wantsAudio(cfg.outputModes) {
@@ -136,7 +137,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 
 	bridge := &toolBridge{
 		mcp:          mcp,
-		sender:       client,
+		sender:       responses,
 		allowedTools: allowedTools,
 		framesMax:    cfg.framesMax,
 		out:          stdout,
@@ -145,6 +146,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	}
 
 	client.OnOrdered("*", func(e oairt.Event) {
+		responses.observe(e)
 		switch e.Type {
 		case oairt.EventSessionCreated, oairt.EventSessionUpdated:
 			postUIEvent(uiEvents, uiEvent{kind: uiStatus, text: e.Type})
@@ -209,11 +211,11 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	if err := sendSessionUpdate(client, cfg, mcpTools); err != nil {
 		return err
 	}
-	if err := sendInitialContext(ctx, client, mcp, allowedTools, cfg.vision); err != nil {
+	if err := sendInitialContext(ctx, responses, mcp, allowedTools, cfg.vision); err != nil {
 		return err
 	}
 	if cfg.prompt != "" {
-		if err := sendUserText(client, cfg.prompt); err != nil {
+		if err := sendUserText(responses, cfg.prompt); err != nil {
 			return err
 		}
 	}
@@ -221,7 +223,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	if interactive {
 		err := runTUI(ctx, tuiOptions{
 			cfg:    cfg,
-			client: client,
+			sender: responses,
 			events: uiEvents,
 			stdin:  stdin,
 			stdout: stdout,
@@ -611,6 +613,72 @@ func handleMicCommand(ctx context.Context, sender realtimeSender, mic *micSessio
 
 type realtimeSender interface {
 	Send(oairt.Event) error
+}
+
+type responseGate struct {
+	sender realtimeSender
+	err    io.Writer
+
+	mu      sync.Mutex
+	active  bool
+	pending bool
+}
+
+func newResponseGate(sender realtimeSender, err io.Writer) *responseGate {
+	return &responseGate{sender: sender, err: err}
+}
+
+func (g *responseGate) Send(e oairt.Event) error {
+	if e.Type != oairt.EventResponseCreate {
+		return g.sender.Send(e)
+	}
+	return g.request()
+}
+
+func (g *responseGate) request() error {
+	g.mu.Lock()
+	if g.active {
+		g.pending = true
+		g.mu.Unlock()
+		return nil
+	}
+	g.active = true
+	g.mu.Unlock()
+
+	if err := g.sender.Send(oairt.Event{Type: oairt.EventResponseCreate}); err != nil {
+		g.mu.Lock()
+		g.active = false
+		g.mu.Unlock()
+		return err
+	}
+	return nil
+}
+
+func (g *responseGate) observe(e oairt.Event) {
+	send := false
+	g.mu.Lock()
+	switch e.Type {
+	case oairt.EventResponseCreated:
+		g.active = true
+	case oairt.EventResponseDone:
+		if g.pending {
+			g.pending = false
+			g.active = true
+			send = true
+		} else {
+			g.active = false
+		}
+	}
+	g.mu.Unlock()
+
+	if send {
+		if err := g.sender.Send(oairt.Event{Type: oairt.EventResponseCreate}); err != nil {
+			fmt.Fprintf(g.err, "send queued response.create: %v\n", err)
+			g.mu.Lock()
+			g.active = false
+			g.mu.Unlock()
+		}
+	}
 }
 
 type toolBridge struct {

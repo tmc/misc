@@ -731,6 +731,49 @@ func (s *captureSender) Events() []oairt.Event {
 	return append([]oairt.Event(nil), s.events...)
 }
 
+func TestResponseGateQueuesCreateWhileActive(t *testing.T) {
+	sender := &captureSender{}
+	gate := newResponseGate(sender, io.Discard)
+
+	if err := gate.Send(oairt.Event{Type: oairt.EventResponseCreate}); err != nil {
+		t.Fatal(err)
+	}
+	if err := gate.Send(oairt.Event{Type: oairt.EventResponseCreate}); err != nil {
+		t.Fatal(err)
+	}
+	if got := sender.Events(); len(got) != 1 {
+		t.Fatalf("sent %d events before done, want 1", len(got))
+	}
+
+	gate.observe(oairt.Event{Type: oairt.EventResponseDone})
+	events := sender.Events()
+	if len(events) != 2 {
+		t.Fatalf("sent %d events after done, want 2", len(events))
+	}
+	for i, event := range events {
+		if event.Type != oairt.EventResponseCreate {
+			t.Fatalf("event %d type = %q, want response.create", i, event.Type)
+		}
+	}
+}
+
+func TestResponseGateAllowsCreateAfterDone(t *testing.T) {
+	sender := &captureSender{}
+	gate := newResponseGate(sender, io.Discard)
+
+	if err := gate.Send(oairt.Event{Type: oairt.EventResponseCreate}); err != nil {
+		t.Fatal(err)
+	}
+	gate.observe(oairt.Event{Type: oairt.EventResponseDone})
+	if err := gate.Send(oairt.Event{Type: oairt.EventResponseCreate}); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := sender.Events(); len(got) != 2 {
+		t.Fatalf("sent %d events, want 2", len(got))
+	}
+}
+
 type fakeMicRecorder struct {
 	data []byte
 	cb   func([]byte)
