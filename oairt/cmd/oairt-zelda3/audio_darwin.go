@@ -4,22 +4,73 @@ package main
 
 import (
 	"context"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 	"unsafe"
 
-	"github.com/tmc/apple/avfaudio"
+	"github.com/ebitengine/purego"
+)
+
+type audioStreamBasicDescription struct {
+	SampleRate       float64
+	FormatID         uint32
+	FormatFlags      uint32
+	BytesPerPacket   uint32
+	FramesPerPacket  uint32
+	BytesPerFrame    uint32
+	ChannelsPerFrame uint32
+	BitsPerChannel   uint32
+	Reserved         uint32
+}
+
+type audioQueueBuffer struct {
+	AudioDataBytesCapacity uint32
+	_                      uint32
+	AudioData              unsafe.Pointer
+	AudioDataByteSize      uint32
+}
+
+const (
+	kAudioFormatLinearPCM       uint32 = 0x6c70636d
+	kAudioFormatFlagIsSignedInt uint32 = 0x4
+	kAudioFormatFlagIsPacked    uint32 = 0x8
+
+	audioQueueNumBuffers   = 3
+	audioQueueBufferFrames = 2400
+	audioQueueRingCap      = 24000 * 2 * 6
+)
+
+var (
+	audioToolboxOnce   sync.Once
+	audioToolboxLoaded bool
+
+	audioQueueNewOutput      func(*audioStreamBasicDescription, uintptr, unsafe.Pointer, uintptr, uintptr, uint32, *uintptr) int32
+	audioQueueAllocateBuffer func(uintptr, uint32, **audioQueueBuffer) int32
+	audioQueueEnqueueBuffer  func(uintptr, *audioQueueBuffer, uint32, unsafe.Pointer) int32
+	audioQueueStart          func(uintptr, unsafe.Pointer) int32
+	audioQueueStop           func(uintptr, bool) int32
+	audioQueueDispose        func(uintptr, bool) int32
+
+	globalAudioQueue      audioQueuePlayer
+	globalAudioCallback   uintptr
+	globalAudioCallbackMu sync.Once
 )
 
 type nativePCMPlayer struct {
-	mu         sync.Mutex
 	sampleRate int
-	engine     avfaudio.AVAudioEngine
-	node       avfaudio.AVAudioPlayerNode
-	format     avfaudio.AVAudioFormat
+}
+
+type audioQueuePlayer struct {
+	mu      sync.Mutex
+	queue   uintptr
+	bufs    [audioQueueNumBuffers]*audioQueueBuffer
+	ring    [audioQueueRingCap]byte
+	head    int
+	tail    int
+	size    int
+	started bool
 }
 
 func newNativePCMPlayer(sampleRate int) (pcmPlayer, error) {
@@ -30,58 +81,29 @@ func newNativePCMPlayer(sampleRate int) (pcmPlayer, error) {
 }
 
 func (p *nativePCMPlayer) Play(ctx context.Context, audio []byte) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-
 	if len(audio) == 0 {
 		return nil
 	}
-	if err := p.ensureReadyLocked(); err != nil {
+	if err := audioQueueStartPlayback(p.sampleRate); err != nil {
 		return err
 	}
-	buffer, frames, err := p.newPCMBufferLocked(audio)
-	if err != nil {
-		return err
-	}
-	defer buffer.Release()
-
-	done := make(chan struct{}, 1)
-	p.node.ScheduleBufferCompletionCallbackTypeCompletionHandler(
-		buffer,
-		avfaudio.AVAudioPlayerNodeCompletionDataPlayedBack,
-		func() {
-			select {
-			case done <- struct{}{}:
-			default:
-			}
-		},
-	)
-	p.node.PrepareWithFrameCount(frames)
-	p.node.Play()
-
-	timer := time.NewTimer(p.playbackTimeout(len(audio)))
-	defer timer.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			p.node.Stop()
-			return ctx.Err()
-		case <-done:
-			return nil
-		case <-timer.C:
-			if !p.engine.IsRunning() {
-				return errors.New("avaudio engine stopped before playback completed")
-			}
-			p.node.Stop()
+	for len(audio) > 0 {
+		n := audioQueueWrite(audio)
+		audio = audio[n:]
+		if len(audio) == 0 {
 			return nil
 		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(5 * time.Millisecond):
+		}
 	}
+	return nil
 }
 
 func (p *nativePCMPlayer) Cleanup() error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.releaseLocked()
+	audioQueueStopPlayback()
 	return nil
 }
 
@@ -89,113 +111,167 @@ func (p *nativePCMPlayer) EstimatedLatency() time.Duration {
 	return 20 * time.Millisecond
 }
 
-func (p *nativePCMPlayer) ensureReadyLocked() error {
-	if p.engine.ID == 0 {
-		if err := p.createEngineLocked(); err != nil {
-			p.releaseLocked()
-			return err
+func loadAudioToolbox() error {
+	var loadErr error
+	audioToolboxOnce.Do(func() {
+		h, err := purego.Dlopen("/System/Library/Frameworks/AudioToolbox.framework/AudioToolbox", purego.RTLD_LAZY|purego.RTLD_GLOBAL)
+		if err != nil {
+			loadErr = fmt.Errorf("dlopen AudioToolbox: %w", err)
+			return
+		}
+		purego.RegisterLibFunc(&audioQueueNewOutput, h, "AudioQueueNewOutput")
+		purego.RegisterLibFunc(&audioQueueAllocateBuffer, h, "AudioQueueAllocateBuffer")
+		purego.RegisterLibFunc(&audioQueueEnqueueBuffer, h, "AudioQueueEnqueueBuffer")
+		purego.RegisterLibFunc(&audioQueueStart, h, "AudioQueueStart")
+		purego.RegisterLibFunc(&audioQueueStop, h, "AudioQueueStop")
+		purego.RegisterLibFunc(&audioQueueDispose, h, "AudioQueueDispose")
+		audioToolboxLoaded = true
+	})
+	if loadErr != nil {
+		return loadErr
+	}
+	if !audioToolboxLoaded {
+		return errors.New("audiotoolbox not loaded")
+	}
+	return nil
+}
+
+func audioQueueCallback(_ uintptr, aq uintptr, buf *audioQueueBuffer) uintptr {
+	capacity := int(buf.AudioDataBytesCapacity)
+	globalAudioQueue.mu.Lock()
+	n := globalAudioQueue.readInto(buf.AudioData, capacity)
+	globalAudioQueue.mu.Unlock()
+	if n < capacity {
+		silence := unsafe.Slice((*byte)(unsafe.Add(buf.AudioData, n)), capacity-n)
+		for i := range silence {
+			silence[i] = 0
 		}
 	}
-	if p.engine.IsRunning() {
+	buf.AudioDataByteSize = uint32(capacity)
+	audioQueueEnqueueBuffer(aq, buf, 0, nil)
+	return 0
+}
+
+func audioQueueStartPlayback(sampleRate int) error {
+	if err := loadAudioToolbox(); err != nil {
+		return err
+	}
+	globalAudioCallbackMu.Do(func() {
+		globalAudioCallback = purego.NewCallback(audioQueueCallback)
+	})
+
+	globalAudioQueue.mu.Lock()
+	defer globalAudioQueue.mu.Unlock()
+	if globalAudioQueue.started {
 		return nil
 	}
-	p.engine.Prepare()
-	if _, err := p.engine.StartAndReturnError(); err != nil {
-		return fmt.Errorf("start avaudio engine: %w", err)
+
+	asbd := audioStreamBasicDescription{
+		SampleRate:       float64(sampleRate),
+		FormatID:         kAudioFormatLinearPCM,
+		FormatFlags:      kAudioFormatFlagIsSignedInt | kAudioFormatFlagIsPacked,
+		BytesPerPacket:   2,
+		FramesPerPacket:  1,
+		BytesPerFrame:    2,
+		ChannelsPerFrame: uint32(audioChannels),
+		BitsPerChannel:   audioBitsPerSample,
 	}
+
+	var queue uintptr
+	if rc := audioQueueNewOutput(&asbd, globalAudioCallback, nil, 0, 0, 0, &queue); rc != 0 {
+		return fmt.Errorf("AudioQueueNewOutput: OSStatus=%d", rc)
+	}
+	globalAudioQueue.queue = queue
+
+	const bufferBytes = uint32(audioQueueBufferFrames * audioChannels * audioBitsPerSample / 8)
+	for i := range globalAudioQueue.bufs {
+		var buf *audioQueueBuffer
+		if rc := audioQueueAllocateBuffer(queue, bufferBytes, &buf); rc != 0 {
+			audioQueueDispose(queue, true)
+			globalAudioQueue.queue = 0
+			return fmt.Errorf("AudioQueueAllocateBuffer: OSStatus=%d", rc)
+		}
+		zeros := unsafe.Slice((*byte)(buf.AudioData), bufferBytes)
+		for j := range zeros {
+			zeros[j] = 0
+		}
+		buf.AudioDataByteSize = bufferBytes
+		globalAudioQueue.bufs[i] = buf
+		if rc := audioQueueEnqueueBuffer(queue, buf, 0, nil); rc != 0 {
+			audioQueueDispose(queue, true)
+			globalAudioQueue.queue = 0
+			return fmt.Errorf("AudioQueueEnqueueBuffer: OSStatus=%d", rc)
+		}
+	}
+	if rc := audioQueueStart(queue, nil); rc != 0 {
+		audioQueueDispose(queue, true)
+		globalAudioQueue.queue = 0
+		return fmt.Errorf("AudioQueueStart: OSStatus=%d", rc)
+	}
+	globalAudioQueue.started = true
 	return nil
 }
 
-func (p *nativePCMPlayer) createEngineLocked() error {
-	p.engine = avfaudio.NewAVAudioEngine()
-	if p.engine.ID == 0 {
-		return errors.New("create avaudio engine")
-	}
-	p.node = avfaudio.NewAVAudioPlayerNode()
-	if p.node.ID == 0 {
-		return errors.New("create avaudio player node")
-	}
-	p.format = avfaudio.NewAudioFormatWithCommonFormatSampleRateChannelsInterleaved(
-		avfaudio.AVAudioPCMFormatInt16,
-		float64(p.sampleRate),
-		avfaudio.AVAudioChannelCount(audioChannels),
-		false,
-	)
-	if p.format.ID == 0 {
-		return errors.New("create avaudio format")
-	}
-	p.engine.AttachNode(p.node)
-	p.engine.ConnectToFormat(p.node, p.engine.MainMixerNode(), p.format)
-	return nil
-}
-
-func (p *nativePCMPlayer) newPCMBufferLocked(audio []byte) (avfaudio.AVAudioPCMBuffer, avfaudio.AVAudioFrameCount, error) {
-	bytesPerFrame := audioChannels * audioBitsPerSample / 8
-	if len(audio)%bytesPerFrame != 0 {
-		return avfaudio.AVAudioPCMBuffer{}, 0, fmt.Errorf("pcm payload has %d trailing bytes", len(audio)%bytesPerFrame)
-	}
-	frames := avfaudio.AVAudioFrameCount(len(audio) / bytesPerFrame)
-	if frames == 0 {
-		return avfaudio.AVAudioPCMBuffer{}, 0, errors.New("cannot play empty pcm buffer")
-	}
-	buffer := avfaudio.NewAudioPCMBufferWithPCMFormatFrameCapacity(p.format, frames)
-	if buffer.ID == 0 {
-		return avfaudio.AVAudioPCMBuffer{}, 0, errors.New("create avaudio pcm buffer")
-	}
-	buffer.SetFrameLength(frames)
-	if err := copyPCM16Mono(buffer, audio, int(frames)); err != nil {
-		buffer.Release()
-		return avfaudio.AVAudioPCMBuffer{}, 0, err
-	}
-	return buffer, frames, nil
-}
-
-func copyPCM16Mono(buffer avfaudio.AVAudioPCMBuffer, audio []byte, frames int) error {
-	channelData := buffer.Int16ChannelData()
-	if channelData == nil {
-		return errors.New("avaudio pcm buffer has no int16 channel data")
-	}
-	channels := unsafe.Slice((**int16)(channelData), audioChannels)
-	if len(channels) == 0 || channels[0] == nil {
-		return errors.New("avaudio pcm buffer returned empty channel data")
-	}
-	samples := unsafe.Slice(channels[0], frames)
-	for i := range frames {
-		samples[i] = int16(binary.LittleEndian.Uint16(audio[i*2:]))
-	}
-	return nil
-}
-
-func (p *nativePCMPlayer) playbackTimeout(n int) time.Duration {
-	timeout := p.estimatedDuration(n) + 2*time.Second
-	if timeout < 2*time.Second {
-		return 2 * time.Second
-	}
-	return timeout
-}
-
-func (p *nativePCMPlayer) estimatedDuration(n int) time.Duration {
-	bytesPerFrame := audioChannels * audioBitsPerSample / 8
-	if bytesPerFrame <= 0 || p.sampleRate <= 0 {
+func audioQueueWrite(p []byte) int {
+	globalAudioQueue.mu.Lock()
+	defer globalAudioQueue.mu.Unlock()
+	if !globalAudioQueue.started {
 		return 0
 	}
-	frames := float64(n) / float64(bytesPerFrame)
-	return time.Duration(frames / float64(p.sampleRate) * float64(time.Second))
+	return globalAudioQueue.write(p)
 }
 
-func (p *nativePCMPlayer) releaseLocked() {
-	if p.node.ID != 0 {
-		p.node.Stop()
-		p.node.Release()
-		p.node = avfaudio.AVAudioPlayerNode{}
+func audioQueueStopPlayback() {
+	globalAudioQueue.mu.Lock()
+	defer globalAudioQueue.mu.Unlock()
+	if !globalAudioQueue.started {
+		return
 	}
-	if p.format.ID != 0 {
-		p.format.Release()
-		p.format = avfaudio.AVAudioFormat{}
+	audioQueueStop(globalAudioQueue.queue, true)
+	audioQueueDispose(globalAudioQueue.queue, true)
+	globalAudioQueue.queue = 0
+	for i := range globalAudioQueue.bufs {
+		globalAudioQueue.bufs[i] = nil
 	}
-	if p.engine.ID != 0 {
-		p.engine.Stop()
-		p.engine.Release()
-		p.engine = avfaudio.AVAudioEngine{}
+	globalAudioQueue.head = 0
+	globalAudioQueue.tail = 0
+	globalAudioQueue.size = 0
+	globalAudioQueue.started = false
+}
+
+func (p *audioQueuePlayer) write(src []byte) int {
+	wrote := 0
+	for wrote < len(src) && p.size < audioQueueRingCap {
+		n := len(src) - wrote
+		if space := audioQueueRingCap - p.size; n > space {
+			n = space
+		}
+		if tailSpace := audioQueueRingCap - p.tail; n > tailSpace {
+			n = tailSpace
+		}
+		copy(p.ring[p.tail:p.tail+n], src[wrote:wrote+n])
+		p.tail = (p.tail + n) % audioQueueRingCap
+		p.size += n
+		wrote += n
 	}
+	return wrote
+}
+
+func (p *audioQueuePlayer) readInto(dst unsafe.Pointer, n int) int {
+	read := 0
+	out := unsafe.Slice((*byte)(dst), n)
+	for read < n && p.size > 0 {
+		chunk := n - read
+		if chunk > p.size {
+			chunk = p.size
+		}
+		if headSpace := audioQueueRingCap - p.head; chunk > headSpace {
+			chunk = headSpace
+		}
+		copy(out[read:read+chunk], p.ring[p.head:p.head+chunk])
+		p.head = (p.head + chunk) % audioQueueRingCap
+		p.size -= chunk
+		read += chunk
+	}
+	return read
 }
