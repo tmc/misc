@@ -1,7 +1,8 @@
-package main
+package oairt
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,202 +11,289 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"go.uber.org/zap"
 )
 
-type RealtimeClientOption func(*RealtimeClient)
+// Option configures a Client.
+type Option func(*Client)
 
-func WithDebug(debug bool) RealtimeClientOption {
-	return func(c *RealtimeClient) {
-		c.debug = debug
-	}
+// WithDebug enables verbose debug logging via the configured Logger.
+func WithDebug(debug bool) Option {
+	return func(c *Client) { c.debug = debug }
 }
 
-func WithDumpFrames(dumpFrames bool) RealtimeClientOption {
-	return func(c *RealtimeClient) {
-		c.dumpFrames = dumpFrames
-	}
+// WithDumpFrames enables logging of raw WebSocket frames via the configured
+// Logger. Frames may contain user data; do not enable in production.
+func WithDumpFrames(dumpFrames bool) Option {
+	return func(c *Client) { c.dumpFrames = dumpFrames }
 }
 
-func NewRealtimeClient(apiKey string, state *AppState, options ...RealtimeClientOption) *RealtimeClient {
-	c := &RealtimeClient{
+// NewClient returns a Client configured for the given API key.
+//
+// Call Connect to dial the Realtime endpoint.
+func NewClient(apiKey string, options ...Option) *Client {
+	c := &Client{
 		URL:      "wss://api.openai.com/v1/realtime",
 		APIKey:   apiKey,
 		handlers: make(map[string][]func(Event)),
 		send:     make(chan []byte, 256),
-		state:    state,
+		logger:   nopLogger{},
+		closed:   make(chan struct{}),
 	}
-
 	for _, option := range options {
 		option(c)
 	}
-
 	return c
 }
 
-func (c *RealtimeClient) Connect(ctx context.Context, model string) error {
+// Connect dials the Realtime endpoint and starts the read/write pumps.
+func (c *Client) Connect(ctx context.Context, model string) error {
 	u, err := url.Parse(c.URL)
 	if err != nil {
-		return fmt.Errorf("error parsing URL: %v", err)
+		return fmt.Errorf("parse url: %w", err)
 	}
-
 	if model != "" {
 		q := u.Query()
 		q.Set("model", model)
 		u.RawQuery = q.Encode()
 	}
 
+	ua := c.userAgent
+	if ua == "" {
+		ua = "OpenAI-Realtime-Client/1.0"
+	}
 	headers := http.Header{}
 	headers.Add("Authorization", "Bearer "+c.APIKey)
-	headers.Add("OpenAI-Beta", "realtime=v1")
-	headers.Add("User-Agent", "OpenAI-Realtime-Client/1.0")
+	headers.Add("User-Agent", ua)
 
-	logDebug("Connecting to WebSocket",
-		zap.String("url", u.String()),
-		zap.Any("headers", headers),
-	)
-
-	dialer := websocket.Dialer{
-		Proxy:            http.ProxyFromEnvironment,
-		HandshakeTimeout: 45 * time.Second,
+	if c.debug {
+		c.logger.Debugf("connecting to %s", u.String())
 	}
+
+	dialer := c.resolveDialer()
 
 	conn, resp, err := dialer.DialContext(ctx, u.String(), headers)
 	if err != nil {
 		if resp != nil {
 			body, _ := io.ReadAll(resp.Body)
-			return fmt.Errorf("websocket handshake failed with status %d: %s\nResponse body: %s", resp.StatusCode, err, string(body))
+			return fmt.Errorf("%w (status %d): %w: %s", ErrHandshake, resp.StatusCode, err, string(body))
 		}
-		return fmt.Errorf("error connecting to websocket: %v", err)
+		return fmt.Errorf("%w: %w", ErrHandshake, err)
 	}
 	c.conn = conn
 
-	if resp != nil {
-		logDebug("Connected to WebSocket",
-			zap.String("status", resp.Status),
-			zap.Any("headers", resp.Header),
-		)
-	}
-
-	if c.dumpFrames {
-		logDebug("WebSocket handshake details",
-			zap.Any("requestHeaders", resp.Request.Header),
-			zap.String("responseStatus", resp.Status),
-			zap.Any("responseHeaders", resp.Header),
-		)
+	if c.debug && resp != nil {
+		c.logger.Debugf("connected: %s", resp.Status)
 	}
 
 	go c.readPump()
 	go c.writePump()
 
+	// Tie pump teardown to the caller's context: when ctx ends (or Close
+	// runs first), shut the connection down. closeOnce makes either path
+	// idempotent.
+	go func() {
+		select {
+		case <-ctx.Done():
+			c.Close()
+		case <-c.closed:
+		}
+	}()
+
 	return nil
 }
 
-func (c *RealtimeClient) Disconnect() error {
-	if c.conn != nil {
-		return c.conn.Close()
+// Close terminates the WebSocket connection and waits for in-flight
+// handler goroutines to finish. It is safe to call concurrently and
+// repeatedly.
+//
+// Close does not close the c.send channel; writePump observes c.closed
+// and returns. That ordering avoids a data race between concurrent
+// Send calls and Close on the channel itself.
+func (c *Client) Close() error {
+	var closeErr error
+	c.closeOnce.Do(func() {
+		// Mark the client closed under the mutex so dispatch sees the
+		// state transition before we Wait, ruling out Add-after-Wait
+		// on dispatchWG.
+		c.mu.Lock()
+		close(c.closed)
+		c.mu.Unlock()
+
+		if c.conn != nil {
+			closeErr = c.conn.Close()
+		}
+		c.dispatchWG.Wait()
+	})
+	return closeErr
+}
+
+// Send queues an event for delivery to the server.
+func (c *Client) Send(event Event) error {
+	if c.conn == nil {
+		return fmt.Errorf("send: %w", ErrNotConnected)
 	}
-	return nil
+	data, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("marshal event: %w", err)
+	}
+	// Single select: c.closed wins over c.send if both are ready, so a
+	// post-Close caller deterministically sees ErrClosed instead of
+	// pushing onto a channel that writePump is no longer draining.
+	select {
+	case <-c.closed:
+		return fmt.Errorf("send: %w", ErrClosed)
+	default:
+	}
+	select {
+	case c.send <- data:
+		return nil
+	case <-c.closed:
+		return fmt.Errorf("send: %w", ErrClosed)
+	default:
+		return fmt.Errorf("send: %w", ErrSendQueueFull)
+	}
 }
 
-func (c *RealtimeClient) Send(event Event) error {
-	logDebug("Sending event", zap.Any("event", event))
-	return c.conn.WriteJSON(event)
+// SendAudio base64-encodes data and queues it as an
+// input_audio_buffer.append event.
+func (c *Client) SendAudio(data []byte) error {
+	encoded := base64.StdEncoding.EncodeToString(data)
+	return c.Send(Event{
+		Type:  "input_audio_buffer.append",
+		Audio: encoded,
+	})
 }
 
-func (c *RealtimeClient) On(eventType string, handler func(Event)) {
+// On registers a handler for the given event type. Use "*" to receive every
+// event. Handlers run in their own goroutine.
+func (c *Client) On(eventType string, handler func(Event)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.handlers[eventType] = append(c.handlers[eventType], handler)
 }
 
-func (c *RealtimeClient) readPump() {
-	defer func() {
-		c.conn.Close()
-	}()
-
+func (c *Client) readPump() {
+	defer c.conn.Close()
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-				logError("Error reading from websocket", err)
+				c.logger.Errorf("read: %v", err)
 			}
-			break
+			return
 		}
-
 		if c.dumpFrames {
-			logDebug("Received raw frame", zap.ByteString("message", message))
+			c.logger.Debugf("recv frame: %s", string(message))
 		}
-
 		var event Event
 		if err := json.Unmarshal(message, &event); err != nil {
-			logError("Error unmarshaling event", err)
+			c.logger.Errorf("unmarshal: %v", err)
 			continue
 		}
-
-		logDebug("Received event", zap.Any("event", event))
-		c.handleEvent(event)
+		c.dispatch(event)
 	}
 }
 
-func (c *RealtimeClient) writePump() {
-	ticker := time.NewTicker(time.Second * 30)
+func (c *Client) writePump() {
+	ticker := time.NewTicker(30 * time.Second)
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
 	}()
-
 	for {
 		select {
-		case message, ok := <-c.send:
-			if !ok {
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
-
+		case <-c.closed:
+			c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+			return
+		case message := <-c.send:
 			if c.dumpFrames {
-				logDebug("Sending raw frame", zap.ByteString("message", message))
+				c.logger.Debugf("send frame: %s", string(message))
 			}
-
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				logError("Error getting next writer", err)
+				c.logger.Errorf("next writer: %v", err)
 				return
 			}
 			w.Write(message)
-
 			if err := w.Close(); err != nil {
-				logError("Error closing writer", err)
+				c.logger.Errorf("close writer: %v", err)
 				return
 			}
 		case <-ticker.C:
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				logError("Error writing ping message", err)
+				c.logger.Errorf("ping: %v", err)
 				return
 			}
 		}
 	}
 }
 
-func (c *RealtimeClient) handleEvent(event Event) {
+func (c *Client) dispatch(event Event) {
+	// Snapshot handlers and reserve waitgroup slots under the mutex.
+	// Holding c.mu across dispatchWG.Add serializes Add against Close,
+	// which closes c.closed under the same mutex — once Close passes
+	// that point, no further Adds happen and dispatchWG.Wait is safe.
 	c.mu.Lock()
-	defer c.mu.Unlock()
+	select {
+	case <-c.closed:
+		c.mu.Unlock()
+		return
+	default:
+	}
+	handlers := append([]func(Event){}, c.handlers[event.Type]...)
+	allHandlers := append([]func(Event){}, c.handlers["*"]...)
+	c.dispatchWG.Add(len(handlers) + len(allHandlers))
+	c.mu.Unlock()
 
-	// Store session information when received
-	if event.Type == "session.created" || event.Type == "session.update" {
-		if event.Session != nil {
-			c.state.Session = event.Session
-			logDebug("Session updated", zap.Any("session", c.state.Session))
+	for _, h := range handlers {
+		go func(fn func(Event)) {
+			defer c.dispatchWG.Done()
+			c.safeInvoke(fn, event)
+		}(h)
+	}
+	for _, h := range allHandlers {
+		go func(fn func(Event)) {
+			defer c.dispatchWG.Done()
+			c.safeInvoke(fn, event)
+		}(h)
+	}
+}
+
+// resolveDialer returns the websocket.Dialer Connect should use,
+// honoring WithDialer first and otherwise composing a default that
+// picks up Proxy/Jar from any WithHTTPClient hint.
+func (c *Client) resolveDialer() *websocket.Dialer {
+	if c.dialer != nil {
+		return c.dialer
+	}
+	d := &websocket.Dialer{
+		Proxy:            http.ProxyFromEnvironment,
+		HandshakeTimeout: 45 * time.Second,
+	}
+	if c.httpClient != nil {
+		if t, ok := c.httpClient.Transport.(*http.Transport); ok && t != nil {
+			if t.Proxy != nil {
+				d.Proxy = t.Proxy
+			}
+			if t.TLSClientConfig != nil {
+				d.TLSClientConfig = t.TLSClientConfig
+			}
+		}
+		if c.httpClient.Jar != nil {
+			d.Jar = c.httpClient.Jar
 		}
 	}
+	return d
+}
 
-	handlers := c.handlers[event.Type]
-	for _, handler := range handlers {
-		go handler(event)
-	}
-
-	allHandlers := c.handlers["*"]
-	for _, handler := range allHandlers {
-		go handler(event)
-	}
+// safeInvoke runs a registered handler, recovering from panics so a single
+// faulty handler cannot strand the dispatch waitgroup or take down the read
+// pump. The recovered value is reported via the configured Logger.
+func (c *Client) safeInvoke(fn func(Event), event Event) {
+	defer func() {
+		if r := recover(); r != nil {
+			c.logger.Errorf("handler panic on %q: %v", event.Type, r)
+		}
+	}()
+	fn(event)
 }

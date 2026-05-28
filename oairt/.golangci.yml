@@ -1,0 +1,34 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - bodyclose
+    - errorlint
+  settings:
+    errorlint:
+      asserts: true
+      comparison: true
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [errcheck]
+      - path: cmd/oairt/audio_darwin\.go
+        linters: [unused]
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  exclude-dirs:
+    - testdata

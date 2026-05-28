@@ -1,0 +1,8 @@
+{
+  "type": "response.output_item.added",
+  "response_id": "resp_1",
+  "item": {
+    "type": "message",
+    "role": "assistant"
+  }
+}

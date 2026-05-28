@@ -1,0 +1,7 @@
+{
+  "type": "session.update",
+  "event_id": "evt_1",
+  "session": {
+    "voice": "alloy"
+  }
+}

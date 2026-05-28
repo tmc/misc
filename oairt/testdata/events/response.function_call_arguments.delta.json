@@ -1,0 +1,5 @@
+{
+  "type": "response.function_call_arguments.delta",
+  "response_id": "resp_1",
+  "delta": "{\"a\":1}"
+}

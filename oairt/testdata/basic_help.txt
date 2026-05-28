@@ -1,0 +1,10 @@
+# Test basic help output
+oairt -h
+stderr 'Usage of'
+stderr '-api-key'
+stderr '-audio-output'
+stderr '-audio-stream'
+stderr '-debug'
+stderr '-voice'
+stderr '-instructions'
+stderr '-model'

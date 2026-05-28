@@ -1,0 +1,12 @@
+{
+  "type": "session.created",
+  "event_id": "evt_2",
+  "session": {
+    "id": "sess_a",
+    "model": "gpt-realtime",
+    "modalities": [
+      "text",
+      "audio"
+    ]
+  }
+}

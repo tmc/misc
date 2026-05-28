@@ -1,0 +1,14 @@
+# Test different debug levels
+env OPENAI_API_KEY=test-key-123
+
+# Test debug level 0 (default - no debug output)
+! oairt -api-key test-key-123 -debug 0
+stderr 'timeout waiting for initial session'
+
+# Test debug level 1 (debug output)
+! oairt -api-key test-key-123 -debug 1
+stderr 'Error reading from websocket'
+
+# Test debug level 2 (verbose output)
+! oairt -api-key test-key-123 -debug 2 -audio-output verbose.pcm
+stderr 'Error reading from websocket'

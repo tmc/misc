@@ -1,0 +1,10 @@
+# Test model flag
+env OPENAI_API_KEY=test-key-123
+
+# Test with custom model name
+! oairt -api-key test-key-123 -model custom-model-2024 -debug 1
+stderr 'Error reading from websocket'
+
+# Test with default model
+! oairt -api-key test-key-123 -debug 1
+stderr 'Error reading from websocket'

@@ -1,0 +1,5 @@
+{
+  "type": "response.audio_transcript.delta",
+  "response_id": "resp_1",
+  "delta": "the cat"
+}

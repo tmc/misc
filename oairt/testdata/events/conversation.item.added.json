@@ -1,0 +1,11 @@
+{
+  "type": "conversation.item.added",
+  "event_id": "evt_6",
+  "previous_item_id": "item_0",
+  "item": {
+    "id": "item_1",
+    "type": "message",
+    "status": "in_progress",
+    "role": "assistant"
+  }
+}

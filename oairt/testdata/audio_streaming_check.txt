@@ -1,0 +1,7 @@
+# Test audio streaming dependency check
+env OPENAI_API_KEY=test-key-123
+
+# Test when ffplay is not available (we'll simulate this by using a non-existent path)
+env PATH=/nonexistent
+! oairt -api-key test-key-123 -audio-stream
+stderr 'ffplay is not installed or not in PATH'

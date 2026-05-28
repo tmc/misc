@@ -1,0 +1,5 @@
+# Test that missing API key produces error
+env OPENAI_API_KEY=
+! oairt
+stderr 'API key is required'
+stderr 'Set OPENAI_API_KEY environment variable or use -api-key flag'

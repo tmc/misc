@@ -1,0 +1,15 @@
+{
+  "type": "session.update",
+  "event_id": "evt_9",
+  "session": {
+    "input_audio_transcription": {
+      "model": "gpt-4o-transcribe",
+      "language": "en",
+      "delay": "low",
+      "prompt": "vocabulary: ACME, OAuth"
+    },
+    "reasoning": {
+      "effort": "medium"
+    }
+  }
+}

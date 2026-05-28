@@ -1,0 +1,14 @@
+{
+  "type": "conversation.item.created",
+  "item": {
+    "id": "item_1",
+    "type": "message",
+    "role": "user",
+    "content": [
+      {
+        "type": "input_text",
+        "text": "hello"
+      }
+    ]
+  }
+}

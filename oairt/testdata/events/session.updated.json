@@ -1,0 +1,6 @@
+{
+  "type": "session.updated",
+  "session": {
+    "voice": "echo"
+  }
+}

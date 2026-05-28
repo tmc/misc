@@ -1,0 +1,9 @@
+{
+  "type": "error",
+  "error": {
+    "type": "invalid_request_error",
+    "code": "missing_parameter",
+    "message": "session is required",
+    "event_id": "evt_5"
+  }
+}

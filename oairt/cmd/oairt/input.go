@@ -7,15 +7,16 @@ import (
 	"os"
 	"strings"
 
+	oairt "github.com/tmc/misc/oairt"
 	"go.uber.org/zap"
 )
 
 type InputHandler struct {
-	client *RealtimeClient
+	client *oairt.Client
 	state  *AppState
 }
 
-func NewInputHandler(client *RealtimeClient, state *AppState) *InputHandler {
+func NewInputHandler(client *oairt.Client, state *AppState) *InputHandler {
 	return &InputHandler{
 		client: client,
 		state:  state,
@@ -49,12 +50,13 @@ func (h *InputHandler) handleInput(ctx context.Context, input string) error {
 }
 
 func (h *InputHandler) handleVoiceCommand() error {
-	if h.client.state.Session == nil || len(h.client.state.Session.AvailableVoices) == 0 {
+	sess := h.state.CurrentSession()
+	if sess == nil || len(sess.AvailableVoices) == 0 {
 		logInfo("Voice information not available. Please try again later.")
 		return nil
 	}
 
-	availableVoices := strings.Join(h.client.state.Session.AvailableVoices, ", ")
+	availableVoices := strings.Join(sess.AvailableVoices, ", ")
 	fmt.Printf("Enter new voice (available voices: %s):\n", availableVoices)
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -79,57 +81,53 @@ func (h *InputHandler) handleInstructionsCommand() error {
 }
 
 func (h *InputHandler) updateVoice(newVoice string) error {
-	if h.client.state.Session == nil {
+	sess := h.state.CurrentSession()
+	if sess == nil {
 		return fmt.Errorf("no active session")
 	}
-
-	availableVoices := h.client.state.Session.AvailableVoices
-	if len(availableVoices) == 0 {
+	if len(sess.AvailableVoices) == 0 {
 		return fmt.Errorf("no available voices information")
 	}
-
-	for _, v := range availableVoices {
+	for _, v := range sess.AvailableVoices {
 		if newVoice == v {
 			return h.updateSession(newVoice, "")
 		}
 	}
-
-	return fmt.Errorf("invalid voice: %s. Supported values are: %s", newVoice, strings.Join(availableVoices, ", "))
+	return fmt.Errorf("invalid voice: %s. Supported values are: %s", newVoice, strings.Join(sess.AvailableVoices, ", "))
 }
 
 func (h *InputHandler) updateInstructions(newInstructions string) error {
-	if h.client.state.Session == nil {
+	if h.state.CurrentSession() == nil {
 		return fmt.Errorf("no active session")
 	}
-
 	return h.updateSession("", newInstructions)
 }
 
 func (h *InputHandler) updateSession(voice, instructions string) error {
-	if h.client.state.Session == nil {
+	sess := h.state.CurrentSession()
+	if sess == nil {
 		return fmt.Errorf("no active session")
 	}
 
-	updateEvent := Event{
+	updateEvent := oairt.Event{
 		Type:    "session.update",
 		EventID: generateID("evt_"),
-		Session: &Session{
+		Session: &oairt.Session{
 			Voice:                   voice,
 			Instructions:            instructions,
-			Modalities:              h.client.state.Session.Modalities,
-			InputAudioFormat:        h.client.state.Session.InputAudioFormat,
-			OutputAudioFormat:       h.client.state.Session.OutputAudioFormat,
-			InputAudioTranscription: h.client.state.Session.InputAudioTranscription,
-			TurnDetection:           h.client.state.Session.TurnDetection,
-			Tools:                   []Tool{},
-			ToolChoice:              h.client.state.Session.ToolChoice,
-			Temperature:             h.client.state.Session.Temperature,
+			Modalities:              sess.Modalities,
+			InputAudioFormat:        sess.InputAudioFormat,
+			OutputAudioFormat:       sess.OutputAudioFormat,
+			InputAudioTranscription: sess.InputAudioTranscription,
+			TurnDetection:           sess.TurnDetection,
+			Tools:                   []oairt.Tool{},
+			ToolChoice:              sess.ToolChoice,
+			Temperature:             sess.Temperature,
 		},
 	}
 
 	logDebug("Sending session update event", zap.Any("event", updateEvent))
-	err := h.client.Send(updateEvent)
-	if err != nil {
+	if err := h.client.Send(updateEvent); err != nil {
 		return fmt.Errorf("error sending session update: %w", err)
 	}
 
@@ -138,29 +136,30 @@ func (h *InputHandler) updateSession(voice, instructions string) error {
 }
 
 func (h *InputHandler) sendUserMessage(input string) error {
-	event := Event{
-		Type:    "conversation.item.create",
+	if strings.TrimSpace(input) == "" {
+		return nil
+	}
+	event := oairt.Event{
+		Type:    oairt.EventConversationItemCreate,
 		EventID: generateID("evt_"),
-		Item: map[string]interface{}{
-			"type": "message",
-			"role": "user",
-			"content": []map[string]string{
-				{"type": "input_text", "text": input},
+		Item: &oairt.Item{
+			Type: "message",
+			Role: "user",
+			Content: []oairt.ItemContent{
+				{Type: "input_text", Text: input},
 			},
 		},
 	}
 
-	err := h.client.Send(event)
-	if err != nil {
+	if err := h.client.Send(event); err != nil {
 		return fmt.Errorf("error sending message: %w", err)
 	}
 
-	responseEvent := Event{
+	responseEvent := oairt.Event{
 		Type:    "response.create",
 		EventID: generateID("evt_"),
 	}
-	err = h.client.Send(responseEvent)
-	if err != nil {
+	if err := h.client.Send(responseEvent); err != nil {
 		return fmt.Errorf("error sending response creation message: %w", err)
 	}
 

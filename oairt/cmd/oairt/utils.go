@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"time"
 
+	oairt "github.com/tmc/misc/oairt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -64,14 +64,10 @@ func logVerbose(msg string, fields ...zap.Field) {
 	}
 }
 
-func generateID(prefix string) string {
-	const charset = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-	b := make([]byte, 21-len(prefix))
-	for i := range b {
-		b[i] = charset[time.Now().UnixNano()%int64(len(charset))]
-	}
-	return prefix + string(b)
-}
+// generateID is a thin CLI-side wrapper over oairt.NewEventID for backward
+// compatibility with existing call sites. New code should use oairt.NewEventID
+// directly.
+func generateID(prefix string) string { return oairt.NewEventID(prefix) }
 
 func mustMarshal(v interface{}) []byte {
 	b, err := json.Marshal(v)

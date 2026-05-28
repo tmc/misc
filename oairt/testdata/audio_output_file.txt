@@ -1,0 +1,12 @@
+# Test audio output file creation
+env OPENAI_API_KEY=test-key-123
+
+# Create a test WAV file
+mkwav test_input.wav 500
+
+# Run oairt with audio output file (it will fail to connect but should create the file)
+! oairt -api-key test-key-123 -audio-output output.pcm -debug 1
+stderr 'timeout waiting for initial session'
+
+# Check that the output file was created
+assert exists output.pcm

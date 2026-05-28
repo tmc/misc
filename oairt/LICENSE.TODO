@@ -1,0 +1,10 @@
+TODO: license choice pending user confirmation.
+
+Candidates: Apache-2.0, MIT, BSD-3-Clause.
+
+The agent intentionally did not pick a license. Please replace this file
+with the chosen license text (filename: LICENSE) and update the README
+"License" section. SPDX headers in source files will only be added on
+explicit request.
+
+Reference: oairt roadmap C3 — user-gated.

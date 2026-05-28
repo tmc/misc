@@ -20,6 +20,18 @@ type AudioPlayer interface {
 	IsClosed() bool
 }
 
+// AudioRecorder defines the interface for audio recording
+type AudioRecorder interface {
+	StartRecording(ctx context.Context, sampleRate int, callback func([]byte)) error
+	StopRecording() error
+}
+
+// AudioEngine combines Player and Recorder
+type AudioEngine interface {
+	AudioPlayer
+	AudioRecorder
+}
+
 // FFplayPlayer implements AudioPlayer using FFplay
 type FFplayPlayer struct {
 	cmd        *exec.Cmd
@@ -169,6 +181,14 @@ func (p *FFplayPlayer) IsClosed() bool {
 	return p.closed
 }
 
+func (p *FFplayPlayer) StartRecording(ctx context.Context, sampleRate int, callback func([]byte)) error {
+	return fmt.Errorf("recording not supported by FFplayPlayer")
+}
+
+func (p *FFplayPlayer) StopRecording() error {
+	return nil
+}
+
 // BufferedAudioWriter implements a buffered writer for audio data
 type BufferedAudioWriter struct {
 	player  AudioPlayer
@@ -231,6 +251,13 @@ func (w *BufferedAudioWriter) Close() error {
 		return err
 	}
 	return w.player.Close()
+}
+
+func checkFFplay() error {
+	if _, err := exec.LookPath("ffplay"); err != nil {
+		return fmt.Errorf("ffplay is not installed or not in PATH. Please install FFmpeg to use audio streaming")
+	}
+	return nil
 }
 
 func (w *BufferedAudioWriter) IsClosed() bool {

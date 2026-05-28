@@ -1,0 +1,6 @@
+{
+  "type": "conversation.item.input_audio_transcription.delta",
+  "event_id": "evt_8",
+  "item_id": "item_2",
+  "delta": "hel"
+}
