@@ -66,9 +66,12 @@ type config struct {
 	outputModes  string
 	audio        bool
 	mic          bool
+	vision       bool
 	instructions string
 	prompt       string
 	framesMax    int
+	loadSaveSlot int
+	exitAfter    time.Duration
 	timeout      time.Duration
 	once         bool
 	tui          bool
@@ -85,6 +88,11 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	cfg, err := parseConfig(args)
 	if err != nil {
 		return err
+	}
+	if cfg.exitAfter > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, cfg.exitAfter)
+		defer cancel()
 	}
 
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
@@ -105,6 +113,11 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		return err
 	}
 	allowedTools := toolNameSet(mcpTools)
+	if cfg.loadSaveSlot >= 0 {
+		if err := loadSaveSlot(ctx, mcp, allowedTools, cfg.loadSaveSlot); err != nil {
+			return err
+		}
+	}
 	interactive := cfg.tui && isInteractive(stdin, stdout)
 	uiEvents := make(chan uiEvent, 256)
 	defer close(uiEvents)
@@ -196,7 +209,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 	if err := sendSessionUpdate(client, cfg, mcpTools); err != nil {
 		return err
 	}
-	if err := sendInitialObservation(ctx, client, mcp); err != nil {
+	if err := sendInitialContext(ctx, client, mcp, allowedTools, cfg.vision); err != nil {
 		return err
 	}
 	if cfg.prompt != "" {
@@ -252,9 +265,11 @@ func parseConfig(args []string) (*config, error) {
 		effort:       "low",
 		audio:        true,
 		mic:          true,
+		vision:       true,
 		tui:          true,
 		instructions: defaultInstructions,
 		framesMax:    60,
+		loadSaveSlot: -1,
 		timeout:      5 * time.Second,
 	}
 	fs := flag.NewFlagSet("oairt-zelda3", flag.ContinueOnError)
@@ -268,9 +283,12 @@ func parseConfig(args []string) (*config, error) {
 	fs.StringVar(&cfg.outputModes, "output-modalities", "text", "comma-separated output modalities: text,audio")
 	fs.BoolVar(&cfg.audio, "audio", cfg.audio, "play Realtime audio output when audio modality is active")
 	fs.BoolVar(&cfg.mic, "mic", cfg.mic, "enable microphone push-to-talk controls")
+	fs.BoolVar(&cfg.vision, "vision", cfg.vision, "send visual Zelda frame context when get_frame is available")
 	fs.StringVar(&cfg.instructions, "instructions", cfg.instructions, "session instructions")
 	fs.StringVar(&cfg.prompt, "prompt", "", "initial user prompt")
 	fs.IntVar(&cfg.framesMax, "frames-max", cfg.framesMax, "maximum frames per run_input call")
+	fs.IntVar(&cfg.loadSaveSlot, "load-save-slot", cfg.loadSaveSlot, "load Zelda save slot before starting Realtime; -1 disables")
+	fs.DurationVar(&cfg.exitAfter, "exit-after", 0, "exit after this duration; useful for external restart loops")
 	fs.DurationVar(&cfg.timeout, "timeout", cfg.timeout, "HTTP/tool timeout")
 	fs.BoolVar(&cfg.once, "once", false, "send startup turn and wait for interrupt")
 	fs.BoolVar(&cfg.tui, "tui", cfg.tui, "run interactive Bubble Tea terminal UI when stdin/stdout are terminals")
@@ -282,6 +300,9 @@ func parseConfig(args []string) (*config, error) {
 	}
 	if cfg.apiKey == "" {
 		return nil, fmt.Errorf("api key is required; set OPENAI_API_KEY or pass -api-key")
+	}
+	if cfg.loadSaveSlot < -1 || cfg.loadSaveSlot > 9 {
+		return nil, fmt.Errorf("load save slot must be between 0 and 9, or -1 to disable")
 	}
 	if cfg.healthURL == "" {
 		health, err := deriveHealthURL(cfg.mcpURL)
@@ -504,6 +525,7 @@ type toolBridge struct {
 	sender       realtimeSender
 	allowedTools map[string]bool
 	handled      sync.Map
+	mutatingMu   sync.Mutex
 	framesMax    int
 	out          io.Writer
 	err          io.Writer
@@ -545,21 +567,36 @@ func (b *toolBridge) handleFunctionCall(ctx context.Context, e oairt.Event) {
 		doneDetail = toolDoneDetail(detail, nil, err, start)
 		b.sendToolOutput(call.CallID, map[string]any{"error": err.Error()})
 		if isMutatingTool(call.Name) {
-			_ = releaseAll(context.Background(), b.mcp)
+			_ = b.releaseAll(context.Background())
 		}
 		return
 	}
-	result, err := b.mcp.callTool(ctx, call.Name, args)
+	result, err := b.callTool(ctx, call.Name, args)
 	if err != nil {
 		doneDetail = toolDoneDetail(detail, nil, err, start)
 		if isMutatingTool(call.Name) {
-			_ = releaseAll(context.Background(), b.mcp)
+			_ = b.releaseAll(context.Background())
 		}
 		b.sendToolOutput(call.CallID, map[string]any{"error": err.Error()})
 		return
 	}
 	doneDetail = toolDoneDetail(detail, result, nil, start)
 	b.sendToolOutput(call.CallID, json.RawMessage(result))
+}
+
+func (b *toolBridge) callTool(ctx context.Context, name string, args map[string]any) (json.RawMessage, error) {
+	if !isMutatingTool(name) {
+		return b.mcp.callTool(ctx, name, args)
+	}
+	b.mutatingMu.Lock()
+	defer b.mutatingMu.Unlock()
+	return b.mcp.callTool(ctx, name, args)
+}
+
+func (b *toolBridge) releaseAll(ctx context.Context) error {
+	b.mutatingMu.Lock()
+	defer b.mutatingMu.Unlock()
+	return releaseAll(ctx, b.mcp)
 }
 
 func toolCallDetail(name string, args map[string]any) string {

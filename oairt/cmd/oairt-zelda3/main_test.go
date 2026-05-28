@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -85,6 +87,56 @@ func TestBridgeCallsMCPAndSendsFunctionOutput(t *testing.T) {
 	}
 	if sender.events[1].Type != oairt.EventResponseCreate {
 		t.Fatalf("second event = %q, want response.create", sender.events[1].Type)
+	}
+}
+
+func TestBridgeSerializesMutatingTools(t *testing.T) {
+	var active int32
+	var maxActive int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req rpcRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode rpc: %v", err)
+		}
+		if req.Method != "tools/call" {
+			t.Fatalf("unexpected method %q", req.Method)
+		}
+		now := atomic.AddInt32(&active, 1)
+		for {
+			old := atomic.LoadInt32(&maxActive)
+			if now <= old || atomic.CompareAndSwapInt32(&maxActive, old, now) {
+				break
+			}
+		}
+		time.Sleep(20 * time.Millisecond)
+		atomic.AddInt32(&active, -1)
+		writeRPCResult(t, w, req.ID, map[string]any{"content": []map[string]any{{"type": "text", "text": "ok"}}})
+	}))
+	defer srv.Close()
+
+	sender := &captureSender{}
+	bridge := &toolBridge{
+		mcp:          newMCPClient(srv.URL, 0),
+		sender:       sender,
+		allowedTools: toolNameSet([]mcpTool{{Name: "run_input"}}),
+		framesMax:    60,
+	}
+	var wg sync.WaitGroup
+	for _, callID := range []string{"call_1", "call_2"} {
+		wg.Add(1)
+		go func(callID string) {
+			defer wg.Done()
+			bridge.handleFunctionCall(context.Background(), oairt.Event{
+				Type:      oairt.EventResponseFunctionCallArgumentsDone,
+				Name:      "run_input",
+				CallID:    callID,
+				Arguments: `{"buttons":["RIGHT"],"frames":1}`,
+			})
+		}(callID)
+	}
+	wg.Wait()
+	if got := atomic.LoadInt32(&maxActive); got != 1 {
+		t.Fatalf("max concurrent mutating calls = %d, want 1", got)
 	}
 }
 
@@ -384,10 +436,13 @@ func TestParseConfigMicFlag(t *testing.T) {
 }
 
 type captureSender struct {
+	mu     sync.Mutex
 	events []oairt.Event
 }
 
 func (s *captureSender) Send(e oairt.Event) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.events = append(s.events, e)
 	return nil
 }
