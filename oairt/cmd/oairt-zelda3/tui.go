@@ -49,6 +49,7 @@ type tuiOptions struct {
 
 type uiEventMsg struct{ ev uiEvent }
 type uiClosedMsg struct{}
+type contextDoneMsg struct{}
 type tickMsg time.Time
 
 type tuiModel struct {
@@ -106,7 +107,7 @@ func runTUI(ctx context.Context, opts tuiOptions) error {
 }
 
 func (m tuiModel) Init() tea.Cmd {
-	return tea.Batch(waitUIEvent(m.events), tick())
+	return tea.Batch(waitUIEvent(m.events), waitContextDone(m.ctx), tick())
 }
 
 func waitUIEvent(ch <-chan uiEvent) tea.Cmd {
@@ -123,6 +124,13 @@ func tick() tea.Cmd {
 	return tea.Tick(time.Second, func(t time.Time) tea.Msg { return tickMsg(t) })
 }
 
+func waitContextDone(ctx context.Context) tea.Cmd {
+	return func() tea.Msg {
+		<-ctx.Done()
+		return contextDoneMsg{}
+	}
+}
+
 func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -133,6 +141,8 @@ func (m tuiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.applyEvent(msg.ev)
 		return m, waitUIEvent(m.events)
 	case uiClosedMsg:
+		return m, tea.Quit
+	case contextDoneMsg:
 		return m, tea.Quit
 	case tickMsg:
 		return m, tick()
