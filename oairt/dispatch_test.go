@@ -1,6 +1,7 @@
 package oairt
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -77,4 +78,38 @@ func TestClient_On_RegistersConcurrently(t *testing.T) {
 
 	wg.Wait()
 	c.dispatchWG.Wait()
+}
+
+func TestClient_OnOrdered_PreservesDispatchOrder(t *testing.T) {
+	c := NewClient("test-key")
+
+	var mu sync.Mutex
+	var got []string
+	c.OnOrdered("*", func(e Event) {
+		mu.Lock()
+		defer mu.Unlock()
+		got = append(got, e.EventID)
+	})
+
+	const n = 64
+	var want []string
+	for i := 0; i < n; i++ {
+		id := fmt.Sprintf("evt_%02d", i)
+		want = append(want, id)
+		c.dispatch(Event{Type: EventResponseTextDelta, EventID: id})
+	}
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(got) != len(want) {
+		t.Fatalf("ordered handler saw %d events, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("event %d = %q, want %q; got=%v", i, got[i], want[i], got)
+		}
+	}
 }

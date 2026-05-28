@@ -35,6 +35,7 @@ func NewClient(apiKey string, options ...Option) *Client {
 		URL:      "wss://api.openai.com/v1/realtime",
 		APIKey:   apiKey,
 		handlers: make(map[string][]func(Event)),
+		ordered:  make(map[string][]*orderedHandler),
 		send:     make(chan []byte, 256),
 		logger:   nopLogger{},
 		closed:   make(chan struct{}),
@@ -117,12 +118,18 @@ func (c *Client) Close() error {
 		// on dispatchWG.
 		c.mu.Lock()
 		close(c.closed)
+		for _, handlers := range c.ordered {
+			for _, h := range handlers {
+				close(h.ch)
+			}
+		}
 		c.mu.Unlock()
 
 		if c.conn != nil {
 			closeErr = c.conn.Close()
 		}
 		c.dispatchWG.Wait()
+		c.orderedWG.Wait()
 	})
 	return closeErr
 }
@@ -170,6 +177,36 @@ func (c *Client) On(eventType string, handler func(Event)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.handlers[eventType] = append(c.handlers[eventType], handler)
+}
+
+// OnOrdered registers a handler that receives matching events in websocket
+// read order. Use it for stream assembly, such as text or transcript deltas.
+//
+// Ordered handlers run on a per-handler worker goroutine. A slow ordered
+// handler can backpressure reads for its own event stream, but it does not
+// serialize ordinary [Client.On] handlers.
+func (c *Client) OnOrdered(eventType string, handler func(Event)) {
+	h := &orderedHandler{
+		fn: handler,
+		ch: make(chan Event, 1024),
+	}
+	c.mu.Lock()
+	select {
+	case <-c.closed:
+		c.mu.Unlock()
+		return
+	default:
+	}
+	c.ordered[eventType] = append(c.ordered[eventType], h)
+	c.orderedWG.Add(1)
+	c.mu.Unlock()
+
+	go func() {
+		defer c.orderedWG.Done()
+		for event := range h.ch {
+			c.safeInvoke(h.fn, event)
+		}
+	}()
 }
 
 func (c *Client) readPump() {
@@ -242,7 +279,15 @@ func (c *Client) dispatch(event Event) {
 	}
 	handlers := append([]func(Event){}, c.handlers[event.Type]...)
 	allHandlers := append([]func(Event){}, c.handlers["*"]...)
+	ordered := append([]*orderedHandler{}, c.ordered[event.Type]...)
+	allOrdered := append([]*orderedHandler{}, c.ordered["*"]...)
 	c.dispatchWG.Add(len(handlers) + len(allHandlers))
+	for _, h := range ordered {
+		h.ch <- event
+	}
+	for _, h := range allOrdered {
+		h.ch <- event
+	}
 	c.mu.Unlock()
 
 	for _, h := range handlers {

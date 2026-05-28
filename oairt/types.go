@@ -19,6 +19,7 @@ type Client struct {
 	conn       *websocket.Conn
 	send       chan []byte
 	handlers   map[string][]func(Event)
+	ordered    map[string][]*orderedHandler
 	mu         sync.Mutex
 	debug      bool
 	dumpFrames bool
@@ -27,8 +28,14 @@ type Client struct {
 	httpClient *http.Client      // optional, used for proxy/transport hints
 	dialer     *websocket.Dialer // optional, overrides the default dialer
 	dispatchWG sync.WaitGroup    // tracks per-handler dispatch goroutines
+	orderedWG  sync.WaitGroup    // tracks ordered handler workers
 	closeOnce  sync.Once
 	closed     chan struct{} // closed by Close to signal teardown
+}
+
+type orderedHandler struct {
+	fn func(Event)
+	ch chan Event
 }
 
 // Event is the wire-level envelope for a Realtime API message in either

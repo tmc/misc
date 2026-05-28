@@ -129,7 +129,7 @@ func run(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.
 		events:       uiEvents,
 	}
 
-	client.On("*", func(e oairt.Event) {
+	client.OnOrdered("*", func(e oairt.Event) {
 		switch e.Type {
 		case oairt.EventSessionCreated, oairt.EventSessionUpdated:
 			postUIEvent(uiEvents, uiEvent{kind: uiStatus, text: e.Type})
