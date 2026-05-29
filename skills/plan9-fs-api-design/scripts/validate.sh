@@ -26,6 +26,7 @@ SLUG="$1"; ROOT="$2"; DRAFT="$3"
 
 SKILL_DIR="${PLAN9_FS_DESIGN_SKILL_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 VALIDATE_FILE="$SKILL_DIR/prompts/validate.md"
+PREAMBLE_FILE="$SKILL_DIR/prompts/preamble.md"
 [ -f "$VALIDATE_FILE" ] || { echo "missing prompt: $VALIDATE_FILE" >&2; exit 1; }
 command -v nlm >/dev/null 2>&1 || { echo "nlm not found on PATH" >&2; exit 127; }
 
@@ -38,6 +39,15 @@ mkdir -p "$WORK"
 THRESHOLD="${PLAN9_FS_DESIGN_PASS_THRESHOLD:-8}"
 RETRIES="${PLAN9_FS_DESIGN_RETRIES:-2}"
 MIN_BYTES="${PLAN9_FS_DESIGN_MIN_BYTES:-200}"
+# NotebookLM verdicts are high-variance: identical calls flip between PASS and
+# REVISE and surface different real findings each run. So validate N times and
+# aggregate conservatively — worst score across trials, unioned fix-lists. A
+# single trial misses real defects.
+TRIALS="${PLAN9_FS_DESIGN_VALIDATE_TRIALS:-3}"
+# Persona preamble (prompts/preamble.md): a dynamic-role frame that the A/B
+# showed produces the sharpest structural critiques. On by default; set
+# PLAN9_FS_DESIGN_PRIME=0 to drop it.
+PRIME="${PLAN9_FS_DESIGN_PRIME:-1}"
 # Scope the review call to the API sources AND the just-uploaded candidate.
 SCOPE="^$SLUG:|^plan9-|^wanix:"
 CAND_NAME="$SLUG: candidate"
@@ -64,38 +74,88 @@ if ! nlm source sync "$NB" "$UPLOAD" --name "$CAND_NAME" >&2; then
 fi
 sleep 5  # indexing buffer
 
-# Short prompt: interpolate root/threshold, point the reviewer at the candidate
-# source by name (no inlined manpage).
+# Short prompt: optional persona preamble, then interpolate root/threshold and
+# point the reviewer at the candidate source by name (no inlined manpage).
 VPROMPT="$(sed -e "s,__ROOT__,$ROOT,g" -e "s,__PASS_THRESHOLD__,$THRESHOLD,g" "$VALIDATE_FILE")"
+if [ "$PRIME" = "1" ] && [ -f "$PREAMBLE_FILE" ]; then
+    VPROMPT="$(cat "$PREAMBLE_FILE")
+$VPROMPT"
+fi
 VPROMPT="$VPROMPT
 
-The design under review is the source named \"$CAND_NAME\". Judge THAT source
-against the other (API specification) sources in the notebook."
+You are the exacting but fair reviewer. The design under review is the
+source named \"$CAND_NAME\". Judge THAT source against the other (API
+specification) sources in the notebook."
 
-attempt=0
-while :; do
-    attempt=$((attempt + 1))
-    echo "Validating draft against sources (nlm call $attempt, threshold $THRESHOLD)..." >&2
-    if nlm generate-chat --source-match "$SCOPE" --citations tail "$NB" "$VPROMPT" \
-            > "$WORK/.validate.raw" 2> "$WORK/validate.stderr"; then
-        bytes=$(wc -c < "$WORK/.validate.raw" | tr -d ' ')
-        # Fail closed: an empty / too-short response is an NLM infrastructure
-        # failure, NOT a REVISE verdict. Retry, then abort — never emit a
-        # silent non-verdict the loop would read as REVISE.
-        if [ "$bytes" -ge "$MIN_BYTES" ] && grep -qiE '^verdict:' "$WORK/.validate.raw"; then
-            break
+# One trial: a generate-chat call that retries until it returns a parseable
+# verdict block, or fails closed. Writes the raw verdict to $1; returns nonzero
+# only on infrastructure failure (never a silent non-verdict).
+one_trial() {
+    local out="$1" attempt=0
+    while :; do
+        attempt=$((attempt + 1))
+        if nlm generate-chat --source-match "$SCOPE" --citations tail "$NB" "$VPROMPT" \
+                > "$out" 2> "$WORK/validate.stderr"; then
+            local bytes; bytes=$(wc -c < "$out" | tr -d ' ')
+            # Fail closed: empty/too-short is an NLM infrastructure failure, NOT
+            # a REVISE verdict. Require a parseable 'verdict:' line.
+            if [ "$bytes" -ge "$MIN_BYTES" ] && grep -qiE '^verdict:' "$out"; then
+                return 0
+            fi
+            echo "  trial returned no usable verdict ($bytes bytes, no 'verdict:' line)" >&2
+        else
+            echo "  nlm generate-chat failed:" >&2; sed 's/^/    /' "$WORK/validate.stderr" >&2
         fi
-        echo "validator returned no usable verdict ($bytes bytes, no 'verdict:' line)" >&2
-        sed 's/^/  /' "$WORK/validate.stderr" >&2
-    else
-        echo "nlm generate-chat failed:" >&2
-        sed 's/^/  /' "$WORK/validate.stderr" >&2
+        [ "$attempt" -le "$RETRIES" ] && { echo "  retrying trial..." >&2; sleep 10; continue; }
+        return 1
+    done
+}
+
+# Run TRIALS trials; aggregate conservatively (worst dimension score, unioned
+# fixes), because NLM verdicts vary run-to-run and each trial catches different
+# real defects.
+DIMS="spec-fidelity shape-fit completeness plan9-idiom"
+declare -A worst
+for d in $DIMS; do worst[$d]=10; done
+FIXES="$WORK/.validate.fixes"
+: > "$FIXES"
+ok_trials=0
+for t in $(seq 1 "$TRIALS"); do
+    [ "$t" -gt 1 ] && sleep 3  # space calls so back-to-back trials aren't throttled
+    echo "Validating (trial $t/$TRIALS, threshold $THRESHOLD, prime=$PRIME)..." >&2
+    raw="$WORK/.validate.$t.raw"
+    if ! one_trial "$raw"; then
+        echo "  trial $t produced no verdict; skipping it" >&2
+        continue
     fi
-    if [ "$attempt" -le "$RETRIES" ]; then echo "retrying validation..." >&2; sleep 10; continue; fi
-    echo "validation did not produce a verdict after $attempt attempts (NLM infrastructure failure, not a design verdict)" >&2
-    exit 4
+    ok_trials=$((ok_trials + 1))
+    # Track the worst score per dimension.
+    for d in $DIMS; do
+        s=$(grep -iE "^$d:" "$raw" | head -1 | grep -oE '[0-9]+' | head -1)
+        [ -n "$s" ] && [ "$s" -lt "${worst[$d]}" ] && worst[$d]=$s
+    done
+    # Collect this trial's fix bullets (lines after 'fixes:' up to the fence).
+    awk 'tolower($0) ~ /^fixes:/ {f=1; next} f && /^```/ {f=0} f && /^- / {print}' "$raw" >> "$FIXES"
 done
 
-# Surface the verdict block to stdout.
-cp "$WORK/.validate.raw" "$WORK/validate.out"
-cat "$WORK/validate.out"
+if [ "$ok_trials" -eq 0 ]; then
+    echo "validation produced no verdict in $TRIALS trials (NLM infrastructure failure, not a design verdict)" >&2
+    exit 4
+fi
+
+# Overall score = lowest dimension across all trials; PASS iff every dimension
+# >= threshold in every trial.
+overall=10
+for d in $DIMS; do [ "${worst[$d]}" -lt "$overall" ] && overall=${worst[$d]}; done
+if [ "$overall" -ge "$THRESHOLD" ]; then verdict=PASS; else verdict=REVISE; fi
+
+{
+    echo "verdict: $verdict"
+    echo "score: $overall"
+    for d in $DIMS; do echo "$d: ${worst[$d]}"; done
+    echo "trials: $ok_trials/$TRIALS (worst-of-N; fixes unioned)"
+    echo "fixes:"
+    # Union the trials' fix bullets, dropping exact-duplicate lines but keeping
+    # first-seen order (NLM phrases the same defect near-identically each trial).
+    if [ -s "$FIXES" ]; then awk '!seen[$0]++' "$FIXES"; else echo "- none"; fi
+} | tee "$WORK/validate.out"
