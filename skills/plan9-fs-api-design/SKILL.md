@@ -44,6 +44,8 @@ still here as a fallback. For the older 13-probe pipeline see the
 | `PLAN9_FS_DESIGN_HOME` | `$HOME/.plan9-fs-designs` | per-run work tree root |
 | `PLAN9_FS_DESIGN_NOTEBOOK` | (none) | notebook id holding the synced sources; `sync.sh` prints the one it resolved/created |
 | `PLAN9_FS_DESIGN_PASS_THRESHOLD` | `8` | per-dimension PASS floor for `validate.sh` |
+| `PLAN9_FS_DESIGN_VALIDATE_TRIALS` | `3` | `validate.sh` trials per pass; scored worst-of-N, fixes unioned |
+| `PLAN9_FS_DESIGN_PRIME` | `1` | prepend `prompts/preamble.md` (dynamic-persona frame); `0` to drop it |
 | `PLAN9_FS_DESIGN_SHAPE` | (none) | skip the classify call and force a shape: `instance-connection`, `request-response`, `resource-tree`, or `mixed:<dominant>` |
 | `PLAN9_FS_DESIGN_MIN_BYTES` / `_RETRIES` | `600` / `2` | only used by the `design.sh` fallback |
 
@@ -85,7 +87,15 @@ blind to one thing:
   spec, score four **prose** dimensions — spec-fidelity, shape-fit,
   completeness, plan9-idiom — and emit a cited `fixes:` punch-list. It reviews,
   it does not rewrite. It fails closed (exit 4) if NLM returns no parseable
-  verdict, rather than emitting a silent REVISE.
+  verdict, rather than emitting a silent REVISE. Because NLM verdicts are
+  high-variance, it runs `PLAN9_FS_DESIGN_VALIDATE_TRIALS` trials (default 3),
+  takes the **worst** dimension score, and **unions** the fix-lists — a single
+  call misses real defects that the union catches. The call is primed with
+  `prompts/preamble.md` (a dynamic-persona frame) by default; in a powered A/B
+  the persona's wording was load-bearing — an "exacting but fair, score
+  calibrated separately from the fix-list" reviewer scored 9.4/100%-PASS vs
+  8.3/60% with no preamble, while a "hostile auditor" frame scored *worse*
+  (7.8/30%). Set `PLAN9_FS_DESIGN_PRIME=0` to drop it.
 - `check-examples.sh` covers **example-coherence locally** (exit 5 on failure):
   it verifies the draft has rc transcripts and that every `ctl` verb a
   transcript writes appears in a verb table. This is *not* in the NLM rubric
