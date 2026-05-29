@@ -1,6 +1,6 @@
 ---
 name: plan9-fs-api-design
-description: Design an API as a Plan 9/Wanix synthetic filesystem in one source-grounded NotebookLM call — shape-classified tree, per-file semantics, rc examples, supported/fails-closed boundary. Optional --verify self-critique pass.
+description: Design an API as a Plan 9/Wanix synthetic filesystem — Claude authors the shape-classified design from the sources, NotebookLM validates the prose against those sources and Plan 9 idiom, a local check covers the rc examples (NLM can't see code), and Claude repairs until it passes. Emits a <service>(4) manpage.
 allowed-tools:
   - Bash
   - Read
@@ -13,17 +13,22 @@ allowed-tools:
 # plan9-fs-api-design
 
 Design an API from the namespace outward and emit a single
-`<service>(4)`-style Markdown manpage. One prompt produces the whole design
-in one NotebookLM call, grounded in mirrored sources: classify the API shape
-(instance/connection, request/response, resource tree), draw the tree, give
-per-file semantics, rc worked examples, and a supported/fails-closed boundary.
+`<service>(4)`-style Markdown manpage: a shape-classified tree, per-file
+semantics, rc worked examples, and a supported/fails-closed boundary.
 
-The prompt picks filesystem vocabulary by what the API actually does, so a
-stateless or pure-data API is not forced into a connection lifecycle. For an
-older, heavier pipeline that splits the work across 13 gated probes, see the
-`plan9-fs-api-design-legacy` skill — in head-to-head testing this single-call
-design scored higher and avoided the template-bleed the probe chain produced,
-so prefer it unless you specifically need per-stage audit gates.
+**Author–validate–repair loop.** Claude is the architect and NotebookLM is the
+grounded reviewer — the division of labor that testing showed each is best at.
+Claude reads the sources and writes the design; NotebookLM, scoped to those
+same sources, audits the draft for spec-fidelity and Plan 9 idiom and returns a
+verdict plus a cited fix-list (it does *not* rewrite); Claude repairs from the
+fix-list; repeat until NotebookLM signs off or the iteration cap is hit. In
+head-to-head testing Claude-direct produced more spec-faithful designs than
+NotebookLM-as-author, while NotebookLM-as-reviewer reliably caught real missed
+and misstated surfaces — so this split plays to both strengths.
+
+For a one-shot NotebookLM-authored design (no loop), `scripts/design.sh` is
+still here as a fallback. For the older 13-probe pipeline see the
+`plan9-fs-api-design-legacy` skill.
 
 ## Requirements
 
@@ -37,54 +42,79 @@ so prefer it unless you specifically need per-stage audit gates.
 |---|---|---|
 | `PLAN9_FS_DESIGN_SKILL_DIR` | script-relative | skill install path |
 | `PLAN9_FS_DESIGN_HOME` | `$HOME/.plan9-fs-designs` | per-run work tree root |
-| `PLAN9_FS_DESIGN_NOTEBOOK` | (none) | reuse an existing notebook id; if unset, the script reuses a cached id or creates one |
-| `PLAN9_FS_DESIGN_MIN_BYTES` | `600` | minimum design size before retry |
-| `PLAN9_FS_DESIGN_RETRIES` | `2` | design-call retries on empty/short output |
+| `PLAN9_FS_DESIGN_NOTEBOOK` | (none) | notebook id holding the synced sources; `sync.sh` prints the one it resolved/created |
+| `PLAN9_FS_DESIGN_PASS_THRESHOLD` | `8` | per-dimension PASS floor for `validate.sh` |
 | `PLAN9_FS_DESIGN_SHAPE` | (none) | skip the classify call and force a shape: `instance-connection`, `request-response`, `resource-tree`, or `mixed:<dominant>` |
+| `PLAN9_FS_DESIGN_MIN_BYTES` / `_RETRIES` | `600` / `2` | only used by the `design.sh` fallback |
 
-## Workflow
+## Workflow (the loop)
 
-One command does the whole run once sources exist:
+Drop spec/IDL/README/MDN files into a source directory first (mirror HTML with
+`curl -sL <url> | html2md` if needed), then:
+
+**1. Sync + classify (once).** Resolves a notebook, uploads the sources, and
+classifies the API shape in an isolated grounded call (the two-step split is
+load-bearing — a combined prompt mis-classifies stateless APIs like Web Crypto
+as connection-shaped and forces a spurious `clone`/`$n` lifecycle). Capture the
+notebook id and shape from its stdout:
 
 ```bash
 SKILL_DIR="${PLAN9_FS_DESIGN_SKILL_DIR:-$HOME/.claude/skills/plan9-fs-api-design}"
-"$SKILL_DIR/scripts/design.sh" [--verify] <slug> <service-root> [source-dir]
+"$SKILL_DIR/scripts/sync.sh" <slug> <source-dir>
+# -> notebook: <id>
+#    shape: ...  / durable-handle: ...  / reason: ...
+export PLAN9_FS_DESIGN_NOTEBOOK=<id>
 ```
 
-`design.sh`:
+**2. Author (Claude).** Read the synced source files and `prompts/design.md`.
+Splice the classified shape block in at `__SHAPE_BLOCK__`, drop the
+`__FEEDBACK_BLOCK__` line on the first pass, interpolate `__SLUG__`/`__ROOT__`,
+and follow the prompt to write the manpage to `$WORK/<service>(4).md`. Ground
+every load-bearing claim in the sources; do not import vocabulary from a
+different kind of API.
 
-1. resolves or creates a NotebookLM notebook (cached in
-   `$PLAN9_FS_DESIGN_HOME/.notebook-id`);
-2. syncs the source directory as run-scoped sources;
-3. **classifies the API shape in an isolated call** (instance-connection,
-   request-response, resource-tree, or mixed) and locks the answer — this
-   keeps the design call from defaulting every API to the `/net` connection
-   idiom. Set `PLAN9_FS_DESIGN_SHAPE` to skip this call and force a shape;
-4. fires the design prompt with the service root, slug, and locked shape
-   interpolated, source-scoped to this run; retries on empty/short output
-   and exits 3 if the source audit returns `Decision: BLOCKED`;
-5. cleans citation-bracket artifacts and writes `$WORK/<service>(4).md`
-   plus `$WORK/design.stderr` (and `$WORK/classify.stderr`).
-
-The two-call classify→design split is load-bearing: a single combined prompt
-reliably mis-classifies stateless APIs (e.g. Web Crypto) as connection-shaped
-and forces a spurious `clone`/`$n` session lifecycle onto them. Classifying in
-isolation first fixed that in testing.
-
-`--verify` adds one self-critique call: the draft is fed back with the
-sources and a hostile-reviewer prompt that hunts hallucinated/imported
-surfaces, missing surfaces, overloaded files, and shape mismatch, then emits
-a repaired manpage (the draft is kept as `<service>(4).pre-verify.md`). This
-doubles the nlm cost; use it for high-stakes designs.
-
-To mirror sources first, drop spec/IDL/README/MDN files into a directory:
+**3. Validate.** Two complementary checks, because the grounded reviewer is
+blind to one thing:
 
 ```bash
-WORK="${PLAN9_FS_DESIGN_HOME:-$HOME/.plan9-fs-designs}/<slug>"
-mkdir -p "$WORK/sources"
-curl -sL <spec-url> | html2md > "$WORK/sources/spec.md"
-"$SKILL_DIR/scripts/design.sh" <slug> /<service> "$WORK/sources"
+"$SKILL_DIR/scripts/check-examples.sh" <service-root> "$WORK/<service>(4).md"   # local, no NLM
+"$SKILL_DIR/scripts/validate.sh"      <slug> <service-root> "$WORK/<service>(4).md"  # NotebookLM
 ```
+
+- `validate.sh` uploads the draft as a source and has NotebookLM, scoped to the
+  spec, score four **prose** dimensions — spec-fidelity, shape-fit,
+  completeness, plan9-idiom — and emit a cited `fixes:` punch-list. It reviews,
+  it does not rewrite. It fails closed (exit 4) if NLM returns no parseable
+  verdict, rather than emitting a silent REVISE.
+- `check-examples.sh` covers **example-coherence locally** (exit 5 on failure):
+  it verifies the draft has rc transcripts and that every `ctl` verb a
+  transcript writes appears in a verb table. This is *not* in the NLM rubric
+  because **NotebookLM ingestion strips fenced/preformatted code** — the
+  reviewer never sees the transcripts, so it cannot judge them (it would
+  perpetually report "missing examples"). Verified: a fenced block and an
+  indented block both vanish from an indexed source while surrounding prose
+  survives. Keep code coherence a local check; keep the NLM call on prose.
+
+**4. Repair (Claude) and loop.** If `validate.sh` says `verdict: REVISE` (or
+`check-examples.sh` fails), re-author the manpage addressing each fix — re-run
+`prompts/design.md` with the verdict's `fixes:` list spliced in at
+`__FEEDBACK_BLOCK__` — then go back to step 3. Stop when `validate.sh` is
+`verdict: PASS` (every dimension ≥ `PLAN9_FS_DESIGN_PASS_THRESHOLD`) **and**
+`check-examples.sh` passes, or after a few iterations; report the last verdict
+either way.
+
+The fixes are concrete and source-cited (e.g. "design conflates the mutable
+builder and the immutable compiled graph — the spec keeps them as separate
+objects; split them"), so each repair is a targeted edit, not a rewrite. In
+testing on WebNN this converged to a clean `PASS` (10/10 on all four NLM
+dimensions) with example-coherence verified locally.
+
+### One-shot fallback
+
+`scripts/design.sh [--verify] <slug> <service-root> [source-dir]` runs the old
+single NotebookLM-authored path (sync → classify → design, optional self-critique
+`--verify`). Use it when you don't want the loop; the author–validate loop above
+produced more spec-faithful designs in testing.
 
 ## Design discipline (folded into the prompt)
 

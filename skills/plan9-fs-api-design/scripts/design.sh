@@ -139,7 +139,7 @@ fi
 #    Splice the shape-block file in at the placeholder line (sed 'r' handles
 #    multi-line content safely), then interpolate slug/root and drop the marker.
 PROMPT="$(sed -e "/^__SHAPE_BLOCK__$/r $SHAPE_FILE" -e "/^__SHAPE_BLOCK__$/d" "$PROMPT_FILE" \
-         | sed -e "s,__SLUG__,$SLUG,g" -e "s,__ROOT__,$ROOT,g")"
+         | sed -e "s,__SLUG__,$SLUG,g" -e "s,__ROOT__,$ROOT,g" -e "/^__FEEDBACK_BLOCK__$/d")"
 
 # 5. One source-scoped design call, retrying on empty/short output.
 OUT="$WORK/${ROOT#/}(4).md"

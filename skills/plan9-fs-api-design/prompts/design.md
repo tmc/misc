@@ -1,7 +1,10 @@
-Reinterpret the API described in the notebook sources as a Plan 9 / Wanix
-synthetic filesystem rooted at `__ROOT__`. Slug: __SLUG__. Work ONLY from the
+Reinterpret the API described in the synced source files as a Plan 9 / Wanix
+synthetic filesystem rooted at `__ROOT__`. Slug: __SLUG__. You (Claude) are the
+architect — read the sources directly and design from them. Work ONLY from the
 sources; cite every load-bearing claim. If the sources lack a normative API
 definition, emit only `Decision: BLOCKED - <reason>` and stop.
+
+__FEEDBACK_BLOCK__
 
 Open with two lines, then go straight to the design (no input summary):
 
