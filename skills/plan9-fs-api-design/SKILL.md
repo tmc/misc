@@ -43,8 +43,7 @@ still here as a fallback. For the older 13-probe pipeline see the
 | `PLAN9_FS_DESIGN_SKILL_DIR` | script-relative | skill install path |
 | `PLAN9_FS_DESIGN_HOME` | `$HOME/.plan9-fs-designs` | per-run work tree root |
 | `PLAN9_FS_DESIGN_NOTEBOOK` | (none) | notebook id holding the synced sources; `sync.sh` prints the one it resolved/created |
-| `PLAN9_FS_DESIGN_PASS_THRESHOLD` | `8` | per-dimension PASS floor for `validate.sh` |
-| `PLAN9_FS_DESIGN_VALIDATE_TRIALS` | `3` | `validate.sh` trials per pass; scored worst-of-N, fixes unioned |
+| `PLAN9_FS_DESIGN_VALIDATE_TRIALS` | `3` | `validate.sh` trials per pass; categorical gate on blockers, advisory scores worst-of-N, fixes unioned |
 | `PLAN9_FS_DESIGN_PRIME` | `1` | prepend `prompts/preamble.md` (dynamic-persona frame); `0` to drop it |
 | `PLAN9_FS_DESIGN_SHAPE` | (none) | skip the classify call and force a shape: `instance-connection`, `request-response`, `resource-tree`, or `mixed:<dominant>` |
 | `PLAN9_FS_DESIGN_MIN_BYTES` / `_RETRIES` | `600` / `2` | only used by the `design.sh` fallback |
@@ -84,18 +83,24 @@ blind to one thing:
 ```
 
 - `validate.sh` uploads the draft as a source and has NotebookLM, scoped to the
-  spec, score four **prose** dimensions — spec-fidelity, shape-fit,
-  completeness, plan9-idiom — and emit a cited `fixes:` punch-list. It reviews,
-  it does not rewrite. It fails closed (exit 4) if NLM returns no parseable
-  verdict, rather than emitting a silent REVISE. Because NLM verdicts are
-  high-variance, it runs `PLAN9_FS_DESIGN_VALIDATE_TRIALS` trials (default 3),
-  takes the **worst** dimension score, and **unions** the fix-lists — a single
-  call misses real defects that the union catches. The call is primed with
-  `prompts/preamble.md` (a dynamic-persona frame) by default; in a powered A/B
-  the persona's wording was load-bearing — an "exacting but fair, score
-  calibrated separately from the fix-list" reviewer scored 9.4/100%-PASS vs
-  8.3/60% with no preamble, while a "hostile auditor" frame scored *worse*
-  (7.8/30%). Set `PLAN9_FS_DESIGN_PRIME=0` to drop it.
+  spec, review four **prose** dimensions — spec-fidelity, shape-fit,
+  completeness, plan9-idiom — and emit a cited `fixes:` punch-list with each
+  fix tagged `blocker`/`high`/`low`. It reviews, it does not rewrite. The
+  verdict is **categorical**: `PASS` iff no trial flags a `blocker` (a
+  hallucinated/wrong-shape/misstated surface); highs and lows are the
+  punch-list, not failures. The per-dimension 0-10 scores are **advisory**
+  diagnostics (worst-of-N) and do **not** gate. This hybrid — categorical gate
+  + advisory score — is the repo convention (see `skills/CONVENTIONS.md`): a
+  single calibrated number conflates "thorough" with "good," so a pickier
+  reviewer scores good work down; gating on severity does not have that failure
+  mode. It fails closed (exit 4) if NLM returns no parseable verdict. Because
+  NLM verdicts are high-variance it runs `PLAN9_FS_DESIGN_VALIDATE_TRIALS`
+  trials (default 3) and **unions** the fix-lists — a single call misses real
+  defects. The call is primed with `prompts/preamble.md` (a dynamic-persona
+  frame) by default; in a powered A/B the persona's wording was load-bearing —
+  an "exacting but fair, fix-list separate from the score" reviewer scored
+  9.4/100%-PASS vs 8.3/60% with no preamble, while a "hostile auditor" frame
+  scored *worse* (7.8/30%). Set `PLAN9_FS_DESIGN_PRIME=0` to drop it.
 - `check-examples.sh` covers **example-coherence locally** (exit 5 on failure):
   it verifies the draft has rc transcripts and that every `ctl` verb a
   transcript writes appears in a verb table. This is *not* in the NLM rubric
@@ -108,16 +113,14 @@ blind to one thing:
 **4. Repair (Claude) and loop.** If `validate.sh` says `verdict: REVISE` (or
 `check-examples.sh` fails), re-author the manpage addressing each fix — re-run
 `prompts/design.md` with the verdict's `fixes:` list spliced in at
-`__FEEDBACK_BLOCK__` — then go back to step 3. Stop when `validate.sh` is
-`verdict: PASS` (every dimension ≥ `PLAN9_FS_DESIGN_PASS_THRESHOLD`) **and**
-`check-examples.sh` passes, or after a few iterations; report the last verdict
-either way.
+`__FEEDBACK_BLOCK__` — then go back to step 3. Prioritize `blocker` fixes;
+`high`/`low` fixes polish an already-passing design. Stop when `validate.sh` is
+`verdict: PASS` (no blockers) **and** `check-examples.sh` passes, or after a few
+iterations; report the last verdict either way.
 
 The fixes are concrete and source-cited (e.g. "design conflates the mutable
 builder and the immutable compiled graph — the spec keeps them as separate
-objects; split them"), so each repair is a targeted edit, not a rewrite. In
-testing on WebNN this converged to a clean `PASS` (10/10 on all four NLM
-dimensions) with example-coherence verified locally.
+objects; split them"), so each repair is a targeted edit, not a rewrite.
 
 ### One-shot fallback
 
