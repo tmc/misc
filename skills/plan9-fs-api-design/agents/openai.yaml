@@ -1,4 +1,0 @@
-interface:
-  display_name: "Plan 9 FS API Design"
-  short_description: "Design APIs as Plan 9/Wanix file services."
-  default_prompt: "Use plan9-fs-api-design to turn an API spec or library into a Plan 9/Wanix synthetic-filesystem design with a tree, per-file semantics, rc examples, and supported/fails-closed boundary."
