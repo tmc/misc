@@ -67,12 +67,37 @@ SKILL_DIR="${PLAN9_FS_DESIGN_SKILL_DIR:-$HOME/.claude/skills/plan9-fs-api-design
 export PLAN9_FS_DESIGN_NOTEBOOK=<id>
 ```
 
-**2. Author (Claude).** Read the synced source files and `prompts/design.md`.
+**1.5. Skeleton (when the sources contain Web IDL).** If the API is defined in
+Web IDL (a `.idl`, or a Bikeshed `.bs`/spec with an `<xmp class=idl>` block),
+generate the deterministic skeleton first:
+
+```bash
+"$SKILL_DIR/scripts/skeleton.sh" "<api name>" <service-root> <source-dir> > "$WORK/skeleton.md"
+```
+
+This runs the `webidl2plan9` tool (install once:
+`go install github.com/tmc/misc/webidl2plan9/cmd/webidl2plan9@latest`), which
+fixes the ~70% the IDL fully settles — the tree, per-file roles, `ctl` verbs,
+the complete feature-mapping table, and the fails-closed type list — so the
+author *cannot* drift on it. That drift (invented verbs, wrong return types,
+mislocated or globalised surfaces) is the exact class of blocker a grounded
+review keeps catching when the design is written from scratch. If no Web IDL is
+present, `skeleton.sh` exits 1 and you author from scratch as before.
+
+In a head-to-head test on the Chrome Prompt API, authoring from the skeleton
+eliminated every IDL-fidelity blocker; the design reached a clean `PASS` after
+one repair round, where the from-scratch design stalled at `REVISE`.
+
+**2. Author (Claude).** Read the synced source files, the `skeleton.md` if one
+was generated, and `prompts/design.md`. When a skeleton exists, treat its
+deterministic surfaces as ground truth — keep them verbatim — and spend your
+effort on the ~30% the IDL does not contain: the namespace idiom, the
+draft/start/freeze lifecycle, callbacks as `call`/`return` pipes, concurrency-
+safe allocation (read-allocators, per-operation `ctl`), and worked examples.
 Splice the classified shape block in at `__SHAPE_BLOCK__`, drop the
 `__FEEDBACK_BLOCK__` line on the first pass, interpolate `__SLUG__`/`__ROOT__`,
-and follow the prompt to write the manpage to `$WORK/<service>(4).md`. Ground
-every load-bearing claim in the sources; do not import vocabulary from a
-different kind of API.
+and write the manpage to `$WORK/<service>(4).md`. Ground every load-bearing
+claim in the sources; do not import vocabulary from a different kind of API.
 
 **3. Validate.** Two complementary checks, because the grounded reviewer is
 blind to one thing:
