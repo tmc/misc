@@ -1,57 +1,49 @@
 import llm from 'k6/x/llm-perf';
 import { check, sleep } from 'k6';
-import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.2/index.js';
 
 export const options = {
     vus: 1,
     duration: '30s',
     thresholds: {
-        'llm_ttft': ['p95<500'],
+        'llm_ttft': ['p(95)<500'],
+        'llm_ttfo': ['p(95)<750'],
         'llm_token_latency': ['avg<50'],
+        'llm_inter_chunk_latency': ['p(95)<100'],
+        'llm_request_latency': ['p(95)<5000'],
+        'llm_good_request': ['rate>0.95'],
         'llm_tokens_per_second': ['value>10'],
     },
 };
 
-const outputConfig = {
-    directory: 'outputs',
-    format: 'json',
-    includeMetadata: true,
-    includeTokens: true,
-    includeTimings: true,
-    har: {
-        enabled: true,
-        includeResponses: true,
-        outputDir: 'outputs/har',
-        filePattern: 'request-%d.har'
-    }
-};
-
 const client = new llm.Client({
-    baseURL: 'http://localhost:8080/v1',
-    storage: outputConfig,
-    httpTimeout: '30s',
+    apiKey: __ENV.OPENAI_API_KEY || 'local-key',
+    baseURL: __ENV.ENDPOINT_URL || 'http://localhost:8080/v1',
+    baseURLs: (__ENV.ENDPOINT_URLS || '').split(',').filter(Boolean),
+    model: __ENV.MODEL || 'gpt-4',
+    timeout: __ENV.TIMEOUT || '30s',
+    networkRTT: Number(__ENV.NETWORK_RTT || '0'),
+    tokenMultiplier: Number(__ENV.TOKEN_MULTIPLIER || '1.33'),
+    prefillConcurrency: Number(__ENV.PREFILL_CONCURRENCY || '0'),
+    warmupCount: Number(__ENV.WARMUP_COUNT || '0'),
+    maxTTFT: 500,
+    maxTTFO: 750,
+    maxTokenLatency: 50,
 });
 
 export default function() {
-    const params = {
-        prompt: "Explain quantum computing",
-        maxTokens: 200,
+    const response = client.chat.completions.create({
+        messages: [
+            { role: 'user', content: 'Explain quantum computing in one paragraph.' },
+        ],
+        max_tokens: 200,
         temperature: 0.7,
-        topP: 0.9,
-        frequencyPenalty: 0.0,
-        presencePenalty: 0.0,
-        stopSequences: ["\n\n"],
-        streaming: true,
-    };
-
-    const response = client.complete(params);
+        stream: true,
+    });
 
     check(response, {
         'completion successful': (r) => r.status === 200,
-        'time to first token < 500ms': (r) => r.metrics.timeToFirstToken < 500,
-        'token throughput > 10 tokens/sec': (r) => r.metrics.tokensPerSecond > 10,
+        'has response content': (r) => r.choices?.[0]?.message?.content?.length > 0,
     });
 
     sleep(1);
 }
-

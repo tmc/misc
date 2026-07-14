@@ -1,4 +1,4 @@
-.PHONY: all build clean install test lint dev example example-vllm example-openai example-triton example-loadtest
+.PHONY: all build clean install-xk6 test vet check example-loadtest example-loadtest-stream example-trace-replay
 
 # Extension info
 EXTENSION_NAME=xk6-llm-perf
@@ -7,7 +7,7 @@ VERSION=v0.1.0
 
 # Build settings
 K6_VERSION=v0.55.0
-XK6_VERSION=latest
+XK6_VERSION=v1.4.6
 BUILD_DIR=dist
 BINARY_NAME=k6
 
@@ -19,7 +19,6 @@ GOBIN=$(GOBASE)/bin
 VLLM_URL?=http://localhost:8000/v1
 OPENAI_URL?=https://api.openai.com/v1
 TRITON_URL?=http://localhost:8001/v1
-BREV_URL?=https://70b-32uncln8p.loadtestlab.com/v1
 OPENAI_KEY?=
 
 all: clean build
@@ -33,23 +32,37 @@ build: install-xk6
 	@mkdir -p $(BUILD_DIR)
 	@xk6 build $(K6_VERSION) \
 		--with $(EXTENSION_PATH)=. \
-		--with github.com/grafana/xk6-dashboard@latest \
 		--output $(BUILD_DIR)/$(BINARY_NAME)
+
+test:
+	go test ./...
+
+vet:
+	go vet ./...
+
+check: test vet build
+
+clean:
+	rm -rf $(BUILD_DIR) bin
 
 example-loadtest: build
 	@echo "Running load test..."
-	ENDPOINT_URL=$(BREV_URL) \
-	ENDPOINT_TYPE=chat \
+	ENDPOINT_URL=$(VLLM_URL) \
+	OPENAI_API_KEY=$(OPENAI_KEY) \
 	./$(BUILD_DIR)/$(BINARY_NAME) run \
-		--out dashboard \
 		examples/sample-load-test.js -v -w
 
 example-loadtest-stream: build
 	@echo "Running streaming load test..."
-	ENDPOINT_URL=$(BREV_URL) \
-	ENDPOINT_TYPE=chat \
+	ENDPOINT_URL=$(VLLM_URL) \
+	OPENAI_API_KEY=$(OPENAI_KEY) \
 	STREAM_MODE=true \
 	./$(BUILD_DIR)/$(BINARY_NAME) run \
-		--out dashboard \
 		examples/sample-load-test.js -v -w
 
+example-trace-replay: build
+	@echo "Running trace replay example..."
+	ENDPOINT_URL=$(VLLM_URL) \
+	OPENAI_API_KEY=$(OPENAI_KEY) \
+	./$(BUILD_DIR)/$(BINARY_NAME) run \
+		examples/trace-replay.js

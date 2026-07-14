@@ -17,29 +17,36 @@ export const options = {
     },
     thresholds: {
         'llm_ttft': ['p(95)<2000'],
+        'llm_ttfo': ['p(95)<2500'],
         'llm_token_latency': ['avg<100'],
+        'llm_inter_chunk_latency': ['p(95)<250'],
+        'llm_request_latency': ['p(95)<5000'],
+        'llm_good_request': ['rate>0.95'],
         'llm_tokens_per_second': ['value>5'],
-        'llm_total_tokens': ['count>0'],
+        'llm_completion_tokens': ['count>0'],
         'llm_errors': ['count<10'],
     },
 };
 
 const config = {
-    apiKey: __ENV.OPENAI_API_KEY || 'default-key',
+    apiKey: __ENV.OPENAI_API_KEY,
     baseURL: __ENV.ENDPOINT_URL || 'https://api.openai.com/v1',
+    baseURLs: (__ENV.ENDPOINT_URLS || '').split(',').filter(Boolean),
     model: __ENV.MODEL || 'gpt-4',
     timeout: __ENV.TIMEOUT || '30s',
+    networkRTT: Number(__ENV.NETWORK_RTT || '0'),
+    tokenMultiplier: Number(__ENV.TOKEN_MULTIPLIER || '1.33'),
+    prefillConcurrency: Number(__ENV.PREFILL_CONCURRENCY || '0'),
+    warmupCount: Number(__ENV.WARMUP_COUNT || '0'),
+    maxTTFT: Number(__ENV.MAX_TTFT || '2000'),
+    maxTTFO: Number(__ENV.MAX_TTFO || '2500'),
+    maxTokenLatency: Number(__ENV.MAX_TOKEN_LATENCY || '100'),
 };
 
-console.log(`Starting test with config: ${JSON.stringify(config, null, 2)}`);
-
-// Create client once, outside the default function
 const client = new llm.Client(config);
-console.log('Client created successfully');
 
 export default function() {
     try {
-        console.log('Starting request...');
         const response = client.chat.completions.create({
             messages: [
                 {
@@ -53,51 +60,20 @@ export default function() {
         });
 
         check(response, {
-            'completion successful': (r) => {
-                console.log(`Response status: ${r.status}`);
-                return r.status === 200;
-            },
-            'has response content': (r) => {
-                const hasContent = r.choices && r.choices.length > 0 && r.choices[0].message.content.length > 0;
-                console.log(`Has content: ${hasContent}`);
-                if (hasContent) {
-                    console.log(`First few chars of response: ${r.choices[0].message.content.substring(0, 50)}...`);
-                }
-                return hasContent;
-            },
+            'completion successful': (r) => r.status === 200,
+            'has response content': (r) => r.choices?.[0]?.message?.content?.length > 0,
         });
 
-        // Add a small random delay between requests
         const delay = Math.random() * 2 + 1;
-        console.log(`Sleeping for ${delay} seconds...`);
         sleep(delay);
     } catch (error) {
         console.error('Request failed:', error);
-        if (error.stack) {
-            console.error('Stack trace:', error.stack);
-        }
     }
 }
 
 export function handleSummary(data) {
-    // Ensure outputs directory exists
-    if (__ENV.CI !== 'true') {
-        try {
-            const fs = require('fs');
-            if (!fs.existsSync('outputs')) {
-                console.log('Creating outputs directory...');
-                fs.mkdirSync('outputs');
-            }
-        } catch (error) {
-            console.error('Failed to create outputs directory:', error);
-        }
-    }
-
-    const summary = {
+    return {
         'outputs/summary.json': JSON.stringify(data, null, 2),
         stdout: textSummary(data, { indent: ' ', enableColors: true }),
     };
-
-    console.log('Test summary:', JSON.stringify(data, null, 2));
-    return summary;
 }

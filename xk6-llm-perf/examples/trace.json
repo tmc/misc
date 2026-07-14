@@ -1,0 +1,24 @@
+[
+  {
+    "delay_seconds": 0,
+    "messages": [
+      {
+        "role": "user",
+        "content": "Write a short sentence about load testing."
+      }
+    ],
+    "max_tokens": 64,
+    "stream": true
+  },
+  {
+    "delay_seconds": 1,
+    "messages": [
+      {
+        "role": "user",
+        "content": "Summarize why latency percentiles matter."
+      }
+    ],
+    "max_tokens": 64,
+    "stream": true
+  }
+]
