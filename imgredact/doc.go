@@ -1,8 +1,8 @@
-// Command imgredact redacts sensitive OCR-detected text from images.
+// Command imgredact redacts sensitive text and faces from images.
 //
-// It uses Apple's Vision framework via github.com/tmc/apple/x/vzkit/ocr
-// to detect text regions matching configured patterns, then paints opaque
-// rectangles over the matched regions.
+// It uses Apple's Vision framework to detect text regions matching
+// configured patterns and, with -faces, to detect faces, then blurs or
+// paints over the matched regions.
 //
 // The built-in pattern matches Stripe test keys (pk_test_... and
 // sk_test_...) with some tolerance for OCR artifacts. Pass -pattern to
@@ -20,4 +20,12 @@
 // Use -pattern to match additional regexps:
 //
 //	imgredact -pattern 'SECRET-\d+' /tmp/download.png
+//
+// Use -faces to blur detected faces, and -text=false to redact faces only:
+//
+//	imgredact -faces -text=false /tmp/photo.jpg
+//
+// Face boxes from Vision hug the face, so imgredact grows each one by
+// -face-expand (a fraction of the box's own size, 0.2 by default) to cover
+// hair, chin, and neck.
 package main

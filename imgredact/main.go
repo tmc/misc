@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/tmc/apple/corefoundation"
 	"github.com/tmc/apple/x/vzkit/ocr"
 )
 
@@ -34,10 +35,13 @@ var (
 	paddingFlag  = flag.Int("padding", 8, "Padding in pixels around each OCR match")
 	styleFlag    = flag.String("style", "blur", "Redaction style: blur or solid")
 	fillFlag     = flag.String("fill", "#000000", "Fill color for redaction rectangles")
-	blurFlag     = flag.Int("blur", 10, "Blur strength in pixels for -style blur")
-	verboseFlag  = flag.Bool("v", false, "Print OCR matches")
+	blurFlag     = flag.Int("blur", 24, "Blur strength in pixels for -style blur")
+	verboseFlag  = flag.Bool("v", false, "Print OCR matches and detected faces")
 	patternsFlag patternList
 	builtinFlag  = flag.Bool("builtin", true, "Include the built-in Stripe test key pattern")
+	textFlag     = flag.Bool("text", true, "Redact OCR text matching the configured patterns")
+	facesFlag    = flag.Bool("faces", false, "Redact faces detected by Apple's Vision framework")
+	faceExpand   = flag.Float64("face-expand", 0.2, "Grow each detected face box by this fraction of its size")
 )
 
 func init() {
@@ -77,9 +81,16 @@ func run(args []string) error {
 		return err
 	}
 
-	patterns, err := compilePatterns(patternsFlag, *builtinFlag)
-	if err != nil {
-		return err
+	if !*textFlag && !*facesFlag {
+		return fmt.Errorf("nothing to redact: -text=false requires -faces")
+	}
+
+	var patterns []*regexp.Regexp
+	if *textFlag {
+		patterns, err = compilePatterns(patternsFlag, *builtinFlag)
+		if err != nil {
+			return err
+		}
 	}
 
 	img, err := loadImage(inPath)
@@ -87,15 +98,27 @@ func run(args []string) error {
 		return err
 	}
 
-	svc := ocr.NewService(*verboseFlag)
-	observations, err := svc.RecognizeText(img)
-	if err != nil {
-		return fmt.Errorf("ocr %s: %w", inPath, err)
+	var rects []image.Rectangle
+	if *textFlag {
+		svc := ocr.NewService(*verboseFlag)
+		observations, err := svc.RecognizeText(img)
+		if err != nil {
+			return fmt.Errorf("ocr %s: %w", inPath, err)
+		}
+		rects = append(rects, matchedRects(observations, img.Bounds(), *paddingFlag, patterns)...)
 	}
-
-	rects := matchedRects(observations, img.Bounds(), *paddingFlag, patterns)
+	if *facesFlag {
+		boxes, err := detectFaces(img)
+		if err != nil {
+			return fmt.Errorf("detect faces %s: %w", inPath, err)
+		}
+		if *verboseFlag {
+			fmt.Printf("[faces] detected %d\n", len(boxes))
+		}
+		rects = append(rects, faceRects(boxes, img.Bounds(), *faceExpand)...)
+	}
 	if len(rects) == 0 {
-		return fmt.Errorf("no matching sensitive text found in %s", inPath)
+		return fmt.Errorf("nothing to redact in %s", inPath)
 	}
 
 	dst := cloneRGBA(img)
@@ -194,11 +217,17 @@ func isSensitive(s string, patterns []*regexp.Regexp) bool {
 }
 
 func observationRect(obs ocr.TextObservation, bounds image.Rectangle) image.Rectangle {
+	return normRect(obs.BoundingBox, bounds)
+}
+
+// normRect converts a Vision bounding box, whose coordinates are normalized to
+// 0-1 with the origin at the bottom-left, into pixel coordinates within bounds.
+func normRect(box corefoundation.CGRect, bounds image.Rectangle) image.Rectangle {
 	w, h := bounds.Dx(), bounds.Dy()
-	x1 := int(obs.BoundingBox.Origin.X * float64(w))
-	y1 := int((1 - obs.BoundingBox.Origin.Y - obs.BoundingBox.Size.Height) * float64(h))
-	x2 := int((obs.BoundingBox.Origin.X + obs.BoundingBox.Size.Width) * float64(w))
-	y2 := int((1 - obs.BoundingBox.Origin.Y) * float64(h))
+	x1 := int(box.Origin.X * float64(w))
+	y1 := int((1 - box.Origin.Y - box.Size.Height) * float64(h))
+	x2 := int((box.Origin.X + box.Size.Width) * float64(w))
+	y2 := int((1 - box.Origin.Y) * float64(h))
 	return image.Rect(x1, y1, x2, y2).Canon()
 }
 
