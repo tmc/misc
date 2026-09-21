@@ -1,0 +1,25 @@
+# calltree renders an edge list as an indented tree.
+calltree -f graph.txt
+cmp stdout want.txt
+
+# A named root restricts the output to that subtree.
+calltree -f graph.txt b
+stdout '^b\n'
+! stdout 'a'
+
+# -depth stops the walk.
+calltree -depth=1 -f graph.txt a
+cmp stdout want-depth1.txt
+
+-- graph.txt --
+a b
+b c
+c d
+-- want.txt --
+a
+  -> b
+    -> c
+      -> d
+-- want-depth1.txt --
+a
+  -> b

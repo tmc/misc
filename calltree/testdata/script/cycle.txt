@@ -1,0 +1,18 @@
+# A cycle is cut where it closes, and a repeated subtree is elided.
+calltree -f graph.txt a x
+cmp stdout want.txt
+
+-- graph.txt --
+a b
+b c
+c a
+c d
+x b
+-- want.txt --
+a
+  -> b
+    -> c
+      -> a ...cycle
+      -> d
+x
+  -> b ...

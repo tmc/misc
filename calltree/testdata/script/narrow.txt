@@ -1,0 +1,33 @@
+# -within keeps only edges whose caller and callee are both in the package,
+# including methods, whose names embed the package path in parentheses.
+calltree -within=example.com/m -trim=example.com/m. -f graph.txt
+cmp stdout want.txt
+
+# -edges writes the filtered graph back in the input format, quoting any name
+# holding a space so that digraph can read it again.
+calltree -within=example.com/m -trim=example.com/m. -edges -tag=prod -f graph.txt
+cmp stdout want-edges.txt
+
+# An empty result after -within is an error: it means the graph loaded partially.
+! calltree -within=example.com/nothing -f graph.txt
+stderr 'no edge has both ends'
+
+# A root that is not in the graph is an error, not an empty tree.
+! calltree -within=example.com/m -trim=example.com/m. -f graph.txt nosuch
+stderr 'no node named "nosuch"'
+
+-- graph.txt --
+example.com/m.main	example.com/m.run
+example.com/m.main	fmt.Println
+runtime.main	example.com/m.main
+example.com/m.run	(*example.com/m.T).M
+example.com/m.run	example.com/m.New[func(i int) error]
+-- want.txt --
+main
+  -> run
+    -> (*T).M
+    -> New[func(i int) error]
+-- want-edges.txt --
+prod: main run
+prod: run (*T).M
+prod: run "New[func(i int) error]"
