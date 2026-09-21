@@ -41,6 +41,12 @@ whose caller and callee are both yours typically removes more than nine tenths
 of the graph. A method is named `(*path/to/pkg.T).M`, with the package path
 inside the parentheses, so `-within` and `-trim` look past a leading `(*`.
 
+Both flags take several prefixes, separated by commas or white space, so the
+output of `go list -m` can be passed unedited — in a workspace it names every
+module in the workspace, one per line:
+
+    calltree -within="$(go list -m)"
+
 A cycle prints as `...cycle` where it closes; a subtree already printed in full
 prints as `...`. Output stays proportional to the graph rather than to the
 number of paths through it.

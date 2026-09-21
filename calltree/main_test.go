@@ -54,7 +54,7 @@ func TestIn(t *testing.T) {
 		{"(*os.File).Read", false},
 	}
 	for _, tt := range tests {
-		if got := in(tt.node, pkg); got != tt.want {
+		if got := in(tt.node, []string{pkg}); got != tt.want {
 			t.Errorf("in(%q, %q) = %v, want %v", tt.node, pkg, got, tt.want)
 		}
 	}
@@ -68,7 +68,7 @@ func TestRemove(t *testing.T) {
 		{"fmt.Println", "fmt.Println"},
 	}
 	for _, tt := range tests {
-		if got := remove(tt.node, pkg); got != tt.want {
+		if got := remove(tt.node, []string{pkg}); got != tt.want {
 			t.Errorf("remove(%q, %q) = %q, want %q", tt.node, pkg, got, tt.want)
 		}
 	}
@@ -81,7 +81,7 @@ example.com/m.run	(*example.com/m.T).M
 runtime.main	example.com/m.main
 example.com/m.run	example.com/m.run
 `
-	g, err := read(strings.NewReader(in), "example.com/m", "example.com/m.")
+	g, err := read(strings.NewReader(in), []string{"example.com/m"}, []string{"example.com/m."})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,11 +97,59 @@ example.com/m.run	example.com/m.run
 }
 
 func TestReadDeduplicates(t *testing.T) {
-	g, err := read(strings.NewReader("a b\na b\na b\n"), "", "")
+	g, err := read(strings.NewReader("a b\na b\na b\n"), nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if want := []string{"b"}; !reflect.DeepEqual(g.succs["a"], want) {
 		t.Errorf("succs[a] = %q, want %q", g.succs["a"], want)
+	}
+}
+
+func TestPrefixes(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want []string
+	}{
+		{"empty", "", nil},
+		{"one", "example.com/m", []string{"example.com/m"}},
+		{"comma separated", "a/bb,a/b", []string{"a/bb", "a/b"}},
+		{"go list -m in a workspace", "example.com/m\nexample.com/m-lm\nexample.com/x\n",
+			[]string{"example.com/m-lm", "example.com/m", "example.com/x"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := prefixes(tt.in)
+			if len(got) != len(tt.want) || (len(got) > 0 && !reflect.DeepEqual(got, tt.want)) {
+				t.Errorf("prefixes(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestRemoveLongestFirst checks that removing a module prefix does not leave
+// the tail of a longer sibling behind: "m" must not be taken out of "m-lm".
+func TestRemoveLongestFirst(t *testing.T) {
+	p := prefixes("example.com/m.\nexample.com/m-lm.\n")
+	const node = "(*example.com/m-lm.Model).Forward"
+	if got, want := remove(node, p), "(*Model).Forward"; got != want {
+		t.Errorf("remove(%q) = %q, want %q", node, got, want)
+	}
+}
+
+func TestInAny(t *testing.T) {
+	p := prefixes("example.com/m,example.com/x")
+	for _, tt := range []struct {
+		node string
+		want bool
+	}{
+		{"example.com/m.F", true},
+		{"(*example.com/x.T).M", true},
+		{"example.com/other.F", false},
+	} {
+		if got := in(tt.node, p); got != tt.want {
+			t.Errorf("in(%q) = %v, want %v", tt.node, got, tt.want)
+		}
 	}
 }

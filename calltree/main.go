@@ -10,12 +10,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 var (
 	depth  = flag.Int("depth", 0, "print at most `n` levels below each root; 0 is unlimited")
-	within = flag.String("within", "", "keep only edges whose caller and callee are both in `prefix`")
-	trim   = flag.String("trim", "", "remove `prefix` wherever it appears in a node name")
+	within = flag.String("within", "", "keep only edges whose caller and callee are both in `prefixes`")
+	trim   = flag.String("trim", "", "remove each of `prefixes` wherever it appears in a node name")
 	tag    = flag.String("tag", "", "begin every output line with \"`name`: \"")
 	edges  = flag.Bool("edges", false, "write the filtered edges instead of a tree")
 	file   = flag.String("f", "", "read the graph from `file` instead of standard input")
@@ -44,14 +45,16 @@ func main() {
 }
 
 func run(r io.Reader, w io.Writer, roots []string) error {
-	g, err := read(r, *within, *trim)
+	keep := prefixes(*within)
+	g, err := read(r, keep, prefixes(*trim))
 	if err != nil {
 		return err
 	}
 	if g.edges == 0 {
-		if *within != "" {
-			return fmt.Errorf("no edge has both ends within %q: callgraph writes the edges it did "+
-				"resolve even when it fails to load packages, so check its exit status and build tags", *within)
+		if len(keep) > 0 {
+			return fmt.Errorf("no edge has both ends within %s: callgraph writes the edges it did "+
+				"resolve even when it fails to load packages, so check its exit status and build tags",
+				strings.Join(keep, ", "))
 		}
 		return fmt.Errorf("no edges in input")
 	}
@@ -82,9 +85,9 @@ type graph struct {
 	edges   int                 // edges retained
 }
 
-// read parses edges from r, keeping only those whose endpoints are both in the
-// package within, then removing trim from each node name.
-func read(r io.Reader, within, trim string) (*graph, error) {
+// read parses edges from r, keeping only those whose endpoints are both in one
+// of the packages within, then removing each of trim from each node name.
+func read(r io.Reader, within, trim []string) (*graph, error) {
 	g := &graph{succs: make(map[string][]string), hasPred: make(map[string]bool)}
 	s := bufio.NewScanner(r)
 	s.Buffer(make([]byte, 0, 64*1024), 16<<20)
@@ -119,20 +122,42 @@ func read(r io.Reader, within, trim string) (*graph, error) {
 	return g, nil
 }
 
-// in reports whether the function named n belongs to the package prefix. A
-// method is named "(*path/to/pkg.T).M" and an interface method "(path/to/pkg.I).M",
-// so the name is considered after any leading parenthesis and star.
-func in(n, prefix string) bool {
-	return strings.HasPrefix(strings.TrimLeft(n, "(*"), prefix)
+// prefixes splits a flag value into the prefixes it names. Both commas and
+// white space separate, so that the output of "go list -m" — several modules,
+// one per line, in a workspace — can be passed unedited. Longer prefixes come
+// first, so that removing one never leaves the tail of a longer one behind.
+func prefixes(s string) []string {
+	list := strings.FieldsFunc(s, func(r rune) bool {
+		return r == ',' || unicode.IsSpace(r)
+	})
+	sort.Slice(list, func(i, j int) bool { return len(list[i]) > len(list[j]) })
+	return list
 }
 
-// remove deletes prefix from n wherever it appears, since a method embeds its
-// package path inside parentheses rather than at the start of its name.
-func remove(n, prefix string) string {
-	if prefix == "" {
-		return n
+// in reports whether the function named n belongs to one of the packages in
+// prefixes, or to any package if prefixes is empty. A method is named
+// "(*path/to/pkg.T).M" and an interface method "(path/to/pkg.I).M", so the name
+// is considered after any leading parenthesis and star.
+func in(n string, prefixes []string) bool {
+	if len(prefixes) == 0 {
+		return true
 	}
-	return strings.ReplaceAll(n, prefix, "")
+	n = strings.TrimLeft(n, "(*")
+	for _, p := range prefixes {
+		if strings.HasPrefix(n, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// remove deletes each prefix from n wherever it appears, since a method embeds
+// its package path inside parentheses rather than at the start of its name.
+func remove(n string, prefixes []string) string {
+	for _, p := range prefixes {
+		n = strings.ReplaceAll(n, p, "")
+	}
+	return n
 }
 
 func (g *graph) add(n string) {

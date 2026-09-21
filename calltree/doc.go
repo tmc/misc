@@ -15,7 +15,10 @@
 // small package is mostly standard-library edges, and an approximate algorithm
 // such as cha adds an edge for every possible dynamic target, so filtering to
 // the edges whose caller and callee are both yours typically removes more than
-// nine tenths of the graph.
+// nine tenths of the graph. In a workspace, pass them all:
+//
+//	callgraph -algo=cha -format=$'{{.Caller}}\t{{.Callee}}' ./pkg |
+//		calltree -within="$(go list -m)"
 //
 // Usage:
 //
@@ -25,10 +28,14 @@
 //
 //	-depth n
 //		Print at most n levels below each root. The default, 0, is unlimited.
-//	-within prefix
-//		Keep only edges whose caller and callee both begin with prefix.
-//	-trim prefix
-//		Remove prefix from the start of every node name, after filtering.
+//	-within prefixes
+//		Keep only edges whose caller and callee are both in one of the
+//		packages named. Separate several by commas or white space, so that
+//		the output of "go list -m" can be passed unedited: in a workspace it
+//		names every module, one per line.
+//	-trim prefixes
+//		Remove each of the prefixes named wherever it appears in a node
+//		name, after filtering. Longer prefixes are removed first.
 //	-tag name
 //		Begin every output line with "name: ", to label one graph of a set.
 //	-edges

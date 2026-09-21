@@ -1,0 +1,18 @@
+# -within and -trim take several prefixes, separated by commas or white space,
+# so that the output of "go list -m" in a workspace can be passed unedited.
+# (Newline separation is covered by TestPrefixes; a script argument is one line.)
+calltree -within=example.com/m,example.com/m-lm -trim=example.com/m.,example.com/m-lm. -f graph.txt
+cmp stdout want.txt
+
+# A longer prefix is removed first, so that trimming example.com/m. does not
+# leave "-lm.Model" behind.
+stdout '\(\*Model\)\.Forward'
+
+-- graph.txt --
+example.com/m.main	example.com/m.run
+example.com/m.run	(*example.com/m-lm.Model).Forward
+example.com/m.run	example.com/other.Helper
+-- want.txt --
+main
+  -> run
+    -> (*Model).Forward
