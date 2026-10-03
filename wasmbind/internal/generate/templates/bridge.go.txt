@@ -8,10 +8,11 @@ import (
  "encoding/json"
  "errors"
  "fmt"
+ "io"
+ "reflect"
  "math"
  "os"
  "strconv"
- "strings"
  "sync"
  "syscall/js"
  "unicode/utf8"
@@ -27,11 +28,12 @@ type bridgeError struct { code, message string }
 func (e *bridgeError) Error() string { return e.message }
 func failure(code, message string) error { return &bridgeError{code,message} }
 func errorValue(err error) any {
- code:= "go-error"; var be *bridgeError
- if errors.As(err,&be) {code=be.code}
+ code:= "go-error"
+ if be,ok:=err.(*bridgeError);ok {code=be.code}
  return map[string]any{"code":code,"message":err.Error()}
 }
 type limits struct {
+ MaxPendingImports int `json:"maxPendingImports"`
  MaxPendingCalls int `json:"maxPendingCalls"`
  MaxResources int `json:"maxResources"`
  MaxValueBytes int `json:"maxValueBytes"`
@@ -43,7 +45,9 @@ func (b *valueBudget) charge(n, count, depth int) error {
  if depth>b.limits.MaxValueDepth || n>b.limits.MaxValueBytes-b.bytes || count>b.limits.MaxElements-b.elements {return failure("limit","value exceeds bridge limits")}
  b.bytes+=n;b.elements+=count;return nil
 }
+type interruptHook struct {fn func()error;started bool;done chan struct{};err error}
 type resource struct {
+ hooks map[string]*interruptHook;finished map[string]bool;lanes map[string]chan struct{}
  id int; kind string; ptr any; close func()error
  refs sync.WaitGroup
  closing bool; done chan struct{}; err error; tail chan struct{}
@@ -51,10 +55,11 @@ type resource struct {
 type invocation struct {
  id int; ctx context.Context; cancel context.CancelFunc
  resources map[int]*resource; created map[int]*resource
- done chan struct{}; prev chan struct{}
+ done chan struct{}; prev chan struct{};lane string;hook bool
 }
 type runtimeBridge struct {
  limits limits; ctx context.Context; cancel context.CancelFunc
+ hostInvoke,hostCancel,ready js.Value;outbound map[int]chan importResult;nextImport int
  closed bool; nextResource int; liveResources int
  calls map[int]*invocation; resources map[int]*resource; identities map[any]*resource
  work sync.WaitGroup; stop chan struct{}; complete js.Value
@@ -66,14 +71,14 @@ func (b *runtimeBridge) hold(i *invocation,id int,kind string)(*resource,error) 
  if i.resources[id]==nil {r.refs.Add(1);i.resources[id]=r}
  return r,nil
 }
-func (b *runtimeBridge) register(i *invocation,key,ptr any,kind string,closeFn func()error)(js.Value,error) {
+func (b *runtimeBridge) register(i *invocation,key,ptr any,kind string,closeFn func()error,hooks map[string]*interruptHook)(js.Value,error) {
  if r:=b.identities[key];r!=nil {if r.closing {return js.Undefined(),failure("closed","resource is closed")};return js.ValueOf(r.id),nil}
  // The pointer is owned by the invocation until committed to JavaScript.
  if b.liveResources>=b.limits.MaxResources || b.nextResource>=9007199254740991 {
   b.identities[key]=&resource{kind:kind,closing:true}
   _=safeClose(closeFn);return js.Undefined(),failure("limit","too many resources")
  }
- b.nextResource++;r:=&resource{id:b.nextResource,kind:kind,ptr:ptr,close:closeFn,done:make(chan struct{}),tail:make(chan struct{})}
+ b.nextResource++;r:=&resource{id:b.nextResource,kind:kind,ptr:ptr,close:closeFn,done:make(chan struct{}),tail:make(chan struct{}),hooks:hooks,finished:map[string]bool{},lanes:map[string]chan struct{}{}}
  close(r.tail);b.resources[r.id]=r;b.identities[key]=r;b.liveResources++;i.created[r.id]=r
  return js.ValueOf(r.id),nil
 }
@@ -82,12 +87,15 @@ func (b *runtimeBridge) closeResource(r *resource) {
  if r.closing {return};r.closing=true
  for _,i:=range b.calls {if i.resources[r.id]!=nil {i.cancel()}}
  b.work.Add(1)
- go func(){defer b.work.Done();r.refs.Wait();r.err=safeClose(r.close);r.ptr=nil;r.close=nil;delete(b.resources,r.id);b.liveResources--;close(r.done)}()
+ for _,lane:=range []string{"read","write","event"}{if !r.finished[lane]{b.startHook(r,lane)}}
+ go func(){defer b.work.Done();r.refs.Wait();var hookErrors []error;for _,lane:=range []string{"read","write","event"}{if h:=r.hooks[lane];h!=nil && h.started{<-h.done;if h.err!=nil{hookErrors=append(hookErrors,h.err)}}};r.err=errors.Join(append(hookErrors,safeClose(r.close))...);r.ptr=nil;r.close=nil;delete(b.resources,r.id);b.liveResources--;close(r.done)}()
 }
-func (b *runtimeBridge) finish(id int,err error,value js.Value) bool {
- code,message:="","";if err!=nil {code="go-error";message=err.Error();var be *bridgeError;if errors.As(err,&be){code=be.code}}
+func (b *runtimeBridge) finish(id int,err error,value js.Value)(accepted bool) {
+ defer func(){if recover()!=nil {accepted=false;if b.complete.Type()==js.TypeFunction{b.complete.Invoke(id,"panic","application panicked",js.Undefined(),nil)}}}()
+ code,message:="","";if err!=nil {code="go-error";message=err.Error();if be,ok:=err.(*bridgeError);ok{code=be.code}}
  if b.complete.Type()!=js.TypeFunction {return false}
- return b.complete.Invoke(id,code,message,value).Bool()
+ var domain any;if err!=nil && code=="go-error"{domain=b.domainError(err)}
+ return b.complete.Invoke(id,code,message,value,domain).Bool()
 }
 func (b *runtimeBridge) dispatch(_ js.Value,args []js.Value)(result any) {
  var i *invocation
@@ -105,11 +113,11 @@ func (b *runtimeBridge) dispatch(_ js.Value,args []js.Value)(result any) {
   var value js.Value;var err error
   func(){defer func(){if recover()!=nil {err=failure("panic","application panicked")}}()
    if i.prev!=nil {select {case <-i.prev:case <-i.ctx.Done():err=failure("abort","call canceled");return}}
-   if i.ctx.Err()!=nil {err=failure("abort","call canceled");return}
+   if i.ctx.Err()!=nil && !i.hook {err=failure("abort","call canceled");return}
    value,err=run()
   }()
   // Canceled calls retain resources until this goroutine actually returns.
-  if i.ctx.Err()!=nil {err=failure("abort","call canceled")}
+  if i.ctx.Err()!=nil && !i.hook {err=failure("abort","call canceled")}
   accepted:=b.finish(id,err,value)
   if !accepted {for _,r:=range i.created {b.closeResource(r)}}
  }()
@@ -128,13 +136,13 @@ func (b *runtimeBridge) disposeResource(_ js.Value,args []js.Value)any {
  go func(){defer b.work.Done();<-r.done;b.finish(id,r.err,js.Undefined())}();return nil
 }
 func (b *runtimeBridge) shutdown(_ js.Value,args []js.Value)any {
- if b.closed {return nil};b.closed=true;b.cancel();id:=args[0].Int()
+ if b.closed {return nil};b.closed=true;b.cancel();id:=args[0].Int();for _,r:=range b.resources {for _,lane:=range []string{"read","write","event"}{if !r.finished[lane]{b.startHook(r,lane)}}}
  go func(){
   b.work.Wait()
-  var failures []string
-  for n:=b.nextResource;n>0;n-- {if r:=b.resources[n];r!=nil {b.closeResource(r);<-r.done;if r.err!=nil {failures=append(failures,r.err.Error())}}}
+  var failures []error
+  for n:=b.nextResource;n>0;n-- {if r:=b.resources[n];r!=nil {b.closeResource(r);<-r.done;if r.err!=nil {failures=append(failures,r.err)}}}
   b.work.Wait()
-  var err error;if len(failures)>0 {err=fmt.Errorf("resource disposal: %s",strings.Join(failures,"; "))}
+  var err error;if len(failures)>0 {err=fmt.Errorf("resource disposal: %w",errors.Join(failures...))}
   b.finish(id,err,js.Undefined());close(b.stop)
  }();return nil
 }
@@ -142,17 +150,21 @@ func main() {
  var lim limits
  if json.Unmarshal([]byte(os.Getenv("WASMBIND_LIMITS")),&lim)!=nil {return}
  ctx,cancel:=context.WithCancel(context.Background());defer cancel()
- b:=&runtimeBridge{limits:lim,ctx:ctx,cancel:cancel,calls:map[int]*invocation{},resources:map[int]*resource{},identities:map[any]*resource{},stop:make(chan struct{})}
+ b:=&runtimeBridge{limits:lim,ctx:ctx,cancel:cancel,calls:map[int]*invocation{},resources:map[int]*resource{},identities:map[any]*resource{},outbound:map[int]chan importResult{},stop:make(chan struct{})}
  if observeBridge!=nil {defer observeBridge(b)()}
- funcs:=[]js.Func{js.FuncOf(b.dispatch),js.FuncOf(b.cancelCall),js.FuncOf(b.disposeResource),js.FuncOf(b.shutdown)}
+ funcs:=[]js.Func{js.FuncOf(b.dispatch),js.FuncOf(b.cancelCall),js.FuncOf(b.disposeResource),js.FuncOf(b.shutdown),js.FuncOf(b.importComplete)}
  defer func(){for _,f:=range funcs {f.Release()}}()
  table:=js.Global().Get("__wasmbind_bootstrap_v1__");if table.Type()!=js.TypeObject {return}
  register:=table.Get(os.Getenv("WASMBIND_TOKEN"));if register.Type()!=js.TypeFunction {return}
- b.complete=register.Invoke(fingerprint,map[string]any{"dispatch":funcs[0],"cancel":funcs[1],"disposeResource":funcs[2],"shutdown":funcs[3]},artifactIdentity)
+ b.work.Add(1);registration:=register.Invoke(fingerprint,map[string]any{"dispatch":funcs[0],"cancel":funcs[1],"disposeResource":funcs[2],"shutdown":funcs[3],"importComplete":funcs[4]},artifactIdentity)
+ b.complete=registration.Get("complete");b.hostInvoke=registration.Get("importCall");b.hostCancel=registration.Get("importCancel");b.ready=registration.Get("ready")
+ go func(){defer b.work.Done();var err error;func(){defer func(){if recover()!=nil{err=failure("panic","application panicked")}}();err=b.initialize()}();if err!=nil {b.ready.Invoke("go-error",err.Error())} else {b.ready.Invoke("","")}}()
  <-b.stop
 }
 
 // Keep imports stable for APIs that do not use every converter category.
+var _ = io.EOF
+var _ = reflect.DeepEqual
 var _ = math.IsNaN
 var _ = strconv.ParseInt
 var _ = utf8.ValidString

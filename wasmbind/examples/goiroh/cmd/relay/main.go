@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/tmc/go-iroh/gossip"
 	"io"
 	"log"
 	"net"
@@ -15,6 +16,7 @@ import (
 	"os/signal"
 	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/tmc/go-iroh/blobs"
 	"github.com/tmc/go-iroh/iroh"
@@ -38,11 +40,12 @@ func run(ctx context.Context, web, storeDir string) error {
 	relayHandler := relayserver.New()
 	mux.Handle("/relay", relayHandler)
 	mux.Handle("/ping", relayHandler)
+	mux.HandleFunc("/fixture", func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, "browser-import") })
 	mux.Handle("/", http.FileServer(http.Dir(web)))
 	server := &http.Server{Handler: mux}
 	defer server.Close()
 	go server.Serve(listener)
-	ep, err := iroh.Bind(ctx, iroh.WithRelayMode(relay.ModeCustom(relay.MapFromURLs(relayURL))), iroh.WithoutIPTransports(), iroh.WithALPNs("wasmbind-echo/1", blobs.ALPN))
+	ep, err := iroh.Bind(ctx, iroh.WithRelayMode(relay.ModeCustom(relay.MapFromURLs(relayURL))), iroh.WithoutIPTransports(), iroh.WithALPNs("wasmbind-echo/1", "wasmbind-raw/1", blobs.ALPN, gossip.ALPN))
 	if err != nil {
 		return err
 	}
@@ -58,7 +61,37 @@ func run(ctx context.Context, web, storeDir string) error {
 	if err != nil {
 		return err
 	}
+	g := gossip.NewGossip(ep)
+	var topicID gossip.TopicID
+	topicID[0] = 1
+	topic, err := g.Subscribe(ctx, topicID, nil)
+	if err != nil {
+		return err
+	}
+	defer topic.Close()
+	go func() {
+		timer := time.NewTicker(100 * time.Millisecond)
+		defer timer.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-timer.C:
+				_ = topic.Broadcast(ctx, []byte("relay-gossip"))
+			}
+		}
+	}()
 	router, err := iroh.NewRouter(ep, map[string]iroh.ProtocolHandler{
+		gossip.ALPN: g,
+		"wasmbind-raw/1": iroh.ProtocolHandlerFunc(func(ctx context.Context, c *iroh.Conn) error {
+			s, err := c.AcceptStream(ctx)
+			if err != nil {
+				return err
+			}
+			defer s.Close()
+			_, err = io.Copy(s, s)
+			return err
+		}),
 		"wasmbind-echo/1": iroh.ProtocolHandlerFunc(func(ctx context.Context, c *iroh.Conn) error {
 			s, err := c.AcceptStream(ctx)
 			if err != nil {

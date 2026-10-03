@@ -5,9 +5,9 @@ The implementation targets Go 1.27. The local qualification used Go 1.27.0
 
 | Engine | Version | General fixture | Relay fixture |
 | --- | --- | --- | --- |
-| Chromium | 149.0.7827.55 | 89 assertions | 65,536-byte echo; 71,680-byte blob |
-| Firefox | 151.0 | 89 assertions | 65,536-byte echo; 71,680-byte blob |
-| WebKit | 26.5 | 89 assertions | 65,536-byte echo; 71,680-byte blob |
+| Chromium | 149.0.7827.55 | 90 assertions | 65,536-byte echo; 71,680-byte blob |
+| Firefox | 151.0 | 90 assertions | 65,536-byte echo; 71,680-byte blob |
+| WebKit | 26.5 | 90 assertions | 65,536-byte echo; 71,680-byte blob |
 
 The general fixture exercises all scalar widths, exact bigint extremes,
 float overflow, record null/missing/unknown fields, throwing getters, malformed
@@ -33,7 +33,7 @@ each engine. Generated declarations pass TypeScript with `--noEmit --strict`.
 
 The relay fixture uses `github.com/tmc/go-iroh v0.3.0`, a Go loopback WebSocket
 relay, and a native Go peer. Actual generated endpoint/connection/stream APIs
-exchange a 64-KiB framed message and fetch a verified 70-KiB BLAKE3 blob. Each
+exchange a 64-KiB duplex stream message and fetch a verified 70-KiB BLAKE3 blob. Each
 engine checks pre-abort and disposes all resources. These results cover that
 relay-only Go-to-Go path; they do not qualify direct UDP, remote relays, or Rust
 interoperability.
@@ -66,3 +66,55 @@ Machine-readable receipts, including generated artifact hashes, are kept at:
 
 The scripts replace these receipts only after a complete successful run and
 remove throwaway builds. No throughput, bundle-size, or zero-copy claim is made.
+
+## Extension candidate matrix
+
+| Backend and features | Window | Dedicated Worker | Toolchain |
+| --- | --- | --- | --- |
+| syscalljs, base | 90 assertions per engine | copied bytes and disposal | Go 1.27.0 |
+| syscalljs, streams/events/imports/errors together | 44-assertion extension fixture | stream/event/import exercise | Go 1.27.0 |
+| syscalljs, go-iroh extensions | duplex echo, blocked cancellation, gossip early break, typed validation error, imported HTTP, verified blob | same network fixture | Go 1.27.0 |
+| abi, base, experimental | 90 shared assertions and 29 direct protocol assertions per engine | copied bytes and disposal | Go 1.27.0 and 1.27.1 |
+| abi with any extension | rejected | rejected | all |
+| pack, base | installed ES module and esbuild consumer | covered by runtime tests, no separate bundled Worker fixture | Go 1.27.0 |
+
+All three pinned engines are required in these rows. Extension declarations pass
+strict ES2022 DOM/DOM.Iterable and WebWorker fixtures with skipLibCheck=false,
+including readonly/opaque-resource/import-result negative tests. Error tests
+include wrapped/joined matches, bounded cycles, malformed data fallback, and
+private-brand guards. Imports test captured callbacks, HTTP, thrown and malformed
+results, ignored abort, never-settling promises, initialization failure, and
+same-instance reentrancy. Streams test final EOF/error chunks, no prefetch,
+short/zero writes, invalid counts, no progress, half-close, and blocked abort.
+Events test concurrent next, return, throw, early break, and stored terminal errors.
+
+The direct protocol fixture checks integer exports, host notifications, strict
+frames and handshake, allocation starts and sizes, interior/double frees, the
+aggregate buffer cap, memory growth, pending/canceled calls, consumed requests,
+and shutdown. The shared fixture covers bigint extremes, resource identity,
+conversion rollback, runtime exit, and loader mismatch. No ABI extension or
+performance claim follows from these results. Unlisted combinations and browsers
+are unqualified.
+
+Firefox's Playwright 1.61.1 driver asserts when tracking Worker WebSockets without
+corresponding tracked HTTP requests. Its relay Worker fixture therefore runs in
+the same pinned native Firefox executable, with a loopback HTTP completion
+callback; it executes the same assertions and is required to finish. This is a
+test-driver accommodation, not an engine skip. The runtime adapter also clears
+Go 1.27's scheduled wakeups on abrupt exit, using the matching compiler runtime's
+internal timer map; compiler/runtime upgrades need renewed qualification.
+
+Packaging qualifies npm 12.0.1 dry-run lists, local installation, TypeScript
+conditional exports, browser default URLs, and esbuild 0.25.12 with explicit
+Wasm/runtime asset handling. The new go-iroh-js package uses the four-feature
+syscalljs backend and includes dependency module-root licenses and Go's license.
+Its source and generated package remain local candidates.
+
+Additional receipts:
+
+- `~/tmp/wasmbind/20261003-syscalljs-browser-tests/qualification.json`
+- `~/tmp/wasmbind/20261003-extension-tests/qualification.json`
+- `~/tmp/wasmbind/20261003-abi-browser-tests/qualification.json`
+- `~/tmp/wasmbind/20261003-abi-go1.27.1-browser-tests/qualification.json`
+- `~/tmp/wasmbind/20261003-package-tests/qualification.json`
+- `~/tmp/go-iroh-js/20261003-package-tests/qualification.json`

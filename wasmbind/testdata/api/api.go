@@ -176,8 +176,19 @@ func Saved() *Client {
 	return saved
 }
 
+var ignoreGate = make(chan struct{})
+var ignoreStarted bool
+
+func IgnoreStarted() bool { return ignoreStarted }
+func ReleaseIgnore()      { close(ignoreGate) }
+
 //wasmbind:export ignore
 func Ignore(ctx context.Context, ms int) string {
+	if ms < 0 {
+		ignoreStarted = true
+		<-ignoreGate
+		return "done"
+	}
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 	return "finished"
 }

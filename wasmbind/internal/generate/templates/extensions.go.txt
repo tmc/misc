@@ -1,0 +1,26 @@
+func (b *runtimeBridge) queue(r *resource,i *invocation,op string) {
+ lane:="receiver"
+ switch op {case "read":lane="read";case "write","finish":lane="write";case "next":lane="event";case "cancelread","cancelwrite","interrupt":i.hook=true;return}
+ i.lane=lane
+ if lane=="receiver" {i.prev=r.tail;r.tail=i.done;return}
+ if tail:=r.lanes[lane];tail!=nil{i.prev=tail};r.lanes[lane]=i.done
+}
+func (b *runtimeBridge) startHook(r *resource,lane string) {
+ h:=r.hooks[lane];if h==nil || h.started{return};h.started=true
+ for _,i:=range b.calls{if i.resources[r.id]!=nil && i.lane==lane{i.cancel()}}
+ b.work.Add(1);go func(){defer b.work.Done();h.err=safeClose(h.fn);close(h.done)}()
+}
+type importResult struct{wire js.Value;err error}
+func (b *runtimeBridge) importComplete(_ js.Value,args []js.Value)any {
+ id:=args[0].Int();ch:=b.outbound[id];if ch==nil{return nil};delete(b.outbound,id)
+ result:=importResult{wire:args[3]};if args[1].String()!=""{result.err=fmt.Errorf("%s",args[2].String())};ch<-result;return nil
+}
+func (b *runtimeBridge) importCall(ctx context.Context,iface,method string,args js.Value)(js.Value,error) {
+ if err:=ctx.Err();err!=nil{return js.Undefined(),err};if b.closed{return js.Undefined(),context.Canceled}
+ if len(b.outbound)>=b.limits.MaxPendingImports{return js.Undefined(),failure("limit","too many pending imports")}
+ b.nextImport++;id:=b.nextImport;ch:=make(chan importResult,1);b.outbound[id]=ch
+ b.hostInvoke.Invoke(id,iface,method,args)
+ select {case result:=<-ch:if result.err!=nil{return js.Undefined(),fmt.Errorf("import %s.%s: %w",iface,method,result.err)};return result.wire,nil
+ case <-ctx.Done():delete(b.outbound,id);b.hostCancel.Invoke(id);return js.Undefined(),ctx.Err()
+ case <-b.ctx.Done():delete(b.outbound,id);b.hostCancel.Invoke(id);return js.Undefined(),context.Canceled}
+}

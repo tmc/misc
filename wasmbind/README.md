@@ -82,7 +82,7 @@ go run ./cmd/wasmbind build -go-out ./examples/echo/cmd/webbind -out ./examples/
 ```
 
 The [go-iroh example](examples/goiroh/README.md) provides relay-only endpoint,
-connection, framed stream, and verified blob-fetch APIs.
+connection, duplex stream, gossip subscription, and verified blob-fetch APIs.
 
 For qualification:
 
@@ -106,3 +106,32 @@ hashes under `~/tmp/wasmbind/<date>-browser-tests/` and
 The repository-root `.github/workflows/wasmbind.yml` runs these gates on changes
 to this package. Local passing tests do not establish a hosted CI run,
 release readiness, or transport support beyond the tested relay path.
+
+Enable the opt-in [extensions](EXTENSIONS.md) explicitly:
+
+```sh
+wasmbind build -features streams,events,imports,errors -go-out ./cmd/webbind -out ./web/generated ./webapi
+wasmbind build -backend abi -go-out ./cmd/webbind -out ./web/generated ./webapi
+wasmbind pack -bundle ./web/generated -out ./npm-package -name @scope/name -version 0.1.0 -license-file ./LICENSE
+```
+
+Stream resources expose readonly platform stream views with separate read/write
+lanes and interruption hooks. Event resources implement AsyncIterableIterator;
+early loop exit disposes them. Imported functions are supplied and captured at
+load, with bounded pending calls and cooperative cancellation. Annotated domain
+errors produce privately branded Error subclasses and guards, including terminal
+read errors after their final chunk. Resource declarations have opaque brands.
+
+The direct ABI backend is experimental and supports the base API only; it rejects
+all feature combinations. It uses integer exports and bounded WBND protocol-one
+frames, with schema/build handshakes, rooted allocation ownership, and deferred
+notification/poll completion. The matching Go runtime remains required. No
+performance or zero-copy improvement is claimed. Packaging writes a local ES
+module directory with explicit licensing; optional `-readme-file` supplies its
+README. It never publishes.
+
+Additional gates are `npm run test:extensions`, `npm run test:abi`, and
+`npm run test:pack`. The minimum tested TypeScript version is 6.0.3 and is recorded
+in manifests. The relay example now uses stream views, gossip iteration, typed
+errors, and imported HTTP. [Local qualification](VALIDATION.md) records the tested
+combinations and remaining release limits.

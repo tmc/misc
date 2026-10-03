@@ -1,0 +1,182 @@
+
+// abiValue is an owned decoded protocol value, never a JavaScript reference.
+type abiValue struct{v any}
+const(abiTypeUndefined=iota;abiTypeBoolean;abiTypeNumber;abiTypeString;abiTypeObject;abiTypeFunction)
+func abiValueOf(v any)abiValue {if x,ok:=v.(abiValue);ok{return x};switch x:=v.(type){case int:return abiValue{float64(x)};case uint32:return abiValue{float64(x)};case map[string]any:m:=map[string]abiValue{};for k,v:=range x{m[k]=abiValueOf(v)};return abiValue{m}};return abiValue{v}}
+func abiUndefined()abiValue{return abiValue{}}
+func abiNull()abiValue{return abiValue{nil}}
+func(v abiValue)IsNull()bool{return v.v==nil}
+func(v abiValue)Type()int{switch v.v.(type){case nil:return abiTypeUndefined;case bool:return abiTypeBoolean;case float64:return abiTypeNumber;case string:return abiTypeString;case func(...any)any:return abiTypeFunction;default:return abiTypeObject}}
+func(v abiValue)Bool()bool{return v.v.(bool)}
+func(v abiValue)Int()int{return int(v.v.(float64))}
+func(v abiValue)Float()float64{return v.v.(float64)}
+func(v abiValue)String()string{return v.v.(string)}
+func(v abiValue)Get(k string)abiValue {if m,ok:=v.v.(map[string]abiValue);ok{return m[k]};return abiValue{k}}
+func(v abiValue)Set(k string,x any){v.v.(map[string]abiValue)[k]=abiValueOf(x)}
+func(v abiValue)Length()int{switch x:=v.v.(type){case []byte:return len(x);case []abiValue:return len(x)};panic("invalid wire array")}
+func(v abiValue)Index(j int)abiValue{return v.v.([]abiValue)[j]}
+func(v abiValue)SetIndex(j int,x any){v.v.([]abiValue)[j]=abiValueOf(x)}
+func(v abiValue)InstanceOf(_ abiValue)bool{_,ok:=v.v.([]byte);return ok}
+func abiGlobal()abiValue{return abiValue{"global"}}
+func(v abiValue)New(n int)abiValue{if v.v=="Uint8Array"{return abiValue{make([]byte,n)}};return abiValue{make([]abiValue,n)}}
+func(v abiValue)Call(_ string,_ ...any)abiValue{return abiValue{map[string]abiValue{}}}
+func(v abiValue)Invoke(args ...any)abiValue{return abiValueOf(v.v.(func(...any)any)(args...))}
+func abiCopyBytesToGo(p []byte,v abiValue)int{return copy(p,v.v.([]byte))}
+func abiCopyBytesToJS(v abiValue,p []byte)int{return copy(v.v.([]byte),p)}
+
+type abiType struct{Kind,Name string;Length int;Elem *abiType}
+type abiField struct{Name string;Type *abiType}
+type abiDecl struct{Name string;Fields []abiField}
+type abiCall struct{ID int;Receiver string;Params []struct{Type *abiType};Result *abiType}
+type abiSchema struct{Declarations []abiDecl;Calls []abiCall}
+var abiDescription abiSchema
+var abiRuntime *runtimeBridge
+var abiMemory=map[uint32][]byte{}
+var abiBuffers int
+var abiState uint32
+var abiNext uint32
+var abiRequests=map[uint32]*abiRequest{}
+var abiHandshake bool
+var abiShutdownID int
+const abiMaxBuffers=32<<20
+const abiDispose=uint32(0xfffffff0)
+const abiShutdown=uint32(0xfffffff1)
+type abiRequest struct{op uint32;response []byte;consumed,canceled,terminal bool}
+
+//go:wasmimport wasmbind notify
+func abiNotify(id uint32)
+
+//go:wasmexport wb_version
+func wbVersion()uint32{return 1}
+
+//go:wasmexport wb_status
+func wbStatus()uint32{return abiState}
+
+func abiAllocate(n uint32)uint32{
+ if n==0||n>abiMaxBuffers-4||int(n)+4>abiMaxBuffers-abiBuffers{abiState=3;return 0}
+ p:=make([]byte,int(n)+4);binary.LittleEndian.PutUint32(p,n);ptr:=uint32(uintptr(unsafe.Pointer(&p[0])));abiMemory[ptr]=p;abiBuffers+=len(p);abiState=0;return ptr
+}
+//go:wasmexport wb_alloc
+func wbAlloc(n uint32)uint32 {if abiRuntime==nil||abiRuntime.closed{abiState=4;return 0};return abiAllocate(n)}
+
+//go:wasmexport wb_free
+func wbFree(ptr uint32){p:=abiMemory[ptr];if p==nil{abiState=7;return};delete(abiMemory,ptr);abiBuffers-=len(p);abiState=0}
+
+//go:wasmexport wb_submit
+func wbSubmit(ptr,n uint32)uint32{
+ abiState=0;if abiRuntime==nil||abiRuntime.closed{abiState=4;return 0}
+ p:=abiMemory[ptr];if p==nil{abiState=7;return 0};if n!=uint32(len(p)-4)||n<16{abiState=2;return 0}
+ frame:=append([]byte(nil),p[4:]...)
+ if string(frame[:4])!="WBND"||binary.LittleEndian.Uint32(frame[4:])!=1{abiState=8;return 0}
+ if binary.LittleEndian.Uint32(frame[8:])!=n{abiState=2;return 0}
+ op:=binary.LittleEndian.Uint32(frame[12:]);fields,err:=abiFields(frame[16:]);if err!=nil{abiState=2;return 0}
+ if !abiHandshake&&op!=0{abiState=8;return 0}
+ if abiNext==math.MaxUint32||len(abiRequests)>=abiRuntime.limits.MaxPendingCalls+abiRuntime.limits.MaxResources+1||len(abiRuntime.calls)>=abiRuntime.limits.MaxPendingCalls{abiState=3;return 0}
+ var args []abiValue;receiver:=0
+ switch op{
+ case 0:
+  if abiHandshake||len(fields)!=2{abiState=8;return 0}
+  q:=&valueBudget{limits:limits{MaxValueBytes:4096,MaxValueDepth:2,MaxElements:2}};f,e:=abiDecode(&abiType{Kind:"string"},fields[1],q,0);a,e2:=abiDecode(&abiType{Kind:"string"},fields[2],q,0)
+  if e!=nil||e2!=nil||f.String()!=fingerprint||a.String()!=artifactIdentity{abiState=8;return 0}
+ case abiDispose:
+  if len(fields)!=1{abiState=2;return 0};v,e:=abiDecode(&abiType{Kind:"uint32"},fields[1],&valueBudget{limits:abiRuntime.limits},0);if e!=nil{abiState=2;return 0};receiver=v.Int()
+ case abiShutdown:if len(fields)!=0||abiShutdownID!=0{abiState=2;return 0}
+ default:
+  if op==0||int(op)>len(abiDescription.Calls){abiState=2;return 0};c:=abiDescription.Calls[op-1]
+  if len(fields)!=len(c.Params)+1{abiState=2;return 0};q:=&valueBudget{limits:abiRuntime.limits}
+  v,e:=abiDecode(&abiType{Kind:"uint32"},fields[1],q,0);if e!=nil{abiState=2;return 0};receiver=v.Int();if c.Receiver==""&&receiver!=0{abiState=2;return 0}
+  for j,p:=range c.Params{v,e:=abiDecode(p.Type,fields[uint32(j+2)],q,0);if e!=nil{abiState=2;return 0};args=append(args,v)}
+ }
+ abiNext++;id:=abiNext;abiRequests[id]=&abiRequest{op:op}
+ // Work is admitted synchronously, but application execution is in goroutines.
+ switch op{
+ case 0:abiHandshake=true;abiStore(abiRequests[id],abiResponse(op,"","",abiNull(),nil))
+ case abiDispose:abiRuntime.disposeResource(abiUndefined(),[]abiValue{abiValueOf(id),abiValueOf(receiver)})
+ case abiShutdown:abiShutdownID=int(id)
+ default:
+  admitted:=abiRuntime.dispatch(abiUndefined(),[]abiValue{abiValueOf(id),abiValueOf(int(op)-1),abiValueOf(receiver),{v:args}})
+  if admitted!=nil{e:=admitted.(map[string]any);abiFinish(int(id),e["code"].(string),e["message"].(string),abiNull())}
+ }
+ abiState=0;return id
+}
+
+//go:wasmexport wb_cancel
+func wbCancel(id uint32){r:=abiRequests[id];if r==nil{abiState=5;if id>0&&id<=abiNext{abiState=6};return};if r.consumed{abiState=6;return};r.canceled=true;abiRuntime.cancelCall(abiUndefined(),[]abiValue{abiValueOf(id)});abiState=0}
+
+//go:wasmexport wb_poll
+func wbPoll(id uint32)uint32{r:=abiRequests[id];if r==nil{abiState=5;if id>0&&id<=abiNext{abiState=6};return 0};if r.consumed{abiState=6;return 0};if !r.terminal{abiState=1;return 0};if r.response==nil{abiStore(r,abiResponse(r.op,"limit","ABI response exceeds buffer limit",abiNull(),nil));if r.response==nil{abiState=3;return 0}};ptr:=uint32(uintptr(unsafe.Pointer(&r.response[0])));abiMemory[ptr]=r.response;r.response=nil;r.consumed=true;delete(abiRequests,id);abiState=0;return ptr}
+
+//go:wasmexport wb_shutdown
+func wbShutdown(){if abiRuntime==nil||abiRuntime.closed{abiState=4;return};abiRuntime.shutdown(abiUndefined(),[]abiValue{abiValueOf(abiShutdownID)});abiState=0}
+
+func abiStore(r *abiRequest,frame []byte){r.terminal=true;if len(frame)+4>abiMaxBuffers-abiBuffers{return};p:=make([]byte,len(frame)+4);binary.LittleEndian.PutUint32(p,uint32(len(frame)));copy(p[4:],frame);r.response=p;abiBuffers+=len(p)}
+func abiFinish(id int,code,message string,v abiValue)bool{
+ r:=abiRequests[uint32(id)];if r==nil||r.consumed{return false}
+ if r.canceled{code="abort";message="call canceled"}
+ var t *abiType;if r.op>0&&r.op<=uint32(len(abiDescription.Calls)){t=abiDescription.Calls[r.op-1].Result}
+ abiStore(r,abiResponse(r.op,code,message,v,t));abiNotify(uint32(id));return code==""
+}
+func main(){
+ var lim limits;if json.Unmarshal([]byte(os.Getenv("WASMBIND_LIMITS")),&lim)!=nil{return}
+ if json.Unmarshal([]byte(__SCHEMA__),&abiDescription)!=nil{return}
+ ctx,cancel:=context.WithCancel(context.Background());defer cancel()
+ b:=&runtimeBridge{limits:lim,ctx:ctx,cancel:cancel,calls:map[int]*invocation{},resources:map[int]*resource{},identities:map[any]*resource{},outbound:map[int]chan importResult{},stop:make(chan struct{})}
+ b.complete=abiValue{func(a ...any)any{return abiFinish(a[0].(int),a[1].(string),a[2].(string),abiValueOf(a[3]))}};abiRuntime=b
+ if observeBridge!=nil{defer observeBridge(b)()}
+ // Go's js/wasm scheduler needs a timer wakeup for work admitted by direct
+ // exports. Notifications only cause polling on a later browser task.
+ ticker:=time.NewTicker(time.Millisecond);defer ticker.Stop()
+ stopping:=false;stop:=b.stop;for{select{case<-ticker.C:if stopping&&(abiShutdownID==0||abiRequests[uint32(abiShutdownID)]==nil){clear(abiRequests);clear(abiMemory);abiBuffers=0;return};case<-stop:stopping=true;stop=nil}}
+}
+
+type abiWire struct{tag uint32;data []byte}
+func abiFields(p []byte)(map[uint32]abiWire,error){out:=map[uint32]abiWire{};for len(p)>0{if len(out)>=abiRuntime.limits.MaxElements{return nil,failure("limit","too many ABI fields")};if len(p)<12{return nil,failure("argument","truncated field")};id:=binary.LittleEndian.Uint32(p);tag:=binary.LittleEndian.Uint32(p[4:]);n:=binary.LittleEndian.Uint32(p[8:]);if id==0||tag<1||tag>10||uint64(n)>uint64(len(p)-12){return nil,failure("argument","invalid field")};if _,ok:=out[id];ok{return nil,failure("argument","duplicate field")};out[id]=abiWire{tag,p[12:12+int(n)]};p=p[12+int(n):]};return out,nil}
+func abiTLV(id,tag uint32,p []byte)[]byte{out:=make([]byte,12+len(p));binary.LittleEndian.PutUint32(out,id);binary.LittleEndian.PutUint32(out[4:],tag);binary.LittleEndian.PutUint32(out[8:],uint32(len(p)));copy(out[12:],p);return out}
+func abiRecord(name string)[]abiField{for _,d:=range abiDescription.Declarations{if d.Name==name{return d.Fields}};return nil}
+func abiTag(t *abiType)uint32{if t==nil{return 1};switch t.Kind{case "pointer":return abiTag(t.Elem);case "bool":return 2;case "float32","float64":return 3;case "string":return 4;case "bytes":return 5;case "slice","array":return 6;case "record":return 7;case "resource":return 8;case "int","int8","int16","int32","int64":return 9;default:return 10}}
+func abiDecode(t *abiType,w abiWire,q *valueBudget,depth int)(abiValue,error){
+ bad:=failure("argument","invalid wire value");if t==nil{if w.tag==1&&len(w.data)==0{return abiNull(),nil};return abiNull(),bad}
+ if err:=q.charge(0,0,depth);err!=nil{return abiNull(),err}
+ if (t.Kind=="pointer"||t.Kind=="resource")&&w.tag==1&&len(w.data)==0{return abiNull(),nil}
+ if t.Kind=="pointer"{return abiDecode(t.Elem,w,q,depth+1)}
+ if w.tag!=abiTag(t){return abiNull(),bad};p:=w.data
+ switch t.Kind{
+ case "bool":if len(p)!=1||p[0]>1{return abiNull(),bad};return abiValueOf(p[0]==1),nil
+ case "string":if !utf8.Valid(p){return abiNull(),bad};if err:=q.charge(len(p),0,depth);err!=nil{return abiNull(),err};return abiValueOf(string(p)),nil
+ case "bytes":if err:=q.charge(len(p),len(p),depth);err!=nil{return abiNull(),err};return abiValue{append([]byte{},p...)},nil
+ case "slice","array","record":
+  fields,err:=abiFields(p);if err!=nil{return abiNull(),err};if err=q.charge(0,len(fields),depth);err!=nil{return abiNull(),err}
+  if t.Kind=="record"{fs:=abiRecord(t.Name);if len(fields)!=len(fs){return abiNull(),bad};out:=abiValue{map[string]abiValue{}};for j,f:=range fs{v,e:=abiDecode(f.Type,fields[uint32(j+1)],q,depth+1);if e!=nil{return abiNull(),e};out.Set(f.Name,v)};return out,nil}
+  if t.Kind=="array"&&len(fields)!=t.Length{return abiNull(),bad};out:=make([]abiValue,len(fields));for j:=range out{v,e:=abiDecode(t.Elem,fields[uint32(j+1)],q,depth+1);if e!=nil{return abiNull(),e};out[j]=v};return abiValue{out},nil
+ case "resource":if len(p)!=4{return abiNull(),bad};id:=binary.LittleEndian.Uint32(p);if id==0{return abiNull(),bad};return abiValueOf(id),nil
+ default:
+  if len(p)!=8{return abiNull(),bad};bits:=binary.LittleEndian.Uint64(p)
+  if t.Kind=="int64"{return abiValueOf(strconv.FormatInt(int64(bits),10)),nil};if t.Kind=="uint64"{return abiValueOf(strconv.FormatUint(bits,10)),nil}
+  var n float64;if w.tag==3{n=math.Float64frombits(bits)}else if w.tag==9{n=float64(int64(bits))}else{n=float64(bits)}
+  if math.IsNaN(n)||math.IsInf(n,0){return abiNull(),bad}
+  switch t.Kind{case "float32":if math.IsInf(float64(float32(n)),0){return abiNull(),bad};case "float64":case "int8":if n < -128||n>127{return abiNull(),bad};case "int16":if n < -32768||n>32767{return abiNull(),bad};case "int32":if n < -2147483648||n>2147483647{return abiNull(),bad};case "uint8":if n>255{return abiNull(),bad};case "uint16":if n>65535{return abiNull(),bad};case "uint32":if n>4294967295{return abiNull(),bad};case "int":if int64(n)!=int64(bits){return abiNull(),bad};case "uint":if uint64(n)!=bits{return abiNull(),bad}}
+  return abiValueOf(n),nil
+ }
+}
+func abiEncode(t *abiType,v abiValue)(abiWire,error){
+ if t==nil||v.IsNull(){return abiWire{1,nil},nil};if t.Kind=="pointer"{return abiEncode(t.Elem,v)}
+ tag:=abiTag(t);var p []byte
+ switch t.Kind{
+ case "bool":p=[]byte{0};if v.Bool(){p[0]=1}
+ case "string":p=[]byte(v.String())
+ case "bytes":p=append([]byte{},v.v.([]byte)...)
+ case "array","slice":for j:=0;j<v.Length();j++{w,e:=abiEncode(t.Elem,v.Index(j));if e!=nil{return abiWire{},e};p=append(p,abiTLV(uint32(j+1),w.tag,w.data)...)}
+ case "record":for j,f:=range abiRecord(t.Name){w,e:=abiEncode(f.Type,v.Get(f.Name));if e!=nil{return abiWire{},e};p=append(p,abiTLV(uint32(j+1),w.tag,w.data)...)}
+ case "resource":if v.Float()>math.MaxUint32{return abiWire{},failure("limit","resource identifier exhausted")};p=make([]byte,4);binary.LittleEndian.PutUint32(p,uint32(v.Int()))
+ default:
+  p=make([]byte,8);var n uint64
+  if t.Kind=="int64"{i,e:=strconv.ParseInt(v.String(),10,64);if e!=nil{return abiWire{},e};n=uint64(i)}else if t.Kind=="uint64"{i,e:=strconv.ParseUint(v.String(),10,64);if e!=nil{return abiWire{},e};n=i}else if tag==3{n=math.Float64bits(v.Float())}else if tag==9{n=uint64(int64(v.Float()))}else{n=uint64(v.Float())};binary.LittleEndian.PutUint64(p,n)
+ }
+ return abiWire{tag,p},nil
+}
+func abiResponse(op uint32,code,message string,v abiValue,t *abiType)[]byte{
+ message=strings.ToValidUTF8(message,"\uFFFD");if len(message)>abiMaxBuffers-128{code="limit";message="ABI response exceeds buffer limit"};if code!=""{t=nil;v=abiNull()}
+ w,err:=abiEncode(t,v);if err!=nil{code="argument";message="invalid ABI result";w=abiWire{1,nil}}
+ p:=append(abiTLV(1,4,[]byte(code)),abiTLV(2,4,[]byte(message))...);p=append(p,abiTLV(3,w.tag,w.data)...)
+ frame:=make([]byte,16);copy(frame,"WBND");binary.LittleEndian.PutUint32(frame[4:],1);binary.LittleEndian.PutUint32(frame[8:],uint32(16+len(p)));binary.LittleEndian.PutUint32(frame[12:],op);return append(frame,p...)
+}

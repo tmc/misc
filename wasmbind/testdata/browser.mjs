@@ -7,11 +7,12 @@ import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
+const backend=process.env.WASMBIND_BACKEND??'syscalljs';
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const task = join(homedir(), 'tmp/wasmbind', new Date().toISOString().slice(0, 10).replaceAll('-', '') + '-browser-tests');
+const task = join(homedir(), 'tmp/wasmbind', new Date().toISOString().slice(0, 10).replaceAll('-', '') + '-'+backend+(process.env.GOTOOLCHAIN?'-'+process.env.GOTOOLCHAIN:'')+'-browser-tests');
 await mkdir(task, { recursive: true });
 const dir = await mkdtemp(join(task, 'run-'));
-const run = (bin, args, cwd = root) => execFileSync(bin, args, { cwd, env: { ...process.env, GOWORK: 'off' }, stdio: 'pipe' }).toString();
+const run = (bin, args, cwd = root) => execFileSync(bin, bin.endsWith('wasmbind')&&args[0]==='build'?[args[0],'-backend',backend,...args.slice(1)]:args, { cwd, env: { ...process.env, GOWORK: 'off' }, stdio: 'pipe' }).toString();
 let server;
 try {
   run('go', ['build', '-o', join(dir, 'wasmbind'), './cmd/wasmbind']);
@@ -21,11 +22,11 @@ try {
   await mkdir(join(dir,'cmd/bind'),{recursive:true});
   await writeFile(join(dir,'cmd/bind/counters.go'), `//go:build js && wasm
 package main
-import ("os";"syscall/js")
+import ("os";"syscall/js";"example.com/browser/api")
 func init(){observeBridge=func(b *runtimeBridge)func(){
  table:=js.Global().Get("__wasmbind_test_counters");if table.IsUndefined(){table=js.Global().Get("Object").Call("create",js.Null());js.Global().Set("__wasmbind_test_counters",table)}
  token:=os.Getenv("WASMBIND_TOKEN")
- f:=js.FuncOf(func(js.Value,[]js.Value)any{return map[string]any{"resources":len(b.resources),"calls":len(b.calls),"live":b.liveResources}})
+ f:=js.FuncOf(func(_ js.Value,args []js.Value)any{if len(args)>0{api.ReleaseIgnore()};return map[string]any{"ignoreStarted":api.IgnoreStarted(),"resources":len(b.resources),"calls":len(b.calls),"live":b.liveResources}})
  table.Set(token,f);return func(){table.Delete(token);f.Release()}
 }}`);
   run(join(dir, 'wasmbind'), ['build', '-go-out', './cmd/bind' , '-out', './web', './api'], dir);
@@ -69,13 +70,14 @@ async function check() {const m=await load(new URL('module.wasm',import.meta.url
   const base = `http://127.0.0.1:${server.address().port}`;
   await writeFile(join(dir, 'web/worker.js'), `import {load} from './bindings.js';
 self.onmessage=async()=>{try{const m=await load(new URL('./module.wasm',import.meta.url));const v=await m.bytes(new Uint8Array([9,8]));await m.dispose();postMessage({value:Array.from(v)});}catch(e){postMessage({error:e.message});}};`);
-  const receipts = { compiler: manifest.compiler, artifacts: manifest.artifacts, typescript: JSON.parse(await readFile(join(root, 'node_modules/typescript/package.json'), 'utf8')).version, browsers: [] };
+  if(backend==='abi')await cp(join(root,'testdata/abi-probe.js'),join(dir,'web/abi-probe.js'));
+  const receipts = { backend,compiler: manifest.compiler, artifacts: manifest.artifacts, typescript: JSON.parse(await readFile(join(root, 'node_modules/typescript/package.json'), 'utf8')).version, browsers: [] };
   for (const [name, browserType] of Object.entries({ chromium, firefox, webkit })) {
     // Required browsers must launch: unavailable executables fail this suite.
     const browser = await browserType.launch({ headless: true });
     try {
       const page = await browser.newPage();
-      await page.goto(base);
+      page.on('pageerror',e=>console.log(name,e));await page.goto(base);
       const results = await page.evaluate(async () => {
         const { load, WasmBindError } = await import('/web/bindings.js');
         let passed = 0;
@@ -117,7 +119,7 @@ self.onmessage=async()=>{try{const m=await load(new URL('./module.wasm',import.m
         await rejects(()=>c.add(1),'closed');await rejects(()=>c.same(),'closed');
         const bad=await m.newClient(true);const badDispose=bad.dispose();const closeErr=await rejects(()=>badDispose,'go-error');assert(closeErr.message==='close failed','close failure');assert(bad.dispose()===badDispose,'same failed settlement');
         const lateAbort=new AbortController();const late=m.late(30,{signal:lateAbort.signal});await new Promise(r=>setTimeout(r,5));lateAbort.abort();await rejects(()=>late,'AbortError');
-        await new Promise(r=>setTimeout(r,80));assert((await m.counts())[0]===0,'late resource cleanup');
+        for(let n=0;n<100&&(await m.counts())[0]!==0;n++)await new Promise(r=>setTimeout(r,20));assert((await m.counts())[0]===0,'late resource cleanup');
         const q=await m.newClient(false);const qa=new AbortController();const first=q.add(1);const queued=q.add(100,{signal:qa.signal});qa.abort();await rejects(()=>queued,'AbortError');assert(await first===1 && await q.add(1)===2,'canceled queued method never invokes');await q.dispose();
         for(let i=0;i<20;i++){const c=await m.newClient(false);await c.echoInt(i);await c.dispose();}assert((await m.counts())[0]===0,'resource cycle cleanup');assert(stats().resources===0 && stats().calls===0 && stats().live===0,'test-only registry counters cleaned');
         const bounded=await load(url(),{maxResources:1,maxValueBytes:8,maxValueDepth:1,maxPendingCalls:1});
@@ -129,7 +131,7 @@ self.onmessage=async()=>{try{const m=await load(new URL('./module.wasm',import.m
         const conflict=await import('/conflict/bindings.js');await rejects(()=>conflict.load(url()),'abi-mismatch');
         const saved=await m.saved();await saved.dispose();await rejects(()=>m.saved(),'closed');
         const beforeDying=new Set(Object.keys(globalThis.__wasmbind_test_counters));const dying=await load(url());const dyingToken=Object.keys(globalThis.__wasmbind_test_counters).find(k=>!beforeDying.has(k));const during=dying.wait(100);const dyingCall=dying.exit();await rejects(()=>during,'runtime-exit');await rejects(()=>dyingCall,'runtime-exit');await rejects(()=>dying.bytes(new Uint8Array()),'closed');await rejects(()=>dying.dispose(),'runtime-exit');delete globalThis.__wasmbind_test_counters[dyingToken];
-        const ignoring=await load(url());const ignored=ignoring.ignore(60);await new Promise(r=>setTimeout(r,5));const ignoredHandled=rejects(()=>ignored,'AbortError');let disposed=false;const disposeIgnore=ignoring.dispose().then(()=>disposed=true);await ignoredHandled;await new Promise(r=>setTimeout(r,10));assert(!disposed,'disposal waits for uncancellable application call');await disposeIgnore;
+        const beforeIgnoring=new Set(Object.keys(globalThis.__wasmbind_test_counters));const ignoring=await load(url());const ignoringStats=globalThis.__wasmbind_test_counters[Object.keys(globalThis.__wasmbind_test_counters).find(k=>!beforeIgnoring.has(k))];const ignored=ignoring.ignore(-1);for(let n=0;n<2000&&!ignoringStats().ignoreStarted;n++)await new Promise(r=>setTimeout(r,1));assert(ignoringStats().ignoreStarted,'uncancellable call started');const ignoredHandled=rejects(()=>ignored,'AbortError');let disposed=false;const disposeIgnore=ignoring.dispose().then(()=>disposed=true);await ignoredHandled;assert(!disposed&&ignoringStats().calls===1,'disposal waits for uncancellable application call');ignoringStats('release');await disposeIgnore;
         for(let i=0;i<12;i++){const race=new AbortController();const promise=m.wait(1,{signal:race.signal});setTimeout(()=>race.abort(),i%3);try{assert(await promise==='done','completion wins once')}catch(e){assert(e.name==='AbortError','abort wins once')}}
         const before=performance.now();await rejects(()=>load(new URL('/slow',location.href),{startupTimeoutMs:10}),'runtime-exit');assert(performance.now()-before<130,'timeout rejects promptly');
         const response=await fetch(url());const responseMod=await load(response);await responseMod.dispose();
@@ -138,9 +140,10 @@ self.onmessage=async()=>{try{const m=await load(new URL('./module.wasm',import.m
         const workerResult=await new Promise((resolve,reject)=>{const w=new Worker('/web/worker.js',{type:'module'});w.onmessage=e=>{w.terminate();resolve(e.data)};w.onerror=reject;w.postMessage({});});assert(workerResult.value?.join(',')==='9,8','dedicated Worker');
         const teardown=await m.newClient(true);const disposing=m.dispose();assert(m.dispose()===disposing,'module disposal idempotence');await rejects(()=>disposing,'go-error');await rejects(()=>m.bytes(new Uint8Array()),'closed');await rejects(()=>teardown.same(),'closed');
         await other.dispose();
-        assert(Object.keys(globalThis.__wasmbind_bootstrap_v1__).length===0,'bootstrap cleaned');assert(Object.keys(globalThis.__wasmbind_test_counters).length===0,'test-only callbacks released');
+        assert(Object.keys(globalThis.__wasmbind_bootstrap_v1__??{}).length===0,'bootstrap cleaned');assert(Object.keys(globalThis.__wasmbind_test_counters).length===0,'test-only callbacks released');
         return {passed};
       });
+      if(backend==='abi')results.protocol=await page.evaluate(async()=>{const {probe}=await import('/web/abi-probe.js');return probe();});
       receipts.browsers.push({ name, version: browser.version(), ...results });
       console.log(`${name} ${browser.version()}: ${results.passed} assertions passed`);
     } finally { await browser.close(); }

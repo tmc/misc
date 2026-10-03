@@ -204,13 +204,23 @@ export async function getGo() {
   globalThis[key] = entry;
   entry.promise = (async () => {
     const previous = Object.getOwnPropertyDescriptor(globalThis, 'Go');
-    try { await import('./wasm_exec.js'); return globalThis.Go; }
+    try {
+      await import('./wasm_exec.js');
+      const BaseGo=globalThis.Go;
+      return class extends BaseGo {
+        constructor(){super();const exit=this.exit;this.exit=code=>{
+          // The matching Go 1.27 runtime leaves scheduled wakeups on abrupt exit.
+          for(const timer of this._scheduledTimeouts?.values()??[])clearTimeout(timer);
+          this._scheduledTimeouts?.clear();exit(code);
+        };}
+      };
+    }
     finally { if (previous) Object.defineProperty(globalThis, 'Go', previous); else delete globalThis.Go; }
   })();
   try { return await entry.promise; }
   catch (error) { if (globalThis[key] === entry) delete globalThis[key]; throw error; }
 }
-`, version+":"+digest)
+`, version+":"+digest+":wasmbind-2")
 }
 func owned(goOut, out string) (*schema.Manifest, error) {
 	p := filepath.Join(out, "bindings.json")

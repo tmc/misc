@@ -3,9 +3,13 @@
   "type": "module",
   "scripts": {
     "test:browser": "node testdata/browser.mjs",
-    "test:goiroh": "node testdata/goiroh.mjs"
+    "test:goiroh": "node testdata/goiroh.mjs",
+    "test:extensions": "node testdata/extensions.mjs",
+    "test:abi": "WASMBIND_BACKEND=abi node testdata/browser.mjs",
+    "test:pack": "node testdata/pack.mjs"
   },
   "devDependencies": {
+    "esbuild": "0.25.12",
     "playwright": "1.61.1",
     "typescript": "6.0.3"
   }
