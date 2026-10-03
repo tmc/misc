@@ -1,0 +1,30 @@
+cp go.mod original.mod
+exec $WASMBIND check ./api
+! exists web/bindings.json
+exec $WASMBIND generate -go-out cmd/bind -out web ./api
+stdout 'web/bindings.json'
+exists cmd/bind/main.go
+exists web/bindings.js
+exists web/bindings.d.ts
+cp web/bindings.json first.json
+exec $WASMBIND generate -go-out cmd/bind -out web ./api
+cmp first.json web/bindings.json
+env GOOS=js GOARCH=wasm
+exec go build -mod=readonly -o module.wasm ./cmd/bind
+cp user.js web/bindings.js
+! exec $WASMBIND generate -go-out cmd/bind -out web ./api
+stderr 'modified artifact'
+cmp user.js web/bindings.js
+cmp first.json web/bindings.json
+cmp original.mod go.mod
+! exists go.sum
+-- go.mod --
+module example.com/fixture
+
+go 1.27.0
+-- api/api.go --
+package api
+//wasmbind:export echo
+func Echo(v string) string { return v }
+-- user.js --
+user code

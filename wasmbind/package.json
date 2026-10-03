@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:browser": "node testdata/browser.mjs",
+    "test:goiroh": "node testdata/goiroh.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.61.1",
+    "typescript": "6.0.3"
+  }
+}

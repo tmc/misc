@@ -1,0 +1,36 @@
+name: wasmbind
+on:
+  push:
+    paths: ['wasmbind/**']
+  pull_request:
+    paths: ['wasmbind/**']
+  workflow_dispatch:
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: wasmbind
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.x'
+          cache-dependency-path: wasmbind/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: wasmbind/package-lock.json
+      - run: go test -race ./...
+      - run: go vet ./...
+      - run: npm ci
+      - run: npx --no-install playwright install --with-deps chromium firefox webkit
+      - run: npm run test:browser
+      - run: npm run test:goiroh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qualification
+          path: ~/tmp/wasmbind/*/qualification.json
+          if-no-files-found: error
