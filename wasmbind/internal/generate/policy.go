@@ -12,9 +12,11 @@ func (e *emitter) validate(b *bytes.Buffer, d *schema.Decl, value, bad string, d
 	if d.Validate == "" {
 		return
 	}
+	fmt.Fprintln(b, "if !q.inactive {")
+	defer fmt.Fprintln(b, "}")
 	if d.Validate != "enum" {
 		if deferred {
-			fmt.Fprintf(b, "path:=q.location();validate:=func()error{if err:=api.%s(%s);err!=nil{return fmt.Errorf(\"%%s: validate %s: %%w\",path,err)};return nil}\nif i!=nil && i.deferValidation {i.validations=append(i.validations,validate)} else if err:=validate();err!=nil{%s}\n", d.Validate, value, d.Name, bad)
+			fmt.Fprintf(b, "path:=q.location();validate:=func()error{if err:=api.%s(%s);err!=nil{return &validationError{path: path,err: fmt.Errorf(\"validate %s: %%w\",err)}};return nil}\nif i!=nil && i.deferValidation {i.validations=append(i.validations,validate)} else if err:=validate();err!=nil{%s}\n", d.Validate, value, d.Name, bad)
 		} else {
 			fmt.Fprintf(b, "if err:=api.%s(%s);err!=nil{err=fmt.Errorf(\"validate %s: %%w\",err);%s}\n", d.Validate, value, d.Name, bad)
 		}

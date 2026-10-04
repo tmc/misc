@@ -195,6 +195,7 @@ function makeModule(bridge, limits, imports) {
   function makeError(code,message,domain){
     let error = code === 'abort' ? abortError() : new WasmBindError(code, message);
     if (domain?.domain && domainClasses.has(domain.domain)) { try { const d=domainClasses.get(domain.domain);const data=convert({kind:'record',name:d.name},domain.data,true,state,budget(limits));error=new d.type(message,data); } catch {} }
+    if(typeof domain?.path==='string') error.path=domain.path;
     return error;
   }
   function complete(id, code, message, wire, domain) {

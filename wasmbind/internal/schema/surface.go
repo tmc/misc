@@ -65,11 +65,6 @@ func (l *loader) unions() error {
 					}
 				}
 			}
-			for _, f := range d.Fields {
-				if !contains(v.Fields, f.Name) && !l.zeroAccepted(f.Type) {
-					return bad("inactive variant field requires a valid Go zero value: " + f.GoName)
-				}
-			}
 			d.Variants = append(d.Variants, v)
 		}
 		for _, c := range enum.Constants {
@@ -102,48 +97,4 @@ func (l *loader) namespaces() error {
 		}
 	}
 	return nil
-}
-
-func (l *loader) zeroAccepted(t *Type) bool {
-	if t.Kind == "pointer" {
-		return true
-	}
-	for _, d := range l.api.Declarations {
-		if d.Name == t.Name && d.Validate != "" {
-			if d.Validate != "enum" {
-				return false
-			}
-			zero := "0"
-			if t.Kind == "string" {
-				zero = "\"\""
-			}
-			if t.Kind == "bool" {
-				zero = "false"
-			}
-			for _, c := range d.Constants {
-				if c.Value == zero {
-					return true
-				}
-			}
-			return false
-		}
-	}
-	if t.Kind == "array" {
-		return l.zeroAccepted(t.Elem)
-	}
-	if t.Kind == "record" {
-		for _, d := range l.api.Declarations {
-			if d.Name == t.Name {
-				if d.unionSpec != "" {
-					return false
-				}
-				for _, f := range d.Fields {
-					if !l.zeroAccepted(f.Type) {
-						return false
-					}
-				}
-			}
-		}
-	}
-	return true
 }

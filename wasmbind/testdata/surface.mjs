@@ -42,6 +42,14 @@ const session=await m.Session.create();await session.dispose();await m.dispose()
     await writeFile(join(module, "web/check.ts"), fixture);
     run(join(dir, "wasmbind"), ["docs", "-bundle", join(module,"web"), "-out", join(module,"site")]);
     run(join(dir, "wasmbind"), ["check-examples", "-tsc", join(root,"node_modules/.bin/tsc"), join(module,"web/check.ts")]);
+    if (backend === "syscalljs") {
+      await writeFile(join(module,"LICENSE"),"fixture license\n");
+      run(join(dir,"wasmbind"),["pack","-bundle",join(module,"web"),"-out",join(module,"package"),"-name","@wasmbind/surface","-version","0.0.0","-license-file",join(module,"LICENSE")]);
+      await writeFile(join(module,"consumer.ts"),fixture.replaceAll("'./bindings.js'","'@wasmbind/surface'"));
+      await writeFile(join(module,"docs.ts"),"import {load} from '@wasmbind/surface'; async function example(){const m=await load();await m.dispose();}\n");
+      run(join(dir,"wasmbind"),["qualify","-package",join(module,"package"),"-out",join(module,"qualification"),"-tsc",join(root,"node_modules/.bin/tsc"),"-npm","npm","-node",process.execPath,"-playwright",join(root,"node_modules/playwright/index.mjs"),"-consumer",join(module,"consumer.ts"),join(module,"docs.ts")]);
+      await cp(join(module,"qualification/qualification.json"),join(task,"installed-qualification.json"));
+    }
     await writeFile(join(module,"web/invalid.ts"), "import {Event} from './bindings.js'; const invalid:Event={kind:99};\n");
     let rejected=false;try {run(join(dir,"wasmbind"),["check-examples","-tsc",join(root,"node_modules/.bin/tsc"),join(module,"web/invalid.ts")]);}catch{rejected=true;}
     if(!rejected)throw Error("check-examples accepted invalid consumer");

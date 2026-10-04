@@ -24,6 +24,9 @@ var artifactIdentity string
 // observeBridge is assigned only by test fixture companion files.
 var observeBridge func(*runtimeBridge) func()
 const fingerprint = "__FINGERPRINT__"
+type validationError struct {path string; err error}
+func (e *validationError) Error()string{return e.path+": "+e.err.Error()}
+func (e *validationError) Unwrap()error{return e.err}
 type bridgeError struct { code, message string }
 func (e *bridgeError) Error() string { return e.message }
 func failure(code, message string) error { return &bridgeError{code,message} }
@@ -40,7 +43,7 @@ type limits struct {
  MaxValueDepth int `json:"maxValueDepth"`
  MaxElements int `json:"maxElements"`
 }
-type valueBudget struct { path string; bytes, elements int; limits limits }
+type valueBudget struct { inactive bool; path string; bytes, elements int; limits limits }
 func (b *valueBudget) location() string {if b.path=="" {return "value"};return b.path}
 func (b *valueBudget) charge(n, count, depth int) error {
  if depth>b.limits.MaxValueDepth || n>b.limits.MaxValueBytes-b.bytes || count>b.limits.MaxElements-b.elements {return failure("limit","value exceeds bridge limits")}
@@ -107,7 +110,7 @@ func (b *runtimeBridge) finish(id int,err error,value js.Value)(accepted bool) {
  defer func(){if recover()!=nil {accepted=false;if b.complete.Type()==js.TypeFunction{b.complete.Invoke(id,"panic","application panicked",js.Undefined(),nil)}}}()
  code,message:="","";if err!=nil {code="go-error";message=err.Error();if be,ok:=err.(*bridgeError);ok{code=be.code}}
  if b.complete.Type()!=js.TypeFunction {return false}
- var domain any;if err!=nil && code=="go-error"{domain=b.domainError(err)}
+ var domain any;if err!=nil && code=="go-error"{domain=b.domainError(err);var validation *validationError;if errors.As(err,&validation){if domain==nil{domain=map[string]any{}};domain.(map[string]any)["path"]=validation.path}}
  return b.complete.Invoke(id,code,message,value,domain).Bool()
 }
 func (b *runtimeBridge) dispatch(_ js.Value,args []js.Value)(result any) {

@@ -77,3 +77,22 @@ type BigEvent struct {
 //wasmbind:export big
 //wasmbind:namespace events
 func Big(e BigEvent) BigEvent { return e }
+
+// ValidatedEvent permits the Go zero of an inactive validated scalar.
+//
+//wasmbind:record
+//wasmbind:union Kind
+//wasmbind:variant EventMessage:PeerKind
+//wasmbind:variant EventLagged
+type ValidatedEvent struct {
+	Kind     EventKind
+	PeerKind EventKind
+}
+
+//wasmbind:export validated
+//wasmbind:namespace events
+func Validated(e ValidatedEvent) ValidatedEvent { return e }
+
+//wasmbind:export invalidActive
+//wasmbind:namespace events
+func InvalidActive() ValidatedEvent { return ValidatedEvent{Kind: EventMessage} }

@@ -1,7 +1,7 @@
 export async function check(branded) {
  const {load,EventKind}=await import('./bindings.js');const m=await load(new URL('./module.wasm',import.meta.url));let passed=0;
  const assert=(ok,msg)=>{if(!ok)throw Error(msg);passed++};
- const rejected=async(fn,code,path)=>{try{await fn()}catch(e){assert(e.code===code,'code '+e.code+' '+e.message);if(path){assert(e.message.includes(path),'path '+e.message);if(code==='argument')assert(e.path===path,'structured path '+e.path);}return e}throw Error('expected rejection')};
+ const rejected=async(fn,code,path)=>{try{await fn()}catch(e){assert(e.code===code,'code '+e.code+' '+e.message);if(path){assert(e.message.includes(path),'path '+e.message);if(code==='argument'||path.startsWith('peers.'))assert(e.path===path,'structured path '+e.path);}return e}throw Error('expected rejection')};
  try {
  const out=await m.echo({required:'ok'});
  assert(out.enabled===true && out.big===18446744073709551615n,'literal defaults');

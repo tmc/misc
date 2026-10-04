@@ -237,7 +237,18 @@ func (e *emitter) converter(t *schema.Type) int {
 				if d.Discriminant != "" && f.Name != d.Discriminant {
 					fmt.Fprintln(&dec, "}")
 				}
-				fmt.Fprintf(&enc, "x%d,err:=b.encode%d(v.%s,i,q,depth+1);if err!=nil{return js.Undefined(),err};out.Set(%q,x%d)\n", j, child, f.GoName, f.Name, j)
+				if d.Discriminant != "" && f.Name != d.Discriminant {
+					condition := strings.ReplaceAll(strings.Join(conditions, " || "), "out.", "v.")
+					if condition == "" {
+						condition = "false"
+					}
+					fmt.Fprintf(&enc, "saved%d:=q.inactive;q.inactive=q.inactive || !(%s)\n", j, condition)
+				}
+				fmt.Fprintf(&enc, "field%d:=v.%s;if q.inactive {var zero %s;field%d=zero};x%d,err:=b.encode%d(field%d,i,q,depth+1);", j, f.GoName, f.Type.Go, j, j, child, j)
+				if d.Discriminant != "" && f.Name != d.Discriminant {
+					fmt.Fprintf(&enc, "q.inactive=saved%d;", j)
+				}
+				fmt.Fprintf(&enc, "if err!=nil{return js.Undefined(),err};out.Set(%q,x%d)\n", f.Name, j)
 			}
 			fmt.Fprintln(&dec, "return out,nil")
 			fmt.Fprintln(&enc, "return out,nil")
@@ -376,15 +387,15 @@ func callSignature(c *schema.Call, imported bool) string {
 	}
 	used := make(map[string]bool)
 	if imported || c.Context {
-		used["options"] = true
-		reserved["options"] = true
+		used["callOptions"] = true
+		reserved["callOptions"] = true
 	}
 	for i, p := range c.Params {
 		name := parameterName(p.Name, i)
 		if name != p.Name || used[name] {
 			base := name
-			if name == "options" {
-				base = "optionsArg"
+			if name == "callOptions" {
+				base = "callOptionsArg"
 			}
 			name = base
 			for suffix := 2; used[name] || reserved[name]; suffix++ {
@@ -399,9 +410,9 @@ func callSignature(c *schema.Call, imported bool) string {
 		params = append(params, name+": "+typ)
 	}
 	if imported {
-		params = append(params, "options: { readonly signal: AbortSignal }")
+		params = append(params, "callOptions: { readonly signal: AbortSignal }")
 	} else if c.Context {
-		params = append(params, "options?: CallOptions")
+		params = append(params, "callOptions?: CallOptions")
 	}
 	result := "void"
 	if c.Result != nil {
@@ -492,7 +503,7 @@ func writeDeclaration(b *bytes.Buffer, a *schema.API, d *schema.Decl) {
 			writeDoc(b, "  ", declarationDoc(a, f.Doc))
 			fmt.Fprintf(b, "  %s: %s;\n", f.Name, tsType(f.Type))
 		}
-		fmt.Fprintf(b, "}\n\nexport class %s extends Error {\n  readonly code: 'go-error';\n  readonly domain: %q;\n  readonly data: %sData;\n  constructor(message: string, data: %sData);\n}\n\nexport function is%s(value: unknown): value is %s;\n", d.Name, d.Domain, d.Name, d.Name, d.Name, d.Name)
+		fmt.Fprintf(b, "}\n\nexport class %s extends Error {\n  readonly code: 'go-error';\n  readonly path?: string;\n  readonly domain: %q;\n  readonly data: %sData;\n  constructor(message: string, data: %sData);\n}\n\nexport function is%s(value: unknown): value is %s;\n", d.Name, d.Domain, d.Name, d.Name, d.Name, d.Name)
 		return
 	}
 	if len(d.Variants) > 0 {

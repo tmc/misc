@@ -28,7 +28,7 @@ func TestDeclarationQuality(t *testing.T) {
 		"  /** peerID identifies the sender. */\n  peerID: PeerID;",
 		"  imports?: Imports;",
 		"  Host?: {",
-		"    /** fetch obtains a value. */\n    fetch(url: string, options: { readonly signal: AbortSignal }): Uint8Array | Promise<Uint8Array>;",
+		"    /** fetch obtains a value. */\n    fetch(url: string, callOptions: { readonly signal: AbortSignal }): Uint8Array | Promise<Uint8Array>;",
 		"  /** bind creates an Endpoint. */\n  bind(): Promise<Endpoint>;",
 		"/**\n * PeerID identifies a peer.\n *\n * It is an opaque string.\n */",
 		"options?: LoadOptions",
@@ -60,9 +60,11 @@ func TestCallParameterNames(t *testing.T) {
 			{Name: "arg0", Type: &schema.Type{Kind: "string"}},
 			{Name: "options", Type: &schema.Type{Kind: "string"}},
 			{Name: "optionsArg", Type: &schema.Type{Kind: "string"}},
+			{Name: "callOptions", Type: &schema.Type{Kind: "string"}},
+			{Name: "callOptionsArg", Type: &schema.Type{Kind: "string"}},
 		}}
 		got := callSignature(c, imported)
-		want := "call(arg0_2: string, arg0: string, optionsArg_2: string, optionsArg: string, options"
+		want := "call(arg0_2: string, arg0: string, options: string, optionsArg: string, callOptionsArg_2: string, callOptionsArg: string, callOptions"
 		if !strings.HasPrefix(got, want) {
 			t.Errorf("imported=%v signature=%q, want prefix %q", imported, got, want)
 		}

@@ -25,6 +25,12 @@ export async function check() {
  assert(zero.kind===0n&&!('text' in zero),'empty variant');
  let reads=0;const stable=await m.events.echo({get kind(){reads++;return reads===1?EventKind.message:EventKind.lagged},content:new Uint8Array([7])});
  assert(reads===1&&stable.kind===EventKind.message&&stable.content[0]===7,'discriminant captured once');
+ const inactive=await m.events.validated({kind:EventKind.lagged});
+ assert(!('peerKind' in inactive),'inactive invalid enum zero omitted');
+ const active=await m.events.validated({kind:EventKind.message,peerKind:EventKind.message});
+ assert(active.peerKind===EventKind.message,'active validated enum preserved');
+ await reject(()=>m.events.validated({kind:EventKind.message,peerKind:0}));
+ await reject(()=>m.events.invalidActive());
  const session=await m.Session.create();await session.dispose();passed++;
  }finally{await m.dispose()}
  return passed;
