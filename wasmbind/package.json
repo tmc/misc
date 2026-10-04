@@ -10,7 +10,8 @@
     "test:pack": "node testdata/pack.mjs",
     "test:surface": "node testdata/surface.mjs",
     "test:values": "node testdata/values.mjs",
-    "test:lifetime": "node testdata/lifetime.mjs"
+    "test:lifetime": "node testdata/lifetime.mjs",
+    "test:qualify": "node testdata/qualify.mjs"
   },
   "devDependencies": {
     "esbuild": "0.25.12",

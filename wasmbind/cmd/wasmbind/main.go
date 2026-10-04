@@ -13,15 +13,19 @@ import (
 	"github.com/tmc/misc/wasmbind/internal/docsite"
 	"github.com/tmc/misc/wasmbind/internal/generate"
 	"github.com/tmc/misc/wasmbind/internal/pack"
+	"github.com/tmc/misc/wasmbind/internal/qualify"
 	"github.com/tmc/misc/wasmbind/internal/schema"
 )
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: wasmbind {check|generate|build|pack|docs|check-examples|adapters} [-tags list] [-go-out dir -out dir] package")
+		fmt.Fprintln(stderr, "usage: wasmbind {check|generate|build|pack|docs|check-examples|adapters|qualify} [-tags list] [-go-out dir -out dir] package")
 		return 2
 	}
 	command := args[0]
+	if command == "qualify" {
+		return qualifyCommand(ctx, args[1:], stdout, stderr)
+	}
 	if command == "adapters" {
 		return adaptersCommand(args[1:], stdout, stderr)
 	}
@@ -157,5 +161,34 @@ func adaptersCommand(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	fmt.Fprintln(stdout, path)
+	return 0
+}
+
+func qualifyCommand(ctx context.Context, args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("qualify", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	var o qualify.Options
+	fs.StringVar(&o.Package, "package", "", "local npm package directory")
+	fs.StringVar(&o.Out, "out", "", "new owned qualification directory")
+	fs.StringVar(&o.TSC, "tsc", "", "local TypeScript executable")
+	fs.StringVar(&o.NPM, "npm", "", "local npm executable")
+	fs.StringVar(&o.Node, "node", "", "local Node executable")
+	fs.StringVar(&o.Playwright, "playwright", "", "local Playwright ESM entrypoint")
+	fs.IntVar(&o.TimeoutMS, "timeout", 30000, "browser lifecycle timeout in milliseconds")
+	fs.StringVar(&o.Fixtures, "fixtures", "", "optional scoped fixture tree preserving relative imports")
+	fs.StringVar(&o.Consumer, "consumer", "", "self-contained consumer TypeScript fixture")
+	fs.StringVar(&o.Hook, "hook", "", "optional local Node application hook")
+	if err := fs.Parse(args); err != nil {
+		if err == flag.ErrHelp {
+			return 0
+		}
+		return 2
+	}
+	o.Examples = fs.Args()
+	if err := qualify.Run(ctx, o); err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	fmt.Fprintln(stdout, "ok")
 	return 0
 }

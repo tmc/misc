@@ -484,3 +484,21 @@ with the field path when known. Missing and unknown fields identify the offendin
 field. Integer ranges and fixed array lengths identify their required constraint.
 Deferred Go scalar validation captures the argument path before decoding proceeds.
 Existing bridge error codes and redacted application panic behavior remain intact.
+
+### Consumer qualification
+
+`qualify` requires an explicit local package directory, new output directory,
+TypeScript, npm, Node and Playwright executables/module, a consumer TypeScript
+fixture, and TypeScript documentation fixtures. It never installs tools. It
+packs and installs the local package offline with scripts disabled, checks all
+fixtures under strict DOM and WebWorker libraries, and observes package load and
+idempotent disposal in all three Playwright browsers in Window and Worker.
+Successful receipts identify fixture and package hashes, tool versions and
+observed checks. Optional application hooks are labeled caller-provided, not
+independent browser observations. Existing output directories are preserved.
+
+Cancellation parameters are named `callOptions`. Go parameter names are kept
+unless they collide with a JavaScript reserved word or the generated parameter.
+Union conversions validate only the discriminant and active payload. Inactive
+fields retain full wire layout with Go zeros without domain validation; runtime
+projection removes them from consumer output.

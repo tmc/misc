@@ -206,3 +206,36 @@ JavaScript and `.d.ts` remain the package outputs. See
 [LIFETIME.md](LIFETIME.md) for explicit parent ownership, async disposal, and
 standard-library stream/event source adapters, and
 [EXTENSIONS.md](EXTENSIONS.md#discriminated-records-and-api-placement) for event unions and API organization.
+
+`wasmbind qualify` checks the installed npm package with local tools. Supply one
+consumer and one or more TypeScript documentation fixtures that import the npm
+package by name. Without `-fixtures`, each file must be self-contained. Use
+`-fixtures ./fixtures` to copy a scoped tree and preserve relative sibling imports;
+all input fixtures must be inside that tree. Dependency directories and Git
+metadata are excluded. No tools are downloaded.
+
+```sh
+wasmbind qualify -package ./dist -out ./qualification \
+  -tsc ./node_modules/.bin/tsc -npm npm -node node \
+  -playwright ./node_modules/playwright/index.mjs \
+  -consumer ./consumer.ts ./docs-example.ts
+```
+
+The output directory must not exist. Qualification packs the local directory,
+installs its archive offline with lifecycle scripts disabled, type-checks all
+fixtures with strict DOM and Worker libraries, and loads and disposes the
+installed package in Chromium, Firefox and WebKit Window and dedicated Worker
+contexts. Missing browser executables fail the command. `qualification.json`
+records package and fixture hashes, tool versions and observed lifecycle checks.
+The generated runner, archive, consumer workspace and logs stay in the owned
+output directory for inspection. The copied fixture tree is hashed before
+compilation. `-timeout 30000` bounds each browser lifecycle operation in
+milliseconds; missing tools and timeout failures do not produce a passing
+receipt. Use `-hook ./application-tests.mjs` for a local
+Node application test; its successful exit is recorded separately and does not
+stand in for the observed browser lifecycle checks.
+
+Generated calls use `callOptions` for cancellation. A Go argument named `options`
+keeps that name. In a discriminated union, only active fields undergo domain
+validation. Inactive wire fields contain genuine Go zeros; their original Go
+values are discarded before conversion and the JavaScript output omits them.
