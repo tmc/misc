@@ -8,12 +8,16 @@ import (
 	"github.com/tmc/misc/wasmbind/internal/schema"
 )
 
-func (e *emitter) validate(b *bytes.Buffer, d *schema.Decl, value, bad string) {
+func (e *emitter) validate(b *bytes.Buffer, d *schema.Decl, value, bad string, deferred bool) {
 	if d.Validate == "" {
 		return
 	}
 	if d.Validate != "enum" {
-		fmt.Fprintf(b, "if err:=api.%s(%s);err!=nil{err=fmt.Errorf(\"validate %s: %%w\",err);%s}\n", d.Validate, value, d.Name, bad)
+		if deferred {
+			fmt.Fprintf(b, "validate:=func()error{if err:=api.%s(%s);err!=nil{return fmt.Errorf(\"validate %s: %%w\",err)};return nil}\nif i!=nil && i.deferValidation {i.validations=append(i.validations,validate)} else if err:=validate();err!=nil{%s}\n", d.Validate, value, d.Name, bad)
+		} else {
+			fmt.Fprintf(b, "if err:=api.%s(%s);err!=nil{err=fmt.Errorf(\"validate %s: %%w\",err);%s}\n", d.Validate, value, d.Name, bad)
+		}
 		return
 	}
 	var cases []string

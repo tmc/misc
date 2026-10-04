@@ -128,7 +128,7 @@ Additional receipts:
 
 `npm run test:policies` qualifies naming, named scalars/enums, non-null results,
 and optional Go import defaults. Chromium, Firefox, and WebKit each passed
-22 syscalljs assertions in both Window and Worker, and 11 ABI assertions in
+33 syscalljs assertions in both Window and Worker, and 11 ABI assertions in
 each realm. Separate strict TypeScript 6.0.3 DOM and WebWorker fixtures verify
 constructor non-nullability, named enum types, field naming, and optional imports.
 The browser checks include acronym/tag behavior, aliases, signed bigint extremes,
@@ -142,3 +142,15 @@ Go validators. Receipt:
 The packaging fixture installs the actual npm tarball, resolves the typed
 Node-only helper, overwrites stale assets with byte-identical matching files,
 and loads the esbuild bundle with its default URL in Window and Worker.
+
+Scalar-validator scheduling regression: on core revision `02b6d70c`, a yielding
+input validator allowed AbortSignal cancellation to arrive before Go invocation
+admission, so the canceled export still executed its target. A plain 20ms sleep
+alone completed normally; the negative control establishes lost cancellation,
+not a general deadlock. Custom input validators now run in the admitted
+invocation coroutine before the target. Channel-gated checks verify cancellation
+skips the target and later validators, retains a resource lease until validation
+returns, and then releases it. Sleeping input/output/import-result validators,
+yielding validation errors, and redacted validator panics are qualified in all
+three engines and both Window and Worker. Negative-control receipt:
+`~/tmp/wasmbind/20261003-api-improvements/validator-negative-control.json`.

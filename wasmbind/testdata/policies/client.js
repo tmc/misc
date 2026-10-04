@@ -10,7 +10,7 @@ async function check(host) {
       await fn();
     } catch (e) {
       assert(e.code === code, `${code}: ${e.code} ${e.message}`);
-      return;
+      return e;
     }
     throw Error("expected " + code);
   };
@@ -32,6 +32,41 @@ async function check(host) {
     assert(await m.openKind(73) === 73 && OpenKind.known === 1, "open enum");
     assert(await m.boundary(Boundary.min) === Boundary.min && await m.boundary(Boundary.max) === Boundary.max, "bigint values");
     if (host) {
+      assert(await m.identifier("yield") === "yield", "yielding scalar validator");
+      await reject(() => m.identifier("yield-invalid"), "go-error");
+      const validationPanic = await reject(() => m.identifier("panic"), "panic");
+      assert(!validationPanic.message.includes("private"), "validator panic redacted");
+      const leased = await m.resource(false);
+      const ac = new AbortController();
+      const validating = m.holdResource(leased, "slow", "panic", { signal: ac.signal });
+      validating.catch(() => {
+      });
+      for (let tries = 0; !await m.validationStarted(); tries++) {
+        if (tries > 100) throw Error("validator never started");
+        await new Promise((r2) => setTimeout(r2, 1));
+      }
+      ac.abort();
+      try {
+        await validating;
+        throw Error("expected abort");
+      } catch (e) {
+        assert(e.name === "AbortError", "validation canceled");
+      }
+      let disposed = false;
+      const disposing = leased.dispose().then(() => {
+        disposed = true;
+      });
+      await new Promise((r2) => setTimeout(r2, 0));
+      assert(!disposed, "validation retains resource lease");
+      await m.releaseValidation();
+      for (let tries = 0; !await m.validationFinished(); tries++) {
+        if (tries > 100) throw Error("validator never finished");
+        await new Promise((r2) => setTimeout(r2, 1));
+      }
+      await disposing;
+      assert(disposed, "lease released after validation");
+      assert(await m.targetCalls() === 0, "canceled validation must not invoke target");
+      assert(await m.validationPanics() === 1, "cancellation skips later validators");
       assert(await m.identifier("id") === "id", "scalar");
       await reject(() => m.identifier(""), "go-error");
       await reject(() => m.invalidIdentifier(), "go-error");
@@ -47,14 +82,15 @@ async function check(host) {
     let reads = 0;
     const imports = { Empty: {}, get Host() {
       reads++;
-      return { fetch(identifier, { signal }) {
-        assert(identifier === "id" && !signal.aborted, "host args");
-        return "override:" + identifier;
+      return { async fetch(identifier, { signal }) {
+        assert((identifier === "id" || identifier === "yield") && !signal.aborted, "host args");
+        return identifier === "yield" ? "yield" : "override:" + identifier;
       } };
     } };
     const override = await load(source, { imports });
     try {
       assert(await override.fetchHost("id") === "override:id", "explicit import override");
+      assert(await override.fetchHost("yield") === "yield", "yielding imported scalar result validator");
       assert(reads === 1, "capture interface once");
       assert(await override.emptyDefaults() === 0, "provided empty interface skips factory");
     } finally {

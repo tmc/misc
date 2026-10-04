@@ -70,7 +70,7 @@ func EchoBoundary(boundary Boundary) Boundary { return boundary }
 // Resource demonstrates a non-null resource result.
 //
 //wasmbind:resource Resource
-type Resource struct{}
+type Resource struct{ token byte }
 
 //wasmbind:export resource
 //wasmbind:nonnull

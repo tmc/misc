@@ -145,9 +145,9 @@ func (e *emitter) converter(t *schema.Type) int {
 	if d := e.decl(t.Name); d != nil && (d.Kind == "scalar" || d.Kind == "enum") {
 		child := e.converter(d.Value)
 		fmt.Fprintf(&dec, "raw,err:=b.decode%d(v,i,q,depth);if err!=nil{return out,err};out=%s(raw)\n", child, t.Go)
-		e.validate(&dec, d, "out", "return out,err")
+		e.validate(&dec, d, "out", "return out,err", true)
 		fmt.Fprintln(&dec, "return out,nil")
-		e.validate(&enc, d, "v", "return js.Undefined(),err")
+		e.validate(&enc, d, "v", "return js.Undefined(),err", false)
 		fmt.Fprintf(&enc, "return b.encode%d(%s(v),i,q,depth)\n", child, d.Value.Go)
 	} else {
 		switch t.Kind {

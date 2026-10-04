@@ -54,6 +54,7 @@ type resource struct {
 }
 type invocation struct {
  id int; ctx context.Context; cancel context.CancelFunc
+ deferValidation bool;validations []func()error
  resources map[int]*resource; created map[int]*resource
  done chan struct{}; prev chan struct{};lane string;hook bool
 }
@@ -104,7 +105,7 @@ func (b *runtimeBridge) dispatch(_ js.Value,args []js.Value)(result any) {
  if len(b.calls)>=b.limits.MaxPendingCalls {return errorValue(failure("limit","too many pending calls"))}
  id:=args[0].Int();if b.calls[id]!=nil{return errorValue(failure("argument","duplicate call identifier"))}
  ctx,cancel:=context.WithCancel(b.ctx)
- i=&invocation{id:id,ctx:ctx,cancel:cancel,resources:map[int]*resource{},created:map[int]*resource{},done:make(chan struct{})}
+ i=&invocation{id:id,ctx:ctx,cancel:cancel,deferValidation:true,resources:map[int]*resource{},created:map[int]*resource{},done:make(chan struct{})}
  run,err:=b.prepare(args[1].Int(),args[2].Int(),args[3],i)
  if err!=nil {b.release(i);return errorValue(err)}
  b.calls[id]=i;b.work.Add(1)
@@ -114,6 +115,12 @@ func (b *runtimeBridge) dispatch(_ js.Value,args []js.Value)(result any) {
   func(){defer func(){if recover()!=nil {err=failure("panic","application panicked")}}()
    if i.prev!=nil {select {case <-i.prev:case <-i.ctx.Done():err=failure("abort","call canceled");return}}
    if i.ctx.Err()!=nil && !i.hook {err=failure("abort","call canceled");return}
+   for _,validate:=range i.validations {
+    if i.ctx.Err()!=nil && !i.hook {err=failure("abort","call canceled");return}
+    if err=validate();err!=nil{return}
+   }
+   if i.ctx.Err()!=nil && !i.hook {err=failure("abort","call canceled");return}
+   i.validations=nil
    value,err=run()
   }()
   // Canceled calls retain resources until this goroutine actually returns.

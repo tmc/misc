@@ -172,7 +172,15 @@ and declarations use bigint literals, including the signed minimum.
 
 A scalar validator must be a public nongeneric `func(T) error` in the input
 package, where T is exactly the annotated scalar. It checks both decoded inputs
-and returned values. Validation errors retain Go error semantics; panics use
+and returned values. Decode and copy inputs during dispatch, but defer custom
+Go input validators until the invocation is admitted, after resource leases and
+receiver-lane waits. Run them in the invocation goroutine before the target,
+checking cancellation before and after validation; a canceled invocation must
+not run later validators or the target. Validators may yield. A validator that
+ignores cancellation can delay release of the invocation's leases, like an
+application call. Validate imported results directly in their existing Go
+coroutine, and returned values in the export's coroutine.
+Validation errors retain Go error semantics; panics use
 the bridge's panic handling. The ABI backend rejects Go scalar validators:
 application code cannot execute during ABI submission. Pure enum validation,
 named scalar aliases without validators, naming, and non-null contracts work
