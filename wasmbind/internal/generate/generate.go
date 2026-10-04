@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"go/format"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -200,9 +201,35 @@ func (e *emitter) converter(t *schema.Type) int {
 			d := e.decl(t.Name)
 			fmt.Fprintf(&dec, "if err:=q.charge(0,%d,depth);err!=nil{return out,err}\n", len(d.Fields))
 			fmt.Fprintf(&enc, "if err:=q.charge(0,%d,depth);err!=nil{return js.Undefined(),err};out:=js.Global().Get(\"Object\").Call(\"create\",js.Null())\n", len(d.Fields))
-			for j, f := range d.Fields {
+			fields := append([]schema.Field(nil), d.Fields...)
+			if d.Discriminant != "" {
+				sort.SliceStable(fields, func(i, j int) bool { return fields[i].Name == d.Discriminant && fields[j].Name != d.Discriminant })
+			}
+			for j, f := range fields {
+				var conditions []string
+				if d.Discriminant != "" && f.Name != d.Discriminant {
+					var tag string
+					for _, tf := range fields {
+						if tf.Name == d.Discriminant {
+							tag = tf.GoName
+						}
+					}
+					for _, v := range d.Variants {
+						if slices.Contains(v.Fields, f.Name) {
+							conditions = append(conditions, "out."+tag+"==api."+v.GoName)
+						}
+					}
+					if len(conditions) == 0 {
+						fmt.Fprintln(&dec, "if false {")
+					} else {
+						fmt.Fprintf(&dec, "if %s {\n", strings.Join(conditions, " || "))
+					}
+				}
 				child := e.converter(f.Type)
 				fmt.Fprintf(&dec, "path%d:=q.path;q.path+=%q;x%d,err:=b.decode%d(v.Get(%q),i,q,depth+1);q.path=path%d;if err!=nil{return out,err};out.%s=x%d\n", j, "."+f.Name, j, child, f.Name, j, f.GoName, j)
+				if d.Discriminant != "" && f.Name != d.Discriminant {
+					fmt.Fprintln(&dec, "}")
+				}
 				fmt.Fprintf(&enc, "x%d,err:=b.encode%d(v.%s,i,q,depth+1);if err!=nil{return js.Undefined(),err};out.Set(%q,x%d)\n", j, child, f.GoName, f.Name, j)
 			}
 			fmt.Fprintln(&dec, "return out,nil")
@@ -461,6 +488,28 @@ func writeDeclaration(b *bytes.Buffer, a *schema.API, d *schema.Decl) {
 		fmt.Fprintf(b, "}\n\nexport class %s extends Error {\n  readonly code: 'go-error';\n  readonly domain: %q;\n  readonly data: %sData;\n  constructor(message: string, data: %sData);\n}\n\nexport function is%s(value: unknown): value is %s;\n", d.Name, d.Domain, d.Name, d.Name, d.Name, d.Name)
 		return
 	}
+	if len(d.Variants) > 0 {
+		fmt.Fprintf(b, "export type %s =\n", d.Name)
+		for _, v := range d.Variants {
+			fmt.Fprintln(b, "  | {")
+			for _, f := range d.Fields {
+				if slices.Contains(v.Fields, f.Name) {
+					value := tsType(f.Type)
+					if f.Name == d.Discriminant {
+						value = v.Value
+						if f.Type.Kind == "int64" || f.Type.Kind == "uint64" {
+							value += "n"
+						}
+					}
+					writeDoc(b, "      ", declarationDoc(a, f.Doc))
+					fmt.Fprintf(b, "      %s: %s;\n", f.Name, value)
+				}
+			}
+			fmt.Fprintln(b, "    }")
+		}
+		fmt.Fprintln(b, ";")
+		return
+	}
 	extends := ""
 	if c := d.Methods["next"]; c != nil {
 		extends = " extends AsyncIterableIterator<" + tsType(c.Result) + ">"
@@ -533,11 +582,29 @@ func declarations(a *schema.API) string {
 		}
 	}
 	fmt.Fprintln(&b, "\nexport interface Module {")
+	namespaces := map[string][]*schema.Call{}
 	for _, c := range a.Calls {
 		if c.Receiver == "" && c.Op == "" {
+			if c.Namespace != "" {
+				namespaces[c.Namespace] = append(namespaces[c.Namespace], c)
+				continue
+			}
 			writeDoc(&b, "  ", declarationDoc(a, c.Doc))
 			fmt.Fprintln(&b, "  "+callSignature(c, false))
 		}
+	}
+	names := make([]string, 0, len(namespaces))
+	for n := range namespaces {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	for _, n := range names {
+		fmt.Fprintf(&b, "  readonly %s: {\n", n)
+		for _, c := range namespaces[n] {
+			writeDoc(&b, "    ", declarationDoc(a, c.Doc))
+			fmt.Fprintln(&b, "    "+callSignature(c, false))
+		}
+		fmt.Fprintln(&b, "  };")
 	}
 	optional := "?"
 	if requiredImports(a) {
@@ -563,7 +630,11 @@ func APIReference(a *schema.API) []byte {
 	fmt.Fprintln(&b, "\n## Module functions")
 	for _, c := range a.Calls {
 		if c.Receiver == "" && c.Op == "" {
-			fmt.Fprintf(&b, "\n### `%s`\n\n", c.Name)
+			name := c.Name
+			if c.Namespace != "" {
+				name = c.Namespace + "." + name
+			}
+			fmt.Fprintf(&b, "\n### `%s`\n\n", name)
 			if c.Doc != "" {
 				fmt.Fprintln(&b, declarationDoc(a, c.Doc)+"\n")
 			}

@@ -113,3 +113,16 @@ func TestHiddenMethodDoc(t *testing.T) {
 		t.Fatalf("hidden protocol names appeared in public docs:\n%s", got)
 	}
 }
+
+func TestUnionDeclaration(t *testing.T) {
+	a := &schema.API{Manifest: schema.Manifest{Declarations: []*schema.Decl{{Kind: "record", Name: "Event", Discriminant: "kind", Fields: []schema.Field{{Name: "kind", Type: &schema.Type{Kind: "uint8"}}, {Name: "content", Type: &schema.Type{Kind: "bytes"}}, {Name: "dropped", Type: &schema.Type{Kind: "uint64"}}}, Variants: []schema.Variant{{Value: "1", Fields: []string{"kind", "content"}}, {Value: "2", Fields: []string{"kind", "dropped"}}}}}, Calls: []*schema.Call{{Name: "echo", Namespace: "events", Params: []schema.Param{{Name: "event", Type: &schema.Type{Kind: "record", Name: "Event"}}}}}}}
+	got := declarations(a)
+	for _, want := range []string{"export type Event =", "kind: 1;", "kind: 2;", "content: Uint8Array;", "dropped: bigint;", "readonly events: {", "echo(event: Event): Promise<void>;"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("missing %q in %s", want, got)
+		}
+	}
+	if strings.Contains(got, "export interface Event") {
+		t.Fatal("union emitted as interface")
+	}
+}

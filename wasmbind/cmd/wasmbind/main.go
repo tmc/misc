@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/tmc/misc/wasmbind/internal/docsite"
 	"github.com/tmc/misc/wasmbind/internal/generate"
 	"github.com/tmc/misc/wasmbind/internal/pack"
 	"github.com/tmc/misc/wasmbind/internal/schema"
@@ -17,10 +18,13 @@ import (
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: wasmbind {check|generate|build|pack} [-tags list] [-go-out dir -out dir] package")
+		fmt.Fprintln(stderr, "usage: wasmbind {check|generate|build|pack|docs|check-examples} [-tags list] [-go-out dir -out dir] package")
 		return 2
 	}
 	command := args[0]
+	if command == "docs" || command == "check-examples" {
+		return docsCommand(ctx, command, args[1:], stdout, stderr)
+	}
 	if command == "pack" {
 		return packCommand(ctx, args[1:], stdout, stderr)
 	}
@@ -96,5 +100,36 @@ func packCommand(ctx context.Context, args []string, stdout, stderr io.Writer) i
 		return 1
 	}
 	fmt.Fprintln(stdout, path)
+	return 0
+}
+
+func docsCommand(ctx context.Context, command string, args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet(command, flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	bundle := fs.String("bundle", "", "generated bundle directory")
+	out := fs.String("out", "", "documentation output directory")
+	tsc := fs.String("tsc", "", "explicit TypeScript compiler executable")
+	lib := fs.String("lib", "ES2022,DOM", "TypeScript library set")
+	if err := fs.Parse(args); err != nil {
+		if err == flag.ErrHelp {
+			return 0
+		}
+		return 2
+	}
+	var err error
+	if command == "docs" {
+		if *bundle == "" || *out == "" || fs.NArg() != 0 {
+			fmt.Fprintln(stderr, "docs requires -bundle and -out")
+			return 2
+		}
+		err = docsite.Write(*bundle, *out)
+	} else {
+		err = docsite.CheckExamples(ctx, *tsc, *lib, fs.Args())
+	}
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	fmt.Fprintln(stdout, "ok")
 	return 0
 }

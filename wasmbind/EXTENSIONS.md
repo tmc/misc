@@ -530,3 +530,80 @@ remaining allocations and responses after the disposal response is consumed.
 The local pack command additionally accepts -readme-file for an explicit package
 README. It validates browser artifact hashes; the external generated main.go hash
 is retained as compiler-source provenance and is not a browser package asset.
+
+## Discriminated records and API placement
+
+A record may declare an explicit discriminant and an exhaustive list of variants:
+
+```go
+//wasmbind:enum Kind
+//wasmbind:validate
+type Kind uint8
+const (
+    //wasmbind:member message
+    KindMessage Kind = 1
+    //wasmbind:member lagged
+    KindLagged Kind = 2
+)
+
+//wasmbind:record
+//wasmbind:union Kind
+//wasmbind:variant KindMessage:Content
+//wasmbind:variant KindLagged:Dropped
+type Event struct {
+    Kind Kind
+    Content []byte
+    Dropped uint64
+}
+```
+
+Variant declarations use Go constant and field names. The tag is always present;
+all listed fields are required. A variant without payload uses
+`//wasmbind:variant KindReady`. Every distinct validated enum value must have
+exactly one variant. JavaScript outputs omit inactive fields; inputs reject
+inactive fields and restore their Go zero values. The wire representation retains
+the complete record. Inactive fields with custom scalar validators, nested unions,
+or closed enums without a valid zero are rejected. Go output conversion still
+validates every underlying field before projection. This applies to both backends.
+TypeScript emits a union of record shapes with literal tags, so checking `kind`
+narrows the payload fields.
+
+`//wasmbind:member name` on a single public typed enum constant overrides its
+JavaScript property name. It does not change the constant value.
+
+A free exported function may use `//wasmbind:namespace docs` to appear under
+`module.docs`. `//wasmbind:constructor Endpoint` places a function under
+`module.Endpoint` and requires an Endpoint resource result. The existing export
+name remains the member name: `export bind` plus `constructor Endpoint` produces
+`module.Endpoint.bind(...)`. Namespace placement does not introduce flat aliases.
+Namespace and constructor annotations are mutually exclusive. Unannotated exports
+retain their existing placement. Namespaces have one level and may not collide
+with flat exports.
+
+## Documentation and consumer examples
+
+Generate an escaped, navigable HTML reference from the canonical bundle schema:
+
+```sh
+wasmbind docs -bundle ./web -out ./docs/site
+```
+
+The reference includes the same signatures, declarations, ownership guidance,
+and import requirements as `API.md`. Navigation links target unique generated
+anchors; Go documentation is escaped instead of interpreted as raw HTML.
+
+Check supplied TypeScript consumers with an explicitly installed compiler:
+
+```sh
+wasmbind check-examples -tsc ./node_modules/.bin/tsc examples/basic.ts
+wasmbind check-examples -tsc ./node_modules/.bin/tsc \
+    -lib ES2022,WebWorker examples/worker.ts
+```
+
+This command runs strict checks with no emitted files, ES2022, ES modules, and
+bundler resolution. Imports resolve from each example normally; examples should
+import the actual generated or installed package. The command neither downloads a
+compiler nor synthesizes example bodies. It checks supplied consumers; it does not
+claim every generated API has a runnable example. Documentation generation and
+example checking are separate commands, so a site build is not itself evidence
+that examples passed.

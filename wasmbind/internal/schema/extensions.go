@@ -34,7 +34,7 @@ func knownDirective(k string) bool {
 	switch k {
 	case "brand":
 		return true
-	case "export", "record", "resource", "close", "read", "write", "finish", "cancelread", "cancelwrite", "next", "interrupt", "imports", "init", "error", "nonnull", "scalar", "enum", "validate", "optional", "naming", "concurrent":
+	case "export", "record", "resource", "close", "read", "write", "finish", "cancelread", "cancelwrite", "next", "interrupt", "imports", "init", "error", "nonnull", "scalar", "enum", "validate", "optional", "naming", "concurrent", "union", "variant", "namespace", "constructor", "member":
 		return true
 	}
 	return false

@@ -78,6 +78,38 @@ func (l *loader) packagePolicy() error {
 
 func (l *loader) scalars() error {
 	p := l.api.Pkg
+	for _, f := range p.Syntax {
+		for _, node := range f.Decls {
+			g, ok := node.(*ast.GenDecl)
+			if !ok {
+				continue
+			}
+			for _, spec := range g.Specs {
+				v, ok := spec.(*ast.ValueSpec)
+				if !ok {
+					continue
+				}
+				doc := v.Doc
+				if doc == nil {
+					doc = g.Doc
+				}
+				ds, _, _ := directives(doc)
+				if !hasDirective(ds, "member") {
+					continue
+				}
+				for _, name := range v.Names {
+					c, ok := p.TypesInfo.Defs[name].(*types.Const)
+					if !ok || !c.Exported() {
+						return l.diag(name.Pos(), name.Name, "member requires a public typed enum constant")
+					}
+					n, ok := c.Type().(*types.Named)
+					if !ok || l.named[n.Obj()] == nil || l.named[n.Obj()].Kind != "enum" {
+						return l.diag(name.Pos(), name.Name, "member requires a public typed enum constant")
+					}
+				}
+			}
+		}
+	}
 	for obj, d := range l.named {
 		if d.Kind != "scalar" && d.Kind != "enum" {
 			continue
@@ -127,7 +159,7 @@ func (l *loader) scalars() error {
 					if doc == nil {
 						doc = g.Doc
 					}
-					_, text, err := directives(doc)
+					ds, text, err := directives(doc)
 					if err != nil {
 						return l.diag(v.Pos(), obj.Name(), err.Error())
 					}
@@ -137,6 +169,9 @@ func (l *loader) scalars() error {
 							continue
 						}
 						name := l.memberName(c.Name())
+						if override, ok := ds["member"]; ok {
+							name = override
+						}
 						if !validName(name) || seen[name] {
 							return l.diag(c.Pos(), c.Name(), "invalid, reserved, or duplicate enum member name")
 						}

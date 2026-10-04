@@ -7,7 +7,8 @@
     "test:policies": "node testdata/policies.mjs",
     "test:extensions": "node testdata/extensions.mjs",
     "test:abi": "WASMBIND_BACKEND=abi node testdata/browser.mjs",
-    "test:pack": "node testdata/pack.mjs"
+    "test:pack": "node testdata/pack.mjs",
+    "test:surface": "node testdata/surface.mjs"
   },
   "devDependencies": {
     "esbuild": "0.25.12",

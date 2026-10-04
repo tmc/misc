@@ -70,8 +70,19 @@ type Constant struct {
 }
 
 // Decl describes an annotated binding type.
+type Variant struct {
+	Constant string   `json:"constant"`
+	GoName   string   `json:"goName"`
+	Value    string   `json:"value"`
+	Fields   []string `json:"fields"`
+}
+
 type Decl struct {
-	Brand         bool             `json:"brand,omitempty"`
+	Brand         bool      `json:"brand,omitempty"`
+	Discriminant  string    `json:"discriminant,omitempty"`
+	Variants      []Variant `json:"variants,omitempty"`
+	unionSpec     string
+	variantSpec   string
 	Concurrent    bool             `json:"concurrent,omitempty"`
 	Value         *Type            `json:"value,omitempty"`
 	Constants     []Constant       `json:"constants,omitempty"`
@@ -101,6 +112,7 @@ type Param struct {
 // Call describes one concrete asynchronous export.
 type Call struct {
 	Scalar     string   `json:"scalar,omitempty"`
+	Namespace  string   `json:"namespace,omitempty"`
 	NonNull    bool     `json:"nonNull,omitempty"`
 	Op         string   `json:"op,omitempty"`
 	ID         int      `json:"id"`
@@ -257,7 +269,7 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 							doc = g.Doc
 						}
 						ds, _, err := directives(doc)
-						if err != nil || len(ds) > 0 {
+						if err != nil || (len(ds) > 0 && (len(ds) != 1 || !hasDirective(ds, "member") || g.Tok != token.CONST || len(v.Names) != 1)) {
 							return nil, l.diag(v.Pos(), v.Names[0].Name, "annotations on variables and constants are unsupported")
 						}
 					}
@@ -275,6 +287,10 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 				if len(ds) == 0 {
 					continue
 				}
+				unionSpec := ds["union"]
+				delete(ds, "union")
+				variantSpec := ds["variant"]
+				delete(ds, "variant")
 				concurrent, hasConcurrent := ds["concurrent"]
 				delete(ds, "concurrent")
 				validate, hasValidate := ds["validate"]
@@ -297,7 +313,7 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 				if _, ok := n.Underlying().(*types.Struct); !ok && ds["imports"] == "" && ds["scalar"] == "" && ds["enum"] == "" {
 					return nil, l.diag(ts.Pos(), obj.Name(), "record and resource annotations require structs")
 				}
-				d := &Decl{Brand: hasBrand, Concurrent: hasConcurrent, Validate: validate, Optional: hasOptional, Default: optional, GoName: obj.Name(), Name: obj.Name(), Doc: text, Position: l.position(ts.Pos()), Order: len(a.Declarations)}
+				d := &Decl{Brand: hasBrand, unionSpec: unionSpec, variantSpec: variantSpec, Concurrent: hasConcurrent, Validate: validate, Optional: hasOptional, Default: optional, GoName: obj.Name(), Name: obj.Name(), Doc: text, Position: l.position(ts.Pos()), Order: len(a.Declarations)}
 				if v, ok := ds["scalar"]; ok {
 					d.Kind = "scalar"
 					d.Name = v
@@ -333,6 +349,9 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 					}
 				} else {
 					return nil, l.diag(ts.Pos(), obj.Name(), "type requires record, resource, error, or imports directive")
+				}
+				if (unionSpec != "" || variantSpec != "") && d.Kind != "record" {
+					return nil, l.diag(ts.Pos(), obj.Name(), "union and variant require record")
 				}
 				if hasConcurrent && (d.Kind != "resource" || concurrent != "") {
 					return nil, l.diag(ts.Pos(), obj.Name(), "concurrent takes no arguments and requires a resource")
@@ -387,6 +406,9 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 			}
 		}
 	}
+	if err := l.unions(); err != nil {
+		return nil, err
+	}
 	if err := l.imports(); err != nil {
 		return nil, err
 	}
@@ -408,6 +430,19 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 			sig := obj.Type().(*types.Signature)
 			if !obj.Exported() {
 				return nil, l.diag(fd.Pos(), obj.Name(), "exports must be public")
+			}
+			namespace, hasNamespace := ds["namespace"]
+			delete(ds, "namespace")
+			constructor, hasConstructor := ds["constructor"]
+			delete(ds, "constructor")
+			if hasNamespace && hasConstructor {
+				return nil, l.diag(fd.Pos(), obj.Name(), "namespace and constructor are mutually exclusive")
+			}
+			if hasConstructor {
+				namespace = constructor
+			}
+			if (hasNamespace || hasConstructor) && (sig.Recv() != nil || namespace == "" || !validName(namespace)) {
+				return nil, l.diag(fd.Pos(), obj.Name(), "namespace and constructor require a free export and valid name")
 			}
 			nonNull, hasNonNull := ds["nonnull"]
 			delete(ds, "nonnull")
@@ -485,12 +520,16 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 					}
 					sig = inst.(*types.Signature)
 				}
-				c := &Call{NonNull: hasNonNull, TypeArgs: goArgs, Name: name, GoName: obj.Name(), Doc: text, Position: l.position(fd.Pos()), Params: []Param{}}
+				c := &Call{Namespace: namespace, NonNull: hasNonNull, TypeArgs: goArgs, Name: name, GoName: obj.Name(), Doc: text, Position: l.position(fd.Pos()), Params: []Param{}}
 				if resource != nil {
 					c.Receiver = resource.Name
 					c.ReceiverGo = resource.GoName
 				}
-				if err := l.name(c.Receiver, name, fd.Pos(), obj.Name()); err != nil {
+				scope := c.Receiver
+				if namespace != "" {
+					scope = "namespace:" + namespace
+				}
+				if err := l.name(scope, name, fd.Pos(), obj.Name()); err != nil {
 					return nil, err
 				}
 				if sig.Variadic() || sig.TypeParams().Len() != 0 {
@@ -536,6 +575,9 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 				if hasNonNull && (c.Result == nil || c.Result.Kind != "pointer" && c.Result.Kind != "resource") {
 					return nil, l.diag(fd.Pos(), obj.Name(), "nonnull requires a pointer or resource result")
 				}
+				if hasConstructor && (c.Result == nil || c.Result.Kind != "resource" || c.Result.Name != namespace) {
+					return nil, l.diag(fd.Pos(), obj.Name(), "constructor requires a result of its named resource")
+				}
 				a.Calls = append(a.Calls, c)
 			}
 		}
@@ -564,6 +606,9 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 		}
 		a.Calls = append(a.Calls, &Call{Name: name, GoName: d.GoName, Scalar: d.GoName, Context: true, Params: []Param{{Name: "value", Type: d.Value}}, Result: result, Position: d.Position, Doc: "Validates value and returns a " + d.Name + "."})
 	}
+	if err := l.namespaces(); err != nil {
+		return nil, err
+	}
 	if err := l.finishExtensions(); err != nil {
 		return nil, err
 	}
@@ -577,6 +622,9 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 		x, y := a.Calls[i], a.Calls[j]
 		if x.Receiver != y.Receiver {
 			return x.Receiver < y.Receiver
+		}
+		if x.Namespace != y.Namespace {
+			return x.Namespace < y.Namespace
 		}
 		return x.Name < y.Name
 	})
@@ -620,7 +668,7 @@ func directives(g *ast.CommentGroup) (map[string]string, string, error) {
 				v = p[1]
 			}
 			if old, ok := d[k]; ok {
-				if k != "export" {
+				if k != "export" && k != "variant" {
 					return nil, "", fmt.Errorf("duplicate directive %q", k)
 				}
 				v = old + "\n" + v

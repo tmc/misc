@@ -124,15 +124,26 @@ function convertValue(t, value, output, state, charge, seen, depth, path) {
       if (typeof value !== 'object' || value === null || ![Object.prototype, null].includes(Object.getPrototypeOf(value)))
         fail('argument', 'expected plain record');
       if (seen.has(value)) fail('argument', 'cyclic record');
-      const fields = records.get(t.name).fields ?? [];
+      const decl = records.get(t.name);
+      const fields = decl.fields ?? [];
+      let active = fields, discriminant;
+      if (decl.variants) {
+        let raw;try {raw=value[decl.discriminant];}catch(error){const e=conversionError(error);e.path=path+'.'+decl.discriminant;e.message=e.path+': '+e.message;throw e;}
+        const tag = discriminant = convert(fields.find(f => f.name === decl.discriminant).type, raw, output, state, charge, seen, depth + 1, path+'.'+decl.discriminant);
+        const variant = decl.variants.find(v => String(tag) === (v.value.startsWith('"') ? JSON.parse(v.value) : v.value));
+        if (!variant) fail('argument', 'unknown union discriminant');
+        active = fields.filter(f => variant.fields.includes(f.name));
+      }
       const keys = Reflect.ownKeys(value).filter(k => Object.prototype.propertyIsEnumerable.call(value, k));
       charge(0, keys.length, depth);
-      for (const key of keys) if (!fields.some(f=>f.name===key)) { const e=new WasmBindError('argument','unknown record field');e.path=path+'.'+String(key);e.message=e.path+': '+e.message;throw e; }
+      for (const key of keys) if ((!output || !decl.variants) && !active.some(f=>f.name===key)) { const e=new WasmBindError('argument','unknown record field');e.path=path+'.'+String(key);e.message=e.path+': '+e.message;throw e; }
       seen.add(value); const result = Object.create(null);
       try {
         for (const f of fields) {
+          if (!active.includes(f)) {if (!output) result[f.name] = convert(f.type, zeroValue(f.type), false, state, charge, seen, depth + 1, path+'.'+f.name);continue;}
           const present=Object.prototype.propertyIsEnumerable.call(value,f.name);
           if (!present && (output || !f.optional)) {const e=new WasmBindError('argument','missing required record field');e.path=path+'.'+f.name;e.message=e.path+': '+e.message;throw e;}
+          if (decl.variants && f.name === decl.discriminant) { result[f.name] = discriminant; continue; }
           let v;try {v=present ? value[f.name] : f.default !== undefined ? literal(f.default) : zeroValue(f.type);}catch(error){const e=conversionError(error);e.path=path+'.'+f.name;e.message=e.path+': '+e.message;throw e;}
           result[f.name] = convert(f.type, v, output, state, charge, seen, depth + 1, path+'.'+f.name);
         }
@@ -234,7 +245,11 @@ function makeModule(bridge, limits, imports) {
     return Object.freeze(w);
   }
   const mod = Object.create(null);
-  for (const c of schema.calls.filter(c => !c.receiver && !c.op)) mod[c.name] = (...args) => call(c, null, args);
+  for (const c of schema.calls.filter(c => !c.receiver && !c.op)) {
+    const target = c.namespace ? (mod[c.namespace] ??= Object.create(null)) : mod;
+    target[c.name] = (...args) => call(c, null, args);
+  }
+  for (const name of new Set(schema.calls.map(c => c.namespace).filter(Boolean))) Object.freeze(mod[name]);
   mod.dispose = () => {
     if (exitError) return disposal ??= Promise.reject(exitError);
     if (disposal) return disposal;
