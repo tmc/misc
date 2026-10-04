@@ -86,9 +86,32 @@ func CheckExamples(ctx context.Context, tsc, lib string, files []string) error {
 	if tsc == "" || len(files) == 0 {
 		return fmt.Errorf("check-examples requires -tsc and TypeScript files")
 	}
+	// Explicit files must not inherit a caller's tsconfig. TypeScript 6 rejects
+	// that combination; an empty working directory also works with older tsc.
+	if strings.ContainsRune(tsc, filepath.Separator) {
+		var err error
+		tsc, err = filepath.Abs(tsc)
+		if err != nil {
+			return fmt.Errorf("resolve compiler: %w", err)
+		}
+	}
+	paths := make([]string, len(files))
+	for i, file := range files {
+		var err error
+		paths[i], err = filepath.Abs(file)
+		if err != nil {
+			return fmt.Errorf("resolve example: %w", err)
+		}
+	}
+	dir, err := os.MkdirTemp("", "wasmbind-examples-")
+	if err != nil {
+		return fmt.Errorf("create compiler directory: %w", err)
+	}
+	defer os.RemoveAll(dir)
 	args := []string{"--strict", "--noEmit", "--target", "ES2022", "--module", "ESNext", "--moduleResolution", "Bundler", "--lib", lib}
-	args = append(args, files...)
+	args = append(args, paths...)
 	cmd := exec.CommandContext(ctx, tsc, args...)
+	cmd.Dir = dir
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("type-check examples: %w\n%s", err, data)

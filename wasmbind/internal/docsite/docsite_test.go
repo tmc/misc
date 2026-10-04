@@ -59,3 +59,44 @@ func TestCheckExamples(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCheckExamplesIgnoresCallerConfig(t *testing.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	if err := os.WriteFile("tsconfig.json", []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile("consumer.ts", []byte("const value: number = 1;"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	tmp := filepath.Join(dir, "tmp")
+	if err := os.Mkdir(tmp, 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TMPDIR", tmp)
+	t.Setenv("WASMBIND_TEST_EXAMPLE", filepath.Join(dir, "consumer.ts"))
+	compiler := filepath.Join(dir, "wasmbind-test-tsc")
+	script := `#!/bin/sh
+[ ! -f tsconfig.json ] || exit 2
+for argument do example_path="$argument"; done
+[ "$example_path" = "$WASMBIND_TEST_EXAMPLE" ] || exit 3
+[ -f "$example_path" ] || exit 4
+`
+	if err := os.WriteFile(compiler, []byte(script), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := CheckExamples(context.Background(), "./wasmbind-test-tsc", "ES2022,DOM", []string{"consumer.ts"}); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	if err := CheckExamples(context.Background(), "wasmbind-test-tsc", "ES2022,DOM", []string{"consumer.ts"}); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Fatal("compiler temporary directory retained")
+	}
+}
