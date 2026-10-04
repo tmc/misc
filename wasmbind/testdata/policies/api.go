@@ -3,6 +3,8 @@
 //wasmbind:naming camelCase
 package policies
 
+import "context"
+
 // Kind is a closed event kind.
 //
 //wasmbind:enum Kind
@@ -83,3 +85,29 @@ func NewResource(nilResult bool) *Resource {
 
 //wasmbind:close
 func (r *Resource) Close() {}
+
+// Concurrent permits a blocked receive and a simultaneous send.
+//
+//wasmbind:resource Concurrent
+//wasmbind:concurrent
+type Concurrent struct{ values chan string }
+
+//wasmbind:export concurrent
+//wasmbind:nonnull
+func NewConcurrent() *Concurrent { return &Concurrent{values: make(chan string, 1)} }
+
+//wasmbind:export receive
+func (c *Concurrent) Receive(ctx context.Context) (string, error) {
+	select {
+	case v := <-c.values:
+		return v, nil
+	case <-ctx.Done():
+		return "", ctx.Err()
+	}
+}
+
+//wasmbind:export send
+func (c *Concurrent) Send(v string) { c.values <- v }
+
+//wasmbind:close
+func (c *Concurrent) Close() {}

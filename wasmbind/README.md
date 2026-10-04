@@ -37,7 +37,9 @@ optional final `{signal: AbortSignal}` argument. Byte buffers are copied before
 the call returns its Promise. Resources use opaque instance-bound wrappers and
 explicit `dispose()`. Method calls on one receiver run in admission order;
 resource arguments are held for their lifetime but application concurrency
-rules still apply.
+rules still apply. A resource can opt into overlapping ordinary method calls
+with `//wasmbind:concurrent`. Use this only for implementations that support
+concurrent calls; stream read/write and event iterator lanes keep their ordering.
 
 Use `//wasmbind:record` for copied structs and `//wasmbind:resource Name` for
 opaque pointer types. Each resource needs one `//wasmbind:close` method with no

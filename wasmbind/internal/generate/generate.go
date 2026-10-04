@@ -31,7 +31,17 @@ func Files(a *schema.API) (map[string][]byte, error) {
 	for _, c := range a.Calls {
 		fmt.Fprintf(&prep, "case %d:\nif args.Length()!=%d {return nil,failure(\"argument\",\"wrong argument count\")}\n", c.ID, len(c.Params))
 		if c.Receiver != "" {
-			fmt.Fprintf(&prep, "r,err:=b.hold(i,receiver,%q);if err!=nil{return nil,err};recv:=r.ptr.(*api.%s);_ = recv\nb.queue(r,i,%q)\n", c.Receiver, c.ReceiverGo, c.Op)
+			fmt.Fprintf(&prep, "r,err:=b.hold(i,receiver,%q);if err!=nil{return nil,err};recv:=r.ptr.(*api.%s);_ = recv\n", c.Receiver, c.ReceiverGo)
+			concurrent := false
+			for _, d := range a.Declarations {
+				if d.Name == c.Receiver {
+					concurrent = d.Concurrent
+					break
+				}
+			}
+			if !concurrent || c.Op != "" {
+				fmt.Fprintf(&prep, "b.queue(r,i,%q)\n", c.Op)
+			}
 		}
 		var args []string
 		if c.Context {
@@ -402,7 +412,14 @@ func writeImports(b *bytes.Buffer, a *schema.API) {
 }
 
 func writeDeclaration(b *bytes.Buffer, a *schema.API, d *schema.Decl) {
-	writeDoc(b, "", declarationDoc(a, d.Doc))
+	doc := declarationDoc(a, d.Doc)
+	if d.Concurrent {
+		if doc != "" {
+			doc += "\n\n"
+		}
+		doc += "Ordinary methods may overlap. Stream and iterator operations retain their direction ordering."
+	}
+	writeDoc(b, "", doc)
 	switch d.Kind {
 	case "scalar":
 		fmt.Fprintf(b, "export type %s = %s;\n", d.Name, tsType(d.Value))

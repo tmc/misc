@@ -147,9 +147,11 @@ It cannot claim to bound the browser's entire WritableStream queue.
 For annotated stream methods only, replace base receiver-wide serialization
 with separate read and write lanes. One read and one write may overlap; finish
 shares the write lane. Interruption hooks use neither lane and must be safe to
-call during I/O. Reject resources mixing ordinary exported receiver methods
-with stream directives; put controls in a separate wrapper resource. This avoids
-implicit concurrency changes to existing methods.
+call during I/O. Resources mixing ordinary exported receiver methods with
+stream directives must explicitly opt into `//wasmbind:concurrent`; these
+ordinary methods may overlap each other and I/O. This permits thread-safe
+protocol controls such as stop and reset. Without that annotation, reject the
+mix and use a separate wrapper resource.
 
 Resource disposal invokes unfinished-direction interruption hooks before waiting
 for I/O references, then follows the base close protocol. Hooks and close must

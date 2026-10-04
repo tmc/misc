@@ -19,6 +19,14 @@ async function check(host) {
   const source = new URL("./module.wasm", import.meta.url);
   const m = await load(source);
   try {
+    const concurrent = await m.concurrent();
+    const pending = concurrent.receive();
+    await concurrent.send("overlap");
+    assert(await pending === "overlap", "concurrent receive and send");
+    const canceled = concurrent.receive();
+    canceled.catch(() => {});
+    await concurrent.dispose();
+    try { await canceled; throw Error("expected cancellation"); } catch (e) { assert(e.name === "AbortError", "concurrent disposal cancels receive"); }
     const r = await m.httpResult(false);
     assert(r.httpStatus === 200 && r.url === "https://example.com" && r.Exact === "override" && r.kind === Kind.first, "camelCase and field override");
     await reject(() => m.httpResult(true), "contract");

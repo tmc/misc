@@ -32,7 +32,7 @@ func parseFeatures(s string) (map[string]bool, []string, error) {
 }
 func knownDirective(k string) bool {
 	switch k {
-	case "export", "record", "resource", "close", "read", "write", "finish", "cancelread", "cancelwrite", "next", "interrupt", "imports", "init", "error", "nonnull", "scalar", "enum", "validate", "optional", "naming":
+	case "export", "record", "resource", "close", "read", "write", "finish", "cancelread", "cancelwrite", "next", "interrupt", "imports", "init", "error", "nonnull", "scalar", "enum", "validate", "optional", "naming", "concurrent":
 		return true
 	}
 	return false
@@ -247,7 +247,7 @@ func (l *loader) finishExtensions() error {
 			return fmt.Errorf("%s: %s: streams and events cannot share one resource", d.Position, d.GoName)
 		}
 		for _, c := range l.api.Calls {
-			if c.Receiver == d.Name && c.Op == "" && (streams || (m["next"] != nil && (c.Name == "next" || c.Name == "return" || c.Name == "throw"))) {
+			if c.Receiver == d.Name && c.Op == "" && ((streams && !d.Concurrent) || (m["next"] != nil && (c.Name == "next" || c.Name == "return" || c.Name == "throw"))) {
 				return fmt.Errorf("%s: %s: ordinary method conflicts with resource extension", c.Position, c.GoName)
 			}
 		}

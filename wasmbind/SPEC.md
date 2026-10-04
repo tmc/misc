@@ -292,6 +292,12 @@ may overlap. Passing a resource as an argument holds a lifetime reference but
 does not implicitly serialize access; document that application concurrency
 rules still apply. Waiting receiver calls check cancellation before invocation.
 
+A resource may opt into overlapping ordinary exported methods with
+`//wasmbind:concurrent` alongside its resource directive. Its implementation
+must support concurrent calls. Admission still holds lifetime references and
+disposal still cancels and waits for calls. Stream read/write and event lanes
+retain their existing ordering. The directive takes no arguments.
+
 Module.dispose() closes admission, cancels calls, waits for retained calls,
 disposes remaining resources in reverse creation order, releases js.Func values,
 and allows the generated Go main to return. It returns a Promise and aggregates

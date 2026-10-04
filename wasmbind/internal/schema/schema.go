@@ -69,6 +69,7 @@ type Constant struct {
 
 // Decl describes an annotated binding type.
 type Decl struct {
+	Concurrent    bool             `json:"concurrent,omitempty"`
 	Value         *Type            `json:"value,omitempty"`
 	Constants     []Constant       `json:"constants,omitempty"`
 	Validate      string           `json:"validate,omitempty"`
@@ -270,6 +271,8 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 				if len(ds) == 0 {
 					continue
 				}
+				concurrent, hasConcurrent := ds["concurrent"]
+				delete(ds, "concurrent")
 				validate, hasValidate := ds["validate"]
 				delete(ds, "validate")
 				optional, hasOptional := ds["optional"]
@@ -288,7 +291,7 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 				if _, ok := n.Underlying().(*types.Struct); !ok && ds["imports"] == "" && ds["scalar"] == "" && ds["enum"] == "" {
 					return nil, l.diag(ts.Pos(), obj.Name(), "record and resource annotations require structs")
 				}
-				d := &Decl{Validate: validate, Optional: hasOptional, Default: optional, GoName: obj.Name(), Name: obj.Name(), Doc: text, Position: l.position(ts.Pos()), Order: len(a.Declarations)}
+				d := &Decl{Concurrent: hasConcurrent, Validate: validate, Optional: hasOptional, Default: optional, GoName: obj.Name(), Name: obj.Name(), Doc: text, Position: l.position(ts.Pos()), Order: len(a.Declarations)}
 				if v, ok := ds["scalar"]; ok {
 					d.Kind = "scalar"
 					d.Name = v
@@ -324,6 +327,9 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 					}
 				} else {
 					return nil, l.diag(ts.Pos(), obj.Name(), "type requires record, resource, error, or imports directive")
+				}
+				if hasConcurrent && (d.Kind != "resource" || concurrent != "") {
+					return nil, l.diag(ts.Pos(), obj.Name(), "concurrent takes no arguments and requires a resource")
 				}
 				if (hasValidate && d.Kind != "scalar" && d.Kind != "enum") || (hasOptional && d.Kind != "imports") {
 					return nil, l.diag(ts.Pos(), obj.Name(), "validate requires scalar or enum; optional requires imports")
