@@ -32,7 +32,7 @@ func parseFeatures(s string) (map[string]bool, []string, error) {
 }
 func knownDirective(k string) bool {
 	switch k {
-	case "export", "record", "resource", "close", "read", "write", "finish", "cancelread", "cancelwrite", "next", "interrupt", "imports", "init", "error":
+	case "export", "record", "resource", "close", "read", "write", "finish", "cancelread", "cancelwrite", "next", "interrupt", "imports", "init", "error", "nonnull", "scalar", "enum", "validate", "optional", "naming":
 		return true
 	}
 	return false
@@ -41,7 +41,7 @@ func (l *loader) callSignature(obj *types.Func, sig *types.Signature) (*Call, er
 	if sig.TypeParams().Len() != 0 || sig.Variadic() {
 		return nil, l.diag(obj.Pos(), obj.Name(), "extension methods cannot be generic or variadic")
 	}
-	c := &Call{GoName: obj.Name(), Name: obj.Name(), Position: l.position(obj.Pos()), Params: []Param{}}
+	c := &Call{GoName: obj.Name(), Name: l.memberName(obj.Name()), Doc: l.docs[obj.Pos()], Position: l.position(obj.Pos()), Params: []Param{}}
 	for i := 0; i < sig.Params().Len(); i++ {
 		p := sig.Params().At(i)
 		if i == 0 && isContext(p.Type()) {
@@ -68,6 +68,11 @@ func (l *loader) imports() error {
 		if d.Kind != "imports" {
 			continue
 		}
+		if d.Optional {
+			if err := l.defaultFactory(obj, d); err != nil {
+				return err
+			}
+		}
 		iface := obj.Type().Underlying().(*types.Interface)
 		if iface.NumEmbeddeds() != 0 {
 			return l.diag(obj.Pos(), obj.Name(), "embedded import interfaces are unsupported")
@@ -75,12 +80,23 @@ func (l *loader) imports() error {
 		d.ImportMethods = []*Call{}
 		for j := 0; j < iface.NumExplicitMethods(); j++ {
 			m := iface.ExplicitMethod(j)
-			if !m.Exported() || !validName(m.Name()) {
+			if !m.Exported() {
 				return l.diag(m.Pos(), m.Name(), "import methods must be public with nonreserved names")
 			}
 			sig := m.Type().(*types.Signature)
 			c, err := l.callSignature(m, sig)
 			if err != nil {
+				return err
+			}
+			if ds := l.methodDirectives[m.Pos()]; len(ds) > 0 {
+				if len(ds) != 1 || !hasDirective(ds, "export") {
+					return l.diag(m.Pos(), m.Name(), "import methods accept only export name overrides")
+				}
+				if ds["export"] != "" {
+					c.Name = ds["export"]
+				}
+			}
+			if err := l.name("import:"+d.Name, c.Name, m.Pos(), m.Name()); err != nil {
 				return err
 			}
 			if !c.Context {
@@ -236,7 +252,7 @@ func (l *loader) finishExtensions() error {
 			}
 		}
 	}
-	if l.features["imports"] && (l.api.Init == nil || imports == 0) {
+	if imports > 0 && l.api.Init == nil || imports == 0 && l.api.Init != nil {
 		return fmt.Errorf("imports requires annotated interfaces and exactly one init function")
 	}
 	return nil

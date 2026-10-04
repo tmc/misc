@@ -238,8 +238,9 @@ annotated import interfaces in declaration order, and returns error. It is not
 an exported JS call. Interface methods must be public and take context first,
 followed by supported copied values, returning error or (T,error). Resources,
 streams, events, variadics, embedded interfaces, and callbacks cannot cross the
-import boundary in the first imports release. JS method names exactly match Go
-method names; reject reserved names rather than transform them.
+import boundary in the first imports release. JS method names match Go
+method names by default; package naming policy and explicit method export
+overrides follow the base specification.
 
 Generate an implementation of each interface and a TypeScript Imports type.
 load(source, {imports:{Host:{Lookup: async (key, options) => ...}}}) supplies the
@@ -247,7 +248,19 @@ implementations. JS receives copied arguments plus {signal:AbortSignal}.
 Synchronous returns are accepted and normalized through Promise.resolve.
 Capture validated callable references at load; no dynamic global-name lookup
 or later mutation of the imports object changes the bound implementation.
-Missing interfaces or methods reject before Go starts. Initialization runs in
+Missing required interfaces or methods reject before Go starts. A feature flag
+with no annotated import interfaces does not require an init or imports option.
+
+An interface may additionally declare `//wasmbind:optional DefaultHost`, where
+`DefaultHost` is a public nongeneric `func() Host` in the input package. Omitting
+the entire interface supplies that Go factory's result to init. Explicitly
+supplied interfaces must still contain every callable method: null, partial
+objects, and missing methods are errors. Capture interface presence and methods
+once, including empty interfaces. A nil default result fails initialization;
+a factory panic follows initialization panic handling. The factory runs only
+when omitted, and no missing-method fallback occurs. `Imports` properties are
+optional only for annotated optional groups; `LoadOptions.imports` is optional
+only when no required groups exist. Initialization runs in
 a goroutine; load resolves only after it succeeds. Initialization failure
 cancels the module and performs cooperative cleanup.
 
@@ -337,7 +350,8 @@ for name, version, files, type, and exports.
 
 Generate type=module, root exports for import and types, and explicit asset
 exports for module.wasm and bindings.json. Include runtime assets, README with
-load examples and limitations, manifest, declared license, and provenance.
+load examples and limitations, generated API.md, BUNDLING.md, manifest, declared
+license, and provenance.
 Require -license-file and copy its contents; do not invent a license or assume
 the wrapper license covers bundled dependencies. Refuse scripts, private
 credentials, incidental build files, absolute source paths, or unlisted assets.
@@ -348,6 +362,14 @@ call load() explicitly. Provide a default URL resolved with import.meta.url and
 an explicit source override for bundlers. Do not promise every bundler copies
 Wasm assets automatically. TypeScript conditional exports resolve to the same
 API as direct .d.ts imports. CommonJS output is not included initially.
+
+The package exports a typed Node-only `copyAssets(destination)` build helper.
+It copies the matching module.wasm, runtime.js, and wasm_exec.js beside an ES
+module browser bundle. It creates the destination and replaces those fixed
+assets, so the destination must belong to the consumer build. Keep packages
+with distinct Wasm assets in distinct output directories. BUNDLING.md gives an
+esbuild ES2022 recipe using that helper; test the resulting default load in
+Window and Worker against an installed npm tarball.
 
 pack produces a directory, not an npm-compatible tarball. Users can run npm
 pack on that directory themselves. Output obeys base ownership and manifest-last

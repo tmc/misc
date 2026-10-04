@@ -1,9 +1,9 @@
 name: wasmbind
 on:
   push:
-    paths: ['wasmbind/**']
+    paths: ['wasmbind/**', '.github/workflows/wasmbind.yml']
   pull_request:
-    paths: ['wasmbind/**']
+    paths: ['wasmbind/**', '.github/workflows/wasmbind.yml']
   workflow_dispatch:
 jobs:
   qualify:
@@ -28,6 +28,7 @@ jobs:
       - run: npx --no-install playwright install --with-deps chromium firefox webkit
       - run: npm run test:browser
       - run: npm run test:extensions
+      - run: npm run test:policies
       - run: npm run test:abi
       - run: npm run test:pack
       - run: npm run test:goiroh

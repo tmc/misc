@@ -46,8 +46,15 @@ func (e *emitter) extensions() string {
 	} else {
 		var args []string
 		args = append(args, "b.ctx")
+		fmt.Fprintln(&b, `provided:=map[string]bool{};if err:=json.Unmarshal([]byte(os.Getenv("WASMBIND_IMPORTS")),&provided);err!=nil{return failure("argument","invalid import configuration")}`)
 		for _, p := range e.api.Init.Params {
-			args = append(args, "&host"+p.Type.Name+"{b:b}")
+			d := e.decl(p.Type.Name)
+			if d.Optional {
+				fmt.Fprintf(&b, "var import%s api.%s;if provided[%q] {import%s=&host%s{b:b}} else {import%s=api.%s();if import%s==nil{return failure(\"go-error\",\"default import factory returned nil\")}}\n", d.Name, d.GoName, d.Name, d.Name, d.Name, d.Name, d.Default, d.Name)
+				args = append(args, "import"+d.Name)
+			} else {
+				args = append(args, "&host"+p.Type.Name+"{b:b}")
+			}
 		}
 		fmt.Fprintf(&b, "return api.%s(%s)\n", e.api.Init.GoName, strings.Join(args, ","))
 	}

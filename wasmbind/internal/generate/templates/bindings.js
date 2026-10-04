@@ -294,7 +294,7 @@ export async function load(source, options = {}) {
   });
   // Observe readiness rejection even while instantiation is still pending.
   ready.catch(() => {});
-  go.env = { ...go.env, WASMBIND_TOKEN: token, WASMBIND_LIMITS: JSON.stringify(limits) };
+  go.env = { ...go.env, WASMBIND_TOKEN: token, WASMBIND_LIMITS: JSON.stringify(limits), WASMBIND_IMPORTS: JSON.stringify(Object.fromEntries(schema.declarations.filter(d=>d.kind==='imports').map(d=>[d.name,imports.provided.has(d.name)]))) };
   const start = async () => {
     let instance;
     if (source instanceof URL) source = await fetch(source);

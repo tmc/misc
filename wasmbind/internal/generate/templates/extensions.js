@@ -11,10 +11,13 @@ function boundedMessage(error) {
 }
 function captureImports(value) {
   const imports = /* @__PURE__ */ new Map();
+  imports.provided = new Set();
   for (const d of schema.declarations.filter((d2) => d2.kind === "imports")) {
     const host = value?.[d.name];
+    if (host === undefined && d.optional) continue;
     if (!host || typeof host !== "object") fail("argument", "missing import interface " + d.name);
-    for (const c of d.importMethods) {
+    imports.provided.add(d.name);
+    for (const c of d.importMethods ?? []) {
       const fn = host[c.name];
       if (typeof fn !== "function") fail("argument", "missing import method " + d.name + "." + c.name);
       imports.set(d.name + "." + c.name, fn.bind(host));

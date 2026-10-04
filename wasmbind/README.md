@@ -12,7 +12,7 @@ wasmbind build -go-out ./cmd/webbind -out ./web/generated ./webapi
 ```
 
 `generate` emits a standalone js/wasm main, an ES module, TypeScript declarations,
-and a manifest. `build` also emits Wasm and the selected compiler's local
+an API reference, and a manifest. `build` also emits Wasm and the selected compiler's local
 runtime. The generated main must be inside the consumer module, outside the
 input package. Dependencies must already be recorded and cached; the tool
 uses `-mod=readonly` and does not update the consumer's module files.
@@ -43,6 +43,38 @@ Use `//wasmbind:record` for copied structs and `//wasmbind:resource Name` for
 opaque pointer types. Each resource needs one `//wasmbind:close` method with no
 arguments and either no result or `error`. See [SPEC.md](SPEC.md) for conversions,
 limits, ownership, cancellation, and error codes.
+
+Generator 0.3.0 adds explicit API naming and contracts. Opt in through source
+annotations:
+
+```go
+// Package webapi exposes a browser API.
+//wasmbind:naming camelCase
+package webapi
+
+//wasmbind:enum EventKind
+//wasmbind:validate
+type EventKind uint8
+const Message EventKind = 1
+
+//wasmbind:record
+type EndpointInfo struct { URL string; Kind EventKind }
+
+//wasmbind:export
+//wasmbind:nonnull
+func NewEndpointInfo() *EndpointInfo {
+  return &EndpointInfo{URL: "https://example.com", Kind: Message}
+}
+```
+
+This emits `mod.newEndpointInfo(): Promise<EndpointInfo>` and a frozen
+`EventKind.message` constant. Nil success rejects with code `contract`.
+`//wasmbind:scalar Name` preserves a domain alias; add
+`//wasmbind:validate ValidateName` for a Go `func(T) error` validator.
+Unvalidated enums accept future primitive values. CamelCase naming handles
+acronyms, respects explicit exports/tags, and diagnoses collisions. Defaults
+remain unchanged. Generated `API.md` and formatted `.d.ts` files retain member
+documentation. See [the input contract](SPEC.md#input-contract) for details.
 
 Go 1.27 generic functions and methods require explicit concrete specializations:
 
@@ -128,9 +160,26 @@ frames, with schema/build handshakes, rooted allocation ownership, and deferred
 notification/poll completion. The matching Go runtime remains required. No
 performance or zero-copy improvement is claimed. Packaging writes a local ES
 module directory with explicit licensing; optional `-readme-file` supplies its
-README. It never publishes.
+README. It never publishes. The package includes its generated `API.md` and a
+Node-only asset helper. For an ES module browser bundle, copy the matching assets
+beside the output so the default `load()` works:
 
-Additional gates are `npm run test:extensions`, `npm run test:abi`, and
+```js
+// build.mjs
+import {build} from 'esbuild';
+import {copyAssets} from '@scope/name/copy-assets';
+await build({entryPoints: ['app.js'], outfile: 'public/app.js',
+  bundle: true, format: 'esm', platform: 'browser', target: 'es2022'});
+await copyAssets('public');
+```
+
+`copyAssets` creates the directory and replaces `module.wasm`, `runtime.js`, and
+`wasm_exec.js`; choose a directory owned by the build. Each package needs its own
+output directory when using its default Wasm URL. Packages with required imports
+call `load(undefined, {imports})`. The packaged `BUNDLING.md` contains the same
+recipe and loading constraints.
+
+Additional gates are `npm run test:policies`, `npm run test:extensions`, `npm run test:abi`, and
 `npm run test:pack`. The minimum tested TypeScript version is 6.0.3 and is recorded
 in manifests. The relay example now uses stream views, gossip iteration, typed
 errors, and imported HTTP. [Local qualification](VALIDATION.md) records the tested

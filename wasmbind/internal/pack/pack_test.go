@@ -52,6 +52,16 @@ func TestPackage(t *testing.T) {
 	if pkg["type"] != "module" || pkg["scripts"] != nil {
 		t.Fatalf("invalid package metadata: %s", data)
 	}
+	exports := pkg["exports"].(map[string]any)
+	helper := exports["./copy-assets"].(map[string]any)
+	if helper["node"] != "./copy-assets.js" || helper["types"] != "./copy-assets.d.ts" || helper["import"] != nil {
+		t.Fatalf("invalid Node-only asset helper export: %v", helper)
+	}
+	for _, name := range []string{"API.md", "BUNDLING.md", "copy-assets.js", "copy-assets.d.ts"} {
+		if data, err := os.ReadFile(filepath.Join(opt.Out, name)); err != nil || len(data) == 0 {
+			t.Fatalf("missing package file %s: %v", name, err)
+		}
+	}
 	license, _ := os.ReadFile(filepath.Join(opt.Out, "LICENSE"))
 	if string(license) != "Explicit fixture license\n" {
 		t.Fatal("license changed")
@@ -79,5 +89,25 @@ func TestIdentity(t *testing.T) {
 		if _, err := Write(context.Background(), opt); err == nil {
 			t.Fatalf("accepted %+v", opt)
 		}
+	}
+}
+
+func TestRequiredImports(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		decls []*schema.Decl
+		want  bool
+	}{
+		{name: "none"},
+		{name: "other declaration", decls: []*schema.Decl{{Kind: "resource"}}},
+		{name: "optional", decls: []*schema.Decl{{Kind: "imports", Optional: true}}},
+		{name: "required", decls: []*schema.Decl{{Kind: "imports"}}, want: true},
+		{name: "mixed", decls: []*schema.Decl{{Kind: "imports", Optional: true}, {Kind: "imports"}}, want: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := hasRequiredImports(schema.Manifest{Declarations: test.decls}); got != test.want {
+				t.Fatalf("hasRequiredImports = %v, want %v", got, test.want)
+			}
+		})
 	}
 }

@@ -4,6 +4,7 @@
   "scripts": {
     "test:browser": "node testdata/browser.mjs",
     "test:goiroh": "node testdata/goiroh.mjs",
+    "test:policies": "node testdata/policies.mjs",
     "test:extensions": "node testdata/extensions.mjs",
     "test:abi": "WASMBIND_BACKEND=abi node testdata/browser.mjs",
     "test:pack": "node testdata/pack.mjs"

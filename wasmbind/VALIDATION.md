@@ -76,7 +76,7 @@ remove throwaway builds. No throughput, bundle-size, or zero-copy claim is made.
 | syscalljs, go-iroh extensions | duplex echo, blocked cancellation, gossip early break, typed validation error, imported HTTP, verified blob | same network fixture | Go 1.27.0 |
 | abi, base, experimental | 90 shared assertions and 29 direct protocol assertions per engine | copied bytes and disposal | Go 1.27.0 and 1.27.1 |
 | abi with any extension | rejected | rejected | all |
-| pack, base | installed ES module and esbuild consumer | covered by runtime tests, no separate bundled Worker fixture | Go 1.27.0 |
+| pack, base | installed ES module and esbuild consumer | bundled Worker using matching copied assets | Go 1.27.0 |
 
 All three pinned engines are required in these rows. Extension declarations pass
 strict ES2022 DOM/DOM.Iterable and WebWorker fixtures with skipLibCheck=false,
@@ -106,7 +106,7 @@ internal timer map; compiler/runtime upgrades need renewed qualification.
 
 Packaging qualifies npm 12.0.1 dry-run lists, local installation, TypeScript
 conditional exports, browser default URLs, and esbuild 0.25.12 with explicit
-Wasm/runtime asset handling. The new go-iroh-js package uses the four-feature
+Wasm/runtime asset handling. The new go-iroh-js package uses the streams/events/errors
 syscalljs backend and includes dependency module-root licenses and Go's license.
 Its source and generated package remain local candidates.
 
@@ -118,3 +118,27 @@ Additional receipts:
 - `~/tmp/wasmbind/20261003-abi-go1.27.1-browser-tests/qualification.json`
 - `~/tmp/wasmbind/20261003-package-tests/qualification.json`
 - `~/tmp/go-iroh-js/20261003-package-tests/qualification.json`
+- `~/tmp/wasmbind/20261004-syscalljs-browser-tests/qualification.json`
+- `~/tmp/wasmbind/20261004-abi-browser-tests/qualification.json`
+- `~/tmp/wasmbind/20261004-abi-go1.27.1-browser-tests/qualification.json`
+- `~/tmp/wasmbind/20261004-goiroh-tests/qualification.json`
+- `~/tmp/go-iroh-js/20261004-package-tests/qualification.json`
+
+## Explicit API contracts
+
+`npm run test:policies` qualifies naming, named scalars/enums, non-null results,
+and optional Go import defaults. Chromium, Firefox, and WebKit each passed
+22 syscalljs assertions in both Window and Worker, and 11 ABI assertions in
+each realm. Separate strict TypeScript 6.0.3 DOM and WebWorker fixtures verify
+constructor non-nullability, named enum types, field naming, and optional imports.
+The browser checks include acronym/tag behavior, aliases, signed bigint extremes,
+input/output validation, open enums, omitted defaults, explicit overrides,
+partial/null host rejection, and capturing an interface getter once.
+Go validation tests additionally cover invalid UTF-8 enum constants, imprecise
+number constants, missing validators/factories, collisions, and unsupported ABI
+Go validators. Receipt:
+`~/tmp/wasmbind/20261003-api-improvements/qualification.json`.
+
+The packaging fixture installs the actual npm tarball, resolves the typed
+Node-only helper, overwrites stale assets with byte-identical matching files,
+and loads the esbuild bundle with its default URL in Window and Worker.

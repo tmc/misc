@@ -127,10 +127,15 @@ Recognize directives in the declaration's doc comment:
 | `//wasmbind:record` | Export a named struct as copied data |
 | `//wasmbind:resource Name` | Export pointer instances through an opaque resource wrapper |
 | `//wasmbind:close` | Designate the resource's disposal method |
+| `//wasmbind:nonnull` | Require an exported pointer result to be non-null on success |
+| `//wasmbind:scalar Name` | Preserve a public defined basic type as a named TypeScript alias |
+| `//wasmbind:enum Name` | Export typed constants as a frozen object and preserve their named value type |
+| `//wasmbind:validate` | Restrict an enum to its exported typed constant values |
+| `//wasmbind:validate Function` | Validate a scalar using a public Go `func(T) error` |
 
 Names must be valid JavaScript identifiers. Reject duplicate names and reserved
 API names (`load`, `dispose`, `then`, `constructor`, and `__proto__`) in their
-respective scopes. Do not silently change case or overload names. Go doc
+respective scopes. Defaults preserve names and never overload them. Go doc
 comments become generated API documentation; directives are omitted.
 
 Exports must be public Go declarations. Resource methods require a pointer
@@ -139,6 +144,39 @@ private fields, embedded fields, recursive record graphs, and contradictory
 directives are rejected. Record fields use their Go names unless a
 `wasmbind:"name"` tag supplies a valid identifier. The `wasmbind:"-"` tag
 explicitly excludes a field. JSON tags have no binding meaning.
+
+A package doc comment may opt into `//wasmbind:naming camelCase`. The policy
+changes record fields, unnamed exports (`//wasmbind:export`), imported method
+names, and enum members. Acronyms retain word boundaries: `HTTPServer` becomes
+`httpServer` and `URL` becomes `url`. Type names retain their explicit spelling.
+Named export directives and field tags are exact overrides. Import methods may
+also use `//wasmbind:export name` in their method doc comment. Apply collision
+and reserved-name checks after naming; never append suffixes to API names.
+
+`//wasmbind:nonnull` supplements export on functions and resource methods with a
+top-level supported pointer or resource result. An error remains an error;
+`(nil,nil)` or a nil-only result rejects with bridge code `contract`. Defaults
+remain nullable. The contract changes only the top-level result, not arguments
+or nested pointers, and does not manufacture resource handles.
+
+Annotated scalar and enum types must have a supported basic underlying type.
+Enums support string, bool, and integer values. Collect only exported constants
+with exactly that defined Go type, retain aliases, and reject enums without any
+such constants. The frozen JS object contains each constant under its selected
+name. Unvalidated enums remain open primitive aliases in TypeScript; only
+validated enums use a finite union. Validate inputs and outputs on the Go side;
+unknown enum values reject with `argument`. Deduplicate Go switch cases for
+constant aliases. Reject invalid UTF-8 string constants and `int`/`uint`
+constants not exactly representable as JS numbers. `int64`/`uint64` enum objects
+and declarations use bigint literals, including the signed minimum.
+
+A scalar validator must be a public nongeneric `func(T) error` in the input
+package, where T is exactly the annotated scalar. It checks both decoded inputs
+and returned values. Validation errors retain Go error semantics; panics use
+the bridge's panic handling. The ABI backend rejects Go scalar validators:
+application code cannot execute during ABI submission. Pure enum validation,
+named scalar aliases without validators, naming, and non-null contracts work
+with both backends.
 
 All exported calls are asynchronous. An optional first context.Context parameter
 is supplied by the bridge and is absent from the JS argument list. Only these
@@ -298,8 +336,11 @@ wasmbind check [-tags list] package
 ```
 
 check validates the API and emits diagnostics without writing files. generate
-writes a standalone main package to go-out, and bindings.js, bindings.d.ts, and
-bindings.json to out. build performs generation, runs go build with js/wasm,
+writes a standalone main package to go-out, and bindings.js, bindings.d.ts,
+bindings.json, and API.md to out. The API reference and readable declarations
+share the validated schema, including field/import-method documentation and
+identifier-aware generated-name substitutions. Consolidate load options in one
+interface and preserve source parameter names with safe local disambiguation. build performs generation, runs go build with js/wasm,
 and adds module.wasm, wasm_exec.js, and its ES-module runtime adapter to out.
 The generated main must reside inside the consumer's module and outside the
 input package; reject paths that violate internal-package visibility or create

@@ -267,10 +267,12 @@ func owned(goOut, out string) (*schema.Manifest, error) {
 	}
 	return &m, nil
 }
-func bytesMarker(data []byte) bool { return strings.HasPrefix(string(data), "// "+schema.Marker) }
+func bytesMarker(data []byte) bool {
+	return strings.HasPrefix(string(data), "// "+schema.Marker) || strings.HasPrefix(string(data), "<!-- "+schema.Marker+" -->")
+}
 func allowed(name string) bool {
 	switch name {
-	case "main.go", "bindings.js", "bindings.d.ts", "runtime.js", "wasm_exec.js", "module.wasm":
+	case "API.md", "main.go", "bindings.js", "bindings.d.ts", "runtime.js", "wasm_exec.js", "module.wasm":
 		return true
 	}
 	return false

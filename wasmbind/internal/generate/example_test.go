@@ -27,7 +27,7 @@ func ExampleFiles() {
 	}
 	sort.Strings(names)
 	fmt.Println(names)
-	// Output: [bindings.d.ts bindings.js bindings.json main.go]
+	// Output: [API.md bindings.d.ts bindings.js bindings.json main.go]
 }
 
 func ExampleWrite() {

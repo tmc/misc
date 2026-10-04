@@ -56,7 +56,7 @@ func Write(ctx context.Context, opt Options) (string, error) {
 	if json.Unmarshal(data, &manifest) != nil || manifest.Generated != schema.Marker || manifest.Compiler == "" || manifest.BuildIdentity == "" || manifest.SchemaVersion != 1 {
 		return "", fmt.Errorf("pack requires a completed build manifest")
 	}
-	allow := map[string]bool{"bindings.js": true, "bindings.d.ts": true, "runtime.js": true, "wasm_exec.js": true, "module.wasm": true}
+	allow := map[string]bool{"bindings.js": true, "bindings.d.ts": true, "runtime.js": true, "wasm_exec.js": true, "module.wasm": true, "API.md": true}
 	files := map[string][]byte{"bindings.json": data}
 	for name, hash := range manifest.Artifacts {
 		if name == "main.go" {
@@ -87,17 +87,31 @@ func Write(ctx context.Context, opt Options) (string, error) {
 		return "", fmt.Errorf("license must be nonempty and at most one MiB")
 	}
 	files["LICENSE"] = license
-	files["index.js"] = []byte("// " + schema.Marker + "\nexport * from './bindings.js';\nimport {load as open} from './bindings.js';\nexport function load(source = new URL('./module.wasm', import.meta.url), options) {return open(source, options);}\n")
+	files["index.js"] = []byte("// " + schema.Marker + "\nexport * from './bindings.js';\nimport {load as open} from './bindings.js';\nexport function load(source = new URL('./module.wasm', import.meta.url), options) {\n  return open(source, options);\n}\n")
 	optional := "?"
-	if hasImports(manifest) {
+	if hasRequiredImports(manifest) {
 		optional = ""
 	}
-	files["index.d.ts"] = []byte("// " + schema.Marker + "\nexport * from './bindings.js';\nimport type {Module,LoadOptions} from './bindings.js';\nexport function load(source" + optional + ": URL | Response | BufferSource | WebAssembly.Module | undefined, options" + optional + ": LoadOptions): Promise<Module>;\n")
+	files["copy-assets.js"] = []byte("// " + schema.Marker + `
+import {copyFile, mkdir} from 'node:fs/promises';
+import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
+/** Copy browser assets to a directory path or file URL, replacing existing assets. */
+export async function copyAssets(destination) {
+  const directory = destination instanceof URL ? fileURLToPath(destination) : destination;
+  await mkdir(directory, {recursive: true});
+  for (const name of ['module.wasm', 'runtime.js', 'wasm_exec.js']) {
+    await copyFile(new URL(name, import.meta.url), join(directory, name));
+  }
+}
+`)
+	files["copy-assets.d.ts"] = []byte("// " + schema.Marker + "\n/** Copy browser assets to a directory path or file URL, replacing existing assets. Node only. */\nexport function copyAssets(destination: string | URL): Promise<void>;\n")
+	files["index.d.ts"] = []byte("// " + schema.Marker + "\nexport * from './bindings.js';\nimport type {Module, LoadOptions} from './bindings.js';\nexport function load(source" + optional + ": URL | Response | BufferSource | WebAssembly.Module | undefined, options" + optional + ": LoadOptions): Promise<Module>;\n")
 	loadExample := "await load()"
-	if hasImports(manifest) {
+	if hasRequiredImports(manifest) {
 		loadExample = "await load(undefined, {imports})"
 	}
-	files["README.md"] = []byte(fmt.Sprintf("<!-- %s -->\n# %s\n\nBrowser Window and dedicated Worker package.\n\n```js\nimport {load} from '%s';\nconst module = %s;\ntry { /* call the API */ } finally { await module.dispose(); }\n```\n\nPass an explicit URL, Response, BufferSource, or compiled Module to load when a\nbundler handles assets separately. No bundler asset-copy behavior is assumed.\nCancellation is cooperative; use a dedicated Worker for hard termination.\nNode execution and browser-to-native direct UDP are not qualified by packaging.\nThe supplied LICENSE is copied verbatim; dependency licensing remains the\npackage author's responsibility. See bindings.json for compiler and schema\nprovenance. This directory has not been published.\n", schema.Marker, opt.Name, opt.Name, loadExample))
+	files["README.md"] = []byte(fmt.Sprintf("<!-- %s -->\n# %s\n\nBrowser Window and dedicated Worker package.\n\n```js\nimport {load} from '%s';\nconst module = %s;\ntry { /* call the API */ } finally { await module.dispose(); }\n```\n\nPass an explicit URL, Response, BufferSource, or compiled Module to load when a\nbundler handles assets separately. Use the Node-only copyAssets helper after bundling; see [BUNDLING.md](BUNDLING.md).\nSee [API.md](API.md) for the generated API reference.\nCancellation is cooperative; use a dedicated Worker for hard termination.\nNode execution and browser-to-native direct UDP are not qualified by packaging.\nThe supplied LICENSE is copied verbatim; dependency licensing remains the\npackage author's responsibility. See bindings.json for compiler and schema\nprovenance. This directory has not been published.\n", schema.Marker, opt.Name, opt.Name, loadExample))
 	if opt.ReadmeFile != "" {
 		data, err := regular(opt.ReadmeFile)
 		if err != nil {
@@ -107,25 +121,53 @@ func Write(ctx context.Context, opt Options) (string, error) {
 			return "", fmt.Errorf("README exceeds one MiB")
 		}
 		files["README.md"] = append([]byte("<!-- "+schema.Marker+" -->\n"), data...)
+		files["README.md"] = append(files["README.md"], []byte("\n\n[API reference](API.md) | [Bundling](BUNDLING.md)\n")...)
 	}
 	provenance, _ := json.MarshalIndent(map[string]any{"generated": schema.Marker, "generator": manifest.GeneratorVersion, "compiler": manifest.Compiler, "fingerprint": manifest.Fingerprint, "buildIdentity": manifest.BuildIdentity, "typescriptMinTested": manifest.TypeScriptMinTested, "features": manifest.Features, "backend": manifest.Backend, "inputArtifactHashes": manifest.Artifacts}, "", "  ")
 	files["provenance.json"] = append(provenance, '\n')
+	files["BUNDLING.md"] = []byte(fmt.Sprintf(`<!-- %s -->
+# Bundle browser consumers
+
+The package entry point loads module.wasm beside the executing ES module.
+For an esbuild bundle, copy the browser assets beside the output file:
+
+~~~js
+// build.mjs (Node)
+import {build} from 'esbuild';
+import {copyAssets} from '%s/copy-assets';
+
+await build({entryPoints: ['app.js'], outfile: 'public/app.js',
+  bundle: true, format: 'esm', platform: 'browser', target: 'es2022'});
+await copyAssets('public');
+~~~
+
+Then call the package's load() in app.js. Packages with required imports use
+load(undefined, {imports}). Serve .wasm as application/wasm. Dedicated Worker
+bundles use the same layout. copyAssets replaces module.wasm, runtime.js, and
+wasm_exec.js in the chosen directory; use a directory owned by this build.
+One directory supports one package's default Wasm URL. For multiple packages,
+use separate output directories or pass each package an explicit asset URL.
+
+Other bundlers should use their asset loader to obtain a URL or use copyAssets
+with an ES module output layout. Only the esbuild layout is covered by the
+package browser qualification suite.
+`, schema.Marker, opt.Name))
 	var names []string
 	for name := range files {
 		names = append(names, name)
 	}
 	names = append(names, "package.json")
 	sort.Strings(names)
-	pkg, _ := json.MarshalIndent(map[string]any{"name": opt.Name, "version": opt.Version, "type": "module", "license": "SEE LICENSE IN LICENSE", "files": names, "exports": map[string]any{".": map[string]string{"types": "./index.d.ts", "import": "./index.js"}, "./module.wasm": "./module.wasm", "./bindings.json": "./bindings.json"}}, "", "  ")
+	pkg, _ := json.MarshalIndent(map[string]any{"name": opt.Name, "version": opt.Version, "type": "module", "license": "SEE LICENSE IN LICENSE", "files": names, "exports": map[string]any{".": map[string]string{"types": "./index.d.ts", "import": "./index.js"}, "./module.wasm": "./module.wasm", "./bindings.json": "./bindings.json", "./API.md": "./API.md", "./copy-assets": map[string]string{"types": "./copy-assets.d.ts", "node": "./copy-assets.js"}}}, "", "  ")
 	files["package.json"] = append(pkg, '\n')
 	if err := publish(ctx, out, files); err != nil {
 		return "", err
 	}
 	return filepath.Join(out, "package-manifest.json"), nil
 }
-func hasImports(m schema.Manifest) bool {
-	for _, f := range m.Features {
-		if f == "imports" {
+func hasRequiredImports(m schema.Manifest) bool {
+	for _, d := range m.Declarations {
+		if d.Kind == "imports" && !d.Optional {
 			return true
 		}
 	}
