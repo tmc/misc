@@ -148,7 +148,9 @@ explicitly excludes a field. JSON tags have no binding meaning.
 A package doc comment may opt into `//wasmbind:naming camelCase`. The policy
 changes record fields, unnamed exports (`//wasmbind:export`), imported method
 names, and enum members. Acronyms retain word boundaries: `HTTPServer` becomes
-`httpServer` and `URL` becomes `url`. Type names retain their explicit spelling.
+`httpServer` and `URL` becomes `url`. An identifier consisting entirely of
+an acronym and a trailing plural `s` is lowered as a whole: `ALPNs` becomes
+`alpns`, `URLs` becomes `urls`, and `IDs` becomes `ids`. Type names retain their explicit spelling.
 Named export directives and field tags are exact overrides. Import methods may
 also use `//wasmbind:export name` in their method doc comment. Apply collision
 and reserved-name checks after naming; never append suffixes to API names.

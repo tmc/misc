@@ -66,3 +66,24 @@ func(*Stream)Close(){}
 		}
 	}
 }
+
+func TestConcurrentStreamNameConflict(t *testing.T) {
+	path := fixture(t, `package fixture
+import "context"
+//wasmbind:resource Stream
+//wasmbind:concurrent
+type Stream struct{}
+//wasmbind:read
+func(*Stream)Read(context.Context,[]byte)(int,error){return 0,nil}
+//wasmbind:cancelread
+func(*Stream)CancelRead()error{return nil}
+//wasmbind:export readable
+func(*Stream)Readable(){}
+//wasmbind:close
+func(*Stream)Close(){}
+`)
+	_, err := LoadOptions(context.Background(), path, "", "streams", "syscalljs")
+	if err == nil || !strings.Contains(err.Error(), "ordinary method conflicts") {
+		t.Fatalf("readable collision: %v", err)
+	}
+}

@@ -247,7 +247,7 @@ func (l *loader) finishExtensions() error {
 			return fmt.Errorf("%s: %s: streams and events cannot share one resource", d.Position, d.GoName)
 		}
 		for _, c := range l.api.Calls {
-			if c.Receiver == d.Name && c.Op == "" && ((streams && !d.Concurrent) || (m["next"] != nil && (c.Name == "next" || c.Name == "return" || c.Name == "throw"))) {
+			if c.Receiver == d.Name && c.Op == "" && ((streams && !d.Concurrent) || (m["read"] != nil && c.Name == "readable") || (m["write"] != nil && c.Name == "writable") || (m["next"] != nil && (c.Name == "next" || c.Name == "return" || c.Name == "throw"))) {
 				return fmt.Errorf("%s: %s: ordinary method conflicts with resource extension", c.Position, c.GoName)
 			}
 		}

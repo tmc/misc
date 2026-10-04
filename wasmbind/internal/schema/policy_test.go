@@ -106,3 +106,21 @@ func TestUnusedImportsFeature(t *testing.T) {
 		t.Fatalf("unused imports feature: %v", err)
 	}
 }
+
+func TestMemberName(t *testing.T) {
+	tests := []struct{ input, want string }{
+		{"HTTPServer", "httpServer"}, {"URL", "url"}, {"ALPNs", "alpns"}, {"URLs", "urls"}, {"IDs", "ids"}, {"RelayURLs", "relayURLs"}, {"IDString", "idString"}, {"ALPNsAvailable", "alpNsAvailable"}, {"Name", "name"}, {"X", "x"}, {"S", "s"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			l := &loader{api: &API{Manifest: Manifest{Naming: "camelCase"}}}
+			if got := l.memberName(tt.input); got != tt.want {
+				t.Fatalf("memberName(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+			l.api.Naming = ""
+			if got := l.memberName(tt.input); got != tt.input {
+				t.Fatalf("default naming changed %q to %q", tt.input, got)
+			}
+		})
+	}
+}

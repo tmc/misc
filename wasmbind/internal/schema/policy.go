@@ -14,6 +14,7 @@ func hasDirective(ds map[string]string, name string) bool { _, ok := ds[name]; r
 
 // memberName lowers the first word, preserving the boundary between an acronym
 // and the next word: HTTPServer becomes httpServer and URL becomes url.
+// A plural acronym such as URLs becomes urls.
 func (l *loader) memberName(name string) string {
 	if l.api.Naming != "camelCase" {
 		return name
@@ -23,7 +24,7 @@ func (l *loader) memberName(name string) string {
 	for n < len(r) && unicode.IsUpper(r[n]) {
 		n++
 	}
-	if n > 1 && n < len(r) && unicode.IsLower(r[n]) {
+	if n > 1 && n < len(r) && unicode.IsLower(r[n]) && !(n == len(r)-1 && r[n] == 's') {
 		n--
 	}
 	for i := 0; i < n; i++ {
