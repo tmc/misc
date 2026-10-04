@@ -32,6 +32,8 @@ func parseFeatures(s string) (map[string]bool, []string, error) {
 }
 func knownDirective(k string) bool {
 	switch k {
+	case "brand":
+		return true
 	case "export", "record", "resource", "close", "read", "write", "finish", "cancelread", "cancelwrite", "next", "interrupt", "imports", "init", "error", "nonnull", "scalar", "enum", "validate", "optional", "naming", "concurrent":
 		return true
 	}

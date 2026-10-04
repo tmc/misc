@@ -224,7 +224,7 @@ follow their scalar representation. Go wasm uses 64-bit int and uint. Returned
 int and uint values that cannot be represented exactly as a JS number are
 rejected; lossless integer APIs should use int64 or uint64. A nil slice maps to an empty array or empty
 Uint8Array; only supported pointer types use null. Undefined is not a substitute
-for null. Record decoding rejects missing and unknown enumerable own fields.
+for null. Record decoding rejects missing required and unknown enumerable own fields.
 
 Converters enforce types on both sides; TypeScript declarations are not runtime
 validation. Reject malformed records, cycles, detached buffers, and invalid
@@ -447,3 +447,40 @@ partial reads, EOF, ownership, and backpressure require explicit semantics.
 There is no initial throughput, bundle-size, zero-copy, or Rust-equivalence
 claim. Measure call overhead, byte-copy cost, startup time, and bundle size
 against hand-written syscall/js adapters before making performance claims.
+
+### Optional input fields and constant defaults
+
+A copied record field may use `wasmbind:"name,optional"`. The name may be
+empty to use the package naming policy. Optional applies to input records only;
+outputs contain every declared field. The generated `RecordInput` type describes
+input records, including nested inputs. `Record` remains the complete output type.
+
+An omitted optional field uses the Go zero value. `wasmbinddefault:"7"` supplies
+an explicit Go constant expression for an optional basic field. The generator
+checks type, range, UTF-8, and JavaScript number representability. String literals
+must be quoted inside the tag, for example `wasmbinddefault:"\"auto\""`.
+Defaults never execute application code. Supplying zero, false, an empty string,
+or null (for a nullable field) overrides a default. Explicit undefined is an
+invalid supplied value. Missing a nested record uses its entire Go zero value;
+supplying `{}` applies that nested record's optional field defaults.
+
+### Validated scalar brands
+
+`//wasmbind:brand` may accompany `//wasmbind:scalar ID` and
+`//wasmbind:validate ValidateID`. It emits a distinct TypeScript scalar brand and
+an asynchronous `module.parseID(value, options?)` constructor. The constructor
+accepts the underlying primitive, invokes the Go validator in an admitted
+coroutine, and returns the validated value. It preserves the spelling and value;
+it does not normalize them. Constructor names participate in export collision
+checks. Brands do not alter the runtime wire representation and are not a
+security boundary: every received scalar still undergoes runtime validation.
+Go validators, including brand constructors, currently require syscalljs.
+
+### Validation paths
+
+Copied argument failures include paths such as `options.items[2].count`.
+JavaScript inspection failures expose the safe message `value inspection failed`,
+with the field path when known. Missing and unknown fields identify the offending
+field. Integer ranges and fixed array lengths identify their required constraint.
+Deferred Go scalar validation captures the argument path before decoding proceeds.
+Existing bridge error codes and redacted application panic behavior remain intact.

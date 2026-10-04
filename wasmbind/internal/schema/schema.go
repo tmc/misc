@@ -53,10 +53,12 @@ type Type struct {
 
 // Field describes an explicitly copied record field.
 type Field struct {
-	Name   string `json:"name"`
-	GoName string `json:"goName"`
-	Type   *Type  `json:"type"`
-	Doc    string `json:"doc,omitempty"`
+	Name     string `json:"name"`
+	GoName   string `json:"goName"`
+	Type     *Type  `json:"type"`
+	Doc      string `json:"doc,omitempty"`
+	Optional bool   `json:"optional,omitempty"`
+	Default  string `json:"default,omitempty"`
 }
 
 // Constant describes one exported typed Go constant in an enum object.
@@ -69,6 +71,7 @@ type Constant struct {
 
 // Decl describes an annotated binding type.
 type Decl struct {
+	Brand         bool             `json:"brand,omitempty"`
 	Concurrent    bool             `json:"concurrent,omitempty"`
 	Value         *Type            `json:"value,omitempty"`
 	Constants     []Constant       `json:"constants,omitempty"`
@@ -97,6 +100,7 @@ type Param struct {
 
 // Call describes one concrete asynchronous export.
 type Call struct {
+	Scalar     string   `json:"scalar,omitempty"`
 	NonNull    bool     `json:"nonNull,omitempty"`
 	Op         string   `json:"op,omitempty"`
 	ID         int      `json:"id"`
@@ -275,6 +279,8 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 				delete(ds, "concurrent")
 				validate, hasValidate := ds["validate"]
 				delete(ds, "validate")
+				brand, hasBrand := ds["brand"]
+				delete(ds, "brand")
 				optional, hasOptional := ds["optional"]
 				delete(ds, "optional")
 				if len(ds) != 1 {
@@ -291,7 +297,7 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 				if _, ok := n.Underlying().(*types.Struct); !ok && ds["imports"] == "" && ds["scalar"] == "" && ds["enum"] == "" {
 					return nil, l.diag(ts.Pos(), obj.Name(), "record and resource annotations require structs")
 				}
-				d := &Decl{Concurrent: hasConcurrent, Validate: validate, Optional: hasOptional, Default: optional, GoName: obj.Name(), Name: obj.Name(), Doc: text, Position: l.position(ts.Pos()), Order: len(a.Declarations)}
+				d := &Decl{Brand: hasBrand, Concurrent: hasConcurrent, Validate: validate, Optional: hasOptional, Default: optional, GoName: obj.Name(), Name: obj.Name(), Doc: text, Position: l.position(ts.Pos()), Order: len(a.Declarations)}
 				if v, ok := ds["scalar"]; ok {
 					d.Kind = "scalar"
 					d.Name = v
@@ -333,6 +339,9 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 				}
 				if (hasValidate && d.Kind != "scalar" && d.Kind != "enum") || (hasOptional && d.Kind != "imports") {
 					return nil, l.diag(ts.Pos(), obj.Name(), "validate requires scalar or enum; optional requires imports")
+				}
+				if hasBrand && (brand != "" || d.Kind != "scalar" || !hasValidate) {
+					return nil, l.diag(ts.Pos(), obj.Name(), "brand takes no arguments and requires a validated scalar")
 				}
 				if d.Kind == "enum" && hasValidate {
 					if validate != "" {
@@ -498,7 +507,7 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 						return nil, err
 					}
 					pn := v.Name()
-					if !ident.MatchString(pn) || pn == "options" {
+					if !ident.MatchString(pn) {
 						pn = fmt.Sprintf("arg%d", i)
 					}
 					if containsDomain(l, t) {
@@ -530,6 +539,30 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 				a.Calls = append(a.Calls, c)
 			}
 		}
+	}
+	for _, d := range a.Declarations {
+		if d.Kind == "record" {
+			obj := p.Types.Scope().Lookup(d.GoName)
+			if err := l.name("types", d.Name+"Input", obj.Pos(), d.GoName); err != nil {
+				return nil, err
+			}
+		}
+		if !d.Brand {
+			continue
+		}
+		obj := p.Types.Scope().Lookup(d.GoName)
+		if err := l.name("types", d.Name+"Brand", obj.Pos(), d.GoName); err != nil {
+			return nil, err
+		}
+		name := "parse" + d.Name
+		if err := l.name("", name, obj.Pos(), d.GoName); err != nil {
+			return nil, err
+		}
+		result, err := l.value(obj.Type(), obj.Pos())
+		if err != nil {
+			return nil, err
+		}
+		a.Calls = append(a.Calls, &Call{Name: name, GoName: d.GoName, Scalar: d.GoName, Context: true, Params: []Param{{Name: "value", Type: d.Value}}, Result: result, Position: d.Position, Doc: "Validates value and returns a " + d.Name + "."})
 	}
 	if err := l.finishExtensions(); err != nil {
 		return nil, err
@@ -689,8 +722,16 @@ func (l *loader) value(t types.Type, pos token.Pos) (*Type, error) {
 					return nil, l.diag(f.Pos(), f.Name(), "private and embedded record fields are unsupported")
 				}
 				name := l.memberName(f.Name())
-				if tag != "" {
-					name = tag
+				parts := strings.Split(tag, ",")
+				optional := false
+				if parts[0] != "" {
+					name = parts[0]
+				}
+				for _, option := range parts[1:] {
+					if option != "optional" || optional {
+						return nil, l.diag(f.Pos(), f.Name(), "unknown or duplicate record field option")
+					}
+					optional = true
 				}
 				if !validName(name) || seen[name] {
 					return nil, l.diag(f.Pos(), f.Name(), "invalid, reserved, or duplicate record field name")
@@ -703,7 +744,17 @@ func (l *loader) value(t types.Type, pos token.Pos) (*Type, error) {
 				if containsResource(ft) || containsDomain(l, ft) {
 					return nil, l.diag(f.Pos(), f.Name(), "records contain copied values, not resources")
 				}
-				d.Fields = append(d.Fields, Field{Name: name, GoName: f.Name(), Type: ft, Doc: l.docs[f.Pos()]})
+				field := Field{Name: name, GoName: f.Name(), Type: ft, Doc: l.docs[f.Pos()], Optional: optional}
+				if value, ok := reflect.StructTag(st.Tag(i)).Lookup("wasmbinddefault"); ok {
+					if !optional {
+						return nil, l.diag(f.Pos(), f.Name(), "default requires optional field")
+					}
+					field.Default, err = l.fieldDefault(f, value)
+					if err != nil {
+						return nil, err
+					}
+				}
+				d.Fields = append(d.Fields, field)
 			}
 			return out, nil
 		}

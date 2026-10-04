@@ -40,7 +40,8 @@ type limits struct {
  MaxValueDepth int `json:"maxValueDepth"`
  MaxElements int `json:"maxElements"`
 }
-type valueBudget struct { bytes, elements int; limits limits }
+type valueBudget struct { path string; bytes, elements int; limits limits }
+func (b *valueBudget) location() string {if b.path=="" {return "value"};return b.path}
 func (b *valueBudget) charge(n, count, depth int) error {
  if depth>b.limits.MaxValueDepth || n>b.limits.MaxValueBytes-b.bytes || count>b.limits.MaxElements-b.elements {return failure("limit","value exceeds bridge limits")}
  b.bytes+=n;b.elements+=count;return nil

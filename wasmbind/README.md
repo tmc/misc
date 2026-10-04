@@ -186,3 +186,10 @@ Additional gates are `npm run test:policies`, `npm run test:extensions`, `npm ru
 in manifests. The relay example now uses stream views, gossip iteration, typed
 errors, and imported HTTP. [Local qualification](VALIDATION.md) records the tested
 combinations and remaining release limits.
+
+Copied record inputs can omit fields tagged `wasmbind:",optional"`. Add
+`wasmbinddefault:"7"` to provide a checked constant default. Generated input types
+are distinct from complete output records, and validation errors identify nested
+argument paths. A validated scalar can opt into `//wasmbind:brand` to receive a
+TypeScript brand and an asynchronous `module.parseType(value)` constructor.
+See [the value contracts](SPEC.md#optional-input-fields-and-constant-defaults).

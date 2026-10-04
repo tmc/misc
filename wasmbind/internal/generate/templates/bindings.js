@@ -36,11 +36,31 @@ function stringBytes(s) {
   }
   return bytes;
 }
-function convert(t, value, output, state, charge, seen = new Set(), depth = 0) {
+function literal(value) { return value.endsWith('n') ? BigInt(value.slice(0,-1)) : JSON.parse(value); }
+function zeroValue(t) {
+ if (t.kind === 'pointer' || t.kind === 'resource') return null;
+ if (t.kind === 'record') return Object.fromEntries((records.get(t.name).fields ?? []).map(f=>[f.name,zeroValue(f.type)]));
+ if (t.kind === 'array') return Array.from({length:t.length},()=>zeroValue(t.elem));
+ if (t.kind === 'slice') return [];
+ if (t.kind === 'bytes') return new Uint8Array();
+ if (t.kind === 'string') return '';
+ if (t.kind === 'bool') return false;
+ if (t.kind === 'int64' || t.kind === 'uint64') return 0n;
+ return 0;
+}
+function convert(t, value, output, state, charge, seen = new Set(), depth = 0, path = 'value') {
+ try { return convertValue(t,value,output,state,charge,seen,depth,path); }
+ catch (error) {
+  const e=conversionError(error);
+  if (e.path === undefined) {e.path=path;e.message=path+': '+e.message;}
+  throw e;
+ }
+}
+function convertValue(t, value, output, state, charge, seen, depth, path) {
   charge(0, 0, depth);
   if (t.kind === 'pointer' || t.kind === 'resource') {
     if (value === null) return null;
-    if (t.kind === 'pointer') return convert(t.elem, value, output, state, charge, seen, depth + 1);
+    if (t.kind === 'pointer') return convert(t.elem, value, output, state, charge, seen, depth + 1, path);
     if (output) {
       if (!Number.isSafeInteger(value) || value <= 0) fail('argument', 'invalid resource handle');
       return state.wrapper(t.name, value);
@@ -74,7 +94,7 @@ function convert(t, value, output, state, charge, seen = new Set(), depth = 0) {
       if (typeof value !== 'bigint') fail('argument', 'expected bigint');
       const min = t.kind === 'int64' ? -(1n << 63n) : 0n;
       const max = t.kind === 'int64' ? (1n << 63n) - 1n : (1n << 64n) - 1n;
-      if (value < min || value > max) fail('argument', 'bigint out of range');
+      if (value < min || value > max) fail('argument', 'expected bigint in range ['+min+', '+max+']');
       return output ? value : value.toString();
     }
     case 'float32': case 'float64':
@@ -90,12 +110,12 @@ function convert(t, value, output, state, charge, seen = new Set(), depth = 0) {
     }
     case 'array': case 'slice': {
       if (!Array.isArray(value)) fail('argument', 'expected Array');
-      if (t.kind === 'array' && value.length !== t.length) fail('argument', 'array has wrong length');
+      if (t.kind === 'array' && value.length !== t.length) fail('argument', 'expected Array of length '+t.length);
       if (seen.has(value)) fail('argument', 'cyclic value');
       charge(0, value.length, depth); seen.add(value);
       try {
         const length = value.length, result = new Array(length);
-        for (let i = 0; i < length; i++) result[i] = convert(t.elem, value[i], output, state, charge, seen, depth + 1);
+        for (let i = 0; i < length; i++) {const itemPath=path+'['+i+']';let item;try{item=value[i]}catch(error){const e=conversionError(error);e.path=itemPath;e.message=itemPath+': '+e.message;throw e;}result[i] = convert(t.elem, item, output, state, charge, seen, depth + 1, itemPath);}
         return result;
       }
       finally { seen.delete(value); }
@@ -107,19 +127,21 @@ function convert(t, value, output, state, charge, seen = new Set(), depth = 0) {
       const fields = records.get(t.name).fields ?? [];
       const keys = Reflect.ownKeys(value).filter(k => Object.prototype.propertyIsEnumerable.call(value, k));
       charge(0, keys.length, depth);
-      if (keys.length !== fields.length || keys.some(k => !fields.some(f => f.name === k))) fail('argument', 'unknown or missing record fields');
+      for (const key of keys) if (!fields.some(f=>f.name===key)) { const e=new WasmBindError('argument','unknown record field');e.path=path+'.'+String(key);e.message=e.path+': '+e.message;throw e; }
       seen.add(value); const result = Object.create(null);
       try {
         for (const f of fields) {
-          if (!Object.prototype.hasOwnProperty.call(value, f.name)) fail('argument', 'missing record field');
-          result[f.name] = convert(f.type, value[f.name], output, state, charge, seen, depth + 1);
+          const present=Object.prototype.propertyIsEnumerable.call(value,f.name);
+          if (!present && (output || !f.optional)) {const e=new WasmBindError('argument','missing required record field');e.path=path+'.'+f.name;e.message=e.path+': '+e.message;throw e;}
+          let v;try {v=present ? value[f.name] : f.default !== undefined ? literal(f.default) : zeroValue(f.type);}catch(error){const e=conversionError(error);e.path=path+'.'+f.name;e.message=e.path+': '+e.message;throw e;}
+          result[f.name] = convert(f.type, v, output, state, charge, seen, depth + 1, path+'.'+f.name);
         }
         return result;
       } finally { seen.delete(value); }
     }
     default: {
       const r = integerRanges[t.kind];
-      if (!r || typeof value !== 'number' || !Number.isInteger(value) || value < r[0] || value > r[1]) fail('argument', 'expected integer in range');
+      if (!r || typeof value !== 'number' || !Number.isInteger(value) || value < r[0] || value > r[1]) fail('argument', r ? 'expected integer in range ['+r[0]+', '+r[1]+']' : 'unsupported integer type');
       return value;
     }
   }
@@ -177,7 +199,7 @@ function makeModule(bridge, limits, imports) {
         if (args.length !== c.params.length) fail('argument', 'wrong argument count');
         if (signal?.aborted) { reject(abortError()); return; }
         const charge = budget(limits);
-        const wire = c.params.map((p, i) => convert(p.type, args[i], false, state, charge));
+        const wire = c.params.map((p, i) => convert(p.type, args[i], false, state, charge, new Set(), 0, p.name));
         id = next++;
         const abort = () => { if (pending.has(id)) { settle(id, abortError()); bridge.cancel(id); } };
         cleanup = () => signal?.removeEventListener('abort', abort);

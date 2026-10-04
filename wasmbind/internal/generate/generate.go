@@ -44,15 +44,18 @@ func Files(a *schema.API) (map[string][]byte, error) {
 			}
 		}
 		var args []string
-		if c.Context {
+		if c.Context && c.Scalar == "" {
 			args = append(args, "i.ctx")
 		}
 		for j, p := range c.Params {
 			n := e.converter(p.Type)
-			fmt.Fprintf(&prep, "a%d,err:=b.decode%d(args.Index(%d),i,budget,0);if err!=nil{return nil,err}\n", j, n, j)
+			fmt.Fprintf(&prep, "budget.path=%q;a%d,err:=b.decode%d(args.Index(%d),i,budget,0);if err!=nil{return nil,err}\n", p.Name, j, n, j)
 			args = append(args, fmt.Sprintf("a%d", j))
 		}
 		target := "api." + c.GoName
+		if c.Scalar != "" {
+			target = "api." + c.Scalar
+		}
 		if c.Receiver != "" {
 			target = "recv." + c.GoName
 		}
@@ -186,7 +189,7 @@ func (e *emitter) converter(t *schema.Type) int {
 			} else {
 				fmt.Fprintf(&dec, "if n!=%d{return out,failure(\"argument\",\"array has wrong length\")}\n", t.Length)
 			}
-			fmt.Fprintf(&dec, "for j:=0;j<n;j++ {x,err:=b.decode%d(v.Index(j),i,q,depth+1);if err!=nil{return out,err};out[j]=x};return out,nil\n", child)
+			fmt.Fprintf(&dec, "for j:=0;j<n;j++ {path:=q.path;q.path=fmt.Sprintf(\"%%s[%%d]\",path,j);x,err:=b.decode%d(v.Index(j),i,q,depth+1);q.path=path;if err!=nil{return out,err};out[j]=x};return out,nil\n", child)
 			fmt.Fprintln(&enc, "if err:=q.charge(0,len(v),depth);err!=nil{return js.Undefined(),err};out:=js.Global().Get(\"Array\").New(len(v))")
 			fmt.Fprintf(&enc, "for j,x:=range v {v,err:=b.encode%d(x,i,q,depth+1);if err!=nil{return js.Undefined(),err};out.SetIndex(j,v)};return out,nil\n", child)
 		case "pointer":
@@ -199,7 +202,7 @@ func (e *emitter) converter(t *schema.Type) int {
 			fmt.Fprintf(&enc, "if err:=q.charge(0,%d,depth);err!=nil{return js.Undefined(),err};out:=js.Global().Get(\"Object\").Call(\"create\",js.Null())\n", len(d.Fields))
 			for j, f := range d.Fields {
 				child := e.converter(f.Type)
-				fmt.Fprintf(&dec, "x%d,err:=b.decode%d(v.Get(%q),i,q,depth+1);if err!=nil{return out,err};out.%s=x%d\n", j, child, f.Name, f.GoName, j)
+				fmt.Fprintf(&dec, "path%d:=q.path;q.path+=%q;x%d,err:=b.decode%d(v.Get(%q),i,q,depth+1);q.path=path%d;if err!=nil{return out,err};out.%s=x%d\n", j, "."+f.Name, j, child, f.Name, j, f.GoName, j)
 				fmt.Fprintf(&enc, "x%d,err:=b.encode%d(v.%s,i,q,depth+1);if err!=nil{return js.Undefined(),err};out.Set(%q,x%d)\n", j, child, f.GoName, f.Name, j)
 			}
 			fmt.Fprintln(&dec, "return out,nil")
@@ -355,7 +358,11 @@ func callSignature(c *schema.Call, imported bool) string {
 			}
 		}
 		used[name] = true
-		params = append(params, name+": "+tsType(p.Type))
+		typ := tsType(p.Type)
+		if !imported {
+			typ = tsInputType(p.Type)
+		}
+		params = append(params, name+": "+typ)
 	}
 	if imported {
 		params = append(params, "options: { readonly signal: AbortSignal }")
@@ -422,7 +429,11 @@ func writeDeclaration(b *bytes.Buffer, a *schema.API, d *schema.Decl) {
 	writeDoc(b, "", doc)
 	switch d.Kind {
 	case "scalar":
-		fmt.Fprintf(b, "export type %s = %s;\n", d.Name, tsType(d.Value))
+		if d.Brand {
+			fmt.Fprintf(b, "declare const %sBrand: unique symbol;\nexport type %s = %s & { readonly [%sBrand]: true };\n", d.Name, d.Name, tsType(d.Value), d.Name)
+		} else {
+			fmt.Fprintf(b, "export type %s = %s;\n", d.Name, tsType(d.Value))
+		}
 		return
 	case "enum":
 		fmt.Fprintf(b, "export const %s: {\n", d.Name)
@@ -477,6 +488,18 @@ func writeDeclaration(b *bytes.Buffer, a *schema.API, d *schema.Decl) {
 		fmt.Fprintln(b, "  dispose(): Promise<void>;")
 	}
 	fmt.Fprintln(b, "}")
+	if d.Kind == "record" {
+		fmt.Fprintf(b, "\nexport interface %sInput {\n", d.Name)
+		for _, f := range d.Fields {
+			optional := ""
+			if f.Optional {
+				optional = "?"
+			}
+			writeDoc(b, "  ", declarationDoc(a, f.Doc))
+			fmt.Fprintf(b, "  %s%s: %s;\n", f.Name, optional, tsInputType(f.Type))
+		}
+		fmt.Fprintln(b, "}")
+	}
 }
 
 func writeOptions(b *bytes.Buffer, a *schema.API) {
@@ -491,7 +514,7 @@ func writeOptions(b *bytes.Buffer, a *schema.API) {
 		}
 		fmt.Fprintf(b, "  imports%s: Imports;\n  maxPendingImports?: number;\n", optional)
 	}
-	fmt.Fprintln(b, "}\n\nexport class WasmBindError extends Error {\n  readonly code: string;\n  constructor(code: string, message: string);\n}")
+	fmt.Fprintln(b, "}\n\nexport class WasmBindError extends Error {\n  readonly code: string;\n  readonly path?: string;\n  constructor(code: string, message: string);\n}")
 }
 
 func declarations(a *schema.API) string {
