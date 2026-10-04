@@ -48,12 +48,14 @@ func (b *valueBudget) charge(n, count, depth int) error {
 }
 type interruptHook struct {fn func()error;started bool;done chan struct{};err error}
 type resource struct {
+ owner *resource;children map[int]*resource
  hooks map[string]*interruptHook;finished map[string]bool;lanes map[string]chan struct{}
  id int; kind string; ptr any; close func()error
  refs sync.WaitGroup
  closing bool; done chan struct{}; err error; tail chan struct{}
 }
 type invocation struct {
+ owner *resource
  id int; ctx context.Context; cancel context.CancelFunc
  deferValidation bool;validations []func()error
  resources map[int]*resource; created map[int]*resource
@@ -74,23 +76,32 @@ func (b *runtimeBridge) hold(i *invocation,id int,kind string)(*resource,error) 
  return r,nil
 }
 func (b *runtimeBridge) register(i *invocation,key,ptr any,kind string,closeFn func()error,hooks map[string]*interruptHook)(js.Value,error) {
- if r:=b.identities[key];r!=nil {if r.closing {return js.Undefined(),failure("closed","resource is closed")};return js.ValueOf(r.id),nil}
+ if r:=b.identities[key];r!=nil {if r.closing {return js.Undefined(),failure("closed","resource is closed")};if err:=b.own(i,r);err!=nil{return js.Undefined(),err};return js.ValueOf(r.id),nil}
  // The pointer is owned by the invocation until committed to JavaScript.
  if b.liveResources>=b.limits.MaxResources || b.nextResource>=9007199254740991 {
   b.identities[key]=&resource{kind:kind,closing:true}
   _=safeClose(closeFn);return js.Undefined(),failure("limit","too many resources")
  }
- b.nextResource++;r:=&resource{id:b.nextResource,kind:kind,ptr:ptr,close:closeFn,done:make(chan struct{}),tail:make(chan struct{}),hooks:hooks,finished:map[string]bool{},lanes:map[string]chan struct{}{}}
+ b.nextResource++;r:=&resource{id:b.nextResource,kind:kind,ptr:ptr,close:closeFn,done:make(chan struct{}),tail:make(chan struct{}),hooks:hooks,children:map[int]*resource{},finished:map[string]bool{},lanes:map[string]chan struct{}{}}
  close(r.tail);b.resources[r.id]=r;b.identities[key]=r;b.liveResources++;i.created[r.id]=r
+ if err:=b.own(i,r);err!=nil{b.closeResource(r);return js.Undefined(),err}
  return js.ValueOf(r.id),nil
+}
+func (b *runtimeBridge) own(i *invocation,r *resource)error {
+ if i.owner==nil{return nil}
+ p:=i.owner
+ if r.owner!=nil && r.owner!=p{return failure("contract","resource already has a different owner")}
+ for a:=p;a!=nil;a=a.owner{if a==r{return failure("contract","resource ownership cycle")}}
+ r.owner=p;p.children[r.id]=r;if p.closing{b.closeResource(r);return failure("closed","owner resource is closed")};return nil
 }
 func safeClose(f func()error)(err error) {defer func(){if recover()!=nil {err=failure("panic","application panicked")}}();return f()}
 func (b *runtimeBridge) closeResource(r *resource) {
  if r.closing {return};r.closing=true
+ for _,c:=range r.children{b.closeResource(c)}
  for _,i:=range b.calls {if i.resources[r.id]!=nil {i.cancel()}}
  b.work.Add(1)
  for _,lane:=range []string{"read","write","event"}{if !r.finished[lane]{b.startHook(r,lane)}}
- go func(){defer b.work.Done();r.refs.Wait();var hookErrors []error;for _,lane:=range []string{"read","write","event"}{if h:=r.hooks[lane];h!=nil && h.started{<-h.done;if h.err!=nil{hookErrors=append(hookErrors,h.err)}}};r.err=errors.Join(append(hookErrors,safeClose(r.close))...);r.ptr=nil;r.close=nil;delete(b.resources,r.id);b.liveResources--;close(r.done)}()
+ go func(){defer b.work.Done();r.refs.Wait();var childErrors []error;for _,c:=range r.children{b.closeResource(c);<-c.done;if c.err!=nil{childErrors=append(childErrors,c.err)}};var hookErrors []error;for _,lane:=range []string{"read","write","event"}{if h:=r.hooks[lane];h!=nil && h.started{<-h.done;if h.err!=nil{hookErrors=append(hookErrors,h.err)}}};r.err=errors.Join(append(append(childErrors,hookErrors...),safeClose(r.close))...);r.ptr=nil;r.close=nil;delete(b.resources,r.id);if r.owner!=nil && !r.owner.closing{delete(r.owner.children,r.id)};b.liveResources--;close(r.done)}()
 }
 func (b *runtimeBridge) finish(id int,err error,value js.Value)(accepted bool) {
  defer func(){if recover()!=nil {accepted=false;if b.complete.Type()==js.TypeFunction{b.complete.Invoke(id,"panic","application panicked",js.Undefined(),nil)}}}()

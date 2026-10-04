@@ -113,6 +113,7 @@ type Param struct {
 type Call struct {
 	Scalar     string   `json:"scalar,omitempty"`
 	Namespace  string   `json:"namespace,omitempty"`
+	Owned      bool     `json:"owned,omitempty"`
 	NonNull    bool     `json:"nonNull,omitempty"`
 	Op         string   `json:"op,omitempty"`
 	ID         int      `json:"id"`
@@ -179,7 +180,7 @@ func (identifierValidator) MatchString(s string) bool {
 	return true
 }
 
-var reserved = map[string]bool{"load": true, "dispose": true, "then": true, "constructor": true, "__proto__": true}
+var reserved = map[string]bool{"load": true, "dispose": true, "then": true, "asyncDispose": true, "constructor": true, "__proto__": true}
 
 func validName(s string) bool { return ident.MatchString(s) && !reserved[s] }
 
@@ -446,6 +447,11 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 			}
 			nonNull, hasNonNull := ds["nonnull"]
 			delete(ds, "nonnull")
+			owned, hasOwned := ds["owned"]
+			delete(ds, "owned")
+			if hasOwned && (owned != "" || len(ds) != 1 || !hasDirective(ds, "export") || sig.Recv() == nil) {
+				return nil, l.diag(fd.Pos(), obj.Name(), "owned requires an exported resource receiver method and takes no argument")
+			}
 			if hasNonNull && (nonNull != "" || len(ds) != 1 || !hasDirective(ds, "export")) {
 				return nil, l.diag(fd.Pos(), obj.Name(), "nonnull requires export and takes no argument")
 			}
@@ -520,7 +526,7 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 					}
 					sig = inst.(*types.Signature)
 				}
-				c := &Call{Namespace: namespace, NonNull: hasNonNull, TypeArgs: goArgs, Name: name, GoName: obj.Name(), Doc: text, Position: l.position(fd.Pos()), Params: []Param{}}
+				c := &Call{Owned: hasOwned, Namespace: namespace, NonNull: hasNonNull, TypeArgs: goArgs, Name: name, GoName: obj.Name(), Doc: text, Position: l.position(fd.Pos()), Params: []Param{}}
 				if resource != nil {
 					c.Receiver = resource.Name
 					c.ReceiverGo = resource.GoName
@@ -577,6 +583,9 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 				}
 				if hasConstructor && (c.Result == nil || c.Result.Kind != "resource" || c.Result.Name != namespace) {
 					return nil, l.diag(fd.Pos(), obj.Name(), "constructor requires a result of its named resource")
+				}
+				if hasOwned && (c.Result == nil || !containsResource(c.Result)) {
+					return nil, l.diag(fd.Pos(), obj.Name(), "owned requires a resource result or collection of resources")
 				}
 				a.Calls = append(a.Calls, c)
 			}

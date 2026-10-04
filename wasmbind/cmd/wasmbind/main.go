@@ -18,10 +18,13 @@ import (
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "usage: wasmbind {check|generate|build|pack|docs|check-examples} [-tags list] [-go-out dir -out dir] package")
+		fmt.Fprintln(stderr, "usage: wasmbind {check|generate|build|pack|docs|check-examples|adapters} [-tags list] [-go-out dir -out dir] package")
 		return 2
 	}
 	command := args[0]
+	if command == "adapters" {
+		return adaptersCommand(args[1:], stdout, stderr)
+	}
 	if command == "docs" || command == "check-examples" {
 		return docsCommand(ctx, command, args[1:], stdout, stderr)
 	}
@@ -131,5 +134,28 @@ func docsCommand(ctx context.Context, command string, args []string, stdout, std
 		return 1
 	}
 	fmt.Fprintln(stdout, "ok")
+	return 0
+}
+
+func adaptersCommand(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("adapters", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	out := fs.String("out", "", "generated bindadapter package directory")
+	if err := fs.Parse(args); err != nil {
+		if err == flag.ErrHelp {
+			return 0
+		}
+		return 2
+	}
+	if *out == "" || fs.NArg() != 0 {
+		fmt.Fprintln(stderr, "adapters requires -out")
+		return 2
+	}
+	path, err := generate.WriteAdapters(*out)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		return 1
+	}
+	fmt.Fprintln(stdout, path)
 	return 0
 }

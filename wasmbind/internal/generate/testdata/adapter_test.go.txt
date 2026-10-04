@@ -1,0 +1,114 @@
+package bindadapter
+
+import("bytes";"fmt";"context";"errors";"io";"iter";"sync/atomic";"testing";"time")
+
+func TestReaderCancel(t *testing.T){
+ read,write:=io.Pipe();defer write.Close();r,err:=ReadCloser(read);if err!=nil{t.Fatal(err)}
+ ctx,cancel:=context.WithCancel(context.Background());done:=make(chan error)
+ go func(){_,err:=r.Read(ctx,make([]byte,1));done<-err}()
+ cancel();select{case err:=<-done:if err==nil{t.Fatal("read not canceled")};case <-time.After(time.Second):t.Fatal("blocked read")}
+ if err:=r.Close();err!=nil{t.Fatal(err)}
+}
+func TestWriterFinish(t *testing.T){
+ var buf bytes.Buffer;var closes atomic.Int32
+ w,err:=NewWriter(func(_ context.Context,p []byte)(int,error){return buf.Write(p)},func(context.Context)error{closes.Add(1);return nil},func()error{closes.Add(1);return nil});if err!=nil{t.Fatal(err)}
+ if n,err:=w.Write(context.Background(),[]byte("ok"));n!=2 || err!=nil{t.Fatal(n,err)}
+ if err:=w.Finish(context.Background());err!=nil{t.Fatal(err)};if err:=w.Close();err!=nil{t.Fatal(err)};if closes.Load()!=1 || buf.String()!="ok"{t.Fatal("finish state")}
+ if _,err:=w.Write(context.Background(),nil);!errors.Is(err,ErrClosed){t.Fatal(err)}
+}
+func TestEventsBusyAndCancel(t *testing.T){
+ source:=make(chan int);e,err:=FromChannel(source,nil);if err!=nil{t.Fatal(err)}
+ ctx,cancel:=context.WithCancel(context.Background());done:=make(chan error)
+ go func(){_,_,err:=e.Next(ctx);done<-err}()
+ for !e.busy.Load(){time.Sleep(time.Millisecond)}
+ if _,_,err:=e.Next(context.Background());!errors.Is(err,ErrBusy){t.Fatal(err)}
+ cancel();select{case err:=<-done:if !errors.Is(err,context.Canceled){t.Fatal(err)};case <-time.After(time.Second):t.Fatal("blocked next")}
+ if err:=e.Close();err!=nil{t.Fatal(err)}
+}
+func TestSeqBackpressure(t *testing.T){
+ var produced atomic.Int32;stopped:=make(chan struct{});closed:=make(chan struct{})
+ var source iter.Seq2[int,error]=func(yield func(int,error)bool){defer close(closed);for n:=0;n<100;n++{produced.Add(1);if !yield(n,nil){return}}}
+ e,err:=FromSeq2(source,func()error{close(stopped);return nil},1);if err!=nil{t.Fatal(err)}
+ for produced.Load()<2{time.Sleep(time.Millisecond)};if produced.Load()!=2{t.Fatal("queue did not block")}
+ if n,ok,err:=e.Next(context.Background());n!=0 || !ok || err!=nil{t.Fatal(n,ok,err)}
+ if err:=e.Close();err!=nil{t.Fatal(err)};select{case <-closed:default:t.Fatal("producer not joined")}
+}
+func TestSeqErrorAndPanic(t *testing.T){
+ want:=errors.New("source failed")
+ for _,source:=range []iter.Seq2[int,error]{func(yield func(int,error)bool){yield(0,want)},func(yield func(int,error)bool){panic("private panic")}}{
+  e,err:=FromSeq2(source,func()error{return nil},0);if err!=nil{t.Fatal(err)}
+  if _,_,err:=e.Next(context.Background());err==nil{t.Fatal("missing error")};if err:=e.Close();err!=nil{t.Fatal(err)}
+ }
+}
+func TestCallbackValidation(t *testing.T){
+ if _,err:=NewReader(nil,nil);err==nil{t.Fatal("reader accepted nil")}
+ if _,err:=NewWriter(nil,nil,nil);err==nil{t.Fatal("writer accepted nil")}
+ if _,err:=NewEvents[int](nil,nil);err==nil{t.Fatal("events accepted nil")}
+ if _,err:=FromSeq[int](nil,nil,-1);err==nil{t.Fatal("sequence accepted nil")}
+}
+func ExampleReadCloser(){r,_:=ReadCloser(io.NopCloser(bytes.NewBufferString("hi")));p:=make([]byte,2);n,_:=r.Read(context.Background(),p);fmt.Println(string(p[:n]));r.Close()
+// Output: hi
+}
+
+func ExampleNewReader(){r,_:=NewReader(func(_ context.Context,p []byte)(int,error){return copy(p,"hi"),io.EOF},func()error{return nil});defer r.Close();p:=make([]byte,2);n,_:=r.Read(context.Background(),p);fmt.Println(string(p[:n]))
+// Output: hi
+}
+func ExampleReader(){r,_:=ReadCloser(io.NopCloser(bytes.NewBufferString("hi")));defer r.Close();p:=make([]byte,2);n,_:=r.Read(context.Background(),p);fmt.Println(string(p[:n]))
+// Output: hi
+}
+func ExampleReader_Read(){r,_:=ReadCloser(io.NopCloser(bytes.NewBufferString("hi")));defer r.Close();p:=make([]byte,2);n,_:=r.Read(context.Background(),p);fmt.Println(n,string(p[:n]))
+// Output: 2 hi
+}
+func ExampleReader_Interrupt(){r,_:=ReadCloser(io.NopCloser(bytes.NewReader(nil)));fmt.Println(r.Interrupt())
+// Output: <nil>
+}
+func ExampleReader_Close(){r,_:=ReadCloser(io.NopCloser(bytes.NewReader(nil)));fmt.Println(r.Close())
+// Output: <nil>
+}
+type exampleSink struct{bytes.Buffer}
+func(*exampleSink)Close()error{return nil}
+func ExampleWriteCloser(){sink:=new(exampleSink);w,_:=WriteCloser(sink);w.Write(context.Background(),[]byte("hi"));w.Finish(context.Background());fmt.Println(sink.String())
+// Output: hi
+}
+func ExampleNewWriter(){sink:=new(exampleSink);w,_:=NewWriter(func(_ context.Context,p []byte)(int,error){return sink.Write(p)},func(context.Context)error{return nil},func()error{return nil});w.Write(context.Background(),[]byte("hi"));w.Finish(context.Background());fmt.Println(sink.String())
+// Output: hi
+}
+func ExampleWriter(){sink:=new(exampleSink);w,_:=WriteCloser(sink);w.Write(context.Background(),[]byte("hi"));w.Finish(context.Background());fmt.Println(sink.String())
+// Output: hi
+}
+func ExampleWriter_Write(){sink:=new(exampleSink);w,_:=WriteCloser(sink);n,err:=w.Write(context.Background(),[]byte("hi"));w.Close();fmt.Println(n,err)
+// Output: 2 <nil>
+}
+func ExampleWriter_Finish(){w,_:=WriteCloser(new(exampleSink));fmt.Println(w.Finish(context.Background()))
+// Output: <nil>
+}
+func ExampleWriter_Interrupt(){w,_:=WriteCloser(new(exampleSink));fmt.Println(w.Interrupt())
+// Output: <nil>
+}
+func ExampleWriter_Close(){w,_:=WriteCloser(new(exampleSink));fmt.Println(w.Close())
+// Output: <nil>
+}
+func ExampleNewEvents(){e,_:=NewEvents(func(context.Context)(int,bool,error){return 7,true,nil},func()error{return nil});defer e.Close();v,ok,_:=e.Next(context.Background());fmt.Println(v,ok)
+// Output: 7 true
+}
+func ExampleEvents(){source:=make(chan int,1);source<-7;close(source);e,_:=FromChannel(source,nil);defer e.Close();v,ok,_:=e.Next(context.Background());fmt.Println(v,ok)
+// Output: 7 true
+}
+func ExampleEvents_Next(){source:=make(chan int,1);source<-7;close(source);e,_:=FromChannel(source,nil);defer e.Close();v,ok,_:=e.Next(context.Background());fmt.Println(v,ok)
+// Output: 7 true
+}
+func ExampleEvents_Interrupt(){e,_:=FromChannel(make(chan int),nil);fmt.Println(e.Interrupt())
+// Output: <nil>
+}
+func ExampleEvents_Close(){e,_:=FromChannel(make(chan int),nil);fmt.Println(e.Close())
+// Output: <nil>
+}
+func ExampleFromChannel(){source:=make(chan int,1);source<-7;close(source);e,_:=FromChannel(source,nil);defer e.Close();v,ok,_:=e.Next(context.Background());fmt.Println(v,ok)
+// Output: 7 true
+}
+func ExampleFromSeq(){e,_:=FromSeq(func(yield func(int)bool){yield(7)},func()error{return nil},0);defer e.Close();v,ok,_:=e.Next(context.Background());fmt.Println(v,ok)
+// Output: 7 true
+}
+func ExampleFromSeq2(){e,_:=FromSeq2(func(yield func(int,error)bool){yield(7,nil)},func()error{return nil},0);defer e.Close();v,ok,_:=e.Next(context.Background());fmt.Println(v,ok)
+// Output: 7 true
+}
