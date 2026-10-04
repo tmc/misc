@@ -193,3 +193,16 @@ are distinct from complete output records, and validation errors identify nested
 argument paths. A validated scalar can opt into `//wasmbind:brand` to receive a
 TypeScript brand and an asynchronous `module.parseType(value)` constructor.
 See [the value contracts](SPEC.md#optional-input-fields-and-constant-defaults).
+
+Generate a navigable reference and check TypeScript consumers with a local compiler:
+
+```sh
+wasmbind docs -bundle ./web/generated -out ./docs/site
+wasmbind check-examples -tsc ./node_modules/.bin/tsc examples/basic.ts
+wasmbind adapters -out ./webapi/bindadapter
+```
+
+JavaScript and `.d.ts` remain the package outputs. See
+[LIFETIME.md](LIFETIME.md) for explicit parent ownership, async disposal, and
+standard-library stream/event source adapters, and
+[EXTENSIONS.md](EXTENSIONS.md#discriminated-records-and-api-placement) for event unions and API organization.

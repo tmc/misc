@@ -8,7 +8,9 @@
     "test:extensions": "node testdata/extensions.mjs",
     "test:abi": "WASMBIND_BACKEND=abi node testdata/browser.mjs",
     "test:pack": "node testdata/pack.mjs",
-    "test:surface": "node testdata/surface.mjs"
+    "test:surface": "node testdata/surface.mjs",
+    "test:values": "node testdata/values.mjs",
+    "test:lifetime": "node testdata/lifetime.mjs"
   },
   "devDependencies": {
     "esbuild": "0.25.12",

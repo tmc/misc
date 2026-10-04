@@ -183,9 +183,13 @@ func (e *emitter) converter(t *schema.Type) int {
 			fmt.Fprintf(&dec, "x,err:=strconv.%s(v.String(),10,%d);if err!=nil{return out,failure(\"argument\",\"bigint out of range\")};return %s(x),nil\n", parse, bits, t.Go)
 			fmt.Fprintf(&enc, "return js.ValueOf(strconv.%s(%s(v),10)),nil\n", formatFn, t.Kind)
 		case "bytes":
+			fmt.Fprintln(&dec, "if v.IsNull(){return nil,nil}")
 			fmt.Fprintf(&dec, "if !v.InstanceOf(js.Global().Get(\"Uint8Array\")){return out,failure(\"argument\",\"expected Uint8Array\")};n:=v.Length();if err:=q.charge(n,n,depth);err!=nil{return out,err};out=make(%s,n);js.CopyBytesToGo(out,v);return out,nil\n", t.Go)
 			fmt.Fprintln(&enc, "if err:=q.charge(len(v),len(v),depth);err!=nil{return js.Undefined(),err};out:=js.Global().Get(\"Uint8Array\").New(len(v));js.CopyBytesToJS(out,v);return out,nil")
 		case "slice", "array":
+			if t.Kind == "slice" {
+				fmt.Fprintln(&dec, "if v.IsNull(){return nil,nil}")
+			}
 			child := e.converter(t.Elem)
 			fmt.Fprintln(&dec, "n:=v.Length();if err:=q.charge(0,n,depth);err!=nil{return out,err}")
 			if t.Kind == "slice" {
@@ -492,25 +496,10 @@ func writeDeclaration(b *bytes.Buffer, a *schema.API, d *schema.Decl) {
 		return
 	}
 	if len(d.Variants) > 0 {
-		fmt.Fprintf(b, "export type %s =\n", d.Name)
-		for _, v := range d.Variants {
-			fmt.Fprintln(b, "  | {")
-			for _, f := range d.Fields {
-				if slices.Contains(v.Fields, f.Name) {
-					value := tsType(f.Type)
-					if f.Name == d.Discriminant {
-						value = v.Value
-						if f.Type.Kind == "int64" || f.Type.Kind == "uint64" {
-							value += "n"
-						}
-					}
-					writeDoc(b, "      ", declarationDoc(a, f.Doc))
-					fmt.Fprintf(b, "      %s: %s;\n", f.Name, value)
-				}
-			}
-			fmt.Fprintln(b, "    }")
+		writeUnionDeclaration(b, a, d, false)
+		if d.Input {
+			writeUnionDeclaration(b, a, d, true)
 		}
-		fmt.Fprintln(b, ";")
 		return
 	}
 	extends := ""
@@ -540,7 +529,7 @@ func writeDeclaration(b *bytes.Buffer, a *schema.API, d *schema.Decl) {
 		fmt.Fprintln(b, "  [Symbol.asyncDispose](): Promise<void>;\n  dispose(): Promise<void>;")
 	}
 	fmt.Fprintln(b, "}")
-	if d.Kind == "record" {
+	if d.Kind == "record" && d.Input {
 		fmt.Fprintf(b, "\nexport interface %sInput {\n", d.Name)
 		for _, f := range d.Fields {
 			optional := ""
@@ -552,6 +541,39 @@ func writeDeclaration(b *bytes.Buffer, a *schema.API, d *schema.Decl) {
 		}
 		fmt.Fprintln(b, "}")
 	}
+}
+
+func writeUnionDeclaration(b *bytes.Buffer, a *schema.API, d *schema.Decl, input bool) {
+	name := d.Name
+	if input {
+		name += "Input"
+	}
+	fmt.Fprintf(b, "export type %s =\n", name)
+	for _, v := range d.Variants {
+		fmt.Fprintln(b, "  | {")
+		for _, f := range d.Fields {
+			if !slices.Contains(v.Fields, f.Name) {
+				continue
+			}
+			value, optional := tsType(f.Type), ""
+			if input {
+				value = tsInputType(f.Type)
+				if f.Optional {
+					optional = "?"
+				}
+			}
+			if f.Name == d.Discriminant {
+				value = v.Value
+				if f.Type.Kind == "int64" || f.Type.Kind == "uint64" {
+					value += "n"
+				}
+			}
+			writeDoc(b, "      ", declarationDoc(a, f.Doc))
+			fmt.Fprintf(b, "      %s%s: %s;\n", f.Name, optional, value)
+		}
+		fmt.Fprintln(b, "    }")
+	}
+	fmt.Fprintln(b, ";")
 }
 
 func writeOptions(b *bytes.Buffer, a *schema.API) {

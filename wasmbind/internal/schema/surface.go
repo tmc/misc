@@ -18,6 +18,9 @@ func (l *loader) unions() error {
 				tag = &d.Fields[i]
 			}
 		}
+		if tag != nil && tag.Optional {
+			return bad("union discriminant cannot be optional")
+		}
 		if tag == nil || d.variantSpec == "" {
 			return bad("union requires a discriminant Go field and variant declarations")
 		}

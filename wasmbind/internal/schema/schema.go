@@ -44,6 +44,7 @@ var Defaults = Limits{30000, 256, 1024, 16 << 20, 64, 1000000}
 
 // Type describes a supported Go value and its JavaScript representation.
 type Type struct {
+	Input  bool   `json:"input,omitempty"`
 	Kind   string `json:"kind"`
 	Name   string `json:"name,omitempty"`
 	Length int64  `json:"length,omitempty"`
@@ -78,6 +79,7 @@ type Variant struct {
 }
 
 type Decl struct {
+	Input         bool      `json:"input,omitempty"`
 	Brand         bool      `json:"brand,omitempty"`
 	Discriminant  string    `json:"discriminant,omitempty"`
 	Variants      []Variant `json:"variants,omitempty"`
@@ -592,12 +594,6 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 		}
 	}
 	for _, d := range a.Declarations {
-		if d.Kind == "record" {
-			obj := p.Types.Scope().Lookup(d.GoName)
-			if err := l.name("types", d.Name+"Input", obj.Pos(), d.GoName); err != nil {
-				return nil, err
-			}
-		}
 		if !d.Brand {
 			continue
 		}
@@ -619,6 +615,9 @@ func LoadOptions(ctx context.Context, pattern, tags, features, backend string) (
 		return nil, err
 	}
 	if err := l.finishExtensions(); err != nil {
+		return nil, err
+	}
+	if err := l.inputs(); err != nil {
 		return nil, err
 	}
 	for _, d := range a.Declarations {

@@ -137,7 +137,7 @@ func abiTag(t *abiType)uint32{if t==nil{return 1};switch t.Kind{case "pointer":r
 func abiDecode(t *abiType,w abiWire,q *valueBudget,depth int)(abiValue,error){
  bad:=failure("argument","invalid wire value");if t==nil{if w.tag==1&&len(w.data)==0{return abiNull(),nil};return abiNull(),bad}
  if err:=q.charge(0,0,depth);err!=nil{return abiNull(),err}
- if (t.Kind=="pointer"||t.Kind=="resource")&&w.tag==1&&len(w.data)==0{return abiNull(),nil}
+ if (t.Kind=="pointer"||t.Kind=="resource"||t.Kind=="bytes"||t.Kind=="slice")&&w.tag==1&&len(w.data)==0{return abiNull(),nil}
  if t.Kind=="pointer"{return abiDecode(t.Elem,w,q,depth+1)}
  if w.tag!=abiTag(t){return abiNull(),bad};p:=w.data
  switch t.Kind{

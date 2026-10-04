@@ -71,3 +71,69 @@ func (l *loader) fieldDefault(f *types.Var, expression string) (string, error) {
 	}
 	return "", l.diag(f.Pos(), f.Name(), "unsupported default constant")
 }
+
+// inputs marks only record shapes whose input differs from their output. The
+// loader has already rejected recursive record graphs before this pass.
+func (l *loader) inputs() error {
+	declarations := make(map[string]*Decl)
+	for _, d := range l.api.Declarations {
+		declarations[d.Name] = d
+	}
+	done := make(map[string]bool)
+	var markType func(*Type) bool
+	var markRecord func(*Decl) bool
+	markRecord = func(d *Decl) bool {
+		if done[d.Name] {
+			return d.Input
+		}
+		done[d.Name] = true
+		for _, f := range d.Fields {
+			changed := markType(f.Type)
+			d.Input = d.Input || f.Optional || changed
+		}
+		return d.Input
+	}
+	markType = func(t *Type) bool {
+		if t == nil {
+			return false
+		}
+		if t.Kind == "record" {
+			d := declarations[t.Name]
+			if d == nil {
+				return false
+			}
+			t.Input = markRecord(d)
+			return t.Input
+		}
+		if t.Elem != nil {
+			return markType(t.Elem)
+		}
+		return false
+	}
+	for _, d := range l.api.Declarations {
+		if d.Kind == "record" {
+			markRecord(d)
+		}
+		for _, c := range d.ImportMethods {
+			for _, p := range c.Params {
+				markType(p.Type)
+			}
+			markType(c.Result)
+		}
+	}
+	for _, c := range l.api.Calls {
+		for _, p := range c.Params {
+			markType(p.Type)
+		}
+		markType(c.Result)
+	}
+	for _, d := range l.api.Declarations {
+		if d.Kind == "record" && d.Input {
+			obj := l.api.Pkg.Types.Scope().Lookup(d.GoName)
+			if err := l.name("types", d.Name+"Input", obj.Pos(), d.GoName); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

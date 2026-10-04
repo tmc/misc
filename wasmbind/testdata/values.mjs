@@ -24,8 +24,10 @@ try {
     manifests[backend] = JSON.parse(await readFile(join(module, "web/bindings.json"), "utf8"));
     await cp(join(root, "testdata/values/client.js"), join(module, "web/client.js"));
     await writeFile(join(module, "web/worker.js"), `import {check} from './client.js';check(${backend === "syscalljs"}).then(passed=>postMessage({passed}),e=>postMessage({error:e.message}));`);
-    const fixture = `import {load,Options,OptionsInput,WasmBindError} from './bindings.js';
-async function test(){const m=await load(new URL('./module.wasm',import.meta.url));const input:OptionsInput={required:'ok',child:{}};const out:Options=await m.echo(input);const complete:boolean=out.enabled;const error=new WasmBindError('argument','invalid');const path:string|undefined=error.path;
+    const fixture = `import {load,Options,OptionsInput,WasmBindError,Event,EventInput,EventKind} from './bindings.js';
+async function test(){const m=await load(new URL('./module.wasm',import.meta.url));const input:OptionsInput={required:'ok',child:{}};const out:Options=await m.echo(input);const complete:boolean=out.enabled;const error=new WasmBindError('argument','invalid');const path:string|undefined=error.path;const eventInput:EventInput={kind:EventKind.message};const event:Event=await m.eventEcho(eventInput);if(event.kind===EventKind.message){const count:number=event.count;}
+// @ts-expect-error inactive variant field
+const invalidEvent:EventInput={kind:EventKind.ready,count:3};
 // @ts-expect-error required field omitted
 await m.echo({});
 // @ts-expect-error unknown field

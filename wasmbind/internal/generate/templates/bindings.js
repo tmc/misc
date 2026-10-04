@@ -38,16 +38,35 @@ function stringBytes(s) {
   return bytes;
 }
 function literal(value) { return value.endsWith('n') ? BigInt(value.slice(0,-1)) : JSON.parse(value); }
-function zeroValue(t) {
- if (t.kind === 'pointer' || t.kind === 'resource') return null;
- if (t.kind === 'record') return Object.fromEntries((records.get(t.name).fields ?? []).map(f=>[f.name,zeroValue(f.type)]));
- if (t.kind === 'array') return Array.from({length:t.length},()=>zeroValue(t.elem));
- if (t.kind === 'slice') return [];
- if (t.kind === 'bytes') return new Uint8Array();
- if (t.kind === 'string') return '';
- if (t.kind === 'bool') return false;
- if (t.kind === 'int64' || t.kind === 'uint64') return 0n;
- return 0;
+// Construct copied Go zero values in wire form, charging before allocation.
+// Keeping the complete wire record also avoids projecting inactive union fields.
+function zeroWire(t, charge, depth, path) {
+ try {
+  charge(0,0,depth);
+  if (t.kind === 'pointer' || t.kind === 'resource') return null;
+  if (t.kind === 'record') {
+   const fields=records.get(t.name).fields ?? [];
+   charge(0,fields.length,depth);
+   const out=Object.create(null);
+   for (const f of fields) out[f.name]=zeroWire(f.type,charge,depth+1,path+'.'+f.name);
+   return out;
+  }
+  if (t.kind === 'array') {
+   charge(0,t.length,depth);
+   const out=new Array(t.length);
+   for(let i=0;i<t.length;i++)out[i]=zeroWire(t.elem,charge,depth+1,path+'['+i+']');
+   return out;
+  }
+  if (t.kind === 'slice' || t.kind === 'bytes') return null;
+  if (t.kind === 'string') return '';
+  if (t.kind === 'bool') return false;
+  if (t.kind === 'int64' || t.kind === 'uint64') return '0';
+  return 0;
+ } catch(error) {
+  const e=conversionError(error);
+  if(e.path===undefined){e.path=path;e.message=path+': '+e.message;}
+  throw e;
+ }
 }
 function convert(t, value, output, state, charge, seen = new Set(), depth = 0, path = 'value') {
  try { return convertValue(t,value,output,state,charge,seen,depth,path); }
@@ -141,11 +160,12 @@ function convertValue(t, value, output, state, charge, seen, depth, path) {
       seen.add(value); const result = Object.create(null);
       try {
         for (const f of fields) {
-          if (!active.includes(f)) {if (!output) result[f.name] = convert(f.type, zeroValue(f.type), false, state, charge, seen, depth + 1, path+'.'+f.name);continue;}
+          if (!active.includes(f)) {if (!output) result[f.name] = zeroWire(f.type,charge,depth+1,path+'.'+f.name);continue;}
           const present=Object.prototype.propertyIsEnumerable.call(value,f.name);
           if (!present && (output || !f.optional)) {const e=new WasmBindError('argument','missing required record field');e.path=path+'.'+f.name;e.message=e.path+': '+e.message;throw e;}
           if (decl.variants && f.name === decl.discriminant) { result[f.name] = discriminant; continue; }
-          let v;try {v=present ? value[f.name] : f.default !== undefined ? literal(f.default) : zeroValue(f.type);}catch(error){const e=conversionError(error);e.path=path+'.'+f.name;e.message=e.path+': '+e.message;throw e;}
+          if (!present && f.default === undefined) {result[f.name]=zeroWire(f.type,charge,depth+1,path+'.'+f.name);continue;}
+          let v;try {v=present ? value[f.name] : literal(f.default);}catch(error){const e=conversionError(error);e.path=path+'.'+f.name;e.message=e.path+': '+e.message;throw e;}
           result[f.name] = convert(f.type, v, output, state, charge, seen, depth + 1, path+'.'+f.name);
         }
         return result;

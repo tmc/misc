@@ -5,7 +5,10 @@ import "github.com/tmc/misc/wasmbind/internal/schema"
 func tsInputType(t *schema.Type) string {
 	switch t.Kind {
 	case "record":
-		return t.Name + "Input"
+		if t.Input {
+			return t.Name + "Input"
+		}
+		return t.Name
 	case "pointer":
 		return tsInputType(t.Elem) + " | null"
 	case "slice", "array":
