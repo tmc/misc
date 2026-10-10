@@ -220,3 +220,21 @@ func TestRecordByteBudgetPreservesAccounting(t *testing.T) {
 		t.Fatalf("bounded run=%+v", s)
 	}
 }
+
+func TestDeterministicTimingAnchorsAndTrailers(t *testing.T) {
+	origin := time.Unix(1000, 0)
+	scheduled := millis(origin)
+	c := &Client{config: Config{StrictMeasurement: true}}
+	m := &Measurement{start: origin, requestStart: origin.Add(200 * time.Millisecond), DispatchedAt: millis(origin.Add(200 * time.Millisecond)), ScheduledAt: &scheduled, first: origin.Add(300 * time.Millisecond), firstOutput: origin.Add(350 * time.Millisecond), last: origin.Add(500 * time.Millisecond), responseEnd: origin.Add(900 * time.Millisecond), reported: Usage{CompletionTokens: 6, completionPresent: true}, counts: &TokenCounts{FirstChunkTokens: intPtr(2)}, Outcome: "success"}
+	c.finishMeasurement(m)
+	if m.FullResponseLatency != 700 || *m.LastContentLatency != 300 || *m.TTFT != 100 || *m.TTFO != 150 || *m.ITL != 50 || *m.FullResponseITL != 150 || *m.ArrivalLag != 200 || *m.ScheduledResponseLatency != 900 {
+		t.Fatalf("anchors=%+v", m)
+	}
+	// A later usage trailer changes full-response metrics alone.
+	m.finalized = false
+	m.responseEnd = origin.Add(1100 * time.Millisecond)
+	c.finishMeasurement(m)
+	if m.FullResponseLatency != 900 || *m.ITL != 50 || *m.LastContentLatency != 300 || *m.FullResponseITL != 200 {
+		t.Fatalf("trailer anchors=%+v", m)
+	}
+}

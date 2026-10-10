@@ -177,8 +177,8 @@ func (c *Client) finishMeasurement(m *Measurement) {
 	if m.ScheduledAt != nil {
 		v := m.DispatchedAt - *m.ScheduledAt
 		m.ArrivalLag = &v
-		v = m.FinishedAt - *m.ScheduledAt
-		m.ScheduledResponseLatency = &v
+		full := m.FinishedAt - *m.ScheduledAt
+		m.ScheduledResponseLatency = &full
 	}
 	if m.trace != nil {
 		v := m.trace.finish(now)
