@@ -3,6 +3,7 @@ package llmperf
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"runtime/debug"
 	"sync"
 	"time"
@@ -10,20 +11,24 @@ import (
 
 // RunOptions configures an explicit process-local measurement window.
 type RunOptions struct {
-	MaxRecordBytes int64  `json:"maxRecordBytes"`
-	WorkerID       string `json:"workerId"`
-	RunID          string `json:"runId"`
-	MaxRecords     int    `json:"maxRecords"`
-	TraceHash      string `json:"traceHash"`
-	Seed           int64  `json:"seed"`
-	Workload       string `json:"workload"`
-	StartDelay     string `json:"startDelay"`
-	Duration       string `json:"duration"`
+	StartedAt      *float64 `json:"startedAt,omitempty"`
+	MaxRecordBytes int64    `json:"maxRecordBytes"`
+	WorkerID       string   `json:"workerId"`
+	RunID          string   `json:"runId"`
+	MaxRecords     int      `json:"maxRecords"`
+	TraceHash      string   `json:"traceHash"`
+	Seed           int64    `json:"seed"`
+	Workload       string   `json:"workload"`
+	StartDelay     string   `json:"startDelay"`
+	Duration       string   `json:"duration"`
 }
 
 // RunSummary contains a versioned manifest and aggregates for requests wholly
 // inside the declared window. Dropped records affect replay, not counters.
+// AggregateError marks incomplete token totals; derived rates are unavailable
+// and export as null in that case, despite the Go numeric fields being zero.
 type RunSummary struct {
+	AggregateError           string                 `json:"aggregate_error,omitempty"`
 	RetainedRecordBytes      int64                  `json:"retained_record_bytes"`
 	RecordLimit              int                    `json:"record_limit"`
 	RecordByteLimit          int64                  `json:"record_byte_limit"`
@@ -76,6 +81,15 @@ type runState struct {
 	inflight   int
 }
 
+func (r *runState) calibrationAllowed() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.summary.active {
+		return fmt.Errorf("calibration requires a closed measurement window")
+	}
+	return nil
+}
+
 func (r *runState) snapshot() (RunSummary, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -98,6 +112,14 @@ func (r *runState) begin(opts RunOptions) error {
 		duration, err = time.ParseDuration(opts.Duration)
 		if err != nil || duration <= 0 {
 			return fmt.Errorf("duration must be positive")
+		}
+	}
+	if opts.StartedAt != nil {
+		if opts.StartDelay != "" || duration == 0 {
+			return fmt.Errorf("startedAt requires duration and excludes startDelay")
+		}
+		if math.IsNaN(*opts.StartedAt) || math.IsInf(*opts.StartedAt, 0) || *opts.StartedAt <= 0 || *opts.StartedAt > 8e12 {
+			return fmt.Errorf("startedAt must be a finite positive Unix millisecond timestamp")
 		}
 	}
 	if opts.MaxRecordBytes == 0 {
@@ -124,6 +146,11 @@ func (r *runState) begin(opts RunOptions) error {
 		return fmt.Errorf("measurement window already active")
 	}
 	now := time.Now().Add(delay)
+	if opts.StartedAt != nil {
+		seconds := int64(*opts.StartedAt / 1000)
+		nanoseconds := int64(math.Round((*opts.StartedAt - float64(seconds)*1000) * 1e6))
+		now = time.Unix(seconds, nanoseconds)
+	}
 	r.maxRecords = opts.MaxRecords
 	r.maxBytes = opts.MaxRecordBytes
 	r.generation++
@@ -182,7 +209,11 @@ func (r *runState) add(m Measurement) {
 			s.GoodRequests++
 		}
 		if m.InputTokens.Value != nil {
-			s.InputTokens += int64(*m.InputTokens.Value)
+			if n := int64(*m.InputTokens.Value); n < 0 || n > math.MaxInt64-s.InputTokens {
+				s.AggregateError = "token aggregate exceeds int64 range"
+			} else {
+				s.InputTokens += n
+			}
 			if m.InputTokens.Source == "estimated" {
 				s.EstimatedInputCounts++
 			}
@@ -190,7 +221,11 @@ func (r *runState) add(m Measurement) {
 			s.MissingInputCounts++
 		}
 		if m.OutputTokens.Value != nil {
-			s.OutputTokens += int64(*m.OutputTokens.Value)
+			if n := int64(*m.OutputTokens.Value); n < 0 || n > math.MaxInt64-s.OutputTokens {
+				s.AggregateError = "token aggregate exceeds int64 range"
+			} else {
+				s.OutputTokens += n
+			}
 			if m.OutputTokens.Source == "estimated" {
 				s.EstimatedOutputCounts++
 			}
@@ -239,7 +274,7 @@ func (r *runState) finish() (RunSummary, error) {
 	s.FinishedAt = millis(now)
 	s.Duration = now.Sub(s.start).Seconds()
 	s.InflightAtEnd = r.inflight
-	if s.Duration > 0 {
+	if s.Duration > 0 && s.AggregateError == "" {
 		s.Goodput = float64(s.GoodRequests) / s.Duration
 		s.OutputThroughput = float64(s.OutputTokens) / s.Duration
 		s.InputThroughput = float64(s.InputTokens) / s.Duration
@@ -250,4 +285,19 @@ func (r *runState) finish() (RunSummary, error) {
 		s.TimelineUnavailable = err.Error()
 	}
 	return *s, nil
+}
+
+// MarshalJSON exports null derived rates when AggregateError marks incomplete
+// token accounting. The retained numeric totals are diagnostic partial totals.
+func (s RunSummary) MarshalJSON() ([]byte, error) {
+	type summary RunSummary
+	if s.AggregateError == "" {
+		return json.Marshal(summary(s))
+	}
+	return json.Marshal(struct {
+		summary
+		Goodput          *float64 `json:"goodput"`
+		InputThroughput  *float64 `json:"input_throughput"`
+		OutputThroughput *float64 `json:"output_throughput"`
+	}{summary: summary(s)})
 }

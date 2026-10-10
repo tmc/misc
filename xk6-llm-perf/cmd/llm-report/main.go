@@ -22,6 +22,7 @@ func main() {
 func run(args []string, out io.Writer) error {
 	flags := flag.NewFlagSet("llm-report", flag.ContinueOnError)
 	input := flags.String("input", "", "versioned run JSON file")
+	records := flags.String("records", "", "optional retained JSONL file to reconcile against run")
 	width := flags.Duration("slice", 10*time.Second, "time slice width")
 	telemetry := flags.String("telemetry", "", "optional benchmark telemetry-window JSON")
 	maxGap := flags.Duration("max-telemetry-gap", time.Second, "maximum admitted telemetry sample gap")
@@ -42,6 +43,24 @@ func run(args []string, out io.Writer) error {
 	}
 	defer f.Close()
 	summary, err := llmperf.ReadRun(f)
+	if err != nil {
+		return err
+	}
+	if *records != "" {
+		f, err := os.Open(*records)
+		if err != nil {
+			return err
+		}
+		rows, err := llmperf.ReadRecords(f)
+		f.Close()
+		if err != nil {
+			return err
+		}
+		if err := llmperf.ReconcileRecords(summary, rows); err != nil {
+			return err
+		}
+	}
+	distributions, err := llmperf.AnalyzeRequests(summary)
 	if err != nil {
 		return err
 	}
@@ -79,10 +98,11 @@ func run(args []string, out io.Writer) error {
 		energy = &result
 	}
 	return json.NewEncoder(out).Encode(struct {
-		SchemaVersion int                    `json:"schema_version"`
-		Timeline      llmperf.Timeline       `json:"timeline"`
-		Slices        []llmperf.SliceSummary `json:"slices"`
-		Energy        *llmperf.EnergySummary `json:"energy,omitempty"`
-		Confidence    *llmperf.Confidence    `json:"latency_mean_confidence,omitempty"`
-	}{1, timeline, slices, energy, confidence})
+		SchemaVersion int                     `json:"schema_version"`
+		Distributions llmperf.RequestAnalysis `json:"request_distributions"`
+		Timeline      llmperf.Timeline        `json:"timeline"`
+		Slices        []llmperf.SliceSummary  `json:"slices"`
+		Energy        *llmperf.EnergySummary  `json:"energy,omitempty"`
+		Confidence    *llmperf.Confidence     `json:"latency_mean_confidence,omitempty"`
+	}{1, distributions, timeline, slices, energy, confidence})
 }

@@ -47,3 +47,16 @@ func TestConfidenceSeedAndRefusals(t *testing.T) {
 		t.Fatal("accepted partial records")
 	}
 }
+
+func TestConfidenceSuccessPopulation(t *testing.T) {
+	run := confidenceFixture()
+	run.Attempts++
+	run.Records = append(run.Records, Measurement{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 2000, FinishedAt: 4000, FullResponseLatency: 2000, Outcome: "timeout"})
+	got, err := LatencyConfidence(run, ConfidenceOptions{Seed: 7, Replicates: 100, Level: .9, Independent: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Samples != 2 || got.Mean != 100 || got.Upper != 100 {
+		t.Fatalf("failed request included: %+v", got)
+	}
+}
