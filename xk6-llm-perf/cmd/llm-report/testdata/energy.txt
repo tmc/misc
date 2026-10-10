@@ -1,0 +1,14 @@
+exec $CLI -input run.json -telemetry telemetry.json -slice 1s
+stdout '"joules":8'
+stdout '"joules_per_output_token":2'
+stdout '"output_tokens_per_joule":0.5'
+! exec $CLI -input run.json -bootstrap 100
+stderr 'independent-observation assumption must be acknowledged'
+! exec $CLI -input run.json -bootstrap 100 -independent-observations
+stderr 'at least two successful observations'
+! exec $CLI -input run.json -telemetry telemetry.json -max-telemetry-gap 100ms
+stderr 'incomplete coverage or sample gap'
+-- run.json --
+{"schema_version":1,"run_id":"fixture","started_at":1000,"finished_at":3000,"duration":2,"attempts":1,"successes":1,"failures":0,"output_tokens":4,"records":[{"schema_version":1,"phase":"measurement","attempted":true,"recorded":true,"endpoint":"http://server/v1","dispatched_at":1500,"finished_at":2000,"outcome":"success","input_tokens":{"value":null,"source":"unavailable"},"output_tokens":{"value":4,"source":"reported"}}]}
+-- telemetry.json --
+{"schema_version":1,"run_id":"fixture","collector":"fixture@1","source_hash":"fixture-sha256","clock_basis":"same-host","clock_uncertainty_ms":0,"endpoint_devices":{"http://server/v1":["GPU-1"]},"devices":[{"uuid":"GPU-1","scope":"whole-device","backend":"fixture","evidence":"injected","started_at":1000,"finished_at":3000,"covered_duration":2,"missing_duration":0,"max_gap":1,"energy_start_millijoules":9007199254740993,"energy_end_millijoules":9007199254748993,"joules":null,"method":"cumulative-counter"}]}

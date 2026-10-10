@@ -27,13 +27,18 @@ type Client struct {
 	http            *http.Client
 	transport       http.RoundTripper
 	limiters        *prefillLimiters
+	requestLimiters *prefillLimiters
 	warmupRemaining int64
 	endpointIndex   uint64
+	measurement     *Measurement
+	run             *runState
+	protocol        string
 }
 
 func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	rt := c.vu.Runtime()
 	ctx := c.vu.Context()
+	c.measurement = nil
 	if c.metrics.samples == nil {
 		if state := c.vu.State(); state != nil {
 			c.metrics.samples = state.Samples
@@ -56,6 +61,13 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 				return rt.ToValue(fmt.Errorf("invalid timeout: %w", err))
 			}
 		}
+		if c.config.UseK6Transport {
+			if state := c.vu.State(); state == nil || state.Transport == nil {
+				return rt.ToValue(fmt.Errorf("k6 transport is unavailable"))
+			} else {
+				c.transport = state.Transport
+			}
+		}
 		c.http = &http.Client{
 			Timeout:   timeout,
 			Transport: c.transport,
@@ -65,6 +77,17 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 		}
 	}
 
+	c.protocol = "openai-chat"
+	if req.Raw != nil {
+		if err := validateRaw(req.Raw); err != nil {
+			return rt.ToValue(err)
+		}
+		c.protocol = req.Raw.Protocol
+		if model, ok := req.Raw.Body["model"].(string); ok {
+			req.Model = model
+		}
+		req.Stream, _ = req.Raw.Body["stream"].(bool)
+	}
 	// Add model from config if not set in request
 	if req.Model == "" {
 		req.Model = c.config.Model
@@ -83,17 +106,32 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 		req.StreamOptions = &StreamOptions{IncludeUsage: true}
 	}
 	inputTokens := c.estimateInputTokens(req.Messages)
+	counts := req.Measurement
+	req.Measurement = nil
+	scheduledAt, cancelAfter := req.ScheduledAt, req.CancelAfter
+	req.ScheduledAt, req.CancelAfter = nil, ""
 
 	// Prepare request body
-	body, err := json.Marshal(req)
+	var payload any = req
+	path := "/chat/completions"
+	if req.Raw != nil {
+		payload, path = req.Raw.Body, req.Raw.Path
+		if _, ok := req.Raw.Body["model"]; !ok && req.Model != "" {
+			req.Raw.Body["model"] = req.Model
+		}
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		c.metrics.RecordMetric("llm_errors", 1)
 		return rt.ToValue(fmt.Errorf("marshal request: %w", err))
 	}
 
+	if len(body) > 16*1024*1024 {
+		return rt.ToValue(fmt.Errorf("request exceeds 16 MiB limit"))
+	}
 	// Create request
 	endpoint := c.nextEndpoint()
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", endpoint+"/chat/completions", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", endpoint+path, bytes.NewReader(body))
 	if err != nil {
 		c.metrics.RecordMetric("llm_errors", 1)
 		return rt.ToValue(fmt.Errorf("create request: %w", err))
@@ -101,7 +139,12 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 
 	// Set headers
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.APIKey))
+	if c.protocol == "anthropic" {
+		httpReq.Header.Set("x-api-key", c.config.APIKey)
+		httpReq.Header.Set("anthropic-version", "2023-06-01")
+	} else {
+		httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.APIKey))
+	}
 	if req.Stream {
 		httpReq.Header.Set("Accept", "text/event-stream")
 	} else {
@@ -110,21 +153,86 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	httpReq, trace := c.traceHTTPRequest(httpReq)
 
 	recordMetrics := c.takeWarmupSample()
-	releasePrefill, err := c.acquirePrefill(ctx, config)
+	phase := c.config.Phase
+	if phase == "" {
+		phase = "measurement"
+	}
+	if !recordMetrics {
+		phase = "warmup"
+	}
+	recordMetrics = recordMetrics && phase == "measurement"
+	m := &Measurement{SchemaVersion: 1, Phase: phase, Endpoint: sanitizedEndpoint(endpoint), Model: req.Model, Outcome: "failure", ErrorStage: "admission", Recorded: recordMetrics, StartedAt: millis(startTime), RTT: float64(c.config.NetworkRTT), RTTSource: c.config.RTTSource, start: startTime, counts: counts, estimatedInput: inputTokens}
+	if m.RTTSource == "" {
+		m.RTTSource = "user_supplied"
+	}
+	m.Protocol = c.protocol
+	m.noInputEstimate = len(req.Tools) > 0 || req.Raw != nil
+	m.noOutputEstimate = c.protocol == "json"
+	for _, msg := range req.Messages {
+		if hasMedia(msg.Content) || len(msg.ToolCalls) > 0 {
+			m.noInputEstimate = true
+		}
+	}
+	m.ScheduledAt = scheduledAt
+	c.measurement = m
+	httpReq, m.trace = attachTrace(httpReq)
+	defer c.finishMeasurement(m)
+	timeout := c.http.Timeout
+	policyCancel := false
+	if cancelAfter != "" {
+		d, _ := time.ParseDuration(cancelAfter)
+		if d < timeout {
+			timeout = d
+			policyCancel = true
+		}
+	}
+	requestCtx, cancel := context.WithTimeout(httpReq.Context(), timeout)
+	defer cancel()
+	httpReq = httpReq.WithContext(requestCtx)
+	queueStart := time.Now()
+	if c.requestLimiters != nil && config.RequestConcurrency > 0 {
+		capConfig := config
+		capConfig.PrefillConcurrency = config.RequestConcurrency
+		release, err := c.requestLimiters.acquire(requestCtx, capConfig)
+		if err != nil {
+			m.AdmissionWait = ms(time.Since(queueStart))
+			return rt.ToValue(fmt.Errorf("request admission: %w", err))
+		}
+		defer release()
+	}
+	releasePrefill, err := c.acquirePrefill(requestCtx, config)
+	m.AdmissionWait = ms(time.Since(queueStart))
 	if err != nil {
 		c.recordMetric(recordMetrics, "llm_errors", 1)
 		return rt.ToValue(err)
 	}
 
 	// Make request
+	m.Attempted = true
+	m.ErrorStage = "transport"
+	m.requestStart = time.Now()
+	m.DispatchedAt = millis(m.requestStart)
+	if c.run != nil {
+		m.runGeneration = c.run.dispatch(m)
+	}
 	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		releasePrefill()
+		if requestCtx.Err() == context.Canceled {
+			m.Outcome = "cancelled"
+		} else if requestCtx.Err() == context.DeadlineExceeded {
+			m.Outcome = "timeout"
+			if policyCancel {
+				m.Outcome = "cancelled"
+			}
+		}
 		c.recordHTTPMetrics(recordMetrics, httpReq, nil, trace, err)
 		c.recordMetric(recordMetrics, "llm_errors", 1)
 		return rt.ToValue(fmt.Errorf("do request: %w", err))
 	}
 	defer resp.Body.Close()
+	m.Status = resp.StatusCode
+	m.ErrorStage = "http"
 
 	if resp.StatusCode != http.StatusOK {
 		releasePrefill()
@@ -135,6 +243,7 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	}
 
 	var completion CompletionResponse
+	m.ErrorStage = "protocol"
 	if req.Stream {
 		completion, err = c.handleStreamingResponse(resp, startTime, inputTokens, releasePrefill, recordMetrics)
 	} else {
@@ -142,13 +251,39 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 		completion, err = c.handleSyncResponse(resp, startTime, inputTokens, recordMetrics)
 	}
 	if err != nil {
+		if requestCtx.Err() == context.Canceled {
+			m.Outcome = "cancelled"
+		} else if requestCtx.Err() == context.DeadlineExceeded {
+			m.Outcome = "timeout"
+			if policyCancel {
+				m.Outcome = "cancelled"
+			}
+		}
 		c.recordHTTPMetrics(recordMetrics, httpReq, resp, trace, err)
 		c.recordMetric(recordMetrics, "llm_errors", 1)
 		return rt.ToValue(err)
 	}
 	c.recordHTTPMetrics(recordMetrics, httpReq, resp, trace, nil)
 
-	return rt.ToValue(completion)
+	m.Outcome, m.ErrorStage = "success", ""
+	c.finishMeasurement(m)
+	completion.Usage = Usage{ReasoningTokens: m.ReasoningTokens, CachedTokens: m.CachedTokens}
+	if m.InputTokens.Value != nil {
+		completion.Usage.PromptTokens = *m.InputTokens.Value
+	}
+	if m.OutputTokens.Value != nil {
+		completion.Usage.CompletionTokens = *m.OutputTokens.Value
+	}
+	completion.Usage.TotalTokens = completion.Usage.PromptTokens + completion.Usage.CompletionTokens
+	if m.ProviderTotalTokens != nil {
+		completion.Usage.TotalTokens = *m.ProviderTotalTokens
+	}
+	completion.Measurement = m
+	value, err := jsonValue(rt, completion)
+	if err != nil {
+		return rt.ToValue(err)
+	}
+	return value
 }
 
 func (c *Client) traceHTTPRequest(req *http.Request) (*http.Request, *httpext.Tracer) {
@@ -249,10 +384,13 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 		lastEvent   time.Time
 		lastChunk   time.Time
 		content     strings.Builder
+		reasoning   strings.Builder
 		chunks      int
 		usage       Usage
 		stats       requestStats
 	)
+	toolCalls := map[int]*ToolCall{}
+	streamBytes := 0
 	prefillReleased := false
 	release := func() {
 		if prefillReleased {
@@ -278,8 +416,18 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 			break
 		}
 
-		var chunk ChatCompletionChunk
-		if err := json.Unmarshal([]byte(event.Data), &chunk); err != nil {
+		var envelope struct {
+			Error json.RawMessage `json:"error"`
+		}
+		if err := json.Unmarshal([]byte(event.Data), &envelope); err == nil && len(envelope.Error) > 0 && string(envelope.Error) != "null" {
+			return result, fmt.Errorf("provider stream error")
+		}
+		streamBytes += len(event.Data)
+		if streamBytes > 16*1024*1024 {
+			return result, fmt.Errorf("stream exceeds 16 MiB response limit")
+		}
+		chunk, terminal, err := decodeChunk([]byte(event.Data), c.protocol)
+		if err != nil {
 			return result, fmt.Errorf("unmarshal chunk: %w", err)
 		}
 
@@ -295,64 +443,113 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 		if chunk.Created != 0 {
 			result.Created = chunk.Created
 		}
+		c.readSpecDecode(chunk.Metrics.SpeculativeDecoding)
+		if len(chunk.Choices) > 0 {
+			c.readSpecDecode(chunk.Choices[0].SpeculativeDecoding)
+		}
 		now := time.Now()
 		if !lastEvent.IsZero() && now.After(lastEvent) {
 			c.recordMetric(recordMetrics, "llm_inter_chunk_latency", (float64(now.Sub(lastEvent)) / float64(time.Millisecond)))
 		}
 		lastEvent = now
-		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
-			text := chunk.Choices[0].Delta.Content
-			if firstToken {
-				stats.TTFT = now.Sub(startTime)
-				c.recordMetric(recordMetrics, "llm_ttft", (float64(stats.TTFT) / float64(time.Millisecond)))
-				c.recordAdjustedMetric(recordMetrics, "llm_ttft_adjusted", stats.TTFT)
-				firstToken = false
+		if len(chunk.Choices) > 0 {
+			delta := chunk.Choices[0].Delta
+			hasContent := delta.Content != "" || delta.ReasoningContent != "" || len(delta.ToolCalls) > 0
+			if hasContent {
+				if c.measurement != nil {
+					c.measurement.content(now, delta.Content != "" || len(delta.ToolCalls) > 0, chunk.Usage)
+				}
+				if firstToken {
+					stats.TTFT = now.Sub(startTime)
+					c.recordMetric(recordMetrics, "llm_ttft", ms(stats.TTFT))
+					c.recordAdjustedMetric(recordMetrics, "llm_ttft_adjusted", stats.TTFT)
+					firstToken = false
+					release()
+				}
+				if (delta.Content != "" || len(delta.ToolCalls) > 0) && firstOutput {
+					stats.TTFO = now.Sub(startTime)
+					c.recordMetric(recordMetrics, "llm_ttfo", ms(stats.TTFO))
+					c.recordAdjustedMetric(recordMetrics, "llm_ttfo_adjusted", stats.TTFO)
+					firstOutput = false
+				}
+				if !lastChunk.IsZero() {
+					stats.MaxTokenLatency = maxDuration(stats.MaxTokenLatency, now.Sub(lastChunk))
+					c.recordMetric(recordMetrics, "llm_token_latency", ms(now.Sub(lastChunk)))
+				}
 				lastChunk = now
-				release()
+				chunks++
+				content.WriteString(delta.Content)
+				reasoning.WriteString(delta.ReasoningContent)
+				if len(delta.ToolCalls) > 0 && c.measurement != nil {
+					c.measurement.noOutputEstimate = true
+				}
+				for _, part := range delta.ToolCalls {
+					if part.Index < 0 || part.Index >= 128 {
+						return result, fmt.Errorf("tool call index exceeds limit")
+					}
+					call := toolCalls[part.Index]
+					if call == nil {
+						call = &ToolCall{Index: part.Index}
+						toolCalls[part.Index] = call
+					}
+					if part.ID != "" {
+						call.ID = part.ID
+					}
+					if part.Type != "" {
+						call.Type = part.Type
+					}
+					call.Function.Name += part.Function.Name
+					call.Function.Arguments += part.Function.Arguments
+					if len(call.Function.Arguments) > 4*1024*1024 {
+						return result, fmt.Errorf("tool arguments exceed 4 MiB")
+					}
+				}
 			}
-			if firstOutput {
-				stats.TTFO = now.Sub(startTime)
-				c.recordMetric(recordMetrics, "llm_ttfo", (float64(stats.TTFO) / float64(time.Millisecond)))
-				c.recordAdjustedMetric(recordMetrics, "llm_ttfo_adjusted", stats.TTFO)
-				firstOutput = false
-			}
-			content.WriteString(text)
-			chunks++
-			if !lastChunk.IsZero() && now.After(lastChunk) {
-				stats.MaxTokenLatency = maxDuration(stats.MaxTokenLatency, now.Sub(lastChunk))
-				c.recordMetric(recordMetrics, "llm_token_latency", (float64(now.Sub(lastChunk)) / float64(time.Millisecond)))
-			}
-			lastChunk = now
-		}
-		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.ReasoningContent != "" && firstToken {
-			stats.TTFT = now.Sub(startTime)
-			c.recordMetric(recordMetrics, "llm_ttft", (float64(stats.TTFT) / float64(time.Millisecond)))
-			c.recordAdjustedMetric(recordMetrics, "llm_ttft_adjusted", stats.TTFT)
-			firstToken = false
-			lastChunk = now
-			release()
 		}
 		for _, choice := range chunk.Choices {
 			if choice.FinishReason != "" {
 				complete = true
+				result.Choices = []Choice{{FinishReason: choice.FinishReason}}
 			}
 		}
-		if chunk.Usage.TotalTokens > 0 || chunk.Usage.PromptTokens > 0 || chunk.Usage.CompletionTokens > 0 {
-			usage = chunk.Usage
+		if chunk.Usage.totalPresent || chunk.Usage.promptPresent || chunk.Usage.completionPresent {
+			usage = mergeUsage(usage, chunk.Usage)
+		}
+		if c.measurement != nil {
+			c.measurement.reported = usage
+			c.measurement.estimatedOutput = c.estimateTokenCount(content.String() + reasoning.String())
+		}
+		if terminal {
+			complete = true
+			break
 		}
 	}
 	if !complete {
 		return result, fmt.Errorf("stream ended before completion marker")
 	}
 
+	finishReason := ""
+	if len(result.Choices) > 0 {
+		finishReason = result.Choices[0].FinishReason
+	}
 	result.Choices = []Choice{{
+		FinishReason: finishReason,
 		Message: Message{
-			Role:    "assistant",
-			Content: content.String(),
+			Role:             "assistant",
+			Content:          content.String(),
+			ReasoningContent: reasoning.String(),
 		},
 	}}
 
+	for i := 0; i < 128; i++ {
+		if call := toolCalls[i]; call != nil {
+			result.Choices[0].Message.ToolCalls = append(result.Choices[0].Message.ToolCalls, *call)
+		}
+	}
 	totalTime := time.Since(startTime)
+	if c.measurement != nil {
+		c.measurement.responseEnd = time.Now()
+	}
 	stats.RequestLatency = totalTime
 	c.recordMetric(recordMetrics, "llm_completion_time", (float64(totalTime) / float64(time.Millisecond)))
 	c.recordMetric(recordMetrics, "llm_request_latency", (float64(totalTime) / float64(time.Millisecond)))
@@ -360,18 +557,22 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 	c.recordMetric(recordMetrics, "llm_requests", 1)
 
 	promptTokens := usage.PromptTokens
-	if promptTokens == 0 {
+	if !usage.promptPresent {
 		promptTokens = inputTokens
 	}
 	outputTokens := usage.CompletionTokens
-	if outputTokens == 0 && usage.TotalTokens > promptTokens {
+	if !usage.completionPresent && usage.TotalTokens > promptTokens {
 		outputTokens = usage.TotalTokens - promptTokens
 	}
-	estimatedOutputTokens := c.estimateTokenCount(content.String())
-	if outputTokens == 0 {
+	estimatedOutputTokens := c.estimateTokenCount(content.String() + reasoning.String())
+	if c.measurement != nil {
+		c.measurement.reported = usage
+		c.measurement.estimatedOutput = estimatedOutputTokens
+	}
+	if !usage.completionPresent && outputTokens == 0 {
 		outputTokens = estimatedOutputTokens
 	}
-	if outputTokens == 0 && chunks > 0 {
+	if !usage.completionPresent && outputTokens == 0 && chunks > 0 {
 		outputTokens = chunks
 	}
 	result.Usage = Usage{PromptTokens: promptTokens, CompletionTokens: outputTokens, TotalTokens: promptTokens + outputTokens}
@@ -383,13 +584,47 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 
 func (c *Client) handleSyncResponse(resp *http.Response, startTime time.Time, inputTokens int, recordMetrics bool) (CompletionResponse, error) {
 	var completion CompletionResponse
-	if err := json.NewDecoder(resp.Body).Decode(&completion); err != nil {
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 16*1024*1024+1))
+	if err != nil {
+		return completion, fmt.Errorf("read response: %w", err)
+	}
+	if len(data) > 16*1024*1024 {
+		return completion, fmt.Errorf("response exceeds 16 MiB limit")
+	}
+	completion, err = decodeResponse(data, c.protocol)
+	if err != nil {
 		return completion, fmt.Errorf("decode response: %w", err)
 	}
 
+	if len(completion.Choices) == 0 && c.protocol != "json" {
+		return completion, fmt.Errorf("response has no choices")
+	}
 	completion.Status = resp.StatusCode
+	c.readSpecDecode(completion.Metrics.SpeculativeDecoding)
+	for _, choice := range completion.Choices {
+		c.readSpecDecode(choice.SpeculativeDecoding)
+	}
+	if c.measurement != nil {
+		c.measurement.reported = completion.Usage
+
+		c.measurement.estimatedOutput = c.estimateCompletionTokens(completion)
+		for _, choice := range completion.Choices {
+			if len(choice.Message.ToolCalls) > 0 || hasMedia(choice.Message.Content) {
+				c.measurement.noOutputEstimate = true
+			}
+		}
+		for _, choice := range completion.Choices {
+			if messageText(choice.Message.Content) != "" || choice.Message.ReasoningContent != "" || len(choice.Message.ToolCalls) > 0 || hasMedia(choice.Message.Content) {
+				c.measurement.last = time.Now()
+				break
+			}
+		}
+	}
 
 	totalTime := time.Since(startTime)
+	if c.measurement != nil {
+		c.measurement.responseEnd = time.Now()
+	}
 	stats := requestStats{RequestLatency: totalTime}
 	c.recordMetric(recordMetrics, "llm_completion_time", (float64(totalTime) / float64(time.Millisecond)))
 	c.recordMetric(recordMetrics, "llm_request_latency", (float64(totalTime) / float64(time.Millisecond)))
@@ -397,7 +632,7 @@ func (c *Client) handleSyncResponse(resp *http.Response, startTime time.Time, in
 	c.recordMetric(recordMetrics, "llm_requests", 1)
 
 	promptTokens := completion.Usage.PromptTokens
-	if promptTokens == 0 {
+	if !completion.Usage.promptPresent {
 		promptTokens = inputTokens
 	}
 	c.recordTokenMetrics(recordMetrics, promptTokens, c.completionTokens(completion), inputTokens, c.estimateCompletionTokens(completion), totalTime)
@@ -409,6 +644,7 @@ func (c *Client) handleSyncResponse(resp *http.Response, startTime time.Time, in
 func newTransport() *http.Transport {
 	return &http.Transport{
 		Proxy:                 http.ProxyFromEnvironment,
+		ForceAttemptHTTP2:     true,
 		MaxIdleConns:          1000,
 		MaxIdleConnsPerHost:   100,
 		MaxConnsPerHost:       0,
@@ -419,6 +655,16 @@ func newTransport() *http.Transport {
 }
 
 func (c *Client) recordTokenMetrics(recordMetrics bool, promptTokens, outputTokens, estimatedPromptTokens, estimatedOutputTokens int, elapsed time.Duration) {
+	if c.measurement != nil {
+		in, out := c.resolveCounts(c.measurement)
+		promptTokens, outputTokens = 0, 0
+		if in.Value != nil {
+			promptTokens = *in.Value
+		}
+		if out.Value != nil {
+			outputTokens = *out.Value
+		}
+	}
 	if promptTokens > 0 {
 		c.recordMetric(recordMetrics, "llm_prompt_tokens", float64(promptTokens))
 		c.recordMetric(recordMetrics, "llm_input_sequence_length", float64(promptTokens))
@@ -426,17 +672,24 @@ func (c *Client) recordTokenMetrics(recordMetrics bool, promptTokens, outputToke
 	if outputTokens > 0 {
 		c.recordMetric(recordMetrics, "llm_completion_tokens", float64(outputTokens))
 		c.recordMetric(recordMetrics, "llm_output_sequence_length", float64(outputTokens))
-		c.recordMetric(recordMetrics, "llm_total_tokens", float64(promptTokens+outputTokens))
+
 		if seconds := elapsed.Seconds(); seconds > 0 {
 			c.recordMetric(recordMetrics, "llm_tokens_per_second", float64(outputTokens)/seconds)
 		}
 	}
-	c.recordDiscrepancy(recordMetrics, "llm_prompt_token_discrepancy", promptTokens, estimatedPromptTokens)
-	c.recordDiscrepancy(recordMetrics, "llm_completion_token_discrepancy", outputTokens, estimatedOutputTokens)
+	if promptTokens+outputTokens > 0 {
+		c.recordMetric(recordMetrics, "llm_total_tokens", float64(promptTokens+outputTokens))
+	}
+	if c.measurement == nil || c.measurement.reported.promptPresent {
+		c.recordDiscrepancy(recordMetrics, "llm_prompt_token_discrepancy", promptTokens, estimatedPromptTokens)
+	}
+	if c.measurement == nil || c.measurement.reported.completionPresent {
+		c.recordDiscrepancy(recordMetrics, "llm_completion_token_discrepancy", outputTokens, estimatedOutputTokens)
+	}
 }
 
 func (c *Client) completionTokens(completion CompletionResponse) int {
-	if completion.Usage.CompletionTokens > 0 {
+	if completion.Usage.completionPresent {
 		return completion.Usage.CompletionTokens
 	}
 	if completion.Usage.TotalTokens > completion.Usage.PromptTokens {
@@ -462,7 +715,8 @@ func (c *Client) recordDiscrepancy(recordMetrics bool, metric string, reported, 
 func (c *Client) estimateCompletionTokens(completion CompletionResponse) int {
 	var text strings.Builder
 	for _, choice := range completion.Choices {
-		text.WriteString(choice.Message.Content)
+		text.WriteString(messageText(choice.Message.Content))
+		text.WriteString(choice.Message.ReasoningContent)
 		text.WriteByte(' ')
 	}
 	return c.estimateTokenCount(text.String())
@@ -471,7 +725,7 @@ func (c *Client) estimateCompletionTokens(completion CompletionResponse) int {
 func (c *Client) estimateInputTokens(messages []Message) int {
 	var text strings.Builder
 	for _, msg := range messages {
-		text.WriteString(msg.Content)
+		text.WriteString(messageText(msg.Content))
 		text.WriteByte(' ')
 	}
 	return c.estimateTokenCount(text.String())
@@ -561,11 +815,17 @@ func maxDuration(a, b time.Duration) time.Duration {
 }
 
 func validateConfig(config Config) error {
+	if len(config.BaseURLs) > 256 {
+		return fmt.Errorf("too many endpoints")
+	}
 	endpoints := normalizedBaseURLs(config)
 	if len(endpoints) == 0 {
 		return fmt.Errorf("baseURL is required")
 	}
 	for i, endpoint := range endpoints {
+		if len(endpoint) > 2048 {
+			return fmt.Errorf("baseURL[%d] exceeds size limit", i)
+		}
 		u, err := url.Parse(endpoint)
 		if err != nil {
 			return fmt.Errorf("parse baseURL[%d]: %w", i, err)
@@ -575,6 +835,9 @@ func validateConfig(config Config) error {
 		}
 		if u.Host == "" {
 			return fmt.Errorf("baseURL[%d] must include host", i)
+		}
+		if u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+			return fmt.Errorf("baseURL[%d] must not contain credentials, query or fragment", i)
 		}
 	}
 	if config.Timeout != "" {
@@ -592,11 +855,26 @@ func validateConfig(config Config) error {
 	if config.NetworkRTT < 0 {
 		return fmt.Errorf("networkRTT must be non-negative")
 	}
+	if config.Phase != "" && config.Phase != "warmup" && config.Phase != "measurement" && config.Phase != "cooldown" {
+		return fmt.Errorf("phase must be warmup, measurement or cooldown")
+	}
+	if config.DiscrepancyTolerance != nil && *config.DiscrepancyTolerance < 0 {
+		return fmt.Errorf("discrepancyTolerance must be non-negative")
+	}
 	if config.TokenMultiplier < 0 {
 		return fmt.Errorf("tokenMultiplier must be non-negative")
 	}
+	if config.RequestConcurrency < 0 || config.RequestConcurrency > 100000 {
+		return fmt.Errorf("requestConcurrency must be between 0 and 100000")
+	}
 	if config.PrefillConcurrency < 0 {
 		return fmt.Errorf("prefillConcurrency must be non-negative")
+	}
+	if config.PrefillConcurrency > 100000 {
+		return fmt.Errorf("prefillConcurrency exceeds 100000")
+	}
+	if len(config.RTTSource) > 256 {
+		return fmt.Errorf("rttSource exceeds size limit")
 	}
 	if config.WarmupCount < 0 {
 		return fmt.Errorf("warmupCount must be non-negative")
@@ -622,6 +900,34 @@ func normalizedBaseURLs(config Config) []string {
 }
 
 func validateCompletionRequest(req CompletionRequest) error {
+	if len(req.Model) > 1024 {
+		return fmt.Errorf("model exceeds size limit")
+	}
+	if req.Measurement != nil && len(req.Measurement.Tokenizer) > 256 {
+		return fmt.Errorf("measurement.tokenizer exceeds size limit")
+	}
+	if req.ScheduledAt != nil && (!finite(*req.ScheduledAt) || *req.ScheduledAt < 0) {
+		return fmt.Errorf("scheduledAt must be a non-negative finite Unix millisecond timestamp")
+	}
+	if req.CancelAfter != "" {
+		d, err := time.ParseDuration(req.CancelAfter)
+		if err != nil || d <= 0 {
+			return fmt.Errorf("cancelAfter must be a positive duration")
+		}
+	}
+	if req.Raw != nil {
+		if req.Measurement != nil {
+			if req.Measurement.Tokenizer == "" {
+				return fmt.Errorf("measurement.tokenizer is required")
+			}
+			for _, n := range []*int{req.Measurement.InputTokens, req.Measurement.OutputTokens, req.Measurement.FirstChunkTokens} {
+				if n != nil && *n < 0 {
+					return fmt.Errorf("measurement counts must be non-negative")
+				}
+			}
+		}
+		return validateRaw(req.Raw)
+	}
 	if strings.TrimSpace(req.Model) == "" {
 		return fmt.Errorf("model is required")
 	}
@@ -632,14 +938,27 @@ func validateCompletionRequest(req CompletionRequest) error {
 		if strings.TrimSpace(msg.Role) == "" {
 			return fmt.Errorf("messages[%d].role is required", i)
 		}
-		if strings.TrimSpace(msg.Content) == "" {
+		if strings.TrimSpace(messageText(msg.Content)) == "" && len(msg.ToolCalls) == 0 && !hasMedia(msg.Content) {
 			return fmt.Errorf("messages[%d].content is required", i)
 		}
+	}
+	if req.Measurement != nil {
+		if req.Measurement.Tokenizer == "" {
+			return fmt.Errorf("measurement.tokenizer is required")
+		}
+		for _, n := range []*int{req.Measurement.InputTokens, req.Measurement.OutputTokens, req.Measurement.FirstChunkTokens} {
+			if n != nil && *n < 0 {
+				return fmt.Errorf("measurement counts must be non-negative")
+			}
+		}
+	}
+	if req.MaxCompletionTokens < 0 {
+		return fmt.Errorf("max_completion_tokens must be non-negative")
 	}
 	if req.MaxTokens < 0 {
 		return fmt.Errorf("max_tokens must be non-negative")
 	}
-	if req.Temperature < 0 {
+	if req.Temperature != nil && *req.Temperature < 0 {
 		return fmt.Errorf("temperature must be non-negative")
 	}
 	return nil

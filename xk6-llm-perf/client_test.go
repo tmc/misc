@@ -99,7 +99,7 @@ func TestClientAPI(t *testing.T) {
 
 			// Setup test VU and client
 			client := setupTestClient(t, ts.URL)
-			samples := make(chan metrics.SampleContainer, 20)
+			samples := make(chan metrics.SampleContainer, 200)
 			client.metrics.samples = samples
 
 			// Create runtime and function call
@@ -272,7 +272,7 @@ func TestClientStreamingLongLine(t *testing.T) {
 		t.Fatalf("export response: %v", err)
 	}
 	if got.Choices[0].Message.Content != longContent {
-		t.Fatalf("content length = %d; want %d", len(got.Choices[0].Message.Content), len(longContent))
+		t.Fatalf("content length = %d; want %d", len(messageText(got.Choices[0].Message.Content)), len(longContent))
 	}
 }
 
@@ -284,7 +284,7 @@ func TestClientStreamingTruncated(t *testing.T) {
 	defer ts.Close()
 
 	client := setupTestClient(t, ts.URL)
-	samples := make(chan metrics.SampleContainer, 20)
+	samples := make(chan metrics.SampleContainer, 200)
 	client.metrics.samples = samples
 
 	rt := client.vu.Runtime()
@@ -477,7 +477,7 @@ func TestClientAdjustedLatencyMetrics(t *testing.T) {
 
 	client := setupTestClient(t, ts.URL)
 	client.config.NetworkRTT = 1
-	samples := make(chan metrics.SampleContainer, 20)
+	samples := make(chan metrics.SampleContainer, 200)
 	client.metrics.samples = samples
 
 	rt := client.vu.Runtime()
@@ -534,7 +534,7 @@ func TestClientWarmupSuppressesMetrics(t *testing.T) {
 	client := setupTestClient(t, ts.URL)
 	client.config.WarmupCount = 1
 	client.warmupRemaining = 1
-	samples := make(chan metrics.SampleContainer, 20)
+	samples := make(chan metrics.SampleContainer, 200)
 	client.metrics.samples = samples
 
 	rt := client.vu.Runtime()

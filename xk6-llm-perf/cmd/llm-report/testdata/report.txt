@@ -1,0 +1,14 @@
+exec $CLI -input run.json -slice 1s
+stdout '"schema_version":1'
+stdout '"completed_attempts":0'
+stdout '"duration":2'
+! exec $CLI -input run.json -slice 0s
+stderr 'slice width must be positive'
+! exec $CLI -input invalid.json
+stderr 'invalid run accounting or schema'
+! exec $CLI
+stderr 'usage: llm-report'
+-- run.json --
+{"schema_version":1,"started_at":1000,"finished_at":3000,"duration":2,"attempts":0,"successes":0,"failures":0,"records":[]}
+-- invalid.json --
+{"schema_version":2,"duration":1}

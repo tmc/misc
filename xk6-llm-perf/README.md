@@ -160,3 +160,114 @@ Run `make check` for race tests, vet, the signed extension build, HTTP/SSE smoke
 checks, and a three-VU trace replay test. See [CONTRIBUTING.md](./CONTRIBUTING.md)
 for the development workflow, [SECURITY.md](./SECURITY.md) for reporting issues,
 and [CHANGELOG.md](./CHANGELOG.md) for changes. Licensed under [MIT](./LICENSE).
+
+### Explicit measurement windows
+
+Use `beginMeasurement` in `setup`, `endMeasurement` in `teardown`, and
+`measurementSummary` in `handleSummary` to export a process-local run. See
+[`examples/phased-load-test.js`](examples/phased-load-test.js) for warmup and
+measurement scenarios. Only measured requests dispatched and finished inside
+the window contribute to run totals. Successful requests contribute token
+totals. Inflight and boundary work is recorded separately; retained records
+are bounded by `maxRecords` (default zero). Dropped records prevent timeline
+replay even when aggregate counters remain available.
+
+The response's `measurement` object preserves unavailable values as `null`.
+`strictMeasurement: true` disables heuristic counts. `measurement` request
+options supply caller-declared counts and a tokenizer label; this does not
+verify vocabulary or chat framing. Reported zero remains distinct from absent
+usage. Admission wait is separate from dispatch-anchored full-response latency.
+TTFT includes reasoning; TTFO starts at visible text or tool output. ITL uses
+last content, excludes trailers, and subtracts first-chunk tokens when known;
+otherwise `first_chunk_source` records `assumed_one`. Non-streaming TTFT and
+ITL remain unavailable. New `llm_slo_compliance` includes measured failures;
+legacy `llm_good_request` retains its successful-request population.
+
+`requestConcurrency` limits complete requests across clients with the same
+endpoint list, model, and ceiling. `prefillConcurrency` releases at first
+content. Timeout includes both admission and the HTTP request. Optional
+`cancelAfter` is a request-local cancellation deadline. `scheduledAt` supplies
+an intended Unix millisecond arrival, without delaying dispatch; the record
+contains dispatch lag and scheduled-to-completion latency. `useK6Transport`
+opts into the VU's transport and k6 network configuration. Completed HTTP
+stages are retained in `http_trace`; missing stages stay null. Network RTT
+subtraction remains a supplied arithmetic adjustment.
+
+### Authored endpoint payloads
+
+`client.request({path, protocol, body})` accepts a bounded authored JSON body.
+Paths are relative to the configured base URL and cannot contain traversal,
+queries, fragments, or another host. The current response adapters are
+`openai-chat`, `openai-completions`, `openai-responses`, `anthropic`, and `json`.
+The JSON adapter returns `body` and leaves generated-token counts unavailable
+unless supplied. Responses and Anthropic adapters normalize text/reasoning and
+usage; they do not yet implement every event or tool lifecycle. Audio uploads,
+asynchronous generation, and full multi-choice streams remain pending.
+
+### Offline replay and GPU energy
+
+Run `go run ./cmd/llm-report -input outputs/run.json -slice 10s` to reconstruct
+request/prefill/decode concurrency and completion-based timeslices. Effective
+concurrency includes idle duration; active concurrency excludes idle duration.
+These are client phase proxies. They do not measure device concurrency.
+Replay refuses partial retained record sets.
+
+An optional `-telemetry window.json` joins a benchmark-specific version-1
+`TelemetryWindow` interchange. This is a consumer adapter format, not an
+assertion that the lib GPU collector has delivered that wire schema. Preserve
+the producer's raw readings and manifest, identified by collector revision and
+source hash. Every observed endpoint needs an explicit device mapping, and
+clock uncertainty must fit `-max-clock-uncertainty` (milliseconds).
+
+Energy admission requires full coverage, matching counter/benchmark boundaries,
+and a sample gap within `-max-telemetry-gap`. Counter resets, missing devices,
+unknown clocks, and MIG allocation of whole-device energy are refused.
+Cumulative millijoules retain integer precision before subtraction. Power
+integration is labeled estimated. Energy ratios use successful output counts
+with source provenance; zero denominators remain unavailable. The consumer
+does not qualify native readings, collection overhead, or cross-tool parity.
+
+[`examples/lib/workload.js`](examples/lib/workload.js) supplies seeded constant,
+Poisson and gamma arrival offsets, dataset validation/sampling, bounded authored
+prefixes, absolute-arrival waits with explicit drop policy, synchronous DAG
+replay, and same-VU conversations. It does not claim exact token budgets from
+text length. `examples/workload-smoke.js` verifies unique seven-row replay across
+three VUs and records scheduled-arrival lag. DAG validation rejects cycles
+before executing any node; failed parents skip descendants.
+
+`LatencyConfidence` provides an optional seeded percentile bootstrap of the
+successful-request mean with explicit independent-observation acknowledgment,
+a retained-record requirement, and a work budget. This assumption can fail for
+concurrent load; request resampling is not run-level convergence evidence.
+
+Dispatch-anchored first-content trends are `llm_dispatch_ttft` and
+`llm_dispatch_ttfo`. Legacy `llm_ttft` and `llm_ttfo` keep their earlier
+local-preparation/admission-inclusive anchors.
+
+The `servermetrics` package parses bounded Prometheus text, validates cumulative
+histogram buckets, retains unavailable/nonfinite readings, and rejects duplicate
+identities. Counter rates require stable labels/types and a declared maximum gap;
+resets remain errors. `Collect` writes serial, bounded JSONL scrape attempts with
+raw exposition hashes, failed observations, missed ticks, and completeness.
+Raw server labels are deliberately retained and may contain server metadata.
+Automatic discovery, normalized window summaries, and a command integration
+remain pending.
+
+Record retention is bounded by both `maxRecords` and `maxRecordBytes` (default
+16 MiB, maximum 32 MiB). Exceeding either budget increases `dropped_records`
+without changing aggregate accounting. Caller tokenizer identity is retained
+as `client_tokenizer`; it does not identify the provider's tokenizer.
+
+`workerId` assigns record identities without adding high-cardinality metric
+tags. `MergeRuns` requires explicit workers, complete records, compatible
+workload/trace identities, and admitted clock mappings. It detects duplicate
+workers/requests and preserves clock receipts. Missing workers require explicit
+partial admission and remain listed in `missing_workers`. Kubernetes/operator
+deployment, asset portability, and live multi-worker qualification remain open.
+
+Makefile builds retain `extension_revision`, `extension_dirty`, and
+`extension_source_hash` in the run manifest. The hash covers local Go sources,
+example JavaScript, module files and Makefile, and is checked again after the
+build. External vocabulary, template and dataset assets still require their
+own retained hashes. A local development version string alone does not pin
+extension source.

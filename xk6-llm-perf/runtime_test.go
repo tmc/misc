@@ -138,7 +138,7 @@ func TestBinaryTraceReplay(t *testing.T) {
 		mu.Lock()
 		defer mu.Unlock()
 		if len(req.Messages) == 1 {
-			seen[req.Messages[0].Content]++
+			seen[messageText(req.Messages[0].Content)]++
 		}
 	})
 	rows := make([]map[string]any, 7)
@@ -175,5 +175,120 @@ func TestBinaryTraceReplay(t *testing.T) {
 	}
 	if len(seen) != len(rows) {
 		t.Fatalf("replayed %d unique rows; want %d", len(seen), len(rows))
+	}
+}
+
+func TestBinaryMeasurement(t *testing.T) {
+	binary := os.Getenv("K6_SMOKE_BINARY")
+	if binary == "" {
+		t.Skip("set K6_SMOKE_BINARY to test measurement exports")
+	}
+	server := completionFixture(t)
+	binary, err := filepath.Abs(binary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	file := filepath.Join(t.TempDir(), "run.json")
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, binary, "run", "--no-color", "examples/measurement-smoke.js")
+	cmd.Env = append(os.Environ(), "ENDPOINT_URL="+server.URL, "RUN_FILE="+file, "K6_NO_USAGE_REPORT=true", "K6_AUTO_EXTENSION_RESOLUTION=false")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("measurement: %v\n%s", err, output)
+	}
+	f, err := os.Open(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	run, err := ReadRun(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Attempts != 6 || run.Successes != 6 || run.Timeline == nil {
+		t.Fatalf("run=%+v", run)
+	}
+	if _, err := TimeSlices(run, 1); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBinaryWorkload(t *testing.T) {
+	binary := os.Getenv("K6_SMOKE_BINARY")
+	if binary == "" {
+		t.Skip("set K6_SMOKE_BINARY to test workload adapters")
+	}
+	var mu sync.Mutex
+	seen := map[string]int{}
+	server := completionFixture(t, func(req CompletionRequest) {
+		mu.Lock()
+		defer mu.Unlock()
+		seen[messageText(req.Messages[0].Content)]++
+	})
+	binary, err := filepath.Abs(binary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, binary, "run", "--no-color", "examples/workload-smoke.js")
+	cmd.Env = append(os.Environ(), "ENDPOINT_URL="+server.URL, "K6_NO_USAGE_REPORT=true", "K6_AUTO_EXTENSION_RESOLUTION=false")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("workload: %v\n%s", err, output)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(seen) != 7 {
+		t.Fatalf("rows=%v", seen)
+	}
+	for i := 0; i < 7; i++ {
+		if seen[fmt.Sprintf("row-%d", i)] != 1 {
+			t.Fatalf("duplicate or missing rows: %v", seen)
+		}
+	}
+}
+
+func TestBinaryPhases(t *testing.T) {
+	binary := os.Getenv("K6_SMOKE_BINARY")
+	if binary == "" {
+		t.Skip("set K6_SMOKE_BINARY to test explicit phases")
+	}
+	server := completionFixture(t)
+	binary, err := filepath.Abs(binary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	script, err := filepath.Abs("examples/phased-load-test.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "outputs"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, binary, "run", "--no-color", script)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "ENDPOINT_URL="+server.URL, "WARMUP_SECONDS=1", "MEASUREMENT_SECONDS=1", "COOLDOWN_SECONDS=1", "K6_NO_USAGE_REPORT=true", "K6_AUTO_EXTENSION_RESOLUTION=false")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("phases: %v\n%s", err, output)
+	}
+	f, err := os.Open(filepath.Join(dir, "outputs/run.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	run, err := ReadRun(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if run.Attempts == 0 || run.Failures != 0 || run.Duration != 1 {
+		t.Fatalf("run=%+v", run)
+	}
+	for _, m := range run.Records {
+		if m.Phase != "measurement" || m.HTTPTrace == nil || m.HTTPTrace.Waiting == nil {
+			t.Fatalf("record=%+v", m)
+		}
 	}
 }
