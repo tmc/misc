@@ -1,0 +1,1 @@
+{"schema_version": 1, "prefix": "<BOS>", "suffix": "", "roles": {"user": {"prefix": "", "suffix": "<EOS>"}}, "generation_prompt": "<tag>"}

@@ -1,0 +1,15 @@
+exec $CLI -tokenizer $VOCAB -tokenizer-sha256 $VOCAB_HASH -model fixture -revision pinned -ids -input text.json
+stdout '"count":11'
+stdout '"ids":\[168,205,204,204,167,32,239,167,130,204,132\]'
+! stdout 'hello world'
+exec $CLI -tokenizer $VOCAB -tokenizer-sha256 $VOCAB_HASH -template $FRAME -template-sha256 $FRAME_HASH -model fixture -revision pinned -ids -input chat.json
+stdout '"count":14'
+stdout '"template_dialect":"llm-role-frame-v1"'
+! exec $CLI -tokenizer $VOCAB -model fixture -revision pinned -input text.json
+stderr 'asset SHA-256 pin is required'
+! exec $CLI -tokenizer $VOCAB -tokenizer-sha256 $VOCAB_HASH -model fixture -revision pinned -input chat.json
+stderr 'chat requires pinned framing'
+-- text.json --
+{"text":"hello world"}
+-- chat.json --
+{"messages":[{"role":"user","content":"hello world"}],"add_generation_prompt":true}

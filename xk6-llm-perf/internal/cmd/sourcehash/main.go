@@ -35,7 +35,7 @@ func run() error {
 		if d.Type()&os.ModeSymlink != 0 {
 			return nil
 		}
-		if path == "go.mod" || path == "go.sum" || path == "Makefile" || strings.HasSuffix(path, ".go") || strings.HasSuffix(path, ".js") {
+		if filepath.Base(path) == "go.mod" || filepath.Base(path) == "go.sum" || path == "Makefile" || strings.HasSuffix(path, ".go") || strings.HasSuffix(path, ".js") {
 			paths = append(paths, path)
 		}
 		return nil

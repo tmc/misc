@@ -1,0 +1,6 @@
+github.com/tmc/lib/hf/hftokenizer v0.0.0-20261010162052-7e9483795cd2 h1:6bVUANL7Q7MnCd5a1ricn/ssYzW7skN0Yd1xWQ1a/1Q=
+github.com/tmc/lib/hf/hftokenizer v0.0.0-20261010162052-7e9483795cd2/go.mod h1:q4wpyYzkzS/05RMJdOvTZ8/jYLEQb9BYOy7ayQeaTiw=
+golang.org/x/tools v0.14.0 h1:jvNa2pY0M4r62jkRQ6RwEZZyPcymeL9XZMLBbV7U2nc=
+golang.org/x/tools v0.14.0/go.mod h1:uYBEerGOWcJyEORxN+Ek8+TT266gXkNlHdJBwexUsBg=
+rsc.io/script v0.0.2 h1:eYoG7A3GFC3z1pRx3A2+s/vZ9LA8cxojHyCvslnj4RI=
+rsc.io/script v0.0.2/go.mod h1:cKBjCtFBBeZ0cbYFRXkRoxP+xGqhArPa9t3VWhtXfzU=
