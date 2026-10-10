@@ -1,0 +1,30 @@
+exec $CLI -config valid.json -validate
+stdout '^configuration valid$'
+! exists outputs
+! exec $CLI -config invalid.json -validate
+stderr 'unknown mode'
+! exec $CLI -config unknown.json -validate
+stderr 'unknown field'
+! exec $CLI -config valid.json
+stderr '\-output is required'
+! exec $CLI -config trailing.json -validate
+stderr 'trailing data'
+
+exec $CLI -scale -config scale.json -validate
+stdout '^configuration valid$'
+! exec $CLI -scale -config bad-scale.json -validate
+stderr 'scale variable must be request or prefill'
+
+
+-- valid.json --
+{"binary":"k6","script":"load.js","mode":"grid","objective":{"name":"llm_requests","stat":"rate"},"max_candidates":1,"max_attempts":3,"min_runs":3,"max_runs":3,"convergence":"cv","tolerance":0.05,"timeout":"1m","max_duration":"5m"}
+-- invalid.json --
+{"binary":"k6","script":"load.js","mode":"unbounded"}
+-- unknown.json --
+{"shell":"execute anything"}
+-- trailing.json --
+{"binary":"k6","script":"load.js","mode":"grid","objective":{"name":"llm_requests","stat":"rate"},"max_candidates":1,"max_attempts":3,"min_runs":3,"max_runs":3,"convergence":"cv","tolerance":0.05,"timeout":"1m","max_duration":"5m"} {}
+-- scale.json --
+{"binary":"k6","script":"scale.js","variable":"request","minimum":1,"maximum":2,"fixed_request":2,"fixed_prefill":2,"workers":2,"windows":4,"sustain_windows":1,"period":"200ms","startup_timeout":"5s","drain_timeout":"100ms","min_completed":2,"max_latency_ms":1000,"max_failure_ratio":0,"max_records":1000}
+-- bad-scale.json --
+{"binary":"k6","script":"scale.js","variable":"unknown"}

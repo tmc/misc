@@ -1,0 +1,20 @@
+{
+  "binary": "./dist/k6",
+  "script": "examples/campaign/global-scale.js",
+  "assets": ["examples/campaign/global-scale.js"],
+  "variable": "request",
+  "minimum": 1,
+  "maximum": 8,
+  "fixed_request": 8,
+  "fixed_prefill": 8,
+  "workers": 2,
+  "windows": 8,
+  "sustain_windows": 2,
+  "period": "5s",
+  "startup_timeout": "10s",
+  "drain_timeout": "3s",
+  "min_completed": 5,
+  "max_latency_ms": 2000,
+  "max_failure_ratio": 0,
+  "max_records": 10000
+}

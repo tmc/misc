@@ -1,0 +1,19 @@
+{
+  "binary": "./dist/k6",
+  "script": "examples/phased-load-test.js",
+  "assets": ["examples/phased-load-test.js"],
+  "mode": "grid",
+  "seed": 17,
+  "dimensions": [{"name": "VUS", "values": ["1", "2", "4"]}],
+  "objective": {"name": "llm_requests", "stat": "rate"},
+  "constraints": [{"metric": {"name": "llm_slo_compliance", "stat": "rate"}, "direction": "ge", "bound": 0.95}],
+  "max_candidates": 3,
+  "max_attempts": 15,
+  "min_runs": 3,
+  "max_runs": 5,
+  "retries": 0,
+  "convergence": "cv",
+  "tolerance": 0.05,
+  "timeout": "2m",
+  "max_duration": "30m"
+}

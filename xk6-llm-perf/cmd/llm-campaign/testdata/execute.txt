@@ -1,0 +1,29 @@
+replace __BINARY__ $K6_HELPER config.json
+env CLI_HELPER=1
+exec $CLI -config config.json -output output
+stdout '2 candidates, best='
+exists output/campaign.json
+grep '"number": 2' output/campaign.json
+! grep '"number": 3' output/campaign.json
+grep '"failed": true' output/campaign.json
+grep '"exit_code": 2' output/campaign.json
+exec $CLI -config config.json -output output
+stdout '2 candidates, best='
+! grep '"number": 3' output/campaign.json
+replace original changed fixture.js
+! exec $CLI -config config.json -output output
+stderr 'configuration or assets differ'
+
+replace __BINARY__ $K6_HELPER scale.json
+! exec $CLI -scale -config scale.json -output scale-output
+stderr 'workers failed startup'
+grep '"stop_reason": "startup_failed"' scale-output/scale.json
+! exec $CLI -scale -config scale.json -output scale-output
+stderr 'scale directory must be new'
+
+-- config.json --
+{"binary":"__BINARY__","script":"fixture.js","mode":"grid","dimensions":[{"name":"LOAD","values":["ok","fail"]}],"objective":{"name":"score","stat":"count"},"max_candidates":2,"max_attempts":4,"min_runs":2,"max_runs":2,"convergence":"cv","tolerance":0,"timeout":"10s","max_duration":"1m"}
+-- fixture.js --
+original
+-- scale.json --
+{"binary":"__BINARY__","script":"fixture.js","variable":"request","minimum":1,"maximum":2,"fixed_request":2,"fixed_prefill":2,"workers":2,"windows":4,"sustain_windows":1,"period":"200ms","startup_timeout":"1s","drain_timeout":"100ms","min_completed":2,"max_latency_ms":1000,"max_failure_ratio":0,"max_records":1000}
