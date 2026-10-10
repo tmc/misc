@@ -1,10 +1,13 @@
 package llmperf
 
 import (
+	"context"
+	"fmt"
 	"math"
 	"time"
 
-	"go.k6.io/k6/metrics"
+	"go.k6.io/k6/v2/js/modules"
+	"go.k6.io/k6/v2/metrics"
 )
 
 // MetricDefinitions holds all metric definitions
@@ -37,12 +40,13 @@ var MetricDefinitions = []struct {
 }
 
 type LLMPerfMetrics struct {
+	vu       modules.VU
 	registry *metrics.Registry
 	samples  chan<- metrics.SampleContainer
 	metrics  map[string]*metrics.Metric
 }
 
-func NewMetrics(registry *metrics.Registry) *LLMPerfMetrics {
+func newMetrics(registry *metrics.Registry) (*LLMPerfMetrics, error) {
 	m := &LLMPerfMetrics{
 		registry: registry,
 		metrics:  make(map[string]*metrics.Metric),
@@ -52,26 +56,44 @@ func NewMetrics(registry *metrics.Registry) *LLMPerfMetrics {
 	for _, def := range MetricDefinitions {
 		metric, err := registry.NewMetric(def.Name, def.Type, def.ValueType)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("register metric %s: %w", def.Name, err)
 		}
 		m.metrics[def.Name] = metric
 	}
 
-	return m
+	return m, nil
 }
 
 func (m *LLMPerfMetrics) RecordMetric(name string, value float64) {
 	if math.IsNaN(value) || math.IsInf(value, 0) {
 		return
 	}
-	if metric, ok := m.metrics[name]; ok && m.samples != nil {
-		m.samples <- metrics.Sample{
+	ctx := context.Background()
+	samples := m.samples
+	tags := m.registry.RootTagSet()
+	var metadata map[string]string
+	if m.vu != nil {
+		state := m.vu.State()
+		if state == nil {
+			return
+		}
+		ctx = m.vu.Context()
+		samples = state.Samples
+		if state.Tags != nil {
+			values := state.Tags.GetCurrentValues()
+			tags = values.Tags
+			metadata = values.Metadata
+		}
+	}
+	if metric, ok := m.metrics[name]; ok && samples != nil {
+		metrics.PushIfNotDone(ctx, samples, metrics.Sample{
 			TimeSeries: metrics.TimeSeries{
 				Metric: metric,
-				Tags:   m.registry.RootTagSet(),
+				Tags:   tags,
 			},
-			Time:  time.Now(),
-			Value: value,
-		}
+			Time:     time.Now(),
+			Value:    value,
+			Metadata: metadata,
+		})
 	}
 }

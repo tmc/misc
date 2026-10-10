@@ -1,29 +1,26 @@
 package llmperf
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
 
 	"github.com/grafana/sobek"
-	"go.k6.io/k6/js/common"
-	"go.k6.io/k6/js/modules"
+	"go.k6.io/k6/v2/js/common"
+	"go.k6.io/k6/v2/js/modules"
 )
 
-func init() {
-	modules.Register("k6/x/llm-perf", new(RootModule))
-}
-
 type (
-	RootModule struct {
+	rootModule struct {
 		limiters      prefillLimiters
 		transport     *http.Transport
 		transportOnce sync.Once
 	}
 
-	ModuleInstance struct {
-		root    *RootModule
+	moduleInstance struct {
+		root    *rootModule
 		vu      modules.VU
 		metrics *LLMPerfMetrics
 		exports *sobek.Object
@@ -31,101 +28,62 @@ type (
 )
 
 var (
-	_ modules.Module   = &RootModule{}
-	_ modules.Instance = &ModuleInstance{}
+	_ modules.Module   = &rootModule{}
+	_ modules.Instance = &moduleInstance{}
 )
 
-func (root *RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
+func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 	rt := vu.Runtime()
+	metricSet, err := newMetrics(vu.InitEnv().Registry)
+	if err != nil {
+		common.Throw(rt, err)
+	}
 
-	mi := &ModuleInstance{
+	mi := &moduleInstance{
 		root:    root,
 		vu:      vu,
-		metrics: NewMetrics(vu.InitEnv().Registry),
+		metrics: metricSet,
 		exports: rt.NewObject(),
 	}
+	mi.metrics.vu = vu
 	if state := vu.State(); state != nil {
 		mi.metrics.samples = state.Samples
 	}
 
-	// Create the Client class
-	clientClass := rt.NewObject()
 	must := func(err error) {
 		if err != nil {
 			common.Throw(rt, err)
 		}
 	}
-
-	// Define constructor function
-	must(clientClass.DefineDataProperty(
-		"constructor",
-		rt.ToValue(func(call sobek.ConstructorCall) *sobek.Object {
-			// Parse config from constructor argument
-			var config Config
-			if err := exportValue(call.Argument(0), &config); err != nil {
-				common.Throw(rt, fmt.Errorf("invalid config: %w", err))
+	constructor := func(call sobek.ConstructorCall) *sobek.Object {
+		var config Config
+		if err := exportValue(call.Argument(0), &config); err != nil {
+			common.Throw(rt, fmt.Errorf("invalid config: %w", err))
+		}
+		client := &Client{
+			config: config, metrics: mi.metrics, vu: mi.vu,
+			transport: mi.root.sharedTransport(), limiters: &mi.root.limiters,
+			warmupRemaining: int64(config.WarmupCount),
+		}
+		completions := rt.NewObject()
+		must(completions.Set("create", func(call sobek.FunctionCall) sobek.Value {
+			result := client.Complete(call)
+			if err, ok := result.Export().(error); ok {
+				return rt.NewGoError(err)
 			}
-
-			client := &Client{
-				config:          config,
-				metrics:         mi.metrics,
-				vu:              mi.vu,
-				transport:       mi.root.sharedTransport(),
-				limiters:        &mi.root.limiters,
-				warmupRemaining: int32(config.WarmupCount),
-			}
-
-			// Create chat object
-			chatObj := rt.NewObject()
-			completionsObj := rt.NewObject()
-
-			// Set up completions.create method
-			must(completionsObj.DefineDataProperty(
-				"create",
-				rt.ToValue(client.Complete),
-				sobek.FLAG_FALSE,
-				sobek.FLAG_FALSE,
-				sobek.FLAG_TRUE,
-			))
-
-			// Set up chat.completions
-			must(chatObj.DefineDataProperty(
-				"completions",
-				completionsObj,
-				sobek.FLAG_FALSE,
-				sobek.FLAG_FALSE,
-				sobek.FLAG_TRUE,
-			))
-
-			// Add chat property to instance
-			must(call.This.DefineDataProperty(
-				"chat",
-				chatObj,
-				sobek.FLAG_FALSE,
-				sobek.FLAG_FALSE,
-				sobek.FLAG_TRUE,
-			))
-
-			return call.This
-		}),
-		sobek.FLAG_FALSE,
-		sobek.FLAG_FALSE,
-		sobek.FLAG_TRUE,
-	))
-
-	// Add Client to exports
-	must(mi.exports.DefineDataProperty(
-		"Client",
-		clientClass.Get("constructor"),
-		sobek.FLAG_FALSE,
-		sobek.FLAG_FALSE,
-		sobek.FLAG_TRUE,
-	))
+			return result
+		}))
+		chat := rt.NewObject()
+		must(chat.Set("completions", completions))
+		must(call.This.Set("chat", chat))
+		return nil
+	}
+	must(mi.exports.Set("Client", constructor))
 
 	return mi
 }
 
-func (root *RootModule) sharedTransport() *http.Transport {
+func (root *rootModule) sharedTransport() *http.Transport {
 	root.transportOnce.Do(func() {
 		root.transport = newTransport()
 	})
@@ -133,18 +91,24 @@ func (root *RootModule) sharedTransport() *http.Transport {
 }
 
 func exportValue(v sobek.Value, dst interface{}) error {
+	if v == nil || sobek.IsUndefined(v) || sobek.IsNull(v) {
+		return nil
+	}
 	data, err := json.Marshal(v.Export())
 	if err != nil {
 		return fmt.Errorf("marshal value: %w", err)
 	}
-	if err := json.Unmarshal(data, dst); err != nil {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
 		return fmt.Errorf("unmarshal value: %w", err)
 	}
 	return nil
 }
 
-func (mi *ModuleInstance) Exports() modules.Exports {
+func (mi *moduleInstance) Exports() modules.Exports {
 	return modules.Exports{
 		Default: mi.exports,
+		Named:   map[string]interface{}{"Client": mi.exports.Get("Client")},
 	}
 }

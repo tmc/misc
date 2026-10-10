@@ -1,10 +1,21 @@
+import execution from 'k6/execution';
 import llm from 'k6/x/llm-perf';
 import { check, sleep } from 'k6';
 import { SharedArray } from 'k6/data';
 
 const trace = new SharedArray('trace', () => {
     const path = __ENV.TRACE_FILE || 'trace.json';
-    return JSON.parse(open(path));
+    const rows = JSON.parse(open(path));
+    if (!Array.isArray(rows) || rows.length === 0) {
+        throw new Error('trace must be a nonempty array');
+    }
+    for (const row of rows) {
+        const delay = Number(row.delay_seconds ?? row.delaySeconds ?? 0);
+        if (!Number.isFinite(delay) || delay < 0) {
+            throw new Error('trace delay must be finite and non-negative');
+        }
+    }
+    return rows;
 });
 
 export const options = {
@@ -17,6 +28,7 @@ export const options = {
         },
     },
     thresholds: {
+        checks: ['rate==1'],
         'llm_ttft': ['p(95)<2000'],
         'llm_ttfo': ['p(95)<2500'],
         'llm_good_request': ['rate>0.95'],
@@ -40,7 +52,7 @@ const client = new llm.Client({
 });
 
 export default function() {
-    const row = trace[__ITER % trace.length];
+    const row = trace[execution.scenario.iterationInTest];
     const delay = Number(row.delay_seconds || row.delaySeconds || 0);
     if (delay > 0) {
         sleep(delay);

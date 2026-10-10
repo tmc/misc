@@ -2,7 +2,7 @@ package llmperf
 
 import (
 	"bufio"
-	"bytes"
+	"fmt"
 	"io"
 	"strings"
 )
@@ -12,47 +12,50 @@ type SSEEvent struct {
 	Data  string
 }
 
-type SSEReader struct {
-	scanner *bufio.Scanner
-}
+type SSEReader struct{ scanner *bufio.Scanner }
 
 func NewSSEReader(r io.Reader) *SSEReader {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
-	return &SSEReader{
-		scanner: scanner,
-	}
+	return &SSEReader{scanner: scanner}
 }
 
 func (r *SSEReader) Read() (*SSEEvent, error) {
 	var event SSEEvent
-	var data bytes.Buffer
-
+	var data strings.Builder
+	hasData := false
 	for r.scanner.Scan() {
 		line := r.scanner.Text()
 		if line == "" {
-			if data.Len() > 0 {
-				event.Data = strings.TrimSpace(data.String())
+			if hasData {
+				event.Data = data.String()
 				return &event, nil
 			}
+			event = SSEEvent{}
 			continue
 		}
-
-		if strings.HasPrefix(line, "event: ") {
-			event.Event = strings.TrimPrefix(line, "event: ")
-		} else if strings.HasPrefix(line, "data: ") {
-			data.WriteString(strings.TrimPrefix(line, "data: "))
+		field, value, _ := strings.Cut(line, ":")
+		value = strings.TrimPrefix(value, " ")
+		switch field {
+		case "event":
+			event.Event = value
+		case "data":
+			if hasData {
+				data.WriteByte('\n')
+			}
+			data.WriteString(value)
+			hasData = true
+			if data.Len() > 4*1024*1024 {
+				return nil, fmt.Errorf("SSE event exceeds 4 MiB")
+			}
 		}
 	}
-
 	if err := r.scanner.Err(); err != nil {
 		return nil, err
 	}
-
-	if data.Len() > 0 {
-		event.Data = strings.TrimSpace(data.String())
+	if hasData {
+		event.Data = data.String()
 		return &event, nil
 	}
-
 	return nil, io.EOF
 }

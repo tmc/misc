@@ -3,7 +3,7 @@ package llmperf
 import "testing"
 
 func TestRootModuleSharedTransport(t *testing.T) {
-	var root RootModule
+	var root rootModule
 	first := root.sharedTransport()
 	second := root.sharedTransport()
 	if first == nil {

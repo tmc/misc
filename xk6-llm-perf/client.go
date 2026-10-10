@@ -15,9 +15,9 @@ import (
 	"time"
 
 	"github.com/grafana/sobek"
-	"go.k6.io/k6/js/modules"
-	"go.k6.io/k6/lib/netext/httpext"
-	"go.k6.io/k6/metrics"
+	"go.k6.io/k6/v2/js/modules"
+	"go.k6.io/k6/v2/lib/netext/httpext"
+	"go.k6.io/k6/v2/metrics"
 )
 
 type Client struct {
@@ -27,7 +27,7 @@ type Client struct {
 	http            *http.Client
 	transport       http.RoundTripper
 	limiters        *prefillLimiters
-	warmupRemaining int32
+	warmupRemaining int64
 	endpointIndex   uint64
 }
 
@@ -129,7 +129,7 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	if resp.StatusCode != http.StatusOK {
 		releasePrefill()
 		c.recordMetric(recordMetrics, "llm_errors", 1)
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 		c.recordHTTPMetrics(recordMetrics, httpReq, resp, trace, nil)
 		return rt.ToValue(fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, string(body)))
 	}
@@ -283,16 +283,28 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 			return result, fmt.Errorf("unmarshal chunk: %w", err)
 		}
 
+		if chunk.ID != "" {
+			result.ID = chunk.ID
+		}
+		if chunk.Model != "" {
+			result.Model = chunk.Model
+		}
+		if chunk.Object != "" {
+			result.Object = chunk.Object
+		}
+		if chunk.Created != 0 {
+			result.Created = chunk.Created
+		}
 		now := time.Now()
 		if !lastEvent.IsZero() && now.After(lastEvent) {
-			c.recordMetric(recordMetrics, "llm_inter_chunk_latency", float64(now.Sub(lastEvent).Milliseconds()))
+			c.recordMetric(recordMetrics, "llm_inter_chunk_latency", (float64(now.Sub(lastEvent)) / float64(time.Millisecond)))
 		}
 		lastEvent = now
 		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
 			text := chunk.Choices[0].Delta.Content
 			if firstToken {
 				stats.TTFT = now.Sub(startTime)
-				c.recordMetric(recordMetrics, "llm_ttft", float64(stats.TTFT.Milliseconds()))
+				c.recordMetric(recordMetrics, "llm_ttft", (float64(stats.TTFT) / float64(time.Millisecond)))
 				c.recordAdjustedMetric(recordMetrics, "llm_ttft_adjusted", stats.TTFT)
 				firstToken = false
 				lastChunk = now
@@ -300,7 +312,7 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 			}
 			if firstOutput {
 				stats.TTFO = now.Sub(startTime)
-				c.recordMetric(recordMetrics, "llm_ttfo", float64(stats.TTFO.Milliseconds()))
+				c.recordMetric(recordMetrics, "llm_ttfo", (float64(stats.TTFO) / float64(time.Millisecond)))
 				c.recordAdjustedMetric(recordMetrics, "llm_ttfo_adjusted", stats.TTFO)
 				firstOutput = false
 			}
@@ -308,13 +320,13 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 			chunks++
 			if !lastChunk.IsZero() && now.After(lastChunk) {
 				stats.MaxTokenLatency = maxDuration(stats.MaxTokenLatency, now.Sub(lastChunk))
-				c.recordMetric(recordMetrics, "llm_token_latency", float64(now.Sub(lastChunk).Milliseconds()))
+				c.recordMetric(recordMetrics, "llm_token_latency", (float64(now.Sub(lastChunk)) / float64(time.Millisecond)))
 			}
 			lastChunk = now
 		}
 		if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.ReasoningContent != "" && firstToken {
 			stats.TTFT = now.Sub(startTime)
-			c.recordMetric(recordMetrics, "llm_ttft", float64(stats.TTFT.Milliseconds()))
+			c.recordMetric(recordMetrics, "llm_ttft", (float64(stats.TTFT) / float64(time.Millisecond)))
 			c.recordAdjustedMetric(recordMetrics, "llm_ttft_adjusted", stats.TTFT)
 			firstToken = false
 			lastChunk = now
@@ -342,8 +354,8 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 
 	totalTime := time.Since(startTime)
 	stats.RequestLatency = totalTime
-	c.recordMetric(recordMetrics, "llm_completion_time", float64(totalTime.Milliseconds()))
-	c.recordMetric(recordMetrics, "llm_request_latency", float64(totalTime.Milliseconds()))
+	c.recordMetric(recordMetrics, "llm_completion_time", (float64(totalTime) / float64(time.Millisecond)))
+	c.recordMetric(recordMetrics, "llm_request_latency", (float64(totalTime) / float64(time.Millisecond)))
 	c.recordAdjustedMetric(recordMetrics, "llm_request_latency_adjusted", totalTime)
 	c.recordMetric(recordMetrics, "llm_requests", 1)
 
@@ -362,6 +374,7 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 	if outputTokens == 0 && chunks > 0 {
 		outputTokens = chunks
 	}
+	result.Usage = Usage{PromptTokens: promptTokens, CompletionTokens: outputTokens, TotalTokens: promptTokens + outputTokens}
 	c.recordTokenMetrics(recordMetrics, promptTokens, outputTokens, inputTokens, estimatedOutputTokens, totalTime)
 	c.recordGoodRequest(recordMetrics, stats)
 
@@ -378,8 +391,8 @@ func (c *Client) handleSyncResponse(resp *http.Response, startTime time.Time, in
 
 	totalTime := time.Since(startTime)
 	stats := requestStats{RequestLatency: totalTime}
-	c.recordMetric(recordMetrics, "llm_completion_time", float64(totalTime.Milliseconds()))
-	c.recordMetric(recordMetrics, "llm_request_latency", float64(totalTime.Milliseconds()))
+	c.recordMetric(recordMetrics, "llm_completion_time", (float64(totalTime) / float64(time.Millisecond)))
+	c.recordMetric(recordMetrics, "llm_request_latency", (float64(totalTime) / float64(time.Millisecond)))
 	c.recordAdjustedMetric(recordMetrics, "llm_request_latency_adjusted", totalTime)
 	c.recordMetric(recordMetrics, "llm_requests", 1)
 
@@ -512,11 +525,11 @@ func (c *Client) recordGoodRequest(recordMetrics bool, stats requestStats) {
 
 func (c *Client) takeWarmupSample() bool {
 	for {
-		remaining := atomic.LoadInt32(&c.warmupRemaining)
+		remaining := atomic.LoadInt64(&c.warmupRemaining)
 		if remaining <= 0 {
 			return true
 		}
-		if atomic.CompareAndSwapInt32(&c.warmupRemaining, remaining, remaining-1) {
+		if atomic.CompareAndSwapInt64(&c.warmupRemaining, remaining, remaining-1) {
 			return false
 		}
 	}
@@ -537,7 +550,7 @@ func (c *Client) recordAdjustedMetric(record bool, name string, value time.Durat
 	if adjusted < 0 {
 		adjusted = 0
 	}
-	c.recordMetric(record, name, float64(adjusted.Milliseconds()))
+	c.recordMetric(record, name, float64(adjusted)/float64(time.Millisecond))
 }
 
 func maxDuration(a, b time.Duration) time.Duration {
@@ -563,6 +576,18 @@ func validateConfig(config Config) error {
 		if u.Host == "" {
 			return fmt.Errorf("baseURL[%d] must include host", i)
 		}
+	}
+	if config.Timeout != "" {
+		timeout, err := time.ParseDuration(config.Timeout)
+		if err != nil {
+			return fmt.Errorf("invalid timeout: %w", err)
+		}
+		if timeout <= 0 {
+			return fmt.Errorf("timeout must be positive")
+		}
+	}
+	if config.MaxTTFT < 0 || config.MaxTTFO < 0 || config.MaxTokenLatency < 0 {
+		return fmt.Errorf("latency limits must be non-negative")
 	}
 	if config.NetworkRTT < 0 {
 		return fmt.Errorf("networkRTT must be non-negative")

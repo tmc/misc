@@ -6,8 +6,8 @@ EXTENSION_PATH=github.com/tmc/misc/$(EXTENSION_NAME)
 VERSION=v0.1.0
 
 # Build settings
-K6_VERSION=v0.55.0
-XK6_VERSION=v1.4.6
+K6_VERSION ?= v2.3.0
+XK6_VERSION ?= v1.4.14
 BUILD_DIR=dist
 BINARY_NAME=k6
 
@@ -25,22 +25,27 @@ all: clean build
 
 install-xk6:
 	@echo "Installing xk6..."
-	@go install go.k6.io/xk6/cmd/xk6@$(XK6_VERSION)
+	@GOWORK=off GOBIN=$(GOBIN) go install go.k6.io/xk6/cmd/xk6@$(XK6_VERSION)
 
 build: install-xk6
 	@echo "Building k6 with $(EXTENSION_NAME)..."
 	@mkdir -p $(BUILD_DIR)
-	@xk6 build $(K6_VERSION) \
+	@rm -f $(BUILD_DIR)/$(BINARY_NAME).new
+	@GOWORK=off $(GOBIN)/xk6 build $(K6_VERSION) \
 		--with $(EXTENSION_PATH)=. \
-		--output $(BUILD_DIR)/$(BINARY_NAME)
+		--output $(BUILD_DIR)/$(BINARY_NAME).new
+	@if [ "$$(uname -s)" = Darwin ]; then codesign --force -s - $(BUILD_DIR)/$(BINARY_NAME).new; fi
+	@mv $(BUILD_DIR)/$(BINARY_NAME).new $(BUILD_DIR)/$(BINARY_NAME)
+	@$(BUILD_DIR)/$(BINARY_NAME) version | grep -F $(EXTENSION_PATH)
 
 test:
-	go test ./...
+	GOWORK=off go test -race ./...
 
 vet:
-	go vet ./...
+	GOWORK=off go vet ./...
 
 check: test vet build
+	K6_SMOKE_BINARY=$(BUILD_DIR)/$(BINARY_NAME) GOWORK=off go test -run TestBinary -v .
 
 clean:
 	rm -rf $(BUILD_DIR) bin

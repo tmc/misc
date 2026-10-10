@@ -14,10 +14,10 @@ import (
 
 	"github.com/grafana/sobek"
 	"github.com/tmc/misc/xk6-llm-perf/testutils"
-	"go.k6.io/k6/js/common"
-	"go.k6.io/k6/js/modulestest"
-	"go.k6.io/k6/lib"
-	"go.k6.io/k6/metrics"
+	"go.k6.io/k6/v2/js/common"
+	"go.k6.io/k6/v2/js/modulestest"
+	"go.k6.io/k6/v2/lib"
+	"go.k6.io/k6/v2/metrics"
 )
 
 func TestClientAPI(t *testing.T) {
@@ -703,7 +703,7 @@ func setupTestClient(t *testing.T, serverURL string) *Client {
 			BaseURL: serverURL,
 			APIKey:  "test-key",
 		},
-		metrics: NewMetrics(registry),
+		metrics: testMetrics(t, registry),
 		vu:      vu,
 	}
 }
