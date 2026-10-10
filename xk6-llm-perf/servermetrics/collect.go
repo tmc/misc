@@ -13,6 +13,7 @@ import (
 // URLs. Authentication belongs to Client. Duration includes query time, and
 // client/context cancellation must bound every HTTP operation.
 type CollectOptions struct {
+	Discover   func(context.Context) ([]string, error)
 	Targets    []string
 	Interval   time.Duration
 	Duration   time.Duration
@@ -26,7 +27,9 @@ type Observation struct {
 	SchemaVersion int       `json:"schema_version"`
 	ScheduledAt   time.Time `json:"scheduled_at"`
 	Target        string    `json:"target"`
+	Targets       []string  `json:"targets,omitempty"`
 	Scrape        *Scrape   `json:"scrape"`
+	FailedScrape  *Scrape   `json:"failed_scrape,omitempty"`
 	Error         string    `json:"error,omitempty"`
 }
 
@@ -48,12 +51,12 @@ type Recording struct {
 // growing a work queue. Record/byte limits, failed targets, canceled contexts
 // and sink errors retain an explicit incomplete recording result.
 func Collect(ctx context.Context, client *http.Client, opts CollectOptions, out io.Writer) (result Recording, err error) {
-	if client == nil || out == nil || len(opts.Targets) == 0 || len(opts.Targets) > 16 || opts.Interval < 10*time.Millisecond || opts.Interval > time.Hour || opts.Duration <= 0 || opts.Duration > 24*time.Hour || opts.MaxRecords <= 0 || opts.MaxRecords > 100000 || opts.MaxBytes <= 0 || opts.MaxBytes > 1024*1024*1024 {
+	if client == nil || out == nil || (len(opts.Targets) == 0 && opts.Discover == nil) || len(opts.Targets) > 16 || opts.Interval < 10*time.Millisecond || opts.Interval > time.Hour || opts.Duration <= 0 || opts.Duration > 24*time.Hour || opts.MaxRecords <= 0 || opts.MaxRecords > 100000 || opts.MaxBytes <= 0 || opts.MaxBytes > 1024*1024*1024 {
 		return result, fmt.Errorf("invalid server recording bounds")
 	}
 	seen := map[string]bool{}
 	for _, target := range opts.Targets {
-		if seen[target] {
+		if !validTarget(target) || seen[target] {
 			return result, fmt.Errorf("duplicate scrape target")
 		}
 		seen[target] = true
@@ -80,6 +83,10 @@ func Collect(ctx context.Context, client *http.Client, opts CollectOptions, out 
 				timer.Stop()
 			}
 		}
+		if !next.Before(end) && !time.Now().Before(end) {
+			result.Complete = true
+			return result, nil
+		}
 		if ctx.Err() != nil {
 			if time.Now().Before(end) || ctx.Err() != context.DeadlineExceeded {
 				result.IncompleteReason = "cancelled"
@@ -88,15 +95,38 @@ func Collect(ctx context.Context, client *http.Client, opts CollectOptions, out 
 			result.Complete = true
 			return result, nil
 		}
-		for _, target := range opts.Targets {
+		targets := opts.Targets
+		if opts.Discover != nil {
+			var discoverErr error
+			targets, discoverErr = opts.Discover(ctx)
+			if discoverErr != nil {
+				result.IncompleteReason = "discovery failed"
+				return result, fmt.Errorf("discover targets: %w", discoverErr)
+			}
+			if len(targets) == 0 || len(targets) > 16 {
+				result.IncompleteReason = "empty or oversized discovery"
+				return result, fmt.Errorf("invalid discovered target count")
+			}
+			seen := map[string]bool{}
+			for _, target := range targets {
+				if !validTarget(target) || seen[target] {
+					return result, fmt.Errorf("invalid discovered target")
+				}
+				seen[target] = true
+			}
+		}
+		for _, target := range targets {
 			if result.Attempts >= opts.MaxRecords {
 				result.IncompleteReason = "record budget exhausted"
 				return result, nil
 			}
-			observation := Observation{SchemaVersion: 1, ScheduledAt: next, Target: target}
+			observation := Observation{SchemaVersion: 1, ScheduledAt: next, Target: target, Targets: append([]string(nil), targets...)}
 			scrape, fetchErr := Fetch(ctx, client, target)
 			if fetchErr != nil {
 				observation.Error = fetchErr.Error()
+				if scrape.Hash != "" {
+					observation.FailedScrape = &scrape
+				}
 				result.Failures++
 			} else {
 				observation.Scrape = &scrape

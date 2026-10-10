@@ -143,6 +143,9 @@ func parseLine(line string) (Sample, error) {
 			end := 1
 			for end < len(rest) {
 				if rest[end] == '\\' {
+					if end+1 >= len(rest) || !strings.ContainsRune("n\\\"", rune(rest[end+1])) {
+						return s, fmt.Errorf("invalid Prometheus label escape")
+					}
 					end += 2
 					continue
 				}
@@ -267,6 +270,11 @@ func validateHistograms(samples []Sample) error {
 		id := identity(strings.TrimSuffix(s.Name, "_bucket"), labels)
 		groups[id] = append(groups[id], bucket{bound, *s.Value})
 	}
+	for id := range counts {
+		if len(groups[id]) == 0 {
+			return fmt.Errorf("histogram count without buckets")
+		}
+	}
 	for id, bs := range groups {
 		sort.Slice(bs, func(i, j int) bool { return bs[i].bound < bs[j].bound })
 		for i := 1; i < len(bs); i++ {
@@ -331,13 +339,21 @@ func CounterRate(before, after Sample, elapsed, maxGap time.Duration) (float64, 
 		return 0, fmt.Errorf("counter timestamp basis changed")
 	}
 	if before.Timestamp != nil {
-		elapsed = time.Duration(*after.Timestamp-*before.Timestamp) * time.Millisecond
+		delta := uint64(*after.Timestamp) - uint64(*before.Timestamp)
+		if *after.Timestamp <= *before.Timestamp || maxGap <= 0 || delta > uint64(maxGap/time.Millisecond) {
+			return 0, fmt.Errorf("counter timestamp interval exceeds bound")
+		}
+		elapsed = time.Duration(delta) * time.Millisecond
 	}
 	if elapsed <= 0 || maxGap <= 0 || elapsed > maxGap {
 		return 0, fmt.Errorf("counter interval invalid or exceeds gap bound")
 	}
-	if *before.Value < 0 || *after.Value < *before.Value {
+	if math.IsNaN(*before.Value) || math.IsNaN(*after.Value) || math.IsInf(*before.Value, 0) || math.IsInf(*after.Value, 0) || *before.Value < 0 || *after.Value < *before.Value {
 		return 0, fmt.Errorf("counter reset or negative value")
 	}
-	return (*after.Value - *before.Value) / elapsed.Seconds(), nil
+	rate := (*after.Value - *before.Value) / elapsed.Seconds()
+	if math.IsInf(rate, 0) || math.IsNaN(rate) {
+		return 0, fmt.Errorf("counter rate overflow")
+	}
+	return rate, nil
 }

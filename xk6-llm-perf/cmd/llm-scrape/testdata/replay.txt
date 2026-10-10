@@ -1,0 +1,12 @@
+exec $CLI -input empty.jsonl -window window.json
+stdout 'missing target: http://localhost:8000/metrics'
+! exec $CLI -input empty.jsonl
+stderr 'requires only'
+! exec $CLI -targets bad.json -duration 20ms -interval 10ms
+stderr 'invalid or duplicate target'
+
+-- empty.jsonl --
+-- window.json --
+{"start":"2026-01-01T00:00:00Z","end":"2026-01-01T00:00:01Z","max_gap":1000000000,"targets":["http://localhost:8000/metrics"]}
+-- bad.json --
+["ftp://host/metrics"]
