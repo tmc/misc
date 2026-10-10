@@ -1,0 +1,27 @@
+exec $CLI -manifest manifest.json
+stdout '"worker_id":"aggregate"'
+stdout '"workers":\["a"\]'
+! exec $CLI -manifest partial.json
+stderr 'required workers are missing'
+exec $CLI -manifest partial.json -allow-partial
+stdout '"missing_workers":\["b"\]'
+! exec $CLI -manifest corrupt.json
+stderr 'worker sha256 mismatch'
+! exec $CLI -manifest no-clock.json
+stderr 'worker clock fields required'
+! exec $CLI -manifest escape.json
+stderr 'worker file must be a relative local path'
+! exec $CLI
+stderr 'usage: llm-merge'
+-- manifest.json --
+{"schema_version":1,"expected_workers":["a"],"max_clock_uncertainty_ms":0,"workers":[{"file":"run.json","sha256":"3a8a8d5a52cc9231411f95659b13fe909752b7175d478927fee0cc377e8d863d","clock":{"offset_ms":0,"uncertainty_ms":0,"basis":"fixture"}}]}
+-- partial.json --
+{"schema_version":1,"expected_workers":["a","b"],"max_clock_uncertainty_ms":0,"workers":[{"file":"run.json","sha256":"3a8a8d5a52cc9231411f95659b13fe909752b7175d478927fee0cc377e8d863d","clock":{"offset_ms":0,"uncertainty_ms":0,"basis":"fixture"}}]}
+-- corrupt.json --
+{"schema_version":1,"expected_workers":["a"],"max_clock_uncertainty_ms":0,"workers":[{"file":"run.json","sha256":"0000000000000000000000000000000000000000000000000000000000000000","clock":{"offset_ms":0,"uncertainty_ms":0,"basis":"fixture"}}]}
+-- run.json --
+{"schema_version":1,"worker_id":"a","run_id":"run","started_at":1000,"finished_at":3000,"duration":2,"attempts":0,"successes":0,"failures":0,"records":[],"trace_hash":"sha256:fixture","workload":"fixture"}
+-- no-clock.json --
+{"schema_version":1,"expected_workers":["a"],"max_clock_uncertainty_ms":0,"workers":[{"file":"run.json","sha256":"3a8a8d5a52cc9231411f95659b13fe909752b7175d478927fee0cc377e8d863d","clock":{"offset_ms":0,"basis":"fixture"}}]}
+-- escape.json --
+{"schema_version":1,"expected_workers":["a"],"max_clock_uncertainty_ms":0,"workers":[{"file":"../run.json","sha256":"3a8a8d5a52cc9231411f95659b13fe909752b7175d478927fee0cc377e8d863d","clock":{"offset_ms":0,"basis":"fixture"}}]}

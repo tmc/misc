@@ -1,0 +1,40 @@
+# Render the uppercase placeholders before server-side validation or execution.
+apiVersion: k6.io/v1alpha1
+kind: TestRun
+metadata:
+  name: llm-perf-distributed
+spec:
+  parallelism: 2
+  script:
+    configMap:
+      name: llm-perf-assets
+      file: worker.js
+  runner:
+    # Must contain this extension; the stock runner does not.
+    image: YOUR_REGISTRY/llm-perf@sha256:YOUR_IMAGE_DIGEST
+    env:
+      - name: POD_NAME
+        valueFrom:
+          fieldRef:
+            fieldPath: metadata.name
+      - name: ENDPOINT_URL
+        value: http://YOUR_INFERENCE_SERVICE:8000
+      - name: RUN_ID
+        value: YOUR_UNIQUE_RUN_ID
+      - name: WINDOW_START_MS
+        value: "YOUR_FUTURE_COMMON_UNIX_MS"
+      - name: WINDOW_DURATION_MS
+        value: "3000"
+      - name: TRACE_HASH
+        value: "sha256:YOUR_ASSET_HASH"
+    securityContext:
+      runAsUser: 12345
+      runAsNonRoot: true
+      fsGroup: 12345
+    volumes:
+      - name: results
+        persistentVolumeClaim:
+          claimName: llm-perf-results
+    volumeMounts:
+      - name: results
+        mountPath: /results

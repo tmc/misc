@@ -43,11 +43,13 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 	}
 	expected := map[string]bool{}
 	for _, id := range opts.ExpectedWorkers {
-		if id == "" || expected[id] {
+		if id == "" || len(id) > 256 || expected[id] {
 			return result, fmt.Errorf("invalid expected worker identity")
 		}
 		expected[id] = true
 	}
+	workers = append([]WorkerRun(nil), workers...)
+	sort.Slice(workers, func(i, j int) bool { return workers[i].Run.WorkerID < workers[j].Run.WorkerID })
 	seen, requests := map[string]bool{}, map[string]bool{}
 	for i, w := range workers {
 		r := w.Run
@@ -55,7 +57,7 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 			return result, fmt.Errorf("duplicate or unexpected worker identity")
 		}
 		seen[r.WorkerID] = true
-		if !finite(w.ClockOffset) || w.ClockBasis == "" || w.ClockUncertainty == nil || !finite(*w.ClockUncertainty) || *w.ClockUncertainty < 0 || *w.ClockUncertainty > opts.MaxClockUncertainty {
+		if !finite(w.ClockOffset) || w.ClockBasis == "" || len(w.ClockBasis) > 1024 || w.ClockUncertainty == nil || !finite(*w.ClockUncertainty) || *w.ClockUncertainty < 0 || *w.ClockUncertainty > opts.MaxClockUncertainty {
 			return result, fmt.Errorf("worker clock mapping unavailable or outside bound")
 		}
 		if err := validateRun(r); err != nil {
@@ -70,17 +72,23 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 		start, end := r.StartedAt+w.ClockOffset, r.FinishedAt+w.ClockOffset
 		if i == 0 {
 			result = RunSummary{SchemaVersion: 1, RunID: r.RunID, WorkerID: "aggregate", WorkerClocks: map[string]WorkerClock{}, StartedAt: start, FinishedAt: end, Duration: r.Duration, Seed: r.Seed, Workload: r.Workload, TraceHash: r.TraceHash, Versions: map[string]string{}, WindowPolicy: "identical clock-mapped whole-contained worker windows; successful token totals", WarmupPolicy: r.WarmupPolicy, Records: []Measurement{}}
-		} else if r.RunID != result.RunID || math.Abs(start-result.StartedAt) > .001 || math.Abs(end-result.FinishedAt) > .001 || r.Duration != result.Duration || r.Seed != result.Seed || r.Workload != result.Workload || r.TraceHash != result.TraceHash {
+		} else if r.RunID != result.RunID || math.Abs(start-result.StartedAt) > .001 || math.Abs(end-result.FinishedAt) > .001 || r.Duration != result.Duration || r.Seed != result.Seed || r.Workload != result.Workload || r.TraceHash != result.TraceHash || r.WarmupPolicy != result.WarmupPolicy {
 			return result, fmt.Errorf("incompatible worker workload or window")
 		}
+		if i > 0 && len(r.Versions) != len(result.Versions) {
+			return result, fmt.Errorf("worker runtime versions differ")
+		}
 		for name, version := range r.Versions {
-			if old, ok := result.Versions[name]; ok && old != version {
+			if old, ok := result.Versions[name]; i > 0 && (!ok || old != version) {
 				return result, fmt.Errorf("worker runtime versions differ")
 			}
 			result.Versions[name] = version
 		}
 		result.WorkerClocks[r.WorkerID] = WorkerClock{Offset: w.ClockOffset, Uncertainty: *w.ClockUncertainty, Basis: w.ClockBasis}
 		result.Workers = append(result.Workers, r.WorkerID)
+		if r.ExcludedBoundaryRequests < 0 || r.InflightAtEnd < 0 || r.ExcludedBoundaryRequests > math.MaxInt-result.ExcludedBoundaryRequests || r.InflightAtEnd > math.MaxInt-result.InflightAtEnd {
+			return result, fmt.Errorf("invalid worker boundary accounting")
+		}
 		result.ExcludedBoundaryRequests += r.ExcludedBoundaryRequests
 		result.InflightAtEnd += r.InflightAtEnd
 		for _, m := range r.Records {
@@ -113,6 +121,9 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 						if c.Value == nil {
 							result.MissingInputCounts++
 						} else {
+							if int64(*c.Value) > math.MaxInt64-result.InputTokens {
+								return result, fmt.Errorf("merged input token total overflows")
+							}
 							result.InputTokens += int64(*c.Value)
 							if c.Source == "estimated" {
 								result.EstimatedInputCounts++
@@ -122,6 +133,9 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 						if c.Value == nil {
 							result.MissingOutputCounts++
 						} else {
+							if int64(*c.Value) > math.MaxInt64-result.OutputTokens {
+								return result, fmt.Errorf("merged output token total overflows")
+							}
 							result.OutputTokens += int64(*c.Value)
 							if c.Source == "estimated" {
 								result.EstimatedOutputCounts++
@@ -145,6 +159,13 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 			result.MissingWorkers = append(result.MissingWorkers, id)
 		}
 	}
+	sort.Slice(result.Records, func(i, j int) bool {
+		a, b := result.Records[i], result.Records[j]
+		if a.DispatchedAt != b.DispatchedAt {
+			return a.DispatchedAt < b.DispatchedAt
+		}
+		return a.RequestID < b.RequestID
+	})
 	sort.Strings(result.Workers)
 	sort.Strings(result.MissingWorkers)
 	if len(result.MissingWorkers) > 0 && !opts.AllowPartial {
