@@ -131,6 +131,9 @@ func TestDistributedStableOrder(t *testing.T) {
 }
 
 func TestDistributedTokenOverflow(t *testing.T) {
+	if math.MaxInt != math.MaxInt64 {
+		t.Skip("64-bit token integers required to exercise int64 aggregate overflow")
+	}
 	a, b := workerFixture("a", 0), workerFixture("b", 0)
 	for _, w := range []*WorkerRun{&a, &b} {
 		w.Run.Records[0].InputTokens = count(math.MaxInt, "reported")

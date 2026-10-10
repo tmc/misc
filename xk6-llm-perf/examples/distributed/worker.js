@@ -6,7 +6,7 @@ import { sha256 } from 'k6/crypto';
 // execution-segment partitions k6's global iteration counter across workers.
 const rawRows = open('./rows.json');
 const rows = JSON.parse(rawRows);
-if (!Array.isArray(rows) || rows.length < 2 || rows.length > 100000 || new Set(rows.map(r=>r.id)).size !== rows.length) throw new Error('bounded unique rows required');
+if (rawRows.length > 16*1024*1024 || !Array.isArray(rows) || rows.length < 2 || rows.length > 100000 || !rows.every(r=>r && typeof r.id==='string' && r.id.length>0 && r.id.length<=256) || new Set(rows.map(r=>r.id)).size !== rows.length) throw new Error('bounded unique rows required');
 const assetHash = 'sha256:'+sha256(open('./worker.js')+'\x00'+rawRows,'hex');
 if (__ENV.TRACE_HASH !== assetHash) throw new Error('portable worker assets differ from declared trace hash');
 const epoch = Number(__ENV.WINDOW_START_MS);

@@ -68,8 +68,9 @@ a ConfigMap and a shared results PVC. The upstream AIPerf lifecycle reference
 at `docs/kubernetes/workflow.md` separates validation, preflight, execution,
 result retrieval and deletion; apply the same separation here.
 
-1. Freeze and build a **Linux** extension binary as `dist/k6-linux`, then build
-   `examples/distributed/Dockerfile` from the repository root. Record source,
+1. Freeze the source and run `make build-linux` from the repository root to
+   create `dist/k6-linux` for the cluster architecture (set `LINUX_ARCH` when
+   needed). Then build `examples/distributed/Dockerfile` from that same root. Record source,
    binary, base image and resulting image digests. A macOS binary will not run
    in this image. Make the pinned image available to your cluster.
 2. Confirm the installed TestRun CRD/operator version, custom image inspection,
