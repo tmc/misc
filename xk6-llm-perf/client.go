@@ -21,6 +21,7 @@ import (
 )
 
 type Client struct {
+	controls        *controlGroups
 	config          Config
 	metrics         *LLMPerfMetrics
 	vu              modules.VU
@@ -119,11 +120,15 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	path := "/chat/completions"
 	if req.Raw != nil {
 		payload, path = req.Raw.Body, req.Raw.Path
-		if _, ok := req.Raw.Body["model"]; !ok && req.Model != "" && c.protocol != "tgi" {
+		if _, ok := req.Raw.Body["model"]; req.Raw.Body != nil && !ok && req.Model != "" && c.protocol != "tgi" && c.protocol != "hf-tei-rankings" && c.protocol != "nim-image-retrieval" && c.protocol != "nv-embedqa" && c.protocol != "solido-rag" {
 			req.Raw.Body["model"] = req.Model
 		}
 	}
 	body, err := json.Marshal(payload)
+	contentType := "application/json"
+	if req.Raw != nil && req.Raw.Multipart != nil {
+		body, contentType, err = encodeMultipart(req.Raw.Multipart)
+	}
 	if err != nil {
 		c.metrics.RecordMetric("llm_errors", 1)
 		return rt.ToValue(fmt.Errorf("marshal request: %w", err))
@@ -141,7 +146,7 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	}
 
 	// Set headers
-	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Content-Type", contentType)
 	if c.protocol == "anthropic" {
 		httpReq.Header.Set("x-api-key", c.config.APIKey)
 		httpReq.Header.Set("anthropic-version", "2023-06-01")
@@ -153,7 +158,6 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	} else {
 		httpReq.Header.Set("Accept", "application/json")
 	}
-	httpReq, trace := c.traceHTTPRequest(httpReq)
 
 	recordMetrics := c.takeWarmupSample()
 	phase := c.config.Phase
@@ -170,7 +174,7 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	}
 	m.Protocol = c.protocol
 	m.noInputEstimate = len(req.Tools) > 0 || req.Raw != nil
-	m.noOutputEstimate = c.protocol == "json"
+	m.noOutputEstimate = c.protocol == "json" || c.protocol == "audio-transcription" || c.protocol == "image" || c.protocol == "video" || c.protocol == "retrieval" || nonGenerationProtocol(c.protocol)
 	for _, msg := range req.Messages {
 		if hasMedia(msg.Content) || len(msg.ToolCalls) > 0 {
 			m.noInputEstimate = true
@@ -178,7 +182,6 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	}
 	m.ScheduledAt = scheduledAt
 	c.measurement = m
-	httpReq, m.trace = attachTrace(httpReq)
 	defer c.finishMeasurement(m)
 	timeout := c.http.Timeout
 	policyCancel := false
@@ -189,11 +192,23 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 			policyCancel = true
 		}
 	}
-	requestCtx, cancel := context.WithTimeout(httpReq.Context(), timeout)
+	requestCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	httpReq = httpReq.WithContext(requestCtx)
+	httpReq, trace := c.traceHTTPRequest(httpReq)
+	httpReq, m.trace = attachTrace(httpReq)
 	queueStart := time.Now()
-	if c.requestLimiters != nil && config.RequestConcurrency > 0 {
+	if config.ControlGroup != "" {
+		if c.controls == nil {
+			return rt.ToValue(fmt.Errorf("control groups are unavailable"))
+		}
+		release, err := c.controls.acquire(requestCtx, config.ControlGroup, false)
+		if err != nil {
+			m.AdmissionWait = ms(time.Since(queueStart))
+			return rt.ToValue(err)
+		}
+		defer release()
+	} else if c.requestLimiters != nil && config.RequestConcurrency > 0 {
 		capConfig := config
 		capConfig.PrefillConcurrency = config.RequestConcurrency
 		release, err := c.requestLimiters.acquire(requestCtx, capConfig)
@@ -237,7 +252,7 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	m.Status = resp.StatusCode
 	m.ErrorStage = "http"
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		releasePrefill()
 		c.recordMetric(recordMetrics, "llm_errors", 1)
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
@@ -246,12 +261,31 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	}
 
 	var completion CompletionResponse
+	submissionRecorded := false
 	m.ErrorStage = "protocol"
-	if req.Stream {
+	if req.Stream && c.protocol == "image" {
+		defer releasePrefill()
+		completion, err = readImageStream(resp.Body, func(now time.Time, terminal bool) {
+			if m.firstOutput.IsZero() {
+				m.firstOutput = now
+			}
+			m.last = now
+			releasePrefill()
+		})
+		completion.Status = resp.StatusCode
+		m.reported = completion.Usage
+		m.responseEnd = time.Now()
+	} else if req.Stream {
 		completion, err = c.handleStreamingResponse(resp, startTime, inputTokens, releasePrefill, recordMetrics)
 	} else {
 		defer releasePrefill()
-		completion, err = c.handleSyncResponse(resp, startTime, inputTokens, recordMetrics)
+		completion, err = c.handleSyncResponse(resp, startTime, inputTokens, recordMetrics, httpReq, req.Raw, requestCtx, func() {
+			value := m.trace.finish(time.Now())
+			m.HTTPTrace = &value
+			m.trace = nil
+			c.recordHTTPMetrics(recordMetrics, httpReq, resp, trace, nil)
+			submissionRecorded = true
+		})
 	}
 	if err != nil {
 		if requestCtx.Err() == context.Canceled {
@@ -262,11 +296,15 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 				m.Outcome = "cancelled"
 			}
 		}
-		c.recordHTTPMetrics(recordMetrics, httpReq, resp, trace, err)
+		if !submissionRecorded {
+			c.recordHTTPMetrics(recordMetrics, httpReq, resp, trace, err)
+		}
 		c.recordMetric(recordMetrics, "llm_errors", 1)
 		return rt.ToValue(err)
 	}
-	c.recordHTTPMetrics(recordMetrics, httpReq, resp, trace, nil)
+	if !submissionRecorded {
+		c.recordHTTPMetrics(recordMetrics, httpReq, resp, trace, nil)
+	}
 
 	m.Outcome, m.ErrorStage = "success", ""
 	c.finishMeasurement(m)
@@ -362,6 +400,9 @@ func (c *Client) addHTTPSystemTags(tagsAndMeta *metrics.TagsAndMeta, req *http.R
 }
 
 func (c *Client) acquirePrefill(ctx context.Context, config Config) (func(), error) {
+	if config.ControlGroup != "" {
+		return c.controls.acquire(ctx, config.ControlGroup, true)
+	}
 	if c.limiters == nil {
 		return func() {}, nil
 	}
@@ -393,6 +434,7 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 		stats       requestStats
 	)
 	toolCalls := map[int]*ToolCall{}
+	choices := streamChoices{}
 	streamBytes := 0
 	prefillReleased := false
 	release := func() {
@@ -433,9 +475,15 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 		if err != nil {
 			return result, fmt.Errorf("unmarshal chunk: %w", err)
 		}
+		if err := choices.add(chunk); err != nil {
+			return result, err
+		}
 
 		if chunk.ID != "" {
 			result.ID = chunk.ID
+		}
+		if len(chunk.Sources) != 0 {
+			result.Sources = chunk.Sources
 		}
 		if chunk.Model != "" {
 			result.Model = chunk.Model
@@ -560,6 +608,12 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 			result.Choices[0].Message.ToolCalls = append(result.Choices[0].Message.ToolCalls, *call)
 		}
 	}
+	if len(choices) > 0 {
+		result.Choices = choices.choices()
+	}
+	if err := validateCompletedTools(result.Choices); err != nil {
+		return result, err
+	}
 	totalTime := time.Since(startTime)
 	if c.measurement != nil {
 		c.measurement.responseEnd = time.Now()
@@ -596,7 +650,7 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 	return result, nil
 }
 
-func (c *Client) handleSyncResponse(resp *http.Response, startTime time.Time, inputTokens int, recordMetrics bool) (CompletionResponse, error) {
+func (c *Client) handleSyncResponse(resp *http.Response, startTime time.Time, inputTokens int, recordMetrics bool, request *http.Request, raw *RawRequest, lifecycleContext context.Context, submissionDone func()) (CompletionResponse, error) {
 	var completion CompletionResponse
 	data, err := io.ReadAll(io.LimitReader(resp.Body, 16*1024*1024+1))
 	if err != nil {
@@ -605,12 +659,22 @@ func (c *Client) handleSyncResponse(resp *http.Response, startTime time.Time, in
 	if len(data) > 16*1024*1024 {
 		return completion, fmt.Errorf("response exceeds 16 MiB limit")
 	}
+	if c.protocol == "video" {
+		submissionDone()
+		data, err = pollVideo(lifecycleContext, c.http, request, data, raw.Poll)
+		if err != nil {
+			return completion, err
+		}
+	}
 	completion, err = decodeResponse(data, c.protocol)
 	if err != nil {
 		return completion, fmt.Errorf("decode response: %w", err)
 	}
+	if err := validateCompletedTools(completion.Choices); err != nil {
+		return completion, err
+	}
 
-	if len(completion.Choices) == 0 && c.protocol != "json" {
+	if len(completion.Choices) == 0 && completion.Body == nil {
 		return completion, fmt.Errorf("response has no choices")
 	}
 	completion.Status = resp.StatusCode
@@ -833,6 +897,9 @@ func maxDuration(a, b time.Duration) time.Duration {
 }
 
 func validateConfig(config Config) error {
+	if len(config.ControlGroup) > 256 || config.ControlGroup != "" && (config.RequestConcurrency != 0 || config.PrefillConcurrency != 0) {
+		return fmt.Errorf("controlGroup excludes static concurrency ceilings and is at most 256 bytes")
+	}
 	if len(config.BaseURLs) > 256 {
 		return fmt.Errorf("too many endpoints")
 	}

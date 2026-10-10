@@ -32,8 +32,8 @@ type Measurement struct {
 	ClientTokenizer          string     `json:"client_tokenizer,omitempty"`
 	RequestID                string     `json:"request_id,omitempty"`
 	ScheduledAt              *float64   `json:"scheduled_at"`
-	ArrivalLag               *float64   `json:"arrival_lag"`
-	ScheduledResponseLatency *float64   `json:"scheduled_response_latency"`
+	ArrivalLag               *float64   `json:"arrival_lag"`                // Unavailable if admission fails before dispatch.
+	ScheduledResponseLatency *float64   `json:"scheduled_response_latency"` // Includes completion of failed admission.
 	HTTPTrace                *HTTPTrace `json:"http_trace"`
 	trace                    *transportTrace
 	Protocol                 string      `json:"protocol"`
@@ -180,8 +180,10 @@ func (c *Client) finishMeasurement(m *Measurement) {
 	}
 	m.FinishedAt = millis(now)
 	if m.ScheduledAt != nil {
-		v := m.DispatchedAt - *m.ScheduledAt
-		m.ArrivalLag = &v
+		if m.Attempted {
+			v := m.DispatchedAt - *m.ScheduledAt
+			m.ArrivalLag = &v
+		}
 		full := m.FinishedAt - *m.ScheduledAt
 		m.ScheduledResponseLatency = &full
 	}
@@ -230,9 +232,9 @@ func (c *Client) finishMeasurement(m *Measurement) {
 	} else if m.firstChunk != nil {
 		m.FirstChunkSource = "reported"
 	}
-	if !m.MultiChoice && m.OutputTokens.Value != nil && *m.OutputTokens.Value >= 2 && m.TTFT != nil && m.LastContentLatency != nil {
+	if !m.MultiChoice && m.OutputTokens.Value != nil && *m.OutputTokens.Value >= 2 && m.TTFT != nil && m.LastContentLatency != nil && (m.firstChunk == nil || *m.firstChunk > 0 && *m.firstChunk < *m.OutputTokens.Value) {
 		n := *m.OutputTokens.Value
-		if m.firstChunk != nil && *m.firstChunk > 0 && *m.firstChunk < n {
+		if m.firstChunk != nil {
 			n -= *m.firstChunk
 		} else {
 			n--
@@ -332,7 +334,7 @@ func (c *Client) resolveCounts(m *Measurement) (TokenCount, TokenCount) {
 	}
 	in := resolveCount(m.reported.PromptTokens, m.reported.promptPresent, input, m.estimatedInput, c.config.StrictMeasurement || m.noInputEstimate)
 	out := resolveCount(m.reported.CompletionTokens, m.reported.completionPresent, output, m.estimatedOutput, c.config.StrictMeasurement || m.noOutputEstimate)
-	if !m.reported.completionPresent && output == nil && m.reported.totalPresent && m.reported.promptPresent && m.reported.TotalTokens >= m.reported.PromptTokens {
+	if generatedTokenProtocol(m.Protocol) && !m.reported.completionPresent && output == nil && m.reported.totalPresent && m.reported.promptPresent && m.reported.TotalTokens >= m.reported.PromptTokens {
 		out = count(m.reported.TotalTokens-m.reported.PromptTokens, "reported_derived")
 	}
 	return in, out

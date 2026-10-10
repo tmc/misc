@@ -14,6 +14,7 @@ import (
 
 type (
 	rootModule struct {
+		controls        controlGroups
 		run             runState
 		limiters        prefillLimiters
 		requestLimiters prefillLimiters
@@ -63,7 +64,8 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 			common.Throw(rt, fmt.Errorf("invalid config: %w", err))
 		}
 		client := &Client{
-			config: config, metrics: mi.metrics, vu: mi.vu,
+			controls: &root.controls,
+			config:   config, metrics: mi.metrics, vu: mi.vu,
 			transport: mi.root.sharedTransport(), limiters: &mi.root.limiters, requestLimiters: &mi.root.requestLimiters,
 			warmupRemaining: int64(config.WarmupCount),
 			run:             &mi.root.run,
@@ -87,6 +89,8 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 		must(call.This.Set("chat", chat))
 		must(call.This.Set("request", func(call sobek.FunctionCall) sobek.Value {
 			var opts struct {
+				Multipart   *RawMultipart  `json:"multipart"`
+				Poll        *VideoPolling  `json:"poll"`
 				Stream      *bool          `json:"stream"`
 				ScheduledAt *float64       `json:"scheduledAt"`
 				CancelAfter string         `json:"cancelAfter"`
@@ -98,7 +102,7 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 			if err := exportValue(call.Argument(0), &opts); err != nil {
 				return rt.NewGoError(err)
 			}
-			value, err := jsonValue(rt, CompletionRequest{ScheduledAt: opts.ScheduledAt, CancelAfter: opts.CancelAfter, Raw: &RawRequest{Stream: opts.Stream, Path: opts.Path, Protocol: opts.Protocol, Body: opts.Body}, Measurement: opts.Measurement})
+			value, err := jsonValue(rt, CompletionRequest{ScheduledAt: opts.ScheduledAt, CancelAfter: opts.CancelAfter, Raw: &RawRequest{Multipart: opts.Multipart, Poll: opts.Poll, Stream: opts.Stream, Path: opts.Path, Protocol: opts.Protocol, Body: opts.Body}, Measurement: opts.Measurement})
 			must(err)
 			result := client.Complete(sobek.FunctionCall{Arguments: []sobek.Value{value}})
 			if err, ok := result.Export().(error); ok {
@@ -115,6 +119,60 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 		return nil
 	}
 	must(mi.exports.Set("Client", constructor))
+	must(mi.exports.Set("setControlLimits", func(name string, v sobek.Value) {
+		var limits ControlLimits
+		must(exportValue(v, &limits))
+		must(root.controls.set(name, limits))
+	}))
+	must(mi.exports.Set("controlSnapshot", func(name string) sobek.Value {
+		snapshot, err := root.controls.snapshot(name)
+		must(err)
+		value, err := jsonValue(rt, snapshot)
+		must(err)
+		return value
+	}))
+	must(mi.exports.Set("renderRequestTemplate", func(v sobek.Value) sobek.Value {
+		var spec RequestTemplate
+		must(exportValue(v, &spec))
+		rendered, err := RenderRequestTemplate(spec)
+		must(err)
+		value, err := jsonValue(rt, rendered)
+		must(err)
+		return value
+	}))
+	must(mi.exports.Set("calibrateHTTP", func(v sobek.Value) sobek.Value {
+		must(root.run.calibrationAllowed())
+		var opts CalibrationOptions
+		must(exportValue(v, &opts))
+		opts.TransportSource = "extension_shared_transport"
+		report, err := CalibrateHTTP(vu.Context(), &http.Client{Transport: root.sharedTransport()}, opts)
+		if err != nil {
+			failure := rt.NewGoError(err)
+			value, encodeErr := jsonValue(rt, report)
+			must(encodeErr)
+			must(failure.Set("calibration", value))
+			panic(failure)
+		}
+		value, err := jsonValue(rt, report)
+		must(err)
+		return value
+	}))
+	must(mi.exports.Set("calibrateTCP", func(v sobek.Value) sobek.Value {
+		must(root.run.calibrationAllowed())
+		var opts CalibrationOptions
+		must(exportValue(v, &opts))
+		report, err := CalibrateTCP(vu.Context(), opts)
+		if err != nil {
+			failure := rt.NewGoError(err)
+			value, encodeErr := jsonValue(rt, report)
+			must(encodeErr)
+			must(failure.Set("calibration", value))
+			panic(failure)
+		}
+		value, err := jsonValue(rt, report)
+		must(err)
+		return value
+	}))
 	must(mi.exports.Set("beginMeasurement", func(v sobek.Value) {
 		var opts RunOptions
 		if err := exportValue(v, &opts); err != nil {
@@ -183,6 +241,6 @@ func exportValue(v sobek.Value, dst interface{}) error {
 func (mi *moduleInstance) Exports() modules.Exports {
 	return modules.Exports{
 		Default: mi.exports,
-		Named:   map[string]interface{}{"Client": mi.exports.Get("Client"), "beginMeasurement": mi.exports.Get("beginMeasurement"), "endMeasurement": mi.exports.Get("endMeasurement"), "measurementSummary": mi.exports.Get("measurementSummary")},
+		Named:   map[string]interface{}{"Client": mi.exports.Get("Client"), "setControlLimits": mi.exports.Get("setControlLimits"), "controlSnapshot": mi.exports.Get("controlSnapshot"), "renderRequestTemplate": mi.exports.Get("renderRequestTemplate"), "calibrateHTTP": mi.exports.Get("calibrateHTTP"), "calibrateTCP": mi.exports.Get("calibrateTCP"), "beginMeasurement": mi.exports.Get("beginMeasurement"), "endMeasurement": mi.exports.Get("endMeasurement"), "measurementSummary": mi.exports.Get("measurementSummary")},
 	}
 }
