@@ -339,8 +339,14 @@ func CounterRate(before, after Sample, elapsed, maxGap time.Duration) (float64, 
 		return 0, fmt.Errorf("counter timestamp basis changed")
 	}
 	if before.Timestamp != nil {
-		delta := uint64(*after.Timestamp) - uint64(*before.Timestamp)
-		if *after.Timestamp <= *before.Timestamp || maxGap <= 0 || delta > uint64(maxGap/time.Millisecond) {
+		if *after.Timestamp <= *before.Timestamp || maxGap <= 0 {
+			return 0, fmt.Errorf("counter timestamp interval exceeds bound")
+		}
+		if *before.Timestamp < 0 && *after.Timestamp > math.MaxInt64+*before.Timestamp {
+			return 0, fmt.Errorf("counter timestamp interval overflows")
+		}
+		delta := *after.Timestamp - *before.Timestamp
+		if delta > int64(maxGap/time.Millisecond) {
 			return 0, fmt.Errorf("counter timestamp interval exceeds bound")
 		}
 		elapsed = time.Duration(delta) * time.Millisecond

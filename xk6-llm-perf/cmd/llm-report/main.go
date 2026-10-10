@@ -52,7 +52,7 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		rows, err := llmperf.ReadRecords(f)
-		f.Close()
+		_ = f.Close()
 		if err != nil {
 			return err
 		}
@@ -87,7 +87,7 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		window, err := llmperf.ReadTelemetryWindow(f)
-		f.Close()
+		_ = f.Close()
 		if err != nil {
 			return err
 		}

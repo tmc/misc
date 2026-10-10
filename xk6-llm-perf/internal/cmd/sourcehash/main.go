@@ -46,13 +46,14 @@ func run() error {
 	sort.Strings(paths)
 	h := sha256.New()
 	for _, path := range paths {
+		// #nosec G304 -- Paths come from the local repository walk, which skips symlinks.
 		f, err := os.Open(path)
 		if err != nil {
 			return err
 		}
 		info, err := f.Stat()
 		if err != nil {
-			f.Close()
+			_ = f.Close()
 			return err
 		}
 		fmt.Fprintf(h, "%d:%s:%d:", len(path), filepath.ToSlash(path), info.Size())

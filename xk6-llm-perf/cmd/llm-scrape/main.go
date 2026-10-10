@@ -73,6 +73,7 @@ func run(args []string, out io.Writer) error {
 		if *pods != "" {
 			path = *pods
 		}
+		// #nosec G304 -- The CLI explicitly reads a caller-selected, bounded discovery file.
 		f, err := os.Open(path)
 		if err != nil {
 			return nil, err

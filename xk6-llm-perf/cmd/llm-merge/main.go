@@ -90,12 +90,12 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 		f, err := root.Open(w.File)
-		root.Close()
+		_ = root.Close()
 		if err != nil {
 			return err
 		}
 		data, err := io.ReadAll(io.LimitReader(f, 64*1024*1024+1))
-		f.Close()
+		_ = f.Close()
 		if err != nil {
 			return err
 		}

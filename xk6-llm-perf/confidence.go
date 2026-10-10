@@ -65,6 +65,7 @@ func LatencyConfidence(run RunSummary, opts ConfidenceOptions) (Confidence, erro
 	for _, v := range values {
 		c.Mean += v / float64(len(values))
 	}
+	// #nosec G404 -- Reproducible bootstrap sampling, not security randomness.
 	rng := rand.New(rand.NewPCG(opts.Seed, opts.Seed^0x9e3779b97f4a7c15))
 	means := make([]float64, opts.Replicates)
 	for i := range means {

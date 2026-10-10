@@ -159,6 +159,7 @@ func asset(path, expected string, limit int64) ([]byte, error) {
 	if err != nil || len(pin) != sha256.Size {
 		return nil, fmt.Errorf("asset SHA-256 pin is required")
 	}
+	// #nosec G304 -- Caller-selected offline asset is bounded and checked against its SHA-256 pin.
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err

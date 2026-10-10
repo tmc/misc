@@ -107,3 +107,27 @@ func TestFetchFailureAndCancellation(t *testing.T) {
 		t.Fatal("accepted secret query")
 	}
 }
+
+func TestCounterTimestampArithmetic(t *testing.T) {
+	valueBefore, valueAfter := float64(1), float64(2)
+	for _, tt := range []struct {
+		name          string
+		before, after int64
+		bad           bool
+	}{
+		{"negative", -2, -1, false}, {"cross zero", -1, 0, false},
+		{"overflow", -2, 1<<63 - 1, true}, {"reverse", 1, -1, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			before := Sample{Name: "counter", Type: "counter", Value: &valueBefore, Timestamp: &tt.before}
+			after := Sample{Name: "counter", Type: "counter", Value: &valueAfter, Timestamp: &tt.after}
+			rate, err := CounterRate(before, after, time.Millisecond, time.Second)
+			if (err != nil) != tt.bad {
+				t.Fatalf("rate=%v err=%v", rate, err)
+			}
+			if !tt.bad && rate != 1000 {
+				t.Fatalf("rate=%v", rate)
+			}
+		})
+	}
+}
