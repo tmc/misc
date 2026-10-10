@@ -138,6 +138,9 @@ func AnalyzeEnergy(run RunSummary, w TelemetryWindow, opts EnergyOptions) (Energ
 			if m.OutputTokens.Value == nil || *m.OutputTokens.Value < 0 {
 				return s, fmt.Errorf("successful output count unavailable")
 			}
+			if int64(*m.OutputTokens.Value) > math.MaxInt64-s.OutputTokens {
+				return s, fmt.Errorf("output token sum overflow")
+			}
 			s.OutputTokens += int64(*m.OutputTokens.Value)
 			s.CountSources[m.OutputTokens.Source]++
 		}

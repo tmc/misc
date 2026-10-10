@@ -1,0 +1,15 @@
+exec $CLI -input raw.jsonl -start 1000 -end 3000 -max-gap 1.5
+stdout '"joules":10.5'
+stdout '"mean":5.25'
+! exec $CLI -input raw.jsonl -start 3000 -end 1000 -max-gap 1.5
+stderr 'invalid replay bounds'
+! exec $CLI -input truncated.jsonl -start 1000 -end 3000 -max-gap 1.5
+stderr 'missing telemetry terminal record'
+-- raw.jsonl --
+{"kind":"manifest","manifest":{"schema_version":1,"run_id":"fixture","collector":"injected@1","definition_version":"llm-telemetry-v1","clock_basis":"same-host","clock_uncertainty_ms":0,"endpoint_devices":{"http://server/v1":["GPU-1"]},"devices":[{"uuid":"GPU-1","scope":"whole-device","model":"fixture","driver":"fixture","backend":"fixture"}]}}
+{"kind":"sample","sample":{"uuid":"GPU-1","monotonic_ms":0,"query_started_at":1000,"query_finished_at":1001,"source_at":1000,"readings":[{"name":"power","unit":"watts","evidence":"injected","value":2}]}}
+{"kind":"sample","sample":{"uuid":"GPU-1","monotonic_ms":500,"query_started_at":1500,"query_finished_at":1501,"source_at":1500,"readings":[{"name":"power","unit":"watts","evidence":"injected","value":4}]}}
+{"kind":"sample","sample":{"uuid":"GPU-1","monotonic_ms":2000,"query_started_at":3000,"query_finished_at":3001,"source_at":3000,"readings":[{"name":"power","unit":"watts","evidence":"injected","value":8}]}}
+{"kind":"end","complete":true}
+-- truncated.jsonl --
+{"kind":"manifest","manifest":{"schema_version":1,"run_id":"fixture","collector":"injected@1","definition_version":"llm-telemetry-v1","clock_basis":"same-host","clock_uncertainty_ms":0,"endpoint_devices":{"http://server/v1":["GPU-1"]},"devices":[{"uuid":"GPU-1","scope":"whole-device","model":"fixture","driver":"fixture","backend":"fixture"}]}}

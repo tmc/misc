@@ -1,0 +1,243 @@
+package llmperf
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"testing"
+)
+
+func rawTelemetryFixture(counter bool) string {
+	zero := 0.0
+	complete := true
+	m := TelemetryManifest{SchemaVersion: 1, RunID: "fixture", Collector: "injected@1", DefinitionVersion: "llm-telemetry-v1", ClockBasis: "same-host", ClockUncertainty: &zero, EndpointDevices: map[string][]string{"http://server/v1": {"GPU-1"}}, Devices: []TelemetryDevice{{UUID: "GPU-1", Scope: "whole-device", Model: "fixture", Driver: "fixture", Backend: "fixture"}}}
+	var b bytes.Buffer
+	e := json.NewEncoder(&b)
+	e.Encode(TelemetryRecord{Kind: "manifest", Manifest: &m})
+	for i, at := range []float64{1000, 1500, 3000} {
+		power := []float64{2, 4, 8}[i]
+		energy := uint64(9007199254740993) + []uint64{0, 1000, 8000}[i]
+		values := []TelemetryReading{{Name: "power", Unit: "watts", Evidence: "injected", Value: &power}}
+		if counter {
+			values = append(values, TelemetryReading{Name: "energy", Unit: "millijoules", Evidence: "injected", Counter: &energy})
+		}
+		e.Encode(TelemetryRecord{Kind: "sample", Sample: &TelemetrySample{UUID: "GPU-1", Monotonic: at - 1000, QueryStarted: at, QueryFinished: at + 1, SourceAt: &at, Readings: values}})
+	}
+	e.Encode(TelemetryRecord{Kind: "end", Complete: &complete})
+	return b.String()
+}
+
+func ExampleReadTelemetryReplay() {
+	raw, err := ReadTelemetryReplay(strings.NewReader(rawTelemetryFixture(true)))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(raw.Manifest.Collector, len(raw.Records))
+	// Output: injected@1 5
+}
+
+func ExampleReplayTelemetry() {
+	raw, _ := ReadTelemetryReplay(strings.NewReader(rawTelemetryFixture(true)))
+	window, fields, err := ReplayTelemetry(raw, 1000, 3000, EnergyOptions{MaxGap: 1.5})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(*fields[0].Mean, window.Devices[0].Method)
+	// Output: 5.25 cumulative-counter
+}
+
+func TestTelemetryReplayAnalytic(t *testing.T) {
+	for _, counter := range []bool{false, true} {
+		raw, err := ReadTelemetryReplay(strings.NewReader(rawTelemetryFixture(counter)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		w, fields, err := ReplayTelemetry(raw, 1000, 3000, EnergyOptions{MaxGap: 1.5})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(fields) == 0 || *fields[0].Mean != 5.25 || fields[0].CoveredDuration != 2 || fields[0].MissingDuration != 0 {
+			t.Fatalf("fields=%+v", fields)
+		}
+		run, _ := energyFixture()
+		summary, err := AnalyzeEnergy(run, w, EnergyOptions{MaxGap: 1.5})
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := 10.5
+		if counter {
+			want = 8
+		}
+		if summary.Joules != want || summary.EstimatedEnergy == counter {
+			t.Fatalf("summary=%+v", summary)
+		}
+		_, _, err = ReplayTelemetry(raw, 1100, 2900, EnergyOptions{MaxGap: 1.5})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestTelemetryReplayRefusals(t *testing.T) {
+	base := rawTelemetryFixture(true)
+	for _, tc := range []struct{ name, input string }{
+		{"truncated", base[:len(base)-3]},
+		{"unknown version", strings.Replace(base, `"schema_version":1`, `"schema_version":2`, 1)},
+		{"identity", strings.Replace(base, `"uuid":"GPU-1","monotonic_ms":500`, `"uuid":"GPU-2","monotonic_ms":500`, 1)},
+		{"loss", strings.Replace(base, `"complete":true`, `"complete":true,"lost_records":1`, 1)},
+		{"incomplete", strings.Replace(base, `"complete":true`, `"complete":false`, 1)},
+		{"unit", strings.Replace(base, `"unit":"watts"`, `"unit":"milliwatts"`, 1)},
+		{"unknown field", strings.Replace(base, `"kind":"end"`, `"kind":"end","extra":1`, 1)},
+		{"after end", base + `{"kind":"end","complete":true}`},
+		{"unknown clock", strings.Replace(base, `"clock_uncertainty_ms":0`, `"clock_uncertainty_ms":null`, 1)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := ReadTelemetryReplay(strings.NewReader(tc.input)); err == nil {
+				t.Fatal("accepted invalid stream")
+			}
+		})
+	}
+	for _, name := range []string{"gap", "missing", "reset", "clock", "wider", "MIG", "partial device"} {
+		t.Run(name, func(t *testing.T) {
+			raw, err := ReadTelemetryReplay(strings.NewReader(base))
+			if err != nil {
+				t.Fatal(err)
+			}
+			gap := 1.5
+			start, end := 1000.0, 3000.0
+			switch name {
+			case "gap":
+				gap = 1
+			case "missing":
+				raw.Records[2].Sample.Readings[1].Counter = nil
+				raw.Records[2].Sample.Readings[1].Unavailable = "permission-denied"
+			case "reset":
+				v := uint64(1)
+				raw.Records[2].Sample.Readings[1].Counter = &v
+			case "clock":
+				v := 100.0
+				raw.Manifest.ClockUncertainty = &v
+				raw.Records[0].Manifest = &raw.Manifest
+			case "wider":
+				start, end = 1100, 2900
+			case "MIG":
+				raw.Manifest.Devices[0].ParentUUID = "parent"
+				raw.Records[0].Manifest = &raw.Manifest
+			case "partial device":
+				raw.Manifest.Devices = append(raw.Manifest.Devices, TelemetryDevice{UUID: "GPU-2", Scope: "whole-device", Model: "test", Driver: "test", Backend: "test"})
+				raw.Manifest.EndpointDevices["http://server/v1"] = append(raw.Manifest.EndpointDevices["http://server/v1"], "GPU-2")
+				raw.Records[0].Manifest = &raw.Manifest
+			}
+			var reb bytes.Buffer
+			if err := WriteTelemetryReplay(&reb, raw); err != nil {
+				t.Fatal(err)
+			}
+			raw, err = ReadTelemetryReplay(&reb)
+			if err != nil {
+				t.Fatal(err)
+			}
+			w, _, err := ReplayTelemetry(raw, start, end, EnergyOptions{MaxGap: gap})
+			if err != nil {
+				return
+			}
+			run, _ := energyFixture()
+			if _, err := AnalyzeEnergy(run, w, EnergyOptions{MaxGap: gap}); err == nil {
+				t.Fatal("accepted unqualified energy")
+			}
+		})
+	}
+}
+
+func ExampleWriteTelemetryReplay() {
+	raw, _ := ReadTelemetryReplay(strings.NewReader(rawTelemetryFixture(true)))
+	var b bytes.Buffer
+	err := WriteTelemetryReplay(&b, raw)
+	got, _ := ReadTelemetryReplay(&b)
+	fmt.Println(err, len(got.Records))
+	// Output: <nil> 5
+}
+
+func TestTelemetryWriterReplay(t *testing.T) {
+	raw, _ := ReadTelemetryReplay(strings.NewReader(rawTelemetryFixture(true)))
+	var b bytes.Buffer
+	if err := WriteTelemetryReplay(&b, raw); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ReadTelemetryReplay(&b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, af, err := ReplayTelemetry(raw, 1000, 3000, EnergyOptions{MaxGap: 1.5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	z, zf, err := ReplayTelemetry(got, 1000, 3000, EnergyOptions{MaxGap: 1.5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	aj, _ := json.Marshal(a)
+	zj, _ := json.Marshal(z)
+	fj, _ := json.Marshal(af)
+	gj, _ := json.Marshal(zf)
+	if !bytes.Equal(aj, zj) || !bytes.Equal(fj, gj) {
+		t.Fatal("replay changed summaries")
+	}
+	if err := WriteTelemetryReplay(shortTelemetryWriter{}, raw); err == nil {
+		t.Fatal("accepted short writer")
+	}
+}
+
+type shortTelemetryWriter struct{}
+
+func (shortTelemetryWriter) Write(p []byte) (int, error) { return len(p) - 1, nil }
+
+func TestTelemetryReplayBoundsAndOrigin(t *testing.T) {
+	if _, err := ReadTelemetryReplay(strings.NewReader(strings.Repeat(" ", 1024*1024+1))); err == nil {
+		t.Fatal("accepted oversized line")
+	}
+	raw, _ := ReadTelemetryReplay(strings.NewReader(rawTelemetryFixture(true)))
+	raw.SourceHash = "sha256:changed"
+	if _, _, err := ReplayTelemetry(raw, 1000, 3000, EnergyOptions{MaxGap: 1.5}); err == nil {
+		t.Fatal("accepted changed raw identity")
+	}
+	raw, _ = ReadTelemetryReplay(strings.NewReader(rawTelemetryFixture(true)))
+	*raw.Records[1].Sample.Readings[0].Value = 100
+	if _, _, err := ReplayTelemetry(raw, 1000, 3000, EnergyOptions{MaxGap: 1.5}); err == nil {
+		t.Fatal("accepted mutated retained stream")
+	}
+}
+
+func TestTelemetryUnavailableZeroAndBitmask(t *testing.T) {
+	raw, _ := ReadTelemetryReplay(strings.NewReader(rawTelemetryFixture(false)))
+	for i := 1; i <= 3; i++ {
+		v := 0.0
+		bits := uint64(4 - i)
+		raw.Records[i].Sample.Readings = []TelemetryReading{{Name: "power", Unit: "watts", Evidence: "injected", Value: &v}, {Name: "throttle_reasons", Unit: "bitmask", Evidence: "injected", Counter: &bits}}
+	}
+	var b bytes.Buffer
+	if err := WriteTelemetryReplay(&b, raw); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := ReadTelemetryReplay(&b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w, fields, err := ReplayTelemetry(raw, 1000, 3000, EnergyOptions{MaxGap: 1.5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *w.Devices[0].Joules != 0 || *fields[0].Mean != 0 || fields[1].Mean != nil {
+		t.Fatalf("zero or bitmask interpretation wrong: %+v", fields)
+	}
+	run, _ := energyFixture()
+	s, err := AnalyzeEnergy(run, w, EnergyOptions{MaxGap: 1.5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.OutputTokensPerJoule != nil {
+		t.Fatal("zero energy yielded efficiency")
+	}
+}
