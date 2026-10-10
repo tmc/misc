@@ -58,6 +58,7 @@ type CompletionResponse struct {
 }
 
 type Choice struct {
+	Index               int             `json:"index"`
 	SpeculativeDecoding json.RawMessage `json:"speculative_decoding,omitempty"`
 	Message             Message         `json:"message"`
 	FinishReason        string          `json:"finish_reason,omitempty"`
@@ -84,6 +85,7 @@ type ChatCompletionChunk struct {
 	Model   string `json:"model"`
 	Usage   Usage  `json:"usage,omitempty"`
 	Choices []struct {
+		Index               int             `json:"index"`
 		SpeculativeDecoding json.RawMessage `json:"speculative_decoding,omitempty"`
 		Delta               struct {
 			Role             string     `json:"role,omitempty"`

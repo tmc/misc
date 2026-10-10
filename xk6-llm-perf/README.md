@@ -271,3 +271,17 @@ example JavaScript, module files and Makefile, and is checked again after the
 build. External vocabulary, template and dataset assets still require their
 own retained hashes. A local development version string alone does not pin
 extension source.
+
+Streaming timing and returned content select choice index 0. Other choice
+indices set `multi_choice`; provider request-level usage is retained, but
+per-choice ITL is omitted because those counts cannot identify choice 0's
+output. The record states `choice_policy`. Sync responses retain all choices
+and their indices. Full streaming multi-choice response aggregation remains
+pending; no per-choice token allocation is inferred.
+
+[`tools/llm-tokenize`](tools/llm-tokenize/README.md) is a separate offline
+preprocessing command using a publicly pinned `lib/hf/hftokenizer` module.
+It verifies vocabulary and literal role-frame hashes, known synthetic sequences,
+and chat framing, and emits a retained counting receipt. Its framing dialect
+is explicit; Jinja and unsupported tokenizer pipelines are refused. The
+extension continues to identify imported counts as caller declarations.

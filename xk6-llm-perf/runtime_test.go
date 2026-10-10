@@ -292,3 +292,63 @@ func TestBinaryPhases(t *testing.T) {
 		}
 	}
 }
+
+func TestBinaryAdapters(t *testing.T) {
+	binary := os.Getenv("K6_SMOKE_BINARY")
+	if binary == "" {
+		t.Skip("set K6_SMOKE_BINARY to test endpoint adapters")
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			Stream bool `json:"stream"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Error(err)
+			http.Error(w, "bad request", 400)
+			return
+		}
+		switch r.URL.Path {
+		case "/completions":
+			if req.Stream {
+				fmt.Fprint(w, "data: {\"choices\":[{\"text\":\"hello\",\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":2,\"completion_tokens\":3}}\n\ndata: [DONE]\n\n")
+			} else {
+				fmt.Fprint(w, `{"choices":[{"text":"hello","finish_reason":"stop"}],"usage":{"prompt_tokens":2,"completion_tokens":3}}`)
+			}
+		case "/responses":
+			if req.Stream {
+				fmt.Fprint(w, "data: {\"type\":\"response.output_text.delta\",\"delta\":\"hello\"}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"usage\":{\"input_tokens\":2,\"output_tokens\":3}}}\n\n")
+			} else {
+				fmt.Fprint(w, `{"output":[{"content":[{"type":"output_text","text":"hello"}]}],"usage":{"input_tokens":2,"output_tokens":3}}`)
+			}
+		case "/messages":
+			if r.Header.Get("anthropic-version") == "" {
+				t.Error("missing Anthropic protocol header")
+			}
+			if req.Stream {
+				fmt.Fprint(w, "data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":2}}}\n\ndata: {\"type\":\"content_block_delta\",\"delta\":{\"text\":\"hello\"}}\n\ndata: {\"type\":\"message_delta\",\"usage\":{\"output_tokens\":3}}\n\ndata: {\"type\":\"message_stop\"}\n\n")
+			} else {
+				fmt.Fprint(w, `{"content":[{"type":"text","text":"hello"}],"usage":{"input_tokens":2,"output_tokens":3}}`)
+			}
+		case "/generate":
+			fmt.Fprint(w, `{"generated_text":"hello","details":{"generated_tokens":3}}`)
+		case "/generate_stream":
+			fmt.Fprint(w, "data: {\"token\":{\"text\":\"he\"}}\n\ndata: {\"token\":{\"text\":\"llo\"},\"generated_text\":\"hello\",\"details\":{\"generated_tokens\":3}}\n\n")
+		case "/embeddings", "/rankings":
+			fmt.Fprint(w, `{"object":"fixture","data":[],"usage":{"prompt_tokens":2}}`)
+		default:
+			http.Error(w, "unknown path", 404)
+		}
+	}))
+	defer server.Close()
+	binary, err := filepath.Abs(binary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, binary, "run", "--no-color", "examples/adapter-smoke.js")
+	cmd.Env = append(os.Environ(), "ENDPOINT_URL="+server.URL, "K6_NO_USAGE_REPORT=true", "K6_AUTO_EXTENSION_RESOLUTION=false")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("adapters: %v\n%s", err, output)
+	}
+}

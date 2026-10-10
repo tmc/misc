@@ -87,6 +87,9 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 			req.Model = model
 		}
 		req.Stream, _ = req.Raw.Body["stream"].(bool)
+		if req.Raw.Stream != nil {
+			req.Stream = *req.Raw.Stream
+		}
 	}
 	// Add model from config if not set in request
 	if req.Model == "" {
@@ -116,7 +119,7 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	path := "/chat/completions"
 	if req.Raw != nil {
 		payload, path = req.Raw.Body, req.Raw.Path
-		if _, ok := req.Raw.Body["model"]; !ok && req.Model != "" {
+		if _, ok := req.Raw.Body["model"]; !ok && req.Model != "" && c.protocol != "tgi" {
 			req.Raw.Body["model"] = req.Model
 		}
 	}
@@ -348,14 +351,14 @@ func (c *Client) addHTTPSystemTags(tagsAndMeta *metrics.TagsAndMeta, req *http.R
 	tagsAndMeta.SetSystemTagOrMetaIfEnabled(enabled, metrics.TagName, req.URL.String())
 	tagsAndMeta.SetSystemTagOrMetaIfEnabled(enabled, metrics.TagURL, req.URL.String())
 	tagsAndMeta.SetSystemTagOrMetaIfEnabled(enabled, metrics.TagMethod, req.Method)
-	if reqErr != nil || resp == nil {
+	if resp == nil {
 		tagsAndMeta.SetSystemTagOrMetaIfEnabled(enabled, metrics.TagStatus, "0")
 		tagsAndMeta.SetSystemTagOrMetaIfEnabled(enabled, metrics.TagExpectedResponse, "false")
 		return
 	}
 	tagsAndMeta.SetSystemTagOrMetaIfEnabled(enabled, metrics.TagStatus, strconv.Itoa(resp.StatusCode))
 	tagsAndMeta.SetSystemTagOrMetaIfEnabled(enabled, metrics.TagProto, resp.Proto)
-	tagsAndMeta.SetSystemTagOrMetaIfEnabled(enabled, metrics.TagExpectedResponse, strconv.FormatBool(resp.StatusCode < 400))
+	tagsAndMeta.SetSystemTagOrMetaIfEnabled(enabled, metrics.TagExpectedResponse, strconv.FormatBool(reqErr == nil && resp.StatusCode < 400))
 }
 
 func (c *Client) acquirePrefill(ctx context.Context, config Config) (func(), error) {
@@ -444,16 +447,26 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 			result.Created = chunk.Created
 		}
 		c.readSpecDecode(chunk.Metrics.SpeculativeDecoding)
-		if len(chunk.Choices) > 0 {
-			c.readSpecDecode(chunk.Choices[0].SpeculativeDecoding)
+		primary := -1
+		for i, choice := range chunk.Choices {
+			if choice.Index != 0 && c.measurement != nil {
+				c.measurement.MultiChoice = true
+				c.measurement.noOutputEstimate = true
+			}
+			if choice.Index == 0 {
+				primary = i
+			}
+		}
+		if primary >= 0 {
+			c.readSpecDecode(chunk.Choices[primary].SpeculativeDecoding)
 		}
 		now := time.Now()
 		if !lastEvent.IsZero() && now.After(lastEvent) {
 			c.recordMetric(recordMetrics, "llm_inter_chunk_latency", (float64(now.Sub(lastEvent)) / float64(time.Millisecond)))
 		}
 		lastEvent = now
-		if len(chunk.Choices) > 0 {
-			delta := chunk.Choices[0].Delta
+		if primary >= 0 {
+			delta := chunk.Choices[primary].Delta
 			hasContent := delta.Content != "" || delta.ReasoningContent != "" || len(delta.ToolCalls) > 0
 			if hasContent {
 				if c.measurement != nil {
@@ -506,7 +519,8 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 				}
 			}
 		}
-		for _, choice := range chunk.Choices {
+		if primary >= 0 {
+			choice := chunk.Choices[primary]
 			if choice.FinishReason != "" {
 				complete = true
 				result.Choices = []Choice{{FinishReason: choice.FinishReason}}
@@ -606,6 +620,10 @@ func (c *Client) handleSyncResponse(resp *http.Response, startTime time.Time, in
 	}
 	if c.measurement != nil {
 		c.measurement.reported = completion.Usage
+		if len(completion.Choices) > 1 {
+			c.measurement.MultiChoice = true
+			c.measurement.ChoicePolicy = "all synchronous choices; provider request-level usage"
+		}
 
 		c.measurement.estimatedOutput = c.estimateCompletionTokens(completion)
 		for _, choice := range completion.Choices {

@@ -26,6 +26,8 @@ type TokenCount struct {
 // Measurement is a sanitized request record. Durations are milliseconds;
 // timestamps are Unix milliseconds. No prompt, response text, or credential is stored.
 type Measurement struct {
+	ChoicePolicy             string     `json:"choice_policy"`
+	MultiChoice              bool       `json:"multi_choice"`
 	ProviderTotalTokens      *int       `json:"provider_total_tokens"`
 	ClientTokenizer          string     `json:"client_tokenizer,omitempty"`
 	RequestID                string     `json:"request_id,omitempty"`
@@ -169,6 +171,9 @@ func (c *Client) finishMeasurement(m *Measurement) {
 		return
 	}
 	m.finalized = true
+	if m.ChoicePolicy == "" {
+		m.ChoicePolicy = "choice 0 timing; provider request-level usage"
+	}
 	now := m.responseEnd
 	if now.IsZero() {
 		now = time.Now()
@@ -225,7 +230,7 @@ func (c *Client) finishMeasurement(m *Measurement) {
 	} else if m.firstChunk != nil {
 		m.FirstChunkSource = "reported"
 	}
-	if m.OutputTokens.Value != nil && *m.OutputTokens.Value >= 2 && m.TTFT != nil && m.LastContentLatency != nil {
+	if !m.MultiChoice && m.OutputTokens.Value != nil && *m.OutputTokens.Value >= 2 && m.TTFT != nil && m.LastContentLatency != nil {
 		n := *m.OutputTokens.Value
 		if m.firstChunk != nil && *m.firstChunk > 0 && *m.firstChunk < n {
 			n -= *m.firstChunk

@@ -87,6 +87,7 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 		must(call.This.Set("chat", chat))
 		must(call.This.Set("request", func(call sobek.FunctionCall) sobek.Value {
 			var opts struct {
+				Stream      *bool          `json:"stream"`
 				ScheduledAt *float64       `json:"scheduledAt"`
 				CancelAfter string         `json:"cancelAfter"`
 				Path        string         `json:"path"`
@@ -97,7 +98,7 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 			if err := exportValue(call.Argument(0), &opts); err != nil {
 				return rt.NewGoError(err)
 			}
-			value, err := jsonValue(rt, CompletionRequest{ScheduledAt: opts.ScheduledAt, CancelAfter: opts.CancelAfter, Raw: &RawRequest{Path: opts.Path, Protocol: opts.Protocol, Body: opts.Body}, Measurement: opts.Measurement})
+			value, err := jsonValue(rt, CompletionRequest{ScheduledAt: opts.ScheduledAt, CancelAfter: opts.CancelAfter, Raw: &RawRequest{Stream: opts.Stream, Path: opts.Path, Protocol: opts.Protocol, Body: opts.Body}, Measurement: opts.Measurement})
 			must(err)
 			result := client.Complete(sobek.FunctionCall{Arguments: []sobek.Value{value}})
 			if err, ok := result.Export().(error); ok {

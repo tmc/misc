@@ -9,6 +9,7 @@ import (
 // RawRequest sends an authored JSON payload. Protocol selects a response
 // adapter; json leaves token metrics unavailable without declared counts.
 type RawRequest struct {
+	Stream   *bool          `json:"stream,omitempty"`
 	Path     string         `json:"path"`
 	Protocol string         `json:"protocol"`
 	Body     map[string]any `json:"body"`
@@ -25,13 +26,17 @@ func validateRaw(r *RawRequest) error {
 		return fmt.Errorf("raw path must be an absolute API path without query or traversal")
 	}
 	switch r.Protocol {
-	case "openai-chat", "openai-completions", "openai-responses", "anthropic", "json":
+	case "openai-chat", "openai-completions", "openai-responses", "anthropic", "tgi", "json":
 	default:
 		return fmt.Errorf("unsupported response protocol")
 	}
 	if stream, ok := r.Body["stream"]; ok {
-		if _, ok := stream.(bool); !ok {
+		value, ok := stream.(bool)
+		if !ok {
 			return fmt.Errorf("body.stream must be boolean")
+		}
+		if r.Stream != nil && *r.Stream != value {
+			return fmt.Errorf("stream conflicts with body.stream")
 		}
 	}
 	return nil
@@ -66,6 +71,9 @@ func canonicalUsage(raw json.RawMessage, protocol string) (Usage, error) {
 }
 
 func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
+	if protocol == "tgi" {
+		return decodeTGI(data)
+	}
 	var result CompletionResponse
 	if protocol == "" || protocol == "openai-chat" {
 		return result, json.Unmarshal(data, &result)
@@ -136,6 +144,11 @@ func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error
 	if protocol == "" || protocol == "openai-chat" {
 		return result, false, json.Unmarshal(data, &result)
 	}
+	var vendor ChatCompletionChunk
+	if err := json.Unmarshal(data, &vendor); err != nil {
+		return result, false, err
+	}
+	result.Metrics = vendor.Metrics
 	var raw struct {
 		Type    string          `json:"type"`
 		ID      string          `json:"id"`
@@ -206,6 +219,19 @@ func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error
 			content, reasoning = delta.Text, delta.Thinking
 		}
 		complete = raw.Type == "message_stop"
+	case "tgi":
+		var v tgiResponse
+		if err := json.Unmarshal(data, &v); err != nil {
+			return result, false, err
+		}
+		if v.Token != nil {
+			content = v.Token.Text
+		}
+		if v.GeneratedText != nil {
+			complete = true
+			finish = v.Details.FinishReason
+			raw.Usage = tgiUsage(v)
+		}
 	case "json":
 		return result, false, fmt.Errorf("json protocol does not support SSE; select a streaming adapter")
 	}
@@ -221,6 +247,10 @@ func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error
 		return result, false, err
 	}
 	result.Choices = normalized.Choices
+	if len(vendor.Choices) > 0 && len(result.Choices) > 0 {
+		result.Choices[0].SpeculativeDecoding = vendor.Choices[0].SpeculativeDecoding
+		result.Choices[0].Index = vendor.Choices[0].Index
+	}
 	return result, complete, nil
 }
 

@@ -30,14 +30,14 @@ declare module 'k6/x/llm-perf' {
     tools?: Record<string, unknown>[]; tool_choice?: unknown;
     measurement?: TokenCounts; scheduledAt?: number; cancelAfter?: string;
   }
-  export type Protocol = 'openai-chat' | 'openai-completions' | 'openai-responses' | 'anthropic' | 'json';
+  export type Protocol = 'openai-chat' | 'openai-completions' | 'openai-responses' | 'anthropic' | 'tgi' | 'json';
   export interface RawRequest {
-    path: string; protocol: Protocol; body: Record<string, unknown>;
+    path: string; protocol: Protocol; stream?: boolean; body: Record<string, unknown>;
     measurement?: TokenCounts; scheduledAt?: number; cancelAfter?: string;
   }
   export interface TokenCount { value: number | null; source: string; }
   export interface Measurement {
-    provider_total_tokens: number | null; client_tokenizer?: string; request_id?: string; schema_version: 1; protocol: Protocol; phase: string;
+    choice_policy: string; multi_choice: boolean; provider_total_tokens: number | null; client_tokenizer?: string; request_id?: string; schema_version: 1; protocol: Protocol; phase: string;
     endpoint: string; model: string; outcome: string; error_stage?: string;
     status: number; attempted: boolean; recorded: boolean; good: boolean;
     started_at: number; dispatched_at: number; finished_at: number;
@@ -59,7 +59,7 @@ declare module 'k6/x/llm-perf' {
   }
   export interface CompletionResponse {
     id: string; object: string; created: number; model: string; status: number;
-    choices: { message: Message; finish_reason?: string }[];
+    choices: { index: number; message: Message; finish_reason?: string }[];
     usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number;
       reasoning_tokens?: number; cached_tokens?: number };
     body?: unknown; measurement?: Measurement;

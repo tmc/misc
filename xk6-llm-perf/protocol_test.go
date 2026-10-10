@@ -1,6 +1,7 @@
 package llmperf
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -85,5 +86,21 @@ func TestRawPathRejectsExfiltration(t *testing.T) {
 		if validateRaw(&RawRequest{Path: path, Protocol: "json", Body: map[string]any{}}) == nil {
 			t.Fatalf("accepted %q", path)
 		}
+	}
+}
+
+func TestCompletionChunkPreservesVendorStats(t *testing.T) {
+	payload := []byte(`{"choices":[{"index":0,"text":"hello","finish_reason":"stop","speculative_decoding":{"total_accepted_draft_tokens":1,"total_draft_tokens":2,"num_spec_steps":1,"acceptance_histogram":[0,1]}}],"metrics":{"speculative_decoding":{"num_accepted_draft_tokens":1,"num_draft_tokens":2,"num_spec_steps":1,"acceptance_histogram":[0,1]}}}`)
+	chunk, _, err := decodeChunk(payload, "openai-completions")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, raw := range []json.RawMessage{chunk.Metrics.SpeculativeDecoding, chunk.Choices[0].SpeculativeDecoding} {
+		if _, err := parseSpecDecode(raw); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if chunk.Choices[0].Delta.Content != "hello" || chunk.Choices[0].Index != 0 {
+		t.Fatalf("chunk=%+v", chunk)
 	}
 }
