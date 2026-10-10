@@ -43,6 +43,7 @@ type StreamOptions struct {
 }
 
 type CompletionResponse struct {
+	Sources json.RawMessage `json:"sources,omitempty"`
 	Body    json.RawMessage `json:"body,omitempty"`
 	Metrics struct {
 		SpeculativeDecoding json.RawMessage `json:"speculative_decoding"`
@@ -76,6 +77,7 @@ type Usage struct {
 }
 
 type ChatCompletionChunk struct {
+	Sources json.RawMessage `json:"sources,omitempty"`
 	Metrics struct {
 		SpeculativeDecoding json.RawMessage `json:"speculative_decoding"`
 	} `json:"metrics,omitempty"`
@@ -98,6 +100,7 @@ type ChatCompletionChunk struct {
 }
 
 type Config struct {
+	ControlGroup         string   `json:"controlGroup"`
 	APIKey               string   `json:"apiKey"`
 	BaseURL              string   `json:"baseURL"`
 	BaseURLs             []string `json:"baseURLs"`
