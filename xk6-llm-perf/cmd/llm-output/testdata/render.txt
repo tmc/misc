@@ -1,0 +1,11 @@
+exec $CLI -input run.json -format csv
+stdout 'metric,unit,count'
+stdout 'ttft,ms,0,,,,,,,'
+exec $CLI -input run.json -format html
+stdout '<svg'
+exec $CLI -input run.json -format otlp
+stdout 'resourceMetrics'
+! exec $CLI -input run.json -format unknown
+stderr 'unknown output format'
+-- run.json --
+{"schema_version": 1, "run_id": "fixture", "started_at": 1000, "finished_at": 2000, "duration": 1, "attempts": 0, "successes": 0, "failures": 0, "records": []}

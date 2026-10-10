@@ -6,6 +6,8 @@ require (
 	github.com/grafana/sobek v0.0.0-20260908083152-4698bc773ae7
 	github.com/sirupsen/logrus v1.9.3
 	go.k6.io/k6/v2 v2.3.0
+	go.opentelemetry.io/proto/otlp v1.11.0
+	google.golang.org/protobuf v1.36.12
 	rsc.io/script v0.0.2
 )
 
@@ -42,7 +44,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.46.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.46.0 // indirect
 	go.opentelemetry.io/otel/trace v1.46.0 // indirect
-	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/net v0.60.0 // indirect
@@ -54,7 +55,6 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688 // indirect
 	google.golang.org/grpc v1.84.0 // indirect
-	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/guregu/null.v3 v3.3.0 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 )

@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "task": "example-fixture",
+  "task_version": "1",
+  "reference_version": "1",
+  "reference_sha256": "4a163a6173a5f47869a943487d2088bf4f0340e83693e1919b12c67a8070a461",
+  "evaluator": "exact-match-v1",
+  "evaluator_version": "1",
+  "model": "fixture",
+  "model_revision": "1",
+  "cases": [
+    {
+      "id": "one",
+      "reference": "A",
+      "prediction": " A ",
+      "outcome": "success"
+    },
+    {
+      "id": "two",
+      "reference": "A",
+      "prediction": "B",
+      "outcome": "success"
+    },
+    {
+      "id": "three",
+      "reference": "A",
+      "prediction": null,
+      "outcome": "success"
+    },
+    {
+      "id": "four",
+      "reference": "A",
+      "prediction": null,
+      "outcome": "failure"
+    }
+  ]
+}

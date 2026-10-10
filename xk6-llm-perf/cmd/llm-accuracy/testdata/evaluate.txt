@@ -1,0 +1,10 @@
+exec $CLI -input artifact.json
+stdout '"correct":1'
+stdout '"accuracy":1'
+! stdout prediction
+! exec $CLI -input invalid.json
+stderr 'unknown field'
+-- artifact.json --
+{"schema_version": 1, "task": "fixture", "task_version": "1", "reference_version": "1", "reference_sha256": "33308be4ad62a1680e06a35cb75ec1bf1188b37764c3d0f3f16dbc838360bf32", "evaluator": "exact-match-v1", "evaluator_version": "1", "model": "fixture", "model_revision": "1", "cases": [{"id": "one", "reference": "A", "prediction": " A ", "outcome": "success"}]}
+-- invalid.json --
+{"secret":"oops"}
