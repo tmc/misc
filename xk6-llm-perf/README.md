@@ -1,6 +1,6 @@
 # xk6-llm-perf
 
-A k6 extension for load testing OpenAI-compatible chat completion APIs.
+A k6 extension for measuring inference APIs and replaying benchmark records.
 It supports streaming and non-streaming requests, shared HTTP connections,
 round-robin endpoints, and a shared prefill concurrency limit.
 
@@ -74,6 +74,10 @@ set a `checks` threshold so failed checks fail the run.
 | `networkRTT` | Milliseconds subtracted from adjusted latency metrics; disabled at zero |
 | `tokenMultiplier` | Word-count multiplier for heuristic token estimates; defaults to 1.33 |
 | `prefillConcurrency` | Shared cap for clients with the same endpoint set, model, and limit; unlimited at zero |
+| `requestConcurrency` | Shared cap for complete requests; unlimited at zero |
+| `controlGroup` | Explicit process-wide mutable admission group; excludes static ceilings |
+| `useK6Transport` | Use the VU transport and its k6 network configuration |
+| `strictMeasurement` | Omit heuristic token counts |
 | `warmupCount` | Initial requests per client excluded from LLM and HTTP metrics |
 | `maxTTFT` | First-token SLO in milliseconds; disabled at zero |
 | `maxTTFO` | First-output SLO in milliseconds; disabled at zero |
@@ -125,9 +129,9 @@ only for streaming requests.
 - `llm_tokens_per_second` is a per-request Gauge, not aggregate throughput.
 - `llm_good_request` excludes failures from its denominator. Use failure and
   checks thresholds alongside it; it is not goodput in requests per second.
-- RTT adjustment uses a supplied value; the extension does not calibrate RTT.
-- Streaming output collects the first choice's text. Tool calls and multimodal
-  content are not supported.
+- RTT adjustment uses a supplied value. Opt-in calibration retains its probe basis and overhead.
+- Streaming timing selects choice 0; response content retains all choice indices.
+  Request-level usage is not allocated to individual choices.
 - The shared transport uses Go's proxy handling and TLS verification. k6-specific
   DNS, TLS, connection, and network byte accounting options are not fully
   integrated.
@@ -197,12 +201,15 @@ subtraction remains a supplied arithmetic adjustment.
 
 `client.request({path, protocol, body})` accepts a bounded authored JSON body.
 Paths are relative to the configured base URL and cannot contain traversal,
-queries, fragments, or another host. The current response adapters are
-`openai-chat`, `openai-completions`, `openai-responses`, `anthropic`, and `json`.
+queries, fragments, or another host. Response adapters include chat, completions, Responses, Anthropic, TGI, audio,
+image, video, embeddings, ranking and retrieval. See
+[modality lifecycles](docs/modalities/README.md) and
+[endpoint templates](docs/endpoint-adapters/templates.md).
 The JSON adapter returns `body` and leaves generated-token counts unavailable
-unless supplied. Responses and Anthropic adapters normalize text/reasoning and
-usage; they do not yet implement every event or tool lifecycle. Audio uploads,
-asynchronous generation, and full multi-choice streams remain pending.
+unless supplied. Responses and Anthropic adapters normalize protocol-specific content and usage.
+Media output units remain separate from generated text tokens. Video requests
+retain one job lifecycle; HTTP traces cover the submission, with polling bounded
+by the same cancellation deadline.
 
 ### Offline replay and GPU energy
 
@@ -250,8 +257,9 @@ identities. Counter rates require stable labels/types and a declared maximum gap
 resets remain errors. `Collect` writes serial, bounded JSONL scrape attempts with
 raw exposition hashes, failed observations, missed ticks, and completeness.
 Raw server labels are deliberately retained and may contain server metadata.
-Automatic discovery, normalized window summaries, and a command integration
-remain pending.
+Configured URL and caller-obtained Kubernetes PodList discovery, normalized
+window replay, and `cmd/llm-scrape` retain target changes and coverage. See
+[server metrics](servermetrics/README.md).
 
 Record retention is bounded by both `maxRecords` and `maxRecordBytes` (default
 16 MiB, maximum 32 MiB). Exceeding either budget increases `dropped_records`
@@ -262,8 +270,9 @@ as `client_tokenizer`; it does not identify the provider's tokenizer.
 tags. `MergeRuns` requires explicit workers, complete records, compatible
 workload/trace identities, and admitted clock mappings. It detects duplicate
 workers/requests and preserves clock receipts. Missing workers require explicit
-partial admission and remain listed in `missing_workers`. Kubernetes/operator
-deployment, asset portability, and live multi-worker qualification remain open.
+partial admission and remain listed in `missing_workers`. Portable local worker and operator assets are in
+[examples/distributed](examples/distributed/README.md). Local worker fixtures
+and live cluster qualification remain separate evidence classes.
 
 Makefile builds retain `extension_revision`, `extension_dirty`, and
 `extension_source_hash` in the run manifest. The hash covers local Go sources,
@@ -272,12 +281,12 @@ build. External vocabulary, template and dataset assets still require their
 own retained hashes. A local development version string alone does not pin
 extension source.
 
-Streaming timing and returned content select choice index 0. Other choice
+Streaming timing selects choice index 0; returned content retains all indices. Other choice
 indices set `multi_choice`; provider request-level usage is retained, but
 per-choice ITL is omitted because those counts cannot identify choice 0's
 output. The record states `choice_policy`. Sync responses retain all choices
-and their indices. Full streaming multi-choice response aggregation remains
-pending; no per-choice token allocation is inferred.
+and their indices. Streaming responses aggregate text, reasoning and tools by choice index; no
+per-choice token allocation is inferred.
 
 [`tools/llm-tokenize`](tools/llm-tokenize/README.md) is a separate offline
 preprocessing command using a publicly pinned `lib/hf/hftokenizer` module.
@@ -285,3 +294,29 @@ It verifies vocabulary and literal role-frame hashes, known synthetic sequences,
 and chat framing, and emits a retained counting receipt. Its framing dialect
 is explicit; Jinja and unsupported tokenizer pipelines are refused. The
 extension continues to identify imported counts as caller declarations.
+
+### Host workflows
+
+- [Analysis and replay](docs/analysis/README.md): distributions, phase-rate proxies,
+  strict JSONL reconciliation, and declared confidence methods.
+- [Workloads](examples/workloads/README.md): seeded realized sequences, exact pinned
+  count receipts, prefixes, absolute arrivals, conversations, DAGs and hooks.
+- [Campaigns](campaign/README.md): bounded sweeps/search, failed attempts,
+  checkpoints and declared convergence controls.
+- [Telemetry replay](docs/telemetry/REPLAY.md): continuous raw readings, coverage,
+  provenance and whole-device energy joins.
+- [Outputs and accuracy](examples/output/README.md): local plots, OTLP/MLflow/W&B
+  consumers and pinned evaluator workflows.
+- [Calibration](docs/calibration.md): bounded HTTP and fresh TCP probes outside
+  active measurement windows.
+
+`make check` runs race/vet, the offline tokenizer checks, a signed extension build
+and built-k6 fixtures. Native telemetry, live providers, collector overhead,
+cluster deployment and matched AIPerf qualification require their own receipts.
+
+For adaptive admission, initialize `setControlLimits('load', {request: 4,
+prefill: 2})` and give clients `controlGroup: 'load'`. Limits apply to all clients
+in that process naming the group. `controlSnapshot('load')` reports current
+holders. Changing a ceiling affects new admission; decreases let existing
+holders drain. Zero disables a ceiling. Multi-process controllers partition
+quotas and preserve their assessment windows rather than assuming shared memory.

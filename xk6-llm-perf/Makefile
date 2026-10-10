@@ -1,4 +1,4 @@
-.PHONY: all build clean install-xk6 test test-tokenize vet vet-tokenize check example-loadtest example-loadtest-stream example-trace-replay
+.PHONY: all build build-linux clean install-xk6 test test-tokenize vet vet-tokenize check example-loadtest example-loadtest-stream example-trace-replay
 
 # Extension info
 EXTENSION_NAME=xk6-llm-perf
@@ -13,6 +13,7 @@ K6_VERSION ?= v2.3.0
 XK6_VERSION ?= v1.4.14
 BUILD_DIR=dist
 BINARY_NAME=k6
+LINUX_ARCH ?= amd64
 
 # Development paths
 GOBASE=$(shell pwd)
@@ -47,6 +48,18 @@ build: install-xk6
 test: test-tokenize
 	GOWORK=off go test -race ./...
 
+build-linux: install-xk6
+	@mkdir -p $(BUILD_DIR)
+	@rm -f $(BUILD_DIR)/k6-linux.new
+	@GOWORK=off $(GOBIN)/xk6 build $(K6_VERSION) --os linux --arch $(LINUX_ARCH) \
+		--with $(EXTENSION_PATH)=. \
+		--build-flags "-ldflags=-s -w -X $(EXTENSION_PATH).extensionRevision=$(SOURCE_REVISION) -X $(EXTENSION_PATH).extensionDirty=$(SOURCE_DIRTY) -X $(EXTENSION_PATH).extensionSourceHash=$(SOURCE_HASH)" \
+		--output $(BUILD_DIR)/k6-linux.new
+	@test "$(SOURCE_HASH)" = "$$(GOWORK=off go run ./internal/cmd/sourcehash)"
+	@test "$(SOURCE_REVISION)" = "$$(git rev-parse HEAD)"
+	@mv $(BUILD_DIR)/k6-linux.new $(BUILD_DIR)/k6-linux
+	@go version -m $(BUILD_DIR)/k6-linux | grep -F $(EXTENSION_PATH)
+
 test-tokenize:
 	cd tools/llm-tokenize && GOWORK=off go test -race ./...
 
@@ -57,7 +70,7 @@ vet-tokenize:
 	cd tools/llm-tokenize && GOWORK=off go vet ./...
 
 check: test vet build
-	K6_SMOKE_BINARY=$(BUILD_DIR)/$(BINARY_NAME) GOWORK=off go test -run TestBinary -v .
+	K6_SMOKE_BINARY=$(abspath $(BUILD_DIR)/$(BINARY_NAME)) GOWORK=off go test -run 'TestBinary|TestBuiltK6|TestK6Live' -v ./...
 
 clean:
 	rm -rf $(BUILD_DIR) bin
