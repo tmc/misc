@@ -100,3 +100,26 @@ image execution, storage, real clock bounds, startup, cancellation and teardown
 on a real cluster are separate open qualification gates. The host integration
 test runs two actual local k6 processes and verifies unique partitioned rows,
 identities, shared window and reconstructed counts.
+
+For bounded lifecycle qualification, `qualify.py` takes an explicit context,
+rendered TestRun/PVC manifest and new artifact directory:
+
+```sh
+python3 qualify.py --context YOUR_TEST_CONTEXT --manifest rendered.yaml \
+  --output YOUR_NEW_RECEIPT_DIRECTORY --timeout 300
+```
+
+It creates a unique namespace, refuses cluster-scoped or foreign-namespace
+resources, records operator/CRD and pod/event/log receipts, and deletes only its
+own namespace after completion, failure, timeout or interruption. Use
+`--cancel-after 10` to exercise cancellation. The manifest must contain exactly
+one TestRun and optional PVCs; the script creates the worker assets ConfigMap.
+Use a deliberately invalid runner image in a separate run to exercise startup
+failure. `qualify_test.py` tests cleanup and ownership guards with mocks.
+
+This harness is for lifecycle tests: its teardown deletes the results PVC.
+Do not use it to retain measured worker runs. Complete worker-run retrieval,
+clock measurement, merge accounting and partial-loss qualification separately
+using the workflow above. A finished operator stage or passing mock test does
+not establish those gates. Namespace deletion failure is a failing receipt and
+requires inspection; the harness never deletes an existing namespace.
