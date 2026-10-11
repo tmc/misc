@@ -19,6 +19,11 @@ export function setup() {
     let refused=false;try{realize([{inputTokens:12,outputBudget:1}],['hello world'],count,{assetHash:tokenReceipt.tokenizer_sha256,tokenizer:'fixture'});}catch(e){refused=true;}if(!refused)throw new Error('unrealizable target accepted');
     const shared=cacheSynthesis(['hello '],['world'],count,{assetHash:tokenReceipt.tokenizer_sha256});
     if(shared[0].inputTokens!==11 || shared[0].cachePolicy!=='shared-prefix')throw new Error('prefix synthesis mismatch');
+    const collision=cacheSynthesis(['hello '],['world'],count,{assetHash:tokenReceipt.tokenizer_sha256,id:'forged',prompt:'changed',inputTokens:999,prefixGroup:'forged',cachePolicy:'forged',realizedInputTokens:999});
+    if(collision[0].id!=='0:0'||collision[0].prompt!=='hello world'||collision[0].inputTokens!==11||collision[0].prefixGroup!=='0'||collision[0].cachePolicy!=='shared-prefix'||'realizedInputTokens' in collision[0])throw new Error('provenance overwrote synthesis');
+    for(const budget of [1000001,1e9,Number.MAX_SAFE_INTEGER+1,1.5,Infinity,0]){
+        let denied=false;try{realize([{inputTokens:11,outputBudget:budget}],['hello world'],count,{assetHash:tokenReceipt.tokenizer_sha256,tokenizer:'fixture'});}catch(e){denied=true;}if(!denied)throw new Error('invalid output budget accepted');
+    }
     if(importDataset(corpus).length!==1 || importDataset('{"prompt":"hello"}\n','jsonl').length!==1 || assetReceipt(corpus).sha256.length!==64)throw new Error('dataset import mismatch');
     const receipt=replayArrival(trace([{id:'late',offset:0}])[0],Date.now()-1000,1,()=>{throw new Error('dropped work dispatched');});
     if(receipt.outcome!=='dropped'||!receipt.dropped)throw new Error('drop accounting mismatch');

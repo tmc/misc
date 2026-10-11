@@ -6,3 +6,5 @@ outputs/*
 *.out
 *.test
 
+__pycache__/
+*.pyc

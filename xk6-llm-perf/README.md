@@ -82,6 +82,13 @@ set a `checks` threshold so failed checks fail the run.
 | `maxTTFT` | First-token SLO in milliseconds; disabled at zero |
 | `maxTTFO` | First-output SLO in milliseconds; disabled at zero |
 | `maxTokenLatency` | Content-chunk interval SLO in milliseconds; disabled at zero |
+| `maxTPOT` | Token-normalized last-content ITL SLO in milliseconds; disabled at zero |
+| `maxE2E` | Dispatch-to-last-content SLO in milliseconds; disabled at zero |
+
+SLO limits accept finite non-negative fractional milliseconds. The Go `Config`
+and `SLOReceipt` latency fields use `float64`; programmatic integer variables
+must be explicitly converted. New receipt pointers distinguish unavailable
+TPOT/E2E limits from explicit disabled zero.
 
 Streaming requests include `stream_options.include_usage` unless explicit
 stream options are supplied. Provider token counts are preferred; missing counts
@@ -114,7 +121,7 @@ request-count, and failure metrics, including `http_reqs`, `http_req_duration`,
 | `llm_total_tokens` | Counter | Prompt plus completion tokens |
 | `llm_usage_discrepancies` | Counter | Differing prompt/completion count comparisons; up to two per request |
 | `llm_requests` | Counter | Successful recorded requests |
-| `llm_good_request` | Rate | SLO-compliant fraction among successful recorded requests |
+| `llm_good_request` | Rate | SLO-compliant fraction among attempted recorded requests |
 | `llm_errors` | Counter | Recorded request failures |
 
 Adjusted metrics are emitted only when `networkRTT` is positive. A configured
@@ -127,8 +134,9 @@ only for streaming requests.
   events. It does not isolate server latency or stop at the last content chunk.
 - `llm_token_latency` measures chunk spacing, not token-normalized ITL.
 - `llm_tokens_per_second` is a per-request Gauge, not aggregate throughput.
-- `llm_good_request` excludes failures from its denominator. Use failure and
-  checks thresholds alongside it; it is not goodput in requests per second.
+- `llm_good_request` and `llm_slo_compliance` include measured failures in their
+  denominator. The `llm_good_requests` counter rate uses the k6 engine window;
+  completed content-span goodput uses `llm_content_span_goodput`.
 - RTT adjustment uses a supplied value. Opt-in calibration retains its probe basis and overhead.
 - Streaming timing selects choice 0; response content retains all choice indices.
   Request-level usage is not allocated to individual choices.
@@ -148,6 +156,7 @@ script settings, not environment variables read directly by the Go extension.
 - [openai-test.js](./examples/openai-test.js): hosted OpenAI example.
 - [sample-load-test.js](./examples/sample-load-test.js): ramping load with a JSON summary.
 - [trace-replay.js](./examples/trace-replay.js): replay request rows from a JSON trace.
+- [Live dashboard](examples/dashboard/README.md): streaming LLM charts and HTML reports.
 
 See each script for its environment settings. The load-test example accepts
 `ENDPOINT_URL`, `ENDPOINT_URLS`, `OPENAI_API_KEY`, `MODEL`, `TIMEOUT`,
@@ -183,9 +192,14 @@ verify vocabulary or chat framing. Reported zero remains distinct from absent
 usage. Admission wait is separate from dispatch-anchored full-response latency.
 TTFT includes reasoning; TTFO starts at visible text or tool output. ITL uses
 last content, excludes trailers, and subtracts first-chunk tokens when known;
-otherwise `first_chunk_source` records `assumed_one`. Non-streaming TTFT and
-ITL remain unavailable. New `llm_slo_compliance` includes measured failures;
-legacy `llm_good_request` retains its successful-request population.
+otherwise `first_chunk_source` records `assumed_one`. Inconsistent explicit
+first-chunk counts retain their original value in `first_chunk_tokens` and
+record a reason in `first_chunk_unavailable`. Non-streaming TTFT and
+ITL remain unavailable. `llm_slo_compliance` and `llm_good_request` include
+measured failures. `maxTPOT` tests this ITL and `maxE2E` tests last-content
+latency; a trailing usage event does not change either. Enabled limits require
+available observations. Archived SLO receipts without the new limits remain
+readable, but cannot qualify the extended SLO policy.
 
 `requestConcurrency` limits complete requests across clients with the same
 endpoint list, model, and ceiling. `prefillConcurrency` releases at first
@@ -233,6 +247,11 @@ Cumulative millijoules retain integer precision before subtraction. Power
 integration is labeled estimated. Energy ratios use successful output counts
 with source provenance; zero denominators remain unavailable. The consumer
 does not qualify native readings, collection overhead, or cross-tool parity.
+
+`llm-telemetry` can admit complete native schema-2 captures with a hash-bound
+clock and endpoint mapping. See [native window admission](docs/telemetry/NATIVE-ADMISSION.md)
+for gauge, interval, MIG and query-estimate policies. Query estimates cannot
+supply energy; unavailable energy does not invalidate independent gauges.
 
 [`examples/lib/workload.js`](examples/lib/workload.js) supplies seeded constant,
 Poisson and gamma arrival offsets, dataset validation/sampling, bounded authored
@@ -297,6 +316,11 @@ extension continues to identify imported counts as caller declarations.
 
 ### Host workflows
 
+See [AIPerf compatibility and remaining gates](docs/aiperf-parity.md) for the
+current scope of cross-tool qualification.
+
+- [Serving qualification](docs/serving/README.md): observed manifests, expected work,
+  supervised processes, measured client controls, and independent paired analysis.
 - [Analysis and replay](docs/analysis/README.md): distributions, phase-rate proxies,
   strict JSONL reconciliation, and declared confidence methods.
 - [Workloads](examples/workloads/README.md): seeded realized sequences, exact pinned
@@ -320,3 +344,26 @@ in that process naming the group. `controlSnapshot('load')` reports current
 holders. Changing a ceiling affects new admission; decreases let existing
 holders drain. Zero disables a ceiling. Multi-process controllers partition
 quotas and preserve their assessment windows rather than assuming shared memory.
+
+For dispatched requests, start and finish timestamps project monotonic elapsed time from the recorded dispatch Unix clock anchor; `timestamp_basis` identifies this mapping. Failed admission uses the request-start Unix anchor. Projected endpoints are not independent system wall-clock samples. Content timings use the same monotonic dispatch span, and scheduled response latency uses the projected finish. Admission wait remains the monotonic duration of the admission queue, excluding request preparation. This keeps timestamps consistent with latency when system wall-clock and monotonic readings advance differently. Replay checks timing against dispatch/finish timestamps within 0.002 ms
+(microsecond truncation plus floating-point epoch rounding). Absent derived
+rates are recomputed for compatible version-1 exports; explicit null rates are
+refused. Request-analysis percentiles include successful requests only. AIPerf
+can include failures in latency percentiles, so comparisons require matching
+populations.
+
+Streaming records retain up to 4096 content-only inter-event intervals in
+`content_intervals_ms`; `content_intervals_truncated` marks an incomplete
+vector. `ttst` measures dispatch to the second recognized content event, which
+can contain multiple tokens. Role, usage, and terminal events do not enter this
+population. The matching k6 trends are `llm_dispatch_ttst`,
+`llm_mean_content_interval`, and `llm_max_content_interval`. The interval
+trends each record one observation per request with a complete, nonempty
+interval vector. Their percentiles describe per-request means and maxima, with
+equal weight per request; raw exports retain the individual intervals for
+pooled event analysis. Truncated and empty vectors contribute no interval trend
+observations. Distributed merging requires a recognized measurement policy,
+whole-contained windows and identical recorded SLO limits; older workers
+without policy receipts must be rerun.
+
+Replay requires eligible count and first-chunk provenance for token-normalized timing, and reconciles ITL against its content span and full-response ITL against its response span. Exact first-chunk sources require the retained original count; unavailable metrics remain unavailable. Arrival lag requires a schedule anchor. Projected admission wait may cover only part of request preparation. Partial manifests cannot add tokens when every dropped successful count in that dimension is missing; incomplete request-level analyses remain refused.

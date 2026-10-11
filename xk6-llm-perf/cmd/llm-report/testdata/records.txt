@@ -9,10 +9,10 @@ stderr 'JSONL records disagree'
 ! exec $CLI -input run.json -records unknown.jsonl
 stderr 'unknown field'
 -- run.json --
-{"schema_version":1,"started_at":0,"finished_at":2000,"duration":2,"attempts":1,"successes":1,"failures":0,"input_tokens":4,"output_tokens":2,"records":[{"schema_version":1,"phase":"measurement","recorded":true,"attempted":true,"dispatched_at":0,"finished_at":1000,"full_response_latency":1000,"ttft":500,"last_content_latency":1000,"decode_tokens":1,"outcome":"success","input_tokens":{"value":4,"source":"reported"},"output_tokens":{"value":2,"source":"reported"}}]}
+{"schema_version":1,"started_at":0,"finished_at":2000,"duration":2,"attempts":1,"successes":1,"failures":0,"input_tokens":4,"output_tokens":2,"records":[{"schema_version":1,"phase":"measurement","recorded":true,"attempted":true,"dispatched_at":0,"finished_at":1000,"full_response_latency":1000,"ttft":500,"last_content_latency":1000,"decode_tokens":1,"first_chunk_source":"assumed_one","outcome":"success","input_tokens":{"value":4,"source":"reported"},"output_tokens":{"value":2,"source":"reported"}}]}
 -- records.jsonl --
-{"schema_version":1,"phase":"measurement","recorded":true,"attempted":true,"dispatched_at":0,"finished_at":1000,"full_response_latency":1000,"ttft":500,"last_content_latency":1000,"decode_tokens":1,"outcome":"success","input_tokens":{"value":4,"source":"reported"},"output_tokens":{"value":2,"source":"reported"}}
+{"schema_version":1,"phase":"measurement","recorded":true,"attempted":true,"dispatched_at":0,"finished_at":1000,"full_response_latency":1000,"ttft":500,"last_content_latency":1000,"decode_tokens":1,"first_chunk_source":"assumed_one","outcome":"success","input_tokens":{"value":4,"source":"reported"},"output_tokens":{"value":2,"source":"reported"}}
 -- wrong.jsonl --
-{"schema_version":1,"phase":"measurement","recorded":true,"attempted":true,"dispatched_at":0,"finished_at":1000,"full_response_latency":1001,"ttft":500,"last_content_latency":1000,"decode_tokens":1,"outcome":"success","input_tokens":{"value":4,"source":"reported"},"output_tokens":{"value":2,"source":"reported"}}
+{"schema_version":1,"phase":"measurement","recorded":true,"attempted":true,"dispatched_at":0,"finished_at":1000,"full_response_latency":1001,"ttft":500,"last_content_latency":1000,"decode_tokens":1,"first_chunk_source":"assumed_one","outcome":"success","input_tokens":{"value":4,"source":"reported"},"output_tokens":{"value":2,"source":"reported"}}
 -- unknown.jsonl --
 {"schema_version":1,"api_key":"secret"}

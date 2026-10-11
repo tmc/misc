@@ -1,4 +1,4 @@
-.PHONY: all build build-linux clean install-xk6 test test-tokenize vet vet-tokenize check example-loadtest example-loadtest-stream example-trace-replay
+.PHONY: all build build-serving build-linux clean install-xk6 test test-tokenize vet vet-tokenize check example-loadtest example-loadtest-stream example-trace-replay
 
 # Extension info
 EXTENSION_NAME=xk6-llm-perf
@@ -44,6 +44,10 @@ build: install-xk6
 	@if [ "$$(uname -s)" = Darwin ]; then codesign --force -s - $(BUILD_DIR)/$(BINARY_NAME).new; fi
 	@mv $(BUILD_DIR)/$(BINARY_NAME).new $(BUILD_DIR)/$(BINARY_NAME)
 	@$(BUILD_DIR)/$(BINARY_NAME) version | grep -F $(EXTENSION_PATH)
+
+build-serving:
+	@mkdir -p $(BUILD_DIR)
+	GOWORK=off go build -o $(BUILD_DIR)/llm-serving ./cmd/llm-serving
 
 test: test-tokenize
 	GOWORK=off go test -race ./...
