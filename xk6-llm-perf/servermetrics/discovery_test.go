@@ -56,8 +56,10 @@ func TestInvalidExpositionRetained(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, "not a valid sample\n") }))
 	defer s.Close()
 	var out bytes.Buffer
-	r, err := Collect(context.Background(), s.Client(), CollectOptions{Targets: []string{s.URL}, Interval: 10 * time.Millisecond, Duration: 30 * time.Millisecond, MaxRecords: 10, MaxBytes: 100000}, &out)
-	if err != nil || r.Complete || !strings.Contains(out.String(), `"failed_scrape"`) || !strings.Contains(out.String(), `not a valid sample`) {
+	r, err := Collect(context.Background(), s.Client(), CollectOptions{Targets: []string{s.URL}, Interval: 10 * time.Millisecond, Duration: time.Second, MaxRecords: 1, MaxBytes: 100000}, &out)
+	// A record budget ends this parser-negative fixture independently of HTTP
+	// startup timing. Dedicated deadline controls keep their short budgets.
+	if err != nil || r.Complete || r.Attempts != 1 || r.Failures != 1 || r.IncompleteReason != "record budget exhausted" || !strings.Contains(out.String(), `"failed_scrape"`) || !strings.Contains(out.String(), `not a valid sample`) {
 		t.Fatalf("%+v %v %s", r, err, out.String())
 	}
 }

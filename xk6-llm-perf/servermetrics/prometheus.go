@@ -54,6 +54,7 @@ func Read(r io.Reader) ([]Sample, error) {
 		return nil, fmt.Errorf("metrics exceed 8 MiB")
 	}
 	types := map[string]string{}
+	seenNames := map[string]bool{}
 	scanner := bufio.NewScanner(strings.NewReader(string(data)))
 	scanner.Buffer(make([]byte, 4096), 1024*1024)
 	var samples []Sample
@@ -69,8 +70,11 @@ func Read(r io.Reader) ([]Sample, error) {
 				if len(fields) != 4 || !validName(fields[2], true) || !oneOf(fields[3], "counter", "gauge", "histogram", "summary", "untyped") {
 					return nil, fmt.Errorf("invalid metric type declaration")
 				}
-				if old, ok := types[fields[2]]; ok && old != fields[3] {
-					return nil, fmt.Errorf("conflicting metric type")
+				if _, ok := types[fields[2]]; ok {
+					return nil, fmt.Errorf("duplicate metric type declaration")
+				}
+				if seenNames[fields[2]] || (fields[3] == "histogram" || fields[3] == "summary") && (seenNames[fields[2]+"_bucket"] || seenNames[fields[2]+"_sum"] || seenNames[fields[2]+"_count"]) {
+					return nil, fmt.Errorf("metric type declaration follows sample")
 				}
 				types[fields[2]] = fields[3]
 			}
@@ -83,6 +87,7 @@ func Read(r io.Reader) ([]Sample, error) {
 		if err != nil {
 			return nil, err
 		}
+		seenNames[s.Name] = true
 		s.Type = types[s.Name]
 		for _, suffix := range []string{"_bucket", "_sum", "_count"} {
 			if strings.HasSuffix(s.Name, suffix) && s.Type == "" {

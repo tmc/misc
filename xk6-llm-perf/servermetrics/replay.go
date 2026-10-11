@@ -17,6 +17,9 @@ import (
 // Window declares the analysis interval and maximum permitted scrape gap.
 // Units map exact sample names to seconds, milliseconds, nanoseconds, bytes,
 // kilobytes, megabytes, gigabytes, ratio, percent, or an authored count unit.
+// Histogram family, _bucket and _sum declarations share observation units and
+// must agree in both unit and scale. Bucket/count values remain counts; units
+// normalize bucket boundaries and sums. An explicit _count unit must be count.
 type Window struct {
 	Start   time.Time         `json:"start"`
 	End     time.Time         `json:"end"`
@@ -88,6 +91,8 @@ func Replay(r io.Reader, w Window) (Analysis, error) {
 	series := map[string]*Series{}
 	integrals := map[string]float64{}
 	totals := map[string]float64{}
+	mixedTypes := map[string]bool{}
+	observedTypes := map[string]string{}
 	seen := map[string]bool{}
 	bytes, n := 0, 0
 	for scan.Scan() {
@@ -163,6 +168,20 @@ func Replay(r io.Reader, w Window) (Analysis, error) {
 			return a, fmt.Errorf("scrapes not ordered")
 		}
 		last[o.Target] = s
+		if !s.FinishedAt.Before(w.Start) && !s.FinishedAt.After(w.End) {
+			for _, p := range parsed {
+				k := o.Target + "\n" + identity(p.Name, p.Labels)
+				if typ, ok := observedTypes[k]; ok && typ != p.Type {
+					mixedTypes[k] = true
+					if q := series[k]; q != nil {
+						q.CoveredSeconds = 0
+						q.Issues = appendUnique(q.Issues, "type changed; aggregation unavailable")
+					}
+				} else if !ok {
+					observedTypes[k] = p.Type
+				}
+			}
+		}
 		if prev == nil {
 			continue
 		}
@@ -181,7 +200,7 @@ func Replay(r io.Reader, w Window) (Analysis, error) {
 			k := o.Target + "\n" + id
 			q := series[k]
 			if q == nil {
-				unit, factor, basis, err := normalizeUnit(p.Name, w.Units)
+				unit, factor, basis, err := sampleUnit(p, w.Units)
 				_ = factor
 				if err != nil {
 					return a, err
@@ -189,24 +208,36 @@ func Replay(r io.Reader, w Window) (Analysis, error) {
 				q = &Series{Target: o.Target, Name: p.Name, Labels: p.Labels, Type: p.Type, Unit: unit, UnitBasis: basis}
 				series[k] = q
 			}
+			if mixedTypes[k] || q.Type != p.Type {
+				mixedTypes[k] = true
+				q.CoveredSeconds = 0
+				q.Issues = appendUnique(q.Issues, "type changed; aggregation unavailable")
+			}
 			b, ok := old[id]
 			if !ok {
 				q.Issues = appendUnique(q.Issues, "label identity appeared")
+				continue
+			}
+			if b.Type != p.Type {
+				mixedTypes[k] = true
+				q.CoveredSeconds = 0
+				q.Issues = appendUnique(q.Issues, "type changed; aggregation unavailable")
+			}
+			if mixedTypes[k] {
 				continue
 			}
 			if dt > w.MaxGap {
 				q.Issues = appendUnique(q.Issues, "cadence gap")
 				continue
 			}
-			if b.Type != p.Type {
-				q.Issues = appendUnique(q.Issues, "type changed")
-				continue
-			}
 			if b.Value == nil || p.Value == nil {
 				q.Issues = appendUnique(q.Issues, "unavailable sample")
 				continue
 			}
-			_, factor, _, _ := normalizeUnit(p.Name, w.Units)
+			_, factor, _, err := sampleUnit(p, w.Units)
+			if err != nil {
+				return a, err
+			}
 			if p.Type == "histogram" && (strings.HasSuffix(p.Name, "_bucket") || strings.HasSuffix(p.Name, "_count")) {
 				factor = 1
 				q.Unit = "count"
@@ -269,8 +300,9 @@ func Replay(r io.Reader, w Window) (Analysis, error) {
 		}
 		a.Series = append(a.Series, *q)
 	}
-	a.Histograms = summarizeHistograms(a.Series, w.Units)
-	return a, nil
+	var err error
+	a.Histograms, err = summarizeHistograms(a.Series, w.Units)
+	return a, err
 }
 
 func appendUnique(s []string, v string) []string {
@@ -323,6 +355,63 @@ func normalizeUnit(name string, units map[string]string) (string, float64, strin
 	return "", 0, "", fmt.Errorf("unsupported configured unit %q", u)
 }
 
+// histogramUnit resolves authored observation units consistently across a family.
+// Bucket sample values and counts are counts; the unit applies to bucket bounds
+// and sums, never to the cumulative sample counts themselves.
+func histogramUnit(name string, units map[string]string) (string, float64, string, error) {
+	unit, factor, basis, err := normalizeUnit(name, nil)
+	if err != nil {
+		return "", 0, "", err
+	}
+	configured := false
+	for _, key := range []string{name, name + "_bucket", name + "_sum"} {
+		if _, ok := units[key]; !ok {
+			continue
+		}
+		u, f, b, err := normalizeUnit(key, units)
+		if err != nil {
+			return "", 0, "", err
+		}
+		if configured && (unit != u || factor != f) {
+			return "", 0, "", fmt.Errorf("conflicting histogram units for %q", name)
+		}
+		unit, factor, basis = u, f, b
+		configured = true
+	}
+	return unit, factor, basis, nil
+}
+
+func sampleUnit(s Sample, units map[string]string) (string, float64, string, error) {
+	if s.Type != "histogram" {
+		return normalizeUnit(s.Name, units)
+	}
+	for _, suffix := range []string{"_bucket", "_sum", "_count"} {
+		if !strings.HasSuffix(s.Name, suffix) {
+			continue
+		}
+		u, f, basis, err := histogramUnit(strings.TrimSuffix(s.Name, suffix), units)
+		if err != nil {
+			return "", 0, "", err
+		}
+		if suffix != "_sum" {
+			if suffix == "_count" {
+				if _, ok := units[s.Name]; ok {
+					countUnit, _, _, err := normalizeUnit(s.Name, units)
+					if err != nil {
+						return "", 0, "", err
+					}
+					if countUnit != "count" {
+						return "", 0, "", fmt.Errorf("histogram count unit must be count")
+					}
+				}
+			}
+			return "count", 1, basis, nil
+		}
+		return u, f, basis, nil
+	}
+	return normalizeUnit(s.Name, units)
+}
+
 // HistogramQuantile estimates a quantile from cumulative window bucket deltas.
 // It interpolates uniformly within the containing bucket, not exact observations.
 // An infinite terminal bucket returns its finite lower bound. Empty counts are
@@ -365,7 +454,7 @@ func HistogramQuantile(bounds, counts []float64, q float64) (*float64, error) {
 	return nil, nil
 }
 
-func summarizeHistograms(series []Series, units map[string]string) []Histogram {
+func summarizeHistograms(series []Series, units map[string]string) ([]Histogram, error) {
 	groups := map[string][]Series{}
 	for _, s := range series {
 		if s.Type == "histogram" && strings.HasSuffix(s.Name, "_bucket") {
@@ -393,7 +482,10 @@ func summarizeHistograms(series []Series, units map[string]string) []Histogram {
 			return a < b
 		})
 		name := strings.TrimSuffix(ss[0].Name, "_bucket")
-		u, f, _, _ := normalizeUnit(name, units)
+		u, f, _, err := histogramUnit(name, units)
+		if err != nil {
+			return nil, err
+		}
 		h := Histogram{Target: ss[0].Target, Name: name, Labels: map[string]string{}, Unit: u, Basis: "linear interpolation within cumulative window bucket deltas; infinite bucket uses finite lower bound"}
 		for k, v := range ss[0].Labels {
 			if k != "le" {
@@ -422,5 +514,5 @@ func summarizeHistograms(series []Series, units map[string]string) []Histogram {
 		}
 		out = append(out, h)
 	}
-	return out
+	return out, nil
 }

@@ -93,7 +93,9 @@ func TestCounterResetLabelsAndGaps(t *testing.T) {
 	}
 }
 func TestFetchFailureAndCancellation(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { http.Error(w, "unavailable", 503) }))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "unavailable", http.StatusServiceUnavailable)
+	}))
 	defer server.Close()
 	if _, err := Fetch(context.Background(), server.Client(), server.URL); err == nil {
 		t.Fatal("accepted HTTP failure")
@@ -127,6 +129,28 @@ func TestCounterTimestampArithmetic(t *testing.T) {
 			}
 			if !tt.bad && rate != 1000 {
 				t.Fatalf("rate=%v", rate)
+			}
+		})
+	}
+}
+
+func TestReadTypeOrdering(t *testing.T) {
+	for _, tt := range []struct {
+		name, text string
+		wantErr    bool
+	}{
+		{"late gauge", "x 1\n# TYPE x gauge\n", true},
+		{"late histogram", "x_bucket{le=\"1\"} -1\n# TYPE x histogram\n", true},
+		{"late summary", "x_sum 1\n# TYPE x summary\n", true},
+		{"duplicate", "# TYPE x gauge\n# TYPE x gauge\nx 1\n", true},
+		{"conflict", "# TYPE x gauge\n# TYPE x counter\nx 1\n", true},
+		{"legal", "# TYPE x gauge\nx 1\n", false},
+		{"independent suffix", "x_count 1\n# TYPE x gauge\nx 1\n", false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Read(strings.NewReader(tt.text))
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("Read error=%v, wantErr=%v", err, tt.wantErr)
 			}
 		})
 	}

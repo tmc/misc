@@ -104,3 +104,123 @@ func TestFailureBreaksInterval(t *testing.T) {
 		t.Fatalf("%+v %v", a, err)
 	}
 }
+
+func TestReplayTypeChanges(t *testing.T) {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	w := Window{Start: start, End: start.Add(3 * time.Second), MaxGap: time.Second, Targets: []string{"http://host/metrics"}}
+	for _, types := range [][]string{{"gauge", "gauge", "counter", "counter"}, {"counter", "counter", "gauge", "gauge"}, {"gauge", "gauge", "gauge", "gauge"}, {"counter", "counter", "counter", "counter"}, {"gauge", "counter", "gauge", "gauge"}} {
+		t.Run(strings.Join(types, "-"), func(t *testing.T) {
+			var raw []string
+			for i, typ := range types {
+				raw = append(raw, fmt.Sprintf("# TYPE n %s\nn %d\n", typ, []int{0, 2, 100, 110}[i]))
+			}
+			a, err := Replay(strings.NewReader(recording(raw)), w)
+			if err != nil || len(a.Series) != 1 {
+				t.Fatalf("analysis=%+v err=%v", a, err)
+			}
+			s := a.Series[0]
+			mixed := false
+			for _, typ := range types {
+				mixed = mixed || typ != types[0]
+			}
+			if mixed {
+				if s.Total != nil || s.Rate != nil || s.Mean != nil || s.CoveredSeconds != 0 || !strings.Contains(strings.Join(s.Issues, ";"), "type changed") {
+					t.Fatalf("mixed types aggregated: %+v", s)
+				}
+			} else if s.CoveredSeconds != 3 || types[0] == "gauge" && (s.Mean == nil || math.Abs(*s.Mean-314.0/6) > 1e-12) || types[0] == "counter" && (s.Total == nil || *s.Total != 110) {
+				t.Fatalf("unchanged types not aggregated correctly: %+v", s)
+			}
+		})
+	}
+}
+
+func TestHistogramConfiguredUnits(t *testing.T) {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	w := Window{Start: start, End: start.Add(time.Second), MaxGap: time.Second, Targets: []string{"http://host/metrics"}}
+	before := "# TYPE latency histogram\nlatency_bucket{le=\"100\"} 0\nlatency_bucket{le=\"200\"} 0\nlatency_bucket{le=\"+Inf\"} 0\nlatency_count 0\nlatency_sum 0\n"
+	after := "# TYPE latency histogram\nlatency_bucket{le=\"100\"} 1\nlatency_bucket{le=\"200\"} 3\nlatency_bucket{le=\"+Inf\"} 4\nlatency_count 4\nlatency_sum 600\n"
+	for _, tt := range []struct {
+		name    string
+		units   map[string]string
+		wantErr bool
+	}{
+		{"exact", map[string]string{"latency_bucket": "milliseconds", "latency_sum": "milliseconds"}, false},
+		{"bucket only", map[string]string{"latency_bucket": "milliseconds"}, false},
+		{"sum only", map[string]string{"latency_sum": "milliseconds"}, false},
+		{"family", map[string]string{"latency": "milliseconds"}, false},
+		{"aliases", map[string]string{"latency": "ms", "latency_bucket": "milliseconds", "latency_sum": "ms", "latency_count": "count"}, false},
+		{"bucket sum conflict", map[string]string{"latency_bucket": "milliseconds", "latency_sum": "seconds"}, true},
+		{"family conflict", map[string]string{"latency": "seconds", "latency_bucket": "milliseconds"}, true},
+		{"bad family", map[string]string{"latency": "fortnights"}, true},
+		{"bad bucket", map[string]string{"latency_bucket": "fortnights"}, true},
+		{"bad sum", map[string]string{"latency_sum": "fortnights"}, true},
+		{"bad count", map[string]string{"latency_count": "seconds"}, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			w.Units = tt.units
+			a, err := Replay(strings.NewReader(recording([]string{before, after})), w)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("invalid units accepted: %+v", a)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(a.Histograms) != 1 || a.Histograms[0].P50 == nil || math.Abs(*a.Histograms[0].P50-0.15) > 1e-12 || a.Histograms[0].Unit != "seconds" {
+				t.Fatalf("histograms=%+v", a.Histograms)
+			}
+			var sum, count *Series
+			for i := range a.Series {
+				s := &a.Series[i]
+				if s.Name == "latency_sum" {
+					sum = s
+				}
+				if s.Name == "latency_count" {
+					count = s
+				}
+			}
+			if sum == nil || sum.Total == nil || math.Abs(*sum.Total-0.6) > 1e-12 || sum.Unit != "seconds" || count == nil || count.Total == nil || *count.Total != 4 || count.Unit != "count" {
+				t.Fatalf("series=%+v", a.Series)
+			}
+		})
+	}
+}
+
+func TestReplayTypeChangeAcrossMissingIdentity(t *testing.T) {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	w := Window{Start: start, End: start.Add(3 * time.Second), MaxGap: time.Second, Targets: []string{"http://host/metrics"}}
+	for _, types := range [][]string{{"gauge", "counter"}, {"counter", "gauge"}} {
+		t.Run(strings.Join(types, "-"), func(t *testing.T) {
+			raw := []string{fmt.Sprintf("# TYPE n %s\nn 0\n", types[0]), fmt.Sprintf("# TYPE n %s\nn 2\n", types[0]), "other 1\n", fmt.Sprintf("# TYPE n %s\nn 100\n", types[1])}
+			a, err := Replay(strings.NewReader(recording(raw)), w)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, s := range a.Series {
+				if s.Name == "n" && (s.Total != nil || s.Rate != nil || s.Mean != nil || s.CoveredSeconds != 0 || !strings.Contains(strings.Join(s.Issues, ";"), "type changed")) {
+					t.Fatalf("mixed types aggregated after missing identity: %+v", s)
+				}
+			}
+		})
+	}
+}
+
+func TestReplayTypeChangeAcrossFailedScrape(t *testing.T) {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	lines := strings.Split(strings.TrimSpace(recording([]string{"# TYPE n gauge\nn 0\n", "# TYPE n gauge\nn 2\n", "other 1\n", "# TYPE n counter\nn 100\n"})), "\n")
+	failure, err := json.Marshal(Observation{SchemaVersion: 1, Target: "http://host/metrics", Error: "failed scrape"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lines[2] = string(failure)
+	a, err := Replay(strings.NewReader(strings.Join(lines, "\n")+"\n"), Window{Start: start, End: start.Add(3 * time.Second), MaxGap: time.Second, Targets: []string{"http://host/metrics"}})
+	if err != nil || len(a.Series) != 1 {
+		t.Fatalf("analysis=%+v err=%v", a, err)
+	}
+	s := a.Series[0]
+	if s.Mean != nil || s.Total != nil || s.Rate != nil || s.CoveredSeconds != 0 || !strings.Contains(strings.Join(s.Issues, ";"), "type changed") {
+		t.Fatalf("mixed types aggregated after failed scrape: %+v", s)
+	}
+}

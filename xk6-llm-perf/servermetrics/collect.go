@@ -47,11 +47,36 @@ type Recording struct {
 }
 
 // Collect writes bounded version-1 observations as JSONL without retaining the
-// full stream. Queries never overlap. A slow target skips ticks rather than
+// full stream. A generic writer is synchronous and cannot be interrupted; its
+// Write must return before Collect can observe cancellation. Use CollectContext
+// with a context-aware sink when bounded shutdown is required. Queries never overlap. A slow target skips ticks rather than
 // growing a work queue. Record/byte limits, failed targets, canceled contexts
 // and sink errors retain an explicit incomplete recording result.
-func Collect(ctx context.Context, client *http.Client, opts CollectOptions, out io.Writer) (result Recording, err error) {
-	if client == nil || out == nil || (len(opts.Targets) == 0 && opts.Discover == nil) || len(opts.Targets) > 16 || opts.Interval < 10*time.Millisecond || opts.Interval > time.Hour || opts.Duration <= 0 || opts.Duration > 24*time.Hour || opts.MaxRecords <= 0 || opts.MaxRecords > 100000 || opts.MaxBytes <= 0 || opts.MaxBytes > 1024*1024*1024 {
+func Collect(ctx context.Context, client *http.Client, opts CollectOptions, out io.Writer) (Recording, error) {
+	if out == nil {
+		return Recording{}, fmt.Errorf("invalid server recording sink")
+	}
+	return collect(ctx, client, opts, func(_ context.Context, p []byte) (int, error) { return out.Write(p) })
+}
+
+// ContextWriter writes a record synchronously. WriteContext must return promptly
+// when ctx is canceled, releasing any resources it owns. CollectContext does not
+// start a background writer or take ownership of the sink.
+type ContextWriter interface {
+	WriteContext(context.Context, []byte) (int, error)
+}
+
+// CollectContext records scrapes with a context-aware sink. The recording
+// deadline also bounds writes, provided the sink honors ContextWriter's contract.
+func CollectContext(ctx context.Context, client *http.Client, opts CollectOptions, out ContextWriter) (Recording, error) {
+	if out == nil {
+		return Recording{}, fmt.Errorf("invalid server recording sink")
+	}
+	return collect(ctx, client, opts, out.WriteContext)
+}
+
+func collect(ctx context.Context, client *http.Client, opts CollectOptions, write func(context.Context, []byte) (int, error)) (result Recording, err error) {
+	if client == nil || write == nil || (len(opts.Targets) == 0 && opts.Discover == nil) || len(opts.Targets) > 16 || opts.Interval < 10*time.Millisecond || opts.Interval > time.Hour || opts.Duration <= 0 || opts.Duration > 24*time.Hour || opts.MaxRecords <= 0 || opts.MaxRecords > 100000 || opts.MaxBytes <= 0 || opts.MaxBytes > 1024*1024*1024 {
 		return result, fmt.Errorf("invalid server recording bounds")
 	}
 	seen := map[string]bool{}
@@ -83,7 +108,7 @@ func Collect(ctx context.Context, client *http.Client, opts CollectOptions, out 
 				timer.Stop()
 			}
 		}
-		if !next.Before(end) && !time.Now().Before(end) {
+		if !next.Before(end) && !time.Now().Before(end) && ctx.Err() != context.Canceled {
 			result.Complete = true
 			return result, nil
 		}
@@ -142,8 +167,19 @@ func Collect(ctx context.Context, client *http.Client, opts CollectOptions, out 
 				result.IncompleteReason = "byte budget exhausted"
 				return result, nil
 			}
-			n, writeErr := out.Write(data)
+			n, writeErr := write(ctx, data)
 			result.Bytes += int64(n)
+			if ctx.Err() != nil || !time.Now().Before(end) {
+				result.IncompleteReason = "sink deadline exceeded"
+				if fetchErr != nil {
+					result.IncompleteReason = "scrape deadline exceeded"
+				}
+				if ctx.Err() == context.Canceled {
+					result.IncompleteReason = "cancelled"
+					return result, ctx.Err()
+				}
+				return result, context.DeadlineExceeded
+			}
 			if writeErr != nil || n != len(data) {
 				result.IncompleteReason = "sink failure"
 				if writeErr == nil {
