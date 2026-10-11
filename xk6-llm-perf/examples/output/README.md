@@ -1,6 +1,8 @@
 # Outputs and accuracy
 
-The Go commands consume version-1 local exports. They use no runtime network
+The Go commands consume version-1 local exports; `llm-output` emits summary
+schema version 2. See the [metric and migration contract](../../docs/output-contract.md)
+for latency endpoints, units, estimators and coverage. They use no runtime network
 unless an endpoint is explicitly supplied. Credentials are supplied through an
 environment variable containing the HTTP Authorization value; they never enter
 output documents. Output sink errors retain only status or a bounded diagnostic.

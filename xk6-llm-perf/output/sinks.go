@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 
 	llm "github.com/tmc/misc/xk6-llm-perf"
@@ -54,7 +55,22 @@ func OTLP(run llm.RunSummary) ([]byte, error) {
 			add("gen_ai.client.operation.time_to_first_chunk", "s", *r.TTFT/1000, r)
 		}
 		if r.ITL != nil {
-			add("llmperf.client.time_per_output_token", "s", *r.ITL/1000, r)
+			add("llmperf.client.time_per_output_token", "s/token", *r.ITL/1000, r)
+		}
+		if r.TTFO != nil {
+			add("llmperf.client.time_to_first_output", "s", *r.TTFO/1000, r)
+		}
+		for _, field := range timingFields() {
+			if v := field.value(r); v != nil {
+				if math.IsNaN(*v) || math.IsInf(*v, 0) || *v < 0 {
+					return nil, fmt.Errorf("invalid OTLP %s observation", field.name)
+				}
+				unit := "s"
+				if timingUnit(field.name) == "ms/token" {
+					unit = "s/token"
+				}
+				add("llmperf.client."+field.name, unit, *v/1000, r)
+			}
 		}
 		for _, c := range []struct {
 			kind  string
@@ -70,6 +86,16 @@ func OTLP(run llm.RunSummary) ([]byte, error) {
 		if m := group[name]; m != nil {
 			list = append(list, m)
 		}
+	}
+	var extraNames []string
+	for name := range group {
+		if strings.HasPrefix(name, "llmperf.client.") && name != "llmperf.client.time_per_output_token" {
+			extraNames = append(extraNames, name)
+		}
+	}
+	sort.Strings(extraNames)
+	for _, name := range extraNames {
+		list = append(list, group[name])
 	}
 	req := &collector.ExportMetricsServiceRequest{ResourceMetrics: []*metrics.ResourceMetrics{{Resource: &resource.Resource{Attributes: []*common.KeyValue{attr("service.name", "xk6-llm-perf"), attr("llmperf.run.id", run.RunID)}}, ScopeMetrics: []*metrics.ScopeMetrics{{Scope: &common.InstrumentationScope{Name: "llmperf.postrun", Version: "1"}, Metrics: list}}}}}
 	return protojson.Marshal(req)
@@ -96,7 +122,7 @@ func MLflowBatch(d Document, runID string, timestamp int64) ([]byte, error) {
 		Metrics []metric `json:"metrics"`
 		Params  []param  `json:"params"`
 		Tags    []param  `json:"tags"`
-	}{RunID: runID, Metrics: []metric{}, Params: []param{}, Tags: []param{{"llmperf.schema_version", "1"}}}
+	}{RunID: runID, Metrics: []metric{}, Params: []param{}, Tags: []param{{"llmperf.schema_version", fmt.Sprint(d.SchemaVersion)}}}
 	for _, s := range d.Metrics {
 		v.Params = append(v.Params, param{"unit." + s.Name, s.Unit})
 		for _, p := range []struct {

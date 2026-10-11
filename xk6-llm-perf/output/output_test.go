@@ -19,7 +19,7 @@ import (
 func runFixture() llm.RunSummary {
 	n := 0
 	v := 20.
-	return llm.RunSummary{SchemaVersion: 1, RunID: "test<script>", StartedAt: 1000, FinishedAt: 2000, Duration: 1, Attempts: 1, Successes: 1, Records: []llm.Measurement{{SchemaVersion: 1, Attempted: true, Recorded: true, Phase: "measurement", Outcome: "success", StartedAt: 1100, DispatchedAt: 1100, FinishedAt: 1200, FullResponseLatency: 100, TTFT: &v, InputTokens: llm.TokenCount{Value: &n, Source: "reported"}, OutputTokens: llm.TokenCount{Source: "unavailable"}}}}
+	return llm.RunSummary{SchemaVersion: 1, RunID: "test<script>", StartedAt: 1000, FinishedAt: 2000, Duration: 1, Attempts: 1, Successes: 1, MissingOutputCounts: 1, Records: []llm.Measurement{{SchemaVersion: 1, Attempted: true, Recorded: true, Phase: "measurement", Outcome: "success", StartedAt: 1100, DispatchedAt: 1100, FinishedAt: 1200, FullResponseLatency: 100, TTFT: &v, InputTokens: llm.TokenCount{Value: &n, Source: "reported"}, OutputTokens: llm.TokenCount{Source: "unavailable"}}}}
 }
 func ExampleSummarize() {
 	d, err := Summarize(runFixture())
@@ -44,7 +44,7 @@ func ExampleOTLP() {
 	var req collector.ExportMetricsServiceRequest
 	_ = protojson.Unmarshal(b, &req)
 	fmt.Println(len(req.ResourceMetrics[0].ScopeMetrics[0].Metrics), err)
-	// Output: 3 <nil>
+	// Output: 5 <nil>
 }
 func ExampleMLflowBatch() {
 	b, err := MLflowBatch(Document{Metrics: []Statistic{{Name: "ttft", Unit: "ms"}}}, "run", 123)

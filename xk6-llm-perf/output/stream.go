@@ -87,6 +87,20 @@ func Stream(ctx context.Context, reader io.Reader, client *http.Client, opts Str
 		} else {
 			run.Failures = 1
 		}
+		if m.Outcome == "success" {
+			if m.InputTokens.Value == nil {
+				run.MissingInputCounts = 1
+			}
+			if m.OutputTokens.Value == nil {
+				run.MissingOutputCounts = 1
+			}
+			if m.InputTokens.Source == "estimated" {
+				run.EstimatedInputCounts = 1
+			}
+			if m.OutputTokens.Source == "estimated" {
+				run.EstimatedOutputCounts = 1
+			}
+		}
 		run.Goodput = float64(run.GoodRequests) / run.Duration
 		run.InputThroughput = float64(run.InputTokens) / run.Duration
 		run.OutputThroughput = float64(run.OutputTokens) / run.Duration
@@ -129,6 +143,14 @@ func liveMLflow(run llm.RunSummary, runID string) ([]byte, error) {
 	}{{"live.gen_ai.client.operation.time_to_first_chunk", m.TTFT}, {"live.llmperf.client.time_per_output_token", m.ITL}} {
 		if item.v != nil {
 			metrics = append(metrics, point{item.k, *item.v / 1000, int64(m.FinishedAt), 0})
+		}
+	}
+	if m.TTFO != nil {
+		metrics = append(metrics, point{"live.llmperf.client.time_to_first_output", *m.TTFO / 1000, int64(m.FinishedAt), 0})
+	}
+	for _, field := range timingFields() {
+		if v := field.value(m); v != nil {
+			metrics = append(metrics, point{"live.llmperf.client." + field.name, *v / 1000, int64(m.FinishedAt), 0})
 		}
 	}
 	for _, item := range []struct {
