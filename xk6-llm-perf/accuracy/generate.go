@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"unicode/utf8"
 )
 
 // Generate fills missing successful-case predictions through an explicit OpenAI
@@ -70,26 +71,33 @@ func Generate(ctx context.Context, client *http.Client, endpoint, authorization 
 		}
 		data, readErr := io.ReadAll(io.LimitReader(resp.Body, 1<<20+1))
 		closeErr := resp.Body.Close()
-		if readErr != nil || closeErr != nil || len(data) > 1<<20 || resp.StatusCode != 200 {
+		if readErr != nil || closeErr != nil || len(data) > 1<<20 || !utf8.Valid(data) || resp.StatusCode != 200 {
 			a.Cases[i].Outcome = "failure"
 			continue
 		}
 		var result struct {
+			Error   json.RawMessage `json:"error"`
+			Model   *string         `json:"model"`
 			Choices []struct {
-				Index   int `json:"index"`
+				Index   *int `json:"index"`
 				Message struct {
 					Content *string `json:"content"`
 				} `json:"message"`
 			} `json:"choices"`
 		}
-		if json.Unmarshal(data, &result) != nil {
+		if uniqueJSON(data) != nil || json.Unmarshal(data, &result) != nil || len(result.Error) > 0 && !bytes.Equal(bytes.TrimSpace(result.Error), []byte("null")) || result.Model != nil && *result.Model != a.Model {
 			a.Cases[i].Outcome = "failure"
 			continue
 		}
 		found := false
 		for _, choice := range result.Choices {
-			if choice.Index == 0 && choice.Message.Content != nil && len(*choice.Message.Content) <= 65536 {
-				if found {
+			if choice.Index == nil {
+				a.Cases[i].Prediction = nil
+				a.Cases[i].Outcome = "failure"
+				break
+			}
+			if *choice.Index == 0 {
+				if found || choice.Message.Content == nil || len(*choice.Message.Content) > 65536 {
 					a.Cases[i].Prediction = nil
 					a.Cases[i].Outcome = "failure"
 					break

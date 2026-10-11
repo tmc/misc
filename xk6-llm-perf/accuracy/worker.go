@@ -108,6 +108,9 @@ func EvaluateWithWorker(ctx context.Context, reader io.Reader, opts WorkerOption
 			WorkerSHA256       string            `json:"worker_sha256"`
 			Isolation          string            `json:"isolation"`
 		}
+		if err := uniqueJSON(out.Bytes()); err != nil {
+			return false, false, fmt.Errorf("invalid worker response")
+		}
 		d := json.NewDecoder(bytes.NewReader(out.Bytes()))
 		d.DisallowUnknownFields()
 		if err := d.Decode(&result); err != nil {
@@ -133,13 +136,16 @@ func EvaluateWithWorker(ctx context.Context, reader io.Reader, opts WorkerOption
 }
 
 type boundedWriter struct {
-	bytes.Buffer
-	limit int
+	buffer bytes.Buffer
+	limit  int
 }
+
+func (w *boundedWriter) Len() int      { return w.buffer.Len() }
+func (w *boundedWriter) Bytes() []byte { return w.buffer.Bytes() }
 
 func (w *boundedWriter) Write(p []byte) (int, error) {
 	if len(p) > w.limit-w.Len() {
 		return 0, fmt.Errorf("output budget exceeded")
 	}
-	return w.Buffer.Write(p)
+	return w.buffer.Write(p)
 }

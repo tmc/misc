@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -38,6 +39,16 @@ print(json.dumps(out))
 	r, err := EvaluateWithWorker(context.Background(), bytes.NewReader(b), opts)
 	if err != nil || r.Correct != 1 || r.Worker == nil || r.Worker.CasesEvaluated != 2 {
 		t.Fatal(r, err)
+	}
+	// A pinned worker still cannot overwrite a score with duplicate members.
+	duplicateBody := strings.Replace(body, `print(json.dumps(out))`, `print(json.dumps(out)[:-1]+',"correct":false}')`, 1)
+	if err := os.WriteFile(script, []byte(duplicateBody), 0600); err != nil {
+		t.Fatal(err)
+	}
+	duplicateHash := sha256.Sum256([]byte(duplicateBody))
+	opts.ScriptSHA256 = hex.EncodeToString(duplicateHash[:])
+	if _, err := EvaluateWithWorker(context.Background(), bytes.NewReader(b), opts); err == nil {
+		t.Fatal("duplicate worker score accepted")
 	}
 	// This tests the trusted bridge wire contract, not actual confinement or math parity.
 	opts.ScriptSHA256 = "wrong"

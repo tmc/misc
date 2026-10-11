@@ -56,6 +56,78 @@ def read_request():
     return request, data
 
 
+def check_cgroup_limits(root=Path("/sys/fs/cgroup"), membership=Path("/proc/self/cgroup")):
+    """Require effective limits for the current unified cgroup, including ancestors."""
+    entries = [line[3:] for line in membership.read_text().splitlines() if line.startswith("0::")]
+    if len(entries) != 1 or not entries[0].startswith("/"):
+        raise ValueError("external grading requires cgroup v2 membership")
+    relative = Path(entries[0].lstrip("/"))
+    if ".." in relative.parts:
+        raise ValueError("invalid cgroup membership")
+    current = root / relative
+    if not current.is_dir():
+        raise ValueError("current cgroup is unavailable")
+    for name, maximum in (("memory.max", 2 << 30), ("pids.max", 64)):
+        values = []
+        directory = current
+        while True:
+            path = directory / name
+            if path.exists():
+                value = path.read_text().strip()
+                if value != "max":
+                    if not value.isdigit() or int(value) <= 0:
+                        raise ValueError("invalid cgroup " + name)
+                    values.append(int(value))
+            if directory == root:
+                break
+            directory = directory.parent
+        if not values or min(values) > maximum:
+            raise ValueError("external grading requires bounded cgroup " + name)
+
+
+def close_in_forked_child(fd):
+    """Close an inherited fd once; descendants must not close a reused fd number."""
+    def close():
+        nonlocal fd
+        if fd is not None:
+            old, fd = fd, None
+            try:
+                os.close(old)
+            except OSError:
+                pass
+    return close
+
+
+def codegen_worker():
+    """Run pinned upstream grading with process-subtree-safe protocol guards."""
+    if sys.platform != "linux" or Path(__file__) != Path("/worker.py") or not Path("/sandbox-marker").is_file() or Path(sys.prefix) != Path("/runtime"):
+        raise ValueError("code worker requires confined mount layout")
+    import multiprocessing
+    import signal
+    import threading
+    protocol_fd = os.dup(1)
+    os.dup2(2, 1)
+    os.register_at_fork(after_in_child=close_in_forked_child(protocol_fd))
+    death_fd = int(os.environ["AIPERF_CODEGEN_DEATH_FD"])
+    os.register_at_fork(after_in_child=close_in_forked_child(death_fd))
+    def watch():
+        try:
+            while os.read(death_fd, 4096):
+                pass
+        except OSError:
+            pass
+        try:
+            os.killpg(0, signal.SIGKILL)
+        except OSError:
+            pass
+    threading.Thread(target=watch, daemon=True).start()
+    multiprocessing.set_start_method("fork", force=True)
+    from aiperf.accuracy.graders._codegen_worker import run_worker_loop
+    from lighteval.tasks.tasks.lcb.codegen_metrics import codegen_metrics, compute_metrics_from_results
+    with os.fdopen(protocol_fd, "wb", buffering=0) as output:
+        run_worker_loop(sys.stdin.buffer, output, codegen_metrics, compute_metrics_from_results)
+
+
 def limits():
     resource.setrlimit(resource.RLIMIT_CPU, (20, 20))
     resource.setrlimit(resource.RLIMIT_AS, (2 << 30, 2 << 30))
@@ -71,7 +143,6 @@ async def grade(request, source):
     if versions != request["dependency_versions"]:
         raise ValueError("installed dependency versions differ from pins")
     sys.path.insert(0, str(source / "src"))
-    import importlib
     module, class_name, _ = EVALUATORS[request["evaluator"]]
     imported = importlib.import_module("aiperf.accuracy.graders." + module)
     if request["evaluator"] == "math-symbolic-v1" and not (imported._HAS_SYMPY and imported._HAS_LATEX2SYMPY):
@@ -80,12 +151,39 @@ async def grade(request, source):
     cls.check_available()
     run = SimpleNamespace(cfg=SimpleNamespace(accuracy=SimpleNamespace()))
     grader = cls(run=run)
+    if request["evaluator"] == "code-execution-v1":
+        from aiperf.accuracy.graders._codegen_worker_client import CodegenGradingWorker, CodegenWorkerError
+        class CheckedWorker(CodegenGradingWorker):
+            async def grade_codegen(self, *args, **kwargs):
+                try:
+                    return await super().grade_codegen(*args, **kwargs)
+                except CodegenWorkerError:
+                    # Upstream maps transport faults to incorrect answers. The
+                    # bridge instead retains them as unavailable qualification.
+                    raise ValueError("confined code worker unavailable") from None
+        # This adapter targets the exact pinned grader implementation. Its
+        # extraction, reference conversion and scoring remain upstream code.
+        grader._worker = CheckedWorker(worker_cmd=[sys.executable, "/worker.py", "--codegen-worker"])
     try:
         result = await grader.grade(request["prediction"], request["reference"])
     finally:
         await grader.aclose()
     return {"schema_version": 1, "evaluator": request["evaluator"], "source_revision": REVISION,
             "dependency_versions": versions, "correct": bool(result.correct), "unparsed": bool(result.unparsed)}
+
+
+def sandbox_command(bwrap, source, runtime, worker):
+    command = [bwrap, "--unshare-all", "--new-session", "--die-with-parent", "--cap-drop", "ALL",
+               "--clearenv", "--setenv", "PATH", "/runtime/bin:/usr/bin", "--setenv", "PYTHONPATH", "/source/src",
+               "--setenv", "PYTHONDONTWRITEBYTECODE", "1", "--setenv", "HOME", "/work",
+               "--setenv", "OPENBLAS_NUM_THREADS", "1", "--setenv", "OMP_NUM_THREADS", "1", "--setenv", "MKL_NUM_THREADS", "1",
+               "--dir", "/source", "--ro-bind", str(source / "src"), "/source/src", "--ro-bind", str(runtime), "/runtime",
+               "--ro-bind", str(worker), "/worker.py", "--proc", "/proc", "--dev", "/dev",
+               "--size", str(64 << 20), "--tmpfs", "/tmp", "--size", str(64 << 20), "--tmpfs", "/work", "--chdir", "/work"]
+    for path in ("/usr", "/lib", "/lib64"):
+        if Path(path).exists():
+            command += ["--ro-bind", path, path]
+    return command
 
 
 def main():
@@ -110,10 +208,7 @@ def main():
         result = asyncio.run(grade(request, source))
         print(json.dumps(result, sort_keys=True, separators=(",", ":")))
         return
-    for name, maximum in (("memory.max", 2 << 30), ("pids.max", 64)):
-        value = Path("/sys/fs/cgroup", name).read_text().strip()
-        if not value.isdigit() or not 0 < int(value) <= maximum:
-            raise ValueError("external grading requires bounded cgroup " + name)
+    check_cgroup_limits()
     bwrap = shutil.which("bwrap")
     if not bwrap:
         raise ValueError("bubblewrap is required; there is no host execution fallback")
@@ -126,15 +221,7 @@ def main():
         raise ValueError("runtime must contain bin/python")
     # Dependencies and source are read-only; no home, secrets or host network are
     # mounted. /work and /tmp are ephemeral. User namespaces must be enabled.
-    command = [bwrap, "--unshare-all", "--new-session", "--die-with-parent", "--cap-drop", "ALL",
-               "--clearenv", "--setenv", "PATH", "/runtime/bin:/usr/bin", "--setenv", "PYTHONPATH", "/source/src",
-               "--setenv", "PYTHONDONTWRITEBYTECODE", "1", "--setenv", "HOME", "/work",
-               "--dir", "/source", "--ro-bind", str(source / "src"), "/source/src", "--ro-bind", str(runtime), "/runtime",
-               "--ro-bind", str(Path(__file__).resolve()), "/worker.py", "--proc", "/proc", "--dev", "/dev",
-               "--size", str(64 << 20), "--tmpfs", "/tmp", "--size", str(64 << 20), "--tmpfs", "/work", "--chdir", "/work"]
-    for path in ("/usr", "/lib", "/lib64"):
-        if Path(path).exists():
-            command += ["--ro-bind", path, path]
+    command = sandbox_command(bwrap, source, runtime, Path(__file__).resolve())
     with tempfile.TemporaryDirectory(prefix="accuracy-worker-") as work:
         marker = Path(work) / "marker"
         marker.write_text("bubblewrap accuracy worker v1\n")
@@ -161,7 +248,10 @@ def main():
 
 if __name__ == "__main__":
     try:
-        main()
+        if sys.argv[1:] == ["--codegen-worker"]:
+            codegen_worker()
+        else:
+            main()
     except (ValueError, OSError, subprocess.SubprocessError, json.JSONDecodeError) as error:
         print("accuracy worker: " + str(error), file=sys.stderr)
         sys.exit(1)

@@ -1,5 +1,3 @@
-// Package accuracy evaluates explicitly supplied response artifacts against pinned references.
-// It never reads text from sanitized performance records or executes generated code.
 package accuracy
 
 import (
@@ -90,11 +88,11 @@ func ReferenceHash(cases []Case) (string, error) {
 	return hex.EncodeToString(h[:]), nil
 }
 
+var rational = regexp.MustCompile(`^[+-]?[0-9]+(?:\.[0-9]+)?(?:/[+-]?[0-9]+)?$`)
+
 // Evaluate reads a bounded strict artifact and verifies its declared reference hash.
 // exact-match-v1 is trimmed, case-sensitive equality; choice-v1 requires a bare
 // A-Z first line; rational-v1 compares finite decimal/fraction values exactly.
-var rational = regexp.MustCompile(`^[+-]?[0-9]+(?:\.[0-9]+)?(?:/[+-]?[0-9]+)?$`)
-
 func Evaluate(reader io.Reader) (Report, error) { return evaluate(reader, nil) }
 
 type grader func(evaluator, pred, ref string) (bool, bool, error)
@@ -106,6 +104,9 @@ func evaluate(reader io.Reader, external grader) (Report, error) {
 	}
 	if len(b) > 16<<20 || !utf8.Valid(b) {
 		return Report{}, fmt.Errorf("artifact exceeds budget or invalid UTF-8")
+	}
+	if err := uniqueJSON(b); err != nil {
+		return Report{}, fmt.Errorf("decode artifact: %w", err)
 	}
 	var a Artifact
 	d := json.NewDecoder(bytes.NewReader(b))

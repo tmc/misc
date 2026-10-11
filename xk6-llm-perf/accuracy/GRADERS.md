@@ -69,3 +69,38 @@ review the script before execution. Report missing sandbox/dependencies as an
 external qualification gate, never as an incorrect model answer or numeric
 fallback. macOS host tests cover parsing and refusal paths; they do not qualify
 Linux symbolic/lighteval/LiveCodeBench execution or matched AIPerf parity.
+
+The admission check reads the current unified cgroup from `/proc/self/cgroup`
+and checks effective ancestor limits. A bounded nested job is supported even
+when the hierarchy root has no controller files; an unbounded job is refused.
+Run the safe admission tests with
+`python3 examples/output/accuracy_external_test.py`.
+
+On an owned Linux job with the required bounds and bubblewrap, run
+`python3 examples/output/qualify_confinement.py`. This exercises the same mount
+and namespace command as the bridge and refuses failed negative controls for
+host-file access, source writes, inherited environment and network namespaces.
+It is confinement evidence only. Real symbolic and LiveCodeBench graders,
+malicious process trees and timeout cleanup require separate qualified receipts.
+
+The code mode uses the pinned upstream `CodeExecutionGrader` with a bridge-owned
+worker transport. The transport delegates the upstream batch and scoring loop,
+but closes inherited protocol/death descriptors only once in each fork subtree.
+The pinned upstream callbacks can otherwise close newly reused descriptor numbers
+in grandchildren and turn a known-correct program into a failing score. Transport
+faults fail evaluation as unavailable; they do not count as wrong model answers.
+BLAS/OpenMP threads are restricted to one so optional imports and worker processes
+fit the unchanged 64-process cgroup bound. Containers hosting repeated checks
+should use an init process to reap namespace supervisor children.
+
+## JSON evidence admission
+
+Provider generation responses, evaluator artifacts and confined-worker receipts
+reject duplicate members recursively before typed decoding. Member names that collide under Go case folding are also refused before
+typed decoding can merge their evidence.
+Parsing depth is limited to 64; each caller retains its existing byte budget.
+Unique explicit empty answers and provider `error: null` remain valid observed
+responses. Artifact null predictions remain unavailable, and worker null score
+fields still fail their existing provenance checks. Ambiguous provider responses
+become failed cases with no prediction; they cannot enter successful accuracy
+populations.
