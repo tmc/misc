@@ -1,0 +1,54 @@
+exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request default.json -request-sha256 b020735320085baa8d2517524a0b58d4f2b68cd47f9fcd538d2971f60028c880 -tokenizer-input default-out.json
+stdout '"effective_think":true'
+cat default-out.json
+stdout '/no_think /think'
+exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request none.json -request-sha256 5e0b72c12b3136cf32dc071406698ba2cf6a6a6a2c368150a5231ad78a81f246 -tokenizer-input none-out.json
+stdout '"effective_think":false'
+cat none-out.json
+stdout '/no_think /no_think'
+! exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request default.json -request-sha256 b020735320085baa8d2517524a0b58d4f2b68cd47f9fcd538d2971f60028c880 -tokenizer-input default-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request default.json -request-sha256 0000000000000000000000000000000000000000000000000000000000000000 -tokenizer-input wrong-hash.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request unsupported.json -request-sha256 75ca7fef83a48a20cbb6d2295f75c325f59b656007d73de2c06fec9e9f6d9ad8 -tokenizer-input unsupported-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request low.json -request-sha256 dcd7d72bee6d0da324198ab34aec2e0bd0ca9d324adeea80ae16d65961db6031 -tokenizer-input low-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request low-nested.json -request-sha256 2d7b7241bc44d51da289c36c87aca436e7c2505f7583d2441b4bb96bc0291848 -tokenizer-input low-nested-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request medium.json -request-sha256 66409afebf4fada83fda4d49160bc05039b4f8cf4bffd0f035fc382d2161d561 -tokenizer-input medium-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request medium-nested.json -request-sha256 54201e1a31463095264b080539f87f481c1e7fe1c0bfd5ec3cd1c6f37315ecd1 -tokenizer-input medium-nested-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request high.json -request-sha256 2bf036240d37da19bc87d3c6a0071d95672ddc43a6ee0add242b021262f3fb42 -tokenizer-input high-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request high-nested.json -request-sha256 ae01e2907b3f1194ad7b65b23860b4354901a2451c349147dfef6db667795d02 -tokenizer-input high-nested-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_SYSTEM -model-show-sha256 $SHA_SYSTEM -provider-version 0.12.7 -request default.json -request-sha256 b020735320085baa8d2517524a0b58d4f2b68cd47f9fcd538d2971f60028c880 -tokenizer-input SYSTEM-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_MESSAGES -model-show-sha256 $SHA_MESSAGES -provider-version 0.12.7 -request default.json -request-sha256 b020735320085baa8d2517524a0b58d4f2b68cd47f9fcd538d2971f60028c880 -tokenizer-input MESSAGES-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_NULL_SYSTEM -model-show-sha256 $SHA_NULL_SYSTEM -provider-version 0.12.7 -request default.json -request-sha256 b020735320085baa8d2517524a0b58d4f2b68cd47f9fcd538d2971f60028c880 -tokenizer-input NULL_SYSTEM-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_NULL_MESSAGES -model-show-sha256 $SHA_NULL_MESSAGES -provider-version 0.12.7 -request default.json -request-sha256 b020735320085baa8d2517524a0b58d4f2b68cd47f9fcd538d2971f60028c880 -tokenizer-input NULL_MESSAGES-out.json
+stderr 'refused'
+exec $CLI -model-show $MODEL_EMPTY -model-show-sha256 $SHA_EMPTY -provider-version 0.12.7 -request default.json -request-sha256 b020735320085baa8d2517524a0b58d4f2b68cd47f9fcd538d2971f60028c880 -tokenizer-input empty-metadata-out.json
+stdout '"effective_think":true'
+-- default.json --
+{"model":"qwen3:0.6b","messages":[{"role":"user","content":"Say hello in one short sentence. /no_think"}]}
+-- none.json --
+{"model":"qwen3:0.6b","messages":[{"role":"user","content":"Say hello in one short sentence. /no_think"}],"reasoning_effort":"none"}
+-- unsupported.json --
+{"model":"qwen3:0.6b","messages":[{"role":"user","content":"a"},{"role":"user","content":"b"}]}
+-- low.json --
+{"model":"qwen3:0.6b","messages":[{"role":"user","content":"Say hello in one short sentence. /no_think"}],"reasoning_effort":"low"}
+-- low-nested.json --
+{"model":"qwen3:0.6b","messages":[{"role":"user","content":"Say hello in one short sentence. /no_think"}],"reasoning":{"effort":"low"}}
+-- medium.json --
+{"model":"qwen3:0.6b","messages":[{"role":"user","content":"Say hello in one short sentence. /no_think"}],"reasoning_effort":"medium"}
+-- medium-nested.json --
+{"model":"qwen3:0.6b","messages":[{"role":"user","content":"Say hello in one short sentence. /no_think"}],"reasoning":{"effort":"medium"}}
+-- high.json --
+{"model":"qwen3:0.6b","messages":[{"role":"user","content":"Say hello in one short sentence. /no_think"}],"reasoning_effort":"high"}
+-- high-nested.json --
+{"model":"qwen3:0.6b","messages":[{"role":"user","content":"Say hello in one short sentence. /no_think"}],"reasoning":{"effort":"high"}}

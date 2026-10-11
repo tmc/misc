@@ -1,0 +1,218 @@
+// Command llm-ollama-frame replays one pinned Ollama 0.12.7 chat template offline.
+package main
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"io"
+	"os"
+	"text/template"
+	"unicode/utf8"
+
+	"github.com/tmc/misc/xk6-llm-perf/internal/jsoncheck"
+)
+
+const templateSHA256 = "ae370d884f108d16e7cc8fd5259ebc5773a0afa6e078b11f4ed7e39a27e0dfc4"
+
+const sourceRevision = "c88647104d1621b5021d6e3ca18fb8a1f5cdd394"
+
+type request struct {
+	Model           string    `json:"model"`
+	Messages        []message `json:"messages"`
+	ReasoningEffort string    `json:"reasoning_effort"`
+	Reasoning       *struct {
+		Effort string `json:"effort"`
+	} `json:"reasoning"`
+	Tools         json.RawMessage `json:"tools"`
+	Stream        bool            `json:"stream"`
+	MaxTokens     *uint64         `json:"max_tokens"`
+	Temperature   *float64        `json:"temperature"`
+	StreamOptions *struct {
+		IncludeUsage bool `json:"include_usage"`
+	} `json:"stream_options"`
+}
+type message struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+type show struct {
+	Template     string          `json:"template"`
+	Capabilities []string        `json:"capabilities"`
+	System       json.RawMessage `json:"system,omitempty"`
+	Messages     json.RawMessage `json:"messages,omitempty"`
+}
+
+type boundedBuffer struct{ bytes.Buffer }
+
+func (b *boundedBuffer) Write(p []byte) (int, error) {
+	if b.Len()+len(p) > 1<<20 {
+		return 0, fmt.Errorf("rendered prompt exceeds budget")
+	}
+	return b.Buffer.Write(p)
+}
+
+func render(s show, r request) (string, bool, error) {
+	// This bounded lane reproduces retained one-user requests only. System/tool
+	// collation and context truncation must not be silently approximated.
+	if fmt.Sprintf("%x", sha256.Sum256([]byte(s.Template))) != templateSHA256 {
+		return "", false, fmt.Errorf("unsupported serving template")
+	}
+	if r.Model != "qwen3:0.6b" || len(r.Messages) != 1 || r.Messages[0].Role != "user" || len(r.Messages[0].Content) > 65536 || len(r.Tools) > 0 && string(r.Tools) != "[]" {
+		return "", false, fmt.Errorf("unsupported request population")
+	}
+	// Model-level defaults are prepended by Ollama before request messages.
+	// This one-user lane can admit their absence or explicit empty values only.
+	if len(s.System) > 0 {
+		var system *string
+		if json.Unmarshal(s.System, &system) != nil || system == nil || *system != "" {
+			return "", false, fmt.Errorf("unsupported model system")
+		}
+	}
+	if len(s.Messages) > 0 {
+		var messages []json.RawMessage
+		if json.Unmarshal(s.Messages, &messages) != nil || messages == nil || len(messages) != 0 {
+			return "", false, fmt.Errorf("unsupported model messages")
+		}
+	}
+	if r.ReasoningEffort != "" && r.ReasoningEffort != "none" {
+		return "", false, fmt.Errorf("unsupported reasoning effort")
+	}
+	if r.Reasoning != nil && r.Reasoning.Effort != "" && r.Reasoning.Effort != "none" {
+		return "", false, fmt.Errorf("unsupported reasoning effort")
+	}
+	thinking := false
+	for _, cap := range s.Capabilities {
+		if cap == "thinking" {
+			thinking = true
+		}
+	}
+	if !thinking {
+		return "", false, fmt.Errorf("thinking capability required")
+	}
+	effort := r.ReasoningEffort
+	if r.Reasoning != nil {
+		effort = r.Reasoning.Effort
+	}
+	think := true // routes.go defaults absent Think for a thinking-capable model.
+	switch effort {
+	case "":
+	case "none":
+		think = false
+	default:
+		return "", false, fmt.Errorf("unsupported reasoning effort")
+	}
+	t, err := template.New("ollama").Parse(s.Template)
+	if err != nil {
+		return "", false, fmt.Errorf("parse template: %w", err)
+	}
+	var b boundedBuffer
+	values := map[string]any{"System": "", "Tools": []any(nil), "Messages": r.Messages, "Think": think, "IsThinkSet": true, "ThinkLevel": effort}
+	if err = t.Execute(&b, values); err != nil {
+		return "", false, fmt.Errorf("render template: %w", err)
+	}
+	return b.String(), think, nil
+}
+
+func decodeJSON(data []byte, value any, strict, allowNull bool) error {
+	if !utf8.Valid(data) {
+		return fmt.Errorf("invalid UTF-8")
+	}
+	d := json.NewDecoder(bytes.NewReader(data))
+	d.UseNumber()
+	if err := jsoncheck.Check(d, jsoncheck.Options{FoldNames: true, RejectNull: !allowNull}); err != nil {
+		return err
+	}
+	d = json.NewDecoder(bytes.NewReader(data))
+	if strict {
+		d.DisallowUnknownFields()
+	}
+	return d.Decode(value)
+}
+
+func pinned(path, want string) ([]byte, error) {
+	if len(want) != 64 {
+		return nil, fmt.Errorf("SHA-256 pin required")
+	}
+	f, err := openRegular(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, 1<<20+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > 1<<20 {
+		return nil, fmt.Errorf("input exceeds budget")
+	}
+	h := sha256.Sum256(data)
+	if hex.EncodeToString(h[:]) != want {
+		return nil, fmt.Errorf("input hash mismatch")
+	}
+	return data, nil
+}
+
+func run(args []string, out io.Writer) error {
+	f := flag.NewFlagSet("llm-ollama-frame", flag.ContinueOnError)
+	sp := f.String("model-show", "", "retained model-show JSON")
+	sh := f.String("model-show-sha256", "", "required model-show byte hash")
+	rp := f.String("request", "", "retained OpenAI request JSON")
+	rh := f.String("request-sha256", "", "required request byte hash")
+	version := f.String("provider-version", "", "observed provider version; must be 0.12.7")
+	input := f.String("tokenizer-input", "", "explicit destination for sensitive rendered tokenizer input")
+	if err := f.Parse(args); err != nil {
+		return err
+	}
+	if f.NArg() != 0 || *version != "0.12.7" || *input == "" {
+		return fmt.Errorf("pinned provider version and tokenizer destination required")
+	}
+	sb, err := pinned(*sp, *sh)
+	if err != nil {
+		return fmt.Errorf("model show: %w", err)
+	}
+	rb, err := pinned(*rp, *rh)
+	if err != nil {
+		return fmt.Errorf("request: %w", err)
+	}
+	var s show
+	var r request
+	if decodeJSON(sb, &s, false, true) != nil || decodeJSON(rb, &r, true, false) != nil {
+		return fmt.Errorf("invalid JSON input")
+	}
+	text, think, err := render(s, r)
+	if err != nil {
+		return err
+	}
+	b, err := json.Marshal(struct {
+		Text    string `json:"text"`
+		Special bool   `json:"add_special_tokens"`
+	}{text, false})
+	if err != nil {
+		return err
+	}
+	target, err := os.OpenFile(*input, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	if err != nil {
+		return err
+	}
+	_, err = target.Write(append(b, '\n'))
+	closeErr := target.Close()
+	if err != nil {
+		return err
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	h := sha256.Sum256([]byte(text))
+	th := sha256.Sum256([]byte(s.Template))
+	return json.NewEncoder(out).Encode(map[string]any{"schema_version": 1, "provider_version": *version, "source_revision": sourceRevision, "model": r.Model, "model_show_sha256": *sh, "request_sha256": *rh, "template_sha256": hex.EncodeToString(th[:]), "rendered_sha256": hex.EncodeToString(h[:]), "effective_think": think, "scope": "offline pinned-source/template reconstruction; actual engine prompt not captured"})
+}
+func main() {
+	if err := run(os.Args[1:], os.Stdout); err != nil {
+		fmt.Fprintln(os.Stderr, "llm-ollama-frame: refused")
+		os.Exit(1)
+	}
+}
