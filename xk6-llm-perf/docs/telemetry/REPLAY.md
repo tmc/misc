@@ -3,7 +3,7 @@
 `llm-telemetry` imports a bounded continuous stream and exports a benchmark
 `TelemetryWindow` plus per-field coverage and statistics. This is a local
 consumer interchange named `llm-telemetry-v1`. It is not the wire schema of a
-released lib/gpufleet collector. A producer adapter must convert its own schema
+native nvidia/x/nvtelemetry collector. A producer adapter must convert its own schema
 explicitly and retain its original manifest and raw bytes.
 
 Run an offline import with explicit window and gap bounds:
@@ -61,3 +61,15 @@ consumer receipts. Native collector delivery, actual unit/cadence/reference
 comparison, collection-on/off overhead, each required GPU/MIG cell, cross-host
 clock qualification, and matched AIPerf comparison remain separate external
 gates. No hardware job or live acquisition is performed by this command.
+
+Native schema 1 can be inspected without converting unknown sensor times or
+clock uncertainty into exact benchmark observations:
+
+```
+go run ./cmd/llm-telemetry -input native.jsonl -input-format nvtelemetry-v1
+```
+
+The diagnostic report retains the original hash, manifests, counts, phases and
+qualification gaps. Requested window/energy conversion is refused for this
+legacy format. See [the native contract](NATIVE-CONTRACT.md) for the agreed
+producer boundary and candidate version 2 diagnostic support and its remaining adoption gates.

@@ -81,6 +81,36 @@ func TestTelemetryReplayAnalytic(t *testing.T) {
 	}
 }
 
+func TestTelemetryReplayAvailabilityTransition(t *testing.T) {
+	for _, missing := range []int{1, 2, 3} {
+		t.Run(fmt.Sprint(missing), func(t *testing.T) {
+			raw, err := ReadTelemetryReplay(strings.NewReader(rawTelemetryFixture(false)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			raw.Records[missing].Sample.Readings[0] = TelemetryReading{Name: "power", Unit: "watts", Evidence: "unavailable", Unavailable: "query_failure"}
+			var b bytes.Buffer
+			for _, rec := range raw.Records {
+				if err := json.NewEncoder(&b).Encode(rec); err != nil {
+					t.Fatal(err)
+				}
+			}
+			raw, err = ReadTelemetryReplay(&b)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, fields, err := ReplayTelemetry(raw, 1000, 3000, EnergyOptions{MaxGap: 1.5})
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantCoverage := []float64{0, 1.5, 0, 0.5}[missing]
+			if len(fields) != 1 || fields[0].CoveredDuration != wantCoverage || fields[0].MissingDuration != 2-wantCoverage || fields[0].Evidence != "injected" {
+				t.Fatalf("fields=%+v, want coverage %v", fields, wantCoverage)
+			}
+		})
+	}
+}
+
 func TestTelemetryReplayRefusals(t *testing.T) {
 	base := rawTelemetryFixture(true)
 	for _, tc := range []struct{ name, input string }{
@@ -239,5 +269,134 @@ func TestTelemetryUnavailableZeroAndBitmask(t *testing.T) {
 	}
 	if s.OutputTokensPerJoule != nil {
 		t.Fatal("zero energy yielded efficiency")
+	}
+}
+
+func TestTelemetryReplayDuplicateKeys(t *testing.T) {
+	for _, input := range []string{
+		strings.Replace(rawTelemetryFixture(false), `"schema_version":1`, `"schema_version":999,"schema_version":1`, 1),
+		strings.Replace(rawTelemetryFixture(false), `"complete":true`, `"complete":false,"complete":true`, 1),
+	} {
+		if _, err := ReadTelemetryReplay(strings.NewReader(input)); err == nil {
+			t.Fatal("accepted replaced evidence")
+		}
+	}
+}
+
+func TestTelemetryReplayWindowLocalAge(t *testing.T) {
+	// An old observation outside the requested window must not alter later coverage.
+	base, _ := ReadTelemetryReplay(strings.NewReader(rawTelemetryFixture(true)))
+	var records []TelemetryRecord
+	records = append(records, base.Records[0])
+	at := []float64{1000, 5000, 7000, 8500}
+	for i, v := range at {
+		power := 2.0
+		counter := uint64(9007199254740993) + uint64(i)*1000
+		finish := v + 1
+		if i == 0 {
+			finish = 3000
+		}
+		source := v
+		records = append(records, TelemetryRecord{Kind: "sample", Sample: &TelemetrySample{UUID: "GPU-1", Monotonic: v - 1000, QueryStarted: v, QueryFinished: finish, SourceAt: &source, Readings: []TelemetryReading{{Name: "power", Unit: "watts", Evidence: "injected", Value: &power}, {Name: "energy", Unit: "millijoules", Evidence: "injected", Counter: &counter}}}})
+	}
+	records = append(records, base.Records[len(base.Records)-1])
+	read := func(rs []TelemetryRecord) TelemetryReplay {
+		t.Helper()
+		var b bytes.Buffer
+		for _, r := range rs {
+			json.NewEncoder(&b).Encode(r)
+		}
+		v, err := ReadTelemetryReplay(&b)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return v
+	}
+	records[1].Sample.Readings[0].Evidence = "old-derived"
+	outside := 25.0
+	records[1].Sample.Readings = append(records[1].Sample.Readings, TelemetryReading{Name: "temperature", Unit: "celsius", Evidence: "injected", Value: &outside})
+	full := read(records)
+	short := read(append(append([]TelemetryRecord{records[0]}, records[3:5]...), records[5]))
+	a, af, err := ReplayTelemetry(full, 7000, 8500, EnergyOptions{MaxGap: 1.5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, bf, err := ReplayTelemetry(short, 7000, 8500, EnergyOptions{MaxGap: 1.5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	x, _ := json.Marshal(a.Devices)
+	y, _ := json.Marshal(b.Devices)
+	if !bytes.Equal(x, y) {
+		t.Fatalf("window changed: %s vs %s", x, y)
+	}
+	x, _ = json.Marshal(af)
+	y, _ = json.Marshal(bf)
+	if !bytes.Equal(x, y) {
+		t.Fatalf("fields changed: %s vs %s", x, y)
+	}
+	if _, _, err := ReplayTelemetry(full, 1000, 5000, EnergyOptions{MaxGap: 1.5}); err == nil {
+		t.Fatal("accepted stale relevant observation")
+	}
+	// A reset outside the window remains irrelevant; inside remains a refusal.
+	records[1].Sample.Readings[1].Counter = new(uint64)
+	*records[1].Sample.Readings[1].Counter = ^uint64(0)
+	if _, _, err := ReplayTelemetry(read(records), 7000, 8500, EnergyOptions{MaxGap: 1.5}); err != nil {
+		t.Fatal(err)
+	}
+	records[4].Sample.Readings[1].Counter = new(uint64)
+	if _, _, err := ReplayTelemetry(read(records), 7000, 8500, EnergyOptions{MaxGap: 1.5}); err == nil {
+		t.Fatal("accepted relevant reset")
+	}
+}
+
+func TestOfflineTelemetryNullTiming(t *testing.T) {
+	base := rawTelemetryFixture(true)
+	// The first monotonic timestamp is genuinely zero. Null must not inherit it.
+	for _, tc := range []struct{ name, old, new string }{
+		{"monotonic", `"monotonic_ms":0`, `"monotonic_ms":null`},
+		{"query start", `"query_started_at":1000`, `"query_started_at":null`},
+		{"query end", `"query_finished_at":1001`, `"query_finished_at":null`},
+		{"source", `"source_at":1000`, `"source_at":null`},
+		{"end bound", `"kind":"end"`, `"kind":"end","at":null`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := strings.Replace(base, tc.old, tc.new, 1)
+			if input == base {
+				t.Fatal("ineffective mutation")
+			}
+			if _, err := ReadTelemetryReplay(strings.NewReader(input)); err == nil {
+				t.Fatal("null timing accepted")
+			}
+		})
+	}
+	// Numeric zero is valid at process and Unix epochs, including query bounds.
+	replay, err := ReadTelemetryReplay(strings.NewReader(base))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, record := range replay.Records {
+		if s := record.Sample; s != nil {
+			s.QueryStarted -= 1000
+			s.QueryFinished -= 1001
+			*s.SourceAt -= 1000
+		}
+	}
+	var buf bytes.Buffer
+	for _, record := range replay.Records {
+		if err := json.NewEncoder(&buf).Encode(record); err != nil {
+			t.Fatal(err)
+		}
+	}
+	zero, err := ReadTelemetryReplay(&buf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	window, _, err := ReplayTelemetry(zero, 0, 2000, EnergyOptions{MaxGap: 1.5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if window.Devices[0].Unavailable != "" || *window.Devices[0].EnergyEnd-*window.Devices[0].EnergyStart != 8000 {
+		t.Fatalf("explicit zero changed admission: %+v", window)
 	}
 }

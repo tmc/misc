@@ -103,6 +103,9 @@ func ReadTelemetryReplay(r io.Reader) (TelemetryReplay, error) {
 		if len(out.Records) >= 100000 || ended {
 			return out, fmt.Errorf("telemetry records exceed bound or follow terminal record")
 		}
+		if err := nativeTelemetryJSON(scan.Bytes()); err != nil {
+			return out, fmt.Errorf("telemetry record %d: %w", len(out.Records)+1, err)
+		}
 		var rec TelemetryRecord
 		dec := json.NewDecoder(bytes.NewReader(scan.Bytes()))
 		dec.DisallowUnknownFields()
@@ -233,11 +236,14 @@ func validateTelemetryReading(v TelemetryReading) error {
 
 // TelemetryFieldSummary uses linear interpolation between adjacent available
 // samples. It never bridges missing readings or gaps exceeding MaxGap.
+// Unavailable explains a field-local admission failure; such fields have no
+// numeric summary and report the entire requested duration as missing.
 type TelemetryFieldSummary struct {
 	UUID            string   `json:"uuid"`
 	Name            string   `json:"name"`
 	Unit            string   `json:"unit"`
 	Evidence        string   `json:"evidence"`
+	Unavailable     string   `json:"unavailable,omitempty"`
 	CoveredDuration float64  `json:"covered_duration"`
 	MissingDuration float64  `json:"missing_duration"`
 	MaxGap          float64  `json:"max_gap"`
@@ -277,31 +283,50 @@ func ReplayTelemetry(replay TelemetryReplay, start, end float64, opts EnergyOpti
 		for _, rec := range replay.Records {
 			if rec.Sample != nil && rec.Sample.UUID == d.UUID {
 				samples = append(samples, *rec.Sample)
-				for _, v := range rec.Sample.Readings {
-					names[v.Name] = true
-				}
 			}
 		}
 		summaries := map[string]TelemetryFieldSummary{}
 		integrals := map[string]float64{}
-		for _, s := range samples {
+		availableEvidence := map[string]string{}
+		for i, s := range samples {
+			relevant := *s.SourceAt >= start && *s.SourceAt <= end
+			if i > 0 && *samples[i-1].SourceAt < end && *s.SourceAt > start {
+				relevant = true
+			}
+			if i+1 < len(samples) && *s.SourceAt < end && *samples[i+1].SourceAt > start {
+				relevant = true
+			}
+			if !relevant {
+				continue
+			}
 			for _, v := range s.Readings {
+				names[v.Name] = true
 				if _, ok := summaries[v.Name]; !ok {
 					summaries[v.Name] = TelemetryFieldSummary{UUID: d.UUID, Name: v.Name, Unit: v.Unit, Evidence: v.Evidence}
-				} else if summaries[v.Name].Evidence != v.Evidence {
-					return w, nil, fmt.Errorf("changing metric evidence")
+				}
+				if v.Unavailable == "" {
+					if previous := availableEvidence[v.Name]; previous != "" && previous != v.Evidence {
+						return w, nil, fmt.Errorf("changing available metric evidence")
+					}
+					availableEvidence[v.Name] = v.Evidence
+					f := summaries[v.Name]
+					f.Evidence = v.Evidence
+					summaries[v.Name] = f
 				}
 			}
 		}
 		for i := 1; i < len(samples); i++ {
 			a, b := samples[i-1], samples[i]
-			if a.QueryFinished-*a.SourceAt > opts.MaxGap*1000 || b.QueryFinished-*b.SourceAt > opts.MaxGap*1000 {
-				return w, nil, fmt.Errorf("stale sensor observation")
-			}
+
 			gap := (*b.SourceAt - *a.SourceAt) / 1000
 			lo, hi := math.Max(start, *a.SourceAt), math.Min(end, *b.SourceAt)
 			if hi <= lo {
 				continue
+			}
+			// Observation age is a window-local admission check. Old samples
+			// that cannot contribute to this window do not affect its coverage.
+			if a.QueryFinished-*a.SourceAt > opts.MaxGap*1000 || b.QueryFinished-*b.SourceAt > opts.MaxGap*1000 {
+				return w, nil, fmt.Errorf("stale sensor observation")
 			}
 			for name := range names {
 				f := summaries[name]

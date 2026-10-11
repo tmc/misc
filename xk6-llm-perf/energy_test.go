@@ -10,8 +10,10 @@ import (
 func energyFixture() (RunSummary, TelemetryWindow) {
 	start, end := uint64(9007199254740993), uint64(9007199254748993)
 	zero := 0.0
-	r := RunSummary{SchemaVersion: 1, RunID: "fixture", StartedAt: 1000, FinishedAt: 3000, Duration: 2, Attempts: 1, Successes: 1, OutputTokens: 4, Records: []Measurement{{SchemaVersion: 1, Phase: "measurement", Recorded: true, Attempted: true, Endpoint: "http://server/v1", DispatchedAt: 1000, FinishedAt: 2000, Outcome: "success", OutputTokens: count(4, "reported")}}}
+	r := RunSummary{SchemaVersion: 1, RunID: "fixture", StartedAt: 1000, FinishedAt: 3000, Duration: 2, Attempts: 1, Successes: 1, OutputTokens: 4, Records: []Measurement{{SchemaVersion: 1, Phase: "measurement", Recorded: true, Attempted: true, Endpoint: "http://server/v1", DispatchedAt: 1000, FinishedAt: 2000, FullResponseLatency: 1000, Outcome: "success", OutputTokens: count(4, "reported")}}}
 	w := TelemetryWindow{SchemaVersion: 1, RunID: "fixture", Collector: "test@1", SourceHash: "sha256:fixture", ClockBasis: "same-host", ClockUncertainty: &zero, EndpointDevices: map[string][]string{"http://server/v1": {"GPU-1"}}, Devices: []DeviceEnergy{{UUID: "GPU-1", Scope: "whole-device", Backend: "fixture", Evidence: "injected", StartedAt: 1000, FinishedAt: 3000, CoveredDuration: 2, MaxGap: 1, EnergyStart: &start, EnergyEnd: &end, Method: "cumulative-counter"}}}
+	r.MissingInputCounts = 1
+	r.Records[0].InputTokens.Source = "unavailable"
 	return r, w
 }
 
@@ -87,6 +89,7 @@ func TestEnergyReplayAndZero(t *testing.T) {
 	}
 	v := 0
 	r.Records[0].OutputTokens = count(v, "reported")
+	r.OutputTokens = 0
 	s, err = AnalyzeEnergy(r, got, EnergyOptions{MaxGap: 1})
 	if err != nil {
 		t.Fatal(err)
@@ -98,5 +101,41 @@ func TestEnergyReplayAndZero(t *testing.T) {
 		if _, err := ReadTelemetryWindow(strings.NewReader(input)); err == nil {
 			t.Fatal("accepted invalid export")
 		}
+	}
+}
+
+func TestTelemetryWindowNullBounds(t *testing.T) {
+	_, window := energyFixture()
+	window.Devices[0].StartedAt = 0
+	window.Devices[0].MissingDuration = 0
+	data, err := json.Marshal(window)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base := string(data)
+	// Optional unavailable energy is still nil, rather than a fabricated zero.
+	valid, err := ReadTelemetryWindow(strings.NewReader(base))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if valid.Devices[0].StartedAt != 0 || valid.Devices[0].Joules != nil {
+		t.Fatal("zero/null distinction lost")
+	}
+	for _, tc := range []struct{ name, old, new string }{
+		{"start", `"started_at":0`, `"started_at":null`},
+		{"end", `"finished_at":3000`, `"finished_at":null`},
+		{"coverage", `"covered_duration":2`, `"covered_duration":null`},
+		{"missing", `"missing_duration":0`, `"missing_duration":null`},
+		{"gap", `"max_gap":1`, `"max_gap":null`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := strings.Replace(base, tc.old, tc.new, 1)
+			if input == base {
+				t.Fatal("ineffective mutation")
+			}
+			if _, err := ReadTelemetryWindow(strings.NewReader(input)); err == nil {
+				t.Fatal("null bound accepted")
+			}
+		})
 	}
 }

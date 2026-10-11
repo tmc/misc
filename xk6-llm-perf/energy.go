@@ -79,6 +79,9 @@ func ReadTelemetryWindow(r io.Reader) (TelemetryWindow, error) {
 		return TelemetryWindow{}, fmt.Errorf("telemetry exceeds 4 MiB")
 	}
 	var w TelemetryWindow
+	if err := nativeTelemetryJSON(data); err != nil {
+		return w, fmt.Errorf("decode telemetry: %w", err)
+	}
 	dec := json.NewDecoder(bytes.NewReader(data))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&w); err != nil {

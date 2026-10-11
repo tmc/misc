@@ -1,0 +1,3 @@
+{"manifest":{"run_id":"run-v2-neg-digest","schema_version":2,"collector_version":"nvtelemetry-2.0.0","binary_digest":"sha256-original","clock_monotonic_epoch_id":"epoch-1","devices":[{"uuid":"GPU-001","status":"ok"}],"start_time_monotonic":1000000000}}
+{"sample":{"seq":1,"query_start_nanos":1000000000,"query_end_nanos":1002000000,"readings":[{"name":"power_milliwatts","unit":"milliwatts","device_uuid":"GPU-001","value":50000}]}}
+{"manifest":{"run_id":"run-v2-neg-digest","schema_version":2,"collector_version":"nvtelemetry-2.0.0","binary_digest":"sha256-contradictory","clock_monotonic_epoch_id":"epoch-1","devices":[{"uuid":"GPU-001","status":"ok"}],"start_time_monotonic":1000000000,"end_time_monotonic":1050000000,"total_samples":1,"is_complete":true}}

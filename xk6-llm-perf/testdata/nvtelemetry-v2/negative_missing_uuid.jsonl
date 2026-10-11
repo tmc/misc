@@ -1,0 +1,1 @@
+{"manifest":{"run_id":"run-v2-neg-missing-uuid","schema_version":2,"collector_version":"nvtelemetry-2.0.0","devices":[{"uuid":"","index":0,"model":"NVIDIA L4","status":"unidentifiable"}],"config":{"interval_nanos":100000000},"start_time_monotonic":1000000000}}
