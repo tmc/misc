@@ -1,0 +1,12 @@
+optuna==4.9.0
+numpy==2.4.6
+scipy==1.17.1
+SQLAlchemy==2.0.52
+alembic==1.19.1
+colorlog==6.12.0
+packaging==26.3
+PyYAML==6.0.3
+tqdm==4.70.0
+Mako==1.4.1
+MarkupSafe==3.0.3
+typing-extensions==4.16.0
