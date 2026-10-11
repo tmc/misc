@@ -1,6 +1,7 @@
 package llmperf
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -32,9 +33,11 @@ func TestBinaryWorkloadAcceptance(t *testing.T) {
 	}
 	token := exec.CommandContext(ctx, "go", "run", ".", "-tokenizer", "testdata/tokenizer.json", "-tokenizer-sha256", "1d5a2116200e41511a30659d8bd90a2ba916a141582e3888b4178b743ca5ad8b", "-model", "fixture", "-revision", "fixture-v1", "-input", input)
 	token.Dir = "tools/llm-tokenize"
-	receipt, err := token.CombinedOutput()
+	var tokenStderr bytes.Buffer
+	token.Stderr = &tokenStderr
+	receipt, err := token.Output()
 	if err != nil {
-		t.Fatalf("offline tokenizer: %v\n%s", err, receipt)
+		t.Fatalf("offline tokenizer: %v\n%s\n%s", err, receipt, tokenStderr.Bytes())
 	}
 	receiptPath := filepath.Join(dir, "receipt.json")
 	if err := os.WriteFile(receiptPath, receipt, 0600); err != nil {

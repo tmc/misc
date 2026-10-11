@@ -2,6 +2,11 @@
 import { sleep } from 'k6';
 import crypto from 'k6/crypto';
 
+const maxTokens = 1000000;
+function tokenBudget(value, minimum = 0) {
+    return Number.isSafeInteger(value) && value >= minimum && value <= maxTokens;
+}
+
 export function random(seed) {
     if (!Number.isSafeInteger(seed)) throw new Error('seed must be a safe integer');
     let state = seed >>> 0;
@@ -131,17 +136,20 @@ export function dag(nodes, execute) {
     return results;
 }
 
+// Each turn may supply request options, such as max_tokens or work. The helper
+// owns messages and streaming; request options cannot replace either.
 export function conversation(client, turns, initial = [], policy = 'append') {
     if (!Array.isArray(turns) || turns.length > 1000 || !Array.isArray(initial) || initial.length > 1000 || !['append', 'independent'].includes(policy)) throw new Error('invalid conversation');
     for (const message of initial) if (!message || typeof message.role !== 'string' || typeof message.content !== 'string' || message.content.length > 1024 * 1024) throw new Error('invalid initial context');
     for (const turn of turns) if (!turn || typeof turn.prompt !== 'string' || turn.prompt.length > 1024 * 1024 || !Number.isFinite(turn.gap || 0) || (turn.gap || 0) < 0 || (turn.gap || 0) > 3600) throw new Error('invalid conversation turn');
+    for (const turn of turns) if (turn.request !== undefined && (!turn.request || typeof turn.request !== 'object' || Array.isArray(turn.request) || 'messages' in turn.request || 'stream' in turn.request)) throw new Error('invalid conversation request options');
     let messages = initial.slice();
     const results = [];
     for (const turn of turns) {
         if (turn.gap) sleep(turn.gap);
         if (policy === 'independent') messages = initial.slice();
         messages.push({ role: 'user', content: turn.prompt });
-        const result = client.chat.completions.create({ messages, stream: true });
+        const result = client.chat.completions.create({ ...turn.request, messages, stream: true });
         results.push(result);
         if (result instanceof Error) break;
         if (!result.choices || !result.choices.length || !result.choices[0].message) throw new Error('conversation response has no message');
@@ -198,7 +206,7 @@ export function realize(targets, candidates, count, provenance) {
     }
     let bytes = 0;
     return targets.map(target => {
-        if (!Number.isInteger(target.inputTokens) || !Number.isInteger(target.outputBudget) || target.outputBudget < 1) throw new Error('invalid target budget');
+        if (!target || !tokenBudget(target.inputTokens) || !tokenBudget(target.outputBudget, 1)) throw new Error('invalid target budget');
         if (!byCount.has(target.inputTokens)) throw new Error(`unrealizable input token budget: ${target.inputTokens}`);
         bytes += byCount.get(target.inputTokens).length * 3;
         if (bytes > 16 * 1024 * 1024) throw new Error('realization exceeds aggregate payload budget');
@@ -220,7 +228,7 @@ export function cacheSynthesis(prefixes, suffixes, count, provenance, bust = fal
         if (bytes > 16 * 1024 * 1024) throw new Error('synthesis exceeds aggregate payload budget');
         const inputTokens = count(prompt);
         if (!Number.isInteger(inputTokens) || inputTokens < 0 || inputTokens > 1000000) throw new Error('invalid synthesized count');
-        rows.push({id, prompt, inputTokens, prefixGroup: bust ? id : String(p), cachePolicy: bust ? 'bust' : 'shared-prefix', ...provenance});
+        rows.push({id, prompt, inputTokens, prefixGroup: bust ? id : String(p), cachePolicy: bust ? 'bust' : 'shared-prefix', assetHash: provenance.assetHash, tokenizer: provenance.tokenizer});
     }
     return rows;
 }
@@ -275,7 +283,7 @@ export function distributionReceipt(rows) {
     const pairs = {};
     let inputSum = 0, outputSum = 0, maxInput = 0, minInput = Infinity;
     for (const row of rows) {
-        if (!Number.isInteger(row.realizedInputTokens) || row.realizedInputTokens < 0 || row.realizedInputTokens > 1000000 || !Number.isInteger(row.outputBudget) || row.outputBudget < 1 || row.outputBudget > 1000000 || !Number.isInteger(row.pairIndex) || row.pairIndex < 0 || row.pairIndex > 255) throw new Error('invalid realized sequence row');
+        if (!row || !tokenBudget(row.realizedInputTokens) || !tokenBudget(row.outputBudget, 1) || !Number.isInteger(row.pairIndex) || row.pairIndex < 0 || row.pairIndex > 255) throw new Error('invalid realized sequence row');
         pairs[row.pairIndex] = (pairs[row.pairIndex] || 0) + 1;
         inputSum += row.realizedInputTokens; outputSum += row.outputBudget;
         minInput = Math.min(minInput, row.realizedInputTokens); maxInput = Math.max(maxInput, row.realizedInputTokens);

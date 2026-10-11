@@ -46,7 +46,10 @@ trace in each VU. Under overload the explicit maxLag policy controls dropping.
 Conversations retain context in one VU, stop at the first returned Error, and
 wait each turn gap after the preceding response completes. `append` is default;
 `independent` resets to the initial context each turn. Validate all turns before
-sending. DAGs validate cycles before side effects; failed parents skip their
+sending. Each turn may include `request` options such as `max_tokens`,
+`temperature` or `work`; the helper owns `messages` and `stream` and rejects
+those keys in `request` before dispatch. See [multi-turn.js](multi-turn.js).
+DAGs validate cycles before side effects; failed parents skip their
 descendants, and callbacks receive the completed parent-result map.
 
 Control POSTs run once in setup/teardown around a logical benchmark phase.
