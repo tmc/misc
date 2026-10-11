@@ -1,0 +1,6 @@
+exec $K6 version
+stdout 'github.com/tmc/misc/xk6-llm-perf'
+exec $K6 run --quiet $EXAMPLE
+stdout 'checks_succeeded.*100.00%'
+stdout 'template_render_ms'
+stdout 'template_selection_ms'

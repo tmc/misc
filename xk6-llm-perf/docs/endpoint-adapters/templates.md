@@ -65,6 +65,11 @@ response selection. This structured subset has no loops, filters, string
 interpolation, or response query language. It does not claim Jinja2/JMESPath
 compatibility or qualify live vendor servers.
 
+For authored loops, filters, macros, and response query expressions, use the
+[offline Jinja/JMESPath workflow](template-compat.md). It prepares payloads and
+selects captured response values using pinned libraries; runtime adapter and
+token-count qualification remain separate.
+
 `examples/template-endpoints.js` and `TestBinaryTemplateEndpoints` exercise all
 nine named protocols against a local HTTP fixture. The test compares exact
 payload shapes, retained responses, absent generation counts, receipts, and
