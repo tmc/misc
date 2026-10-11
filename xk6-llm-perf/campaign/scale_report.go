@@ -59,7 +59,7 @@ func ReadScale(r io.Reader) (*ScaleManifest, error) {
 			return nil, fmt.Errorf("fixed cap changed")
 		}
 		for _, s := range w.Samples {
-			if s.ID == "" || seen[s.ID] || !workers[s.Worker] || s.Epoch != w.Epoch || !finite(s.DispatchedAt) || !finite(s.FinishedAt) || s.DispatchedAt < float64(w.StartedAt) || s.FinishedAt > float64(w.FinishedAt) || s.FinishedAt < s.DispatchedAt || !finite(s.Latency) || s.Latency < 0 || (s.Outcome != "success" && s.Outcome != "failure" && s.Outcome != "cancelled") {
+			if s.ID == "" || seen[s.ID] || !workers[s.Worker] || s.Epoch != w.Epoch || !finite(s.DispatchedAt) || !finite(s.FinishedAt) || s.DispatchedAt < float64(w.StartedAt) || s.FinishedAt > float64(w.FinishedAt) || s.FinishedAt < s.DispatchedAt || !coherentScaleLatency(s) || (s.Outcome != "success" && s.Outcome != "failure" && s.Outcome != "cancelled") {
 				return nil, fmt.Errorf("invalid retained scale sample")
 			}
 			seen[s.ID] = true

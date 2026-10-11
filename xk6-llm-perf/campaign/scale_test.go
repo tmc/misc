@@ -152,7 +152,23 @@ func TestBuiltK6GlobalScale(t *testing.T) {
 			if e != nil {
 				t.Fatal(e)
 			}
-			m, e := RunScale(context.Background(), c, filepath.Join(t.TempDir(), "scale"))
+			var preparedAt int64
+			verify := func(binary, script, bh, sh string, assets map[string]string) error {
+				time.Sleep(250 * time.Millisecond)
+				return verifyInputs(binary, script, bh, sh, assets)
+			}
+			checkpoint := func(path string, manifest *ScaleManifest) error {
+				if len(manifest.Windows) > 0 && manifest.Windows[len(manifest.Windows)-1].Reason == "admission_pending" {
+					time.Sleep(250 * time.Millisecond)
+					pending := manifest.Windows[len(manifest.Windows)-1]
+					if pending.StartedAt != 0 || pending.FinishedAt != 0 {
+						t.Fatal("pending checkpoint advertises an active window")
+					}
+					preparedAt = time.Now().UnixMilli()
+				}
+				return writeJSON(path, manifest)
+			}
+			m, e := runScale(context.Background(), c, filepath.Join(t.TempDir(), "scale"), verify, checkpoint)
 			if e != nil {
 				t.Fatal(e)
 			}
@@ -161,9 +177,15 @@ func TestBuiltK6GlobalScale(t *testing.T) {
 				t.Fatalf("global scale: %s", b)
 			}
 			for _, window := range m.Windows {
+				if window.FinishedAt-window.StartedAt != 200 {
+					t.Fatal("assessment duration changed")
+				}
 				if !window.Passed || len(window.ParticipatingWorkers) != 2 || window.Completed < 2 {
 					t.Fatalf("assessment failed: %+v", window)
 				}
+			}
+			if m.Windows[len(m.Windows)-1].StartedAt < preparedAt {
+				t.Fatal("assessment began before durable checkpoint")
 			}
 			if peak.Load() > 2 || peak.Load() < 2 {
 				t.Fatalf("global actual peak %d want 2", peak.Load())
@@ -264,5 +286,108 @@ func TestScaleReplayControlAndStopMutation(t *testing.T) {
 	m.Windows[0].Passed = false
 	if e := verifyScaleDecisions(&m); e != nil {
 		t.Fatal(e)
+	}
+}
+
+func TestBuiltK6GlobalScaleAdmissionCancellation(t *testing.T) {
+	binary := os.Getenv("K6_SMOKE_BINARY")
+	if binary == "" {
+		t.Skip("set K6_SMOKE_BINARY to signed extension binary")
+	}
+	binary, err := filepath.Abs(binary)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var calls atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+	t.Setenv("ENDPOINT_URL", server.URL)
+	c := scaleConfiguration()
+	c.Binary = binary
+	c.Script, err = filepath.Abs("../examples/campaign/global-scale.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	checkpoint := func(path string, m *ScaleManifest) error {
+		if len(m.Windows) > 0 && m.Windows[len(m.Windows)-1].Reason == "admission_pending" {
+			cancel()
+		}
+		return writeJSON(path, m)
+	}
+	m, err := runScale(ctx, c, filepath.Join(t.TempDir(), "cancel"), verifyInputs, checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if m.StopReason != "cancelled" || len(m.Workers) != c.Workers || len(m.Windows) != 1 {
+		t.Fatalf("cancellation: %+v", m)
+	}
+	if calls.Load() != 0 || m.Windows[0].StartedAt != 0 || len(m.Windows[0].Samples) != 0 {
+		t.Fatal("cancelled admission was activated")
+	}
+	b, _ := json.Marshal(m)
+	if _, err := ReadScale(bytes.NewReader(b)); err == nil {
+		t.Fatal("unassessed pending receipt accepted as completed assessment")
+	}
+}
+
+func TestScaleLatencyAdmissionAndReplay(t *testing.T) {
+	for _, tt := range []struct {
+		name          string
+		span, latency float64
+		accepted      bool
+	}{
+		{"coherent", 10, 10, true},
+		{"epoch roundoff", 10.0001, 10, true},
+		{"outside tolerance", 10.01, 10, false},
+		{"understated latency", 1000, 10, false},
+		{"overstated latency", 10, 1000, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			c := scaleConfiguration()
+			c.Workers = 1
+			c.MinCompleted = 1
+			c.MaxLatency = 100
+			sample := ScaleSample{ID: "latency", Worker: 0, Epoch: 1, DispatchedAt: 120, FinishedAt: 120 + tt.span, Latency: tt.latency, Outcome: "success"}
+			control := &scaleControl{config: c, ready: []bool{true}, participating: []bool{true}, seen: map[string]bool{}, active: true, window: &ScaleWindow{Epoch: 1, StartedAt: 100, FinishedAt: 2000, RequestLimit: 1, PrefillLimit: 2}}
+			b, err := json.Marshal(sample)
+			if err != nil {
+				t.Fatal(err)
+			}
+			req := httptest.NewRequest(http.MethodPost, "/sample?worker=0", bytes.NewReader(b))
+			response := httptest.NewRecorder()
+			control.serveHTTP(response, req)
+			want := http.StatusBadRequest
+			if tt.accepted {
+				want = http.StatusAccepted
+			}
+			if response.Code != want {
+				t.Fatalf("admission status %d want %d", response.Code, want)
+			}
+			if !tt.accepted && len(control.window.Samples) != 0 {
+				t.Fatal("contradictory sample retained for assessment")
+			}
+
+			// Construct the replay independently: a receipt asserting a favorable
+			// assessment must be refused when its own timestamp span contradicts it.
+			latency := tt.latency
+			window := ScaleWindow{Epoch: 1, StartedAt: 100, FinishedAt: 2000, RequestLimit: 1, PrefillLimit: 2, ParticipatingWorkers: []int{0}, Completed: 1, P95: &latency, Passed: tt.latency <= 100, Reason: "passed", Samples: []ScaleSample{sample}}
+			if !window.Passed {
+				window.Reason = "latency"
+			}
+			m := ScaleManifest{SchemaVersion: 1, Identity: "latency-fixture", Config: c, StartedAt: time.UnixMilli(100), FinishedAt: time.UnixMilli(2100), Windows: []ScaleWindow{window}, Workers: []ScaleWorker{{ID: 0}}, StopReason: "cancelled"}
+			b, err = json.Marshal(m)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = ReadScale(bytes.NewReader(b))
+			if (err == nil) != tt.accepted {
+				t.Fatalf("replay error %v accepted=%v", err, tt.accepted)
+			}
+		})
 	}
 }

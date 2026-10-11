@@ -213,24 +213,24 @@ func (s *scaleControl) serveHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "sample has trailing data", 400)
 			return
 		}
-		if sample.Requests < 0 || sample.Requests > 100000 || sample.Prefills < 0 || sample.Prefills > 100000 || sample.Worker != worker || sample.ID == "" || len(sample.ID) > 128 || !finite(sample.DispatchedAt) || !finite(sample.FinishedAt) || sample.FinishedAt < sample.DispatchedAt || !finite(sample.Latency) || sample.Latency < 0 || (sample.Outcome != "success" && sample.Outcome != "failure" && sample.Outcome != "cancelled") {
+		if sample.Requests < 0 || sample.Requests > 100000 || sample.Prefills < 0 || sample.Prefills > 100000 || sample.Worker != worker || sample.ID == "" || len(sample.ID) > 128 || !finite(sample.DispatchedAt) || !finite(sample.FinishedAt) || sample.FinishedAt < sample.DispatchedAt || !coherentScaleLatency(sample) || (sample.Outcome != "success" && sample.Outcome != "failure" && sample.Outcome != "cancelled") {
 			http.Error(w, "invalid sample", 400)
 			return
 		}
 		if s.window == nil || sample.Epoch != s.window.Epoch {
-			http.Error(w, "stale epoch", 409)
+			http.Error(w, "stale epoch", http.StatusConflict)
 			return
 		}
 		window := s.window
 		if s.seen[sample.ID] {
 			window.Duplicates++
 			s.protocolFailure = "duplicate request identity"
-			http.Error(w, "duplicate identity", 409)
+			http.Error(w, "duplicate identity", http.StatusConflict)
 			return
 		}
 		if s.retained >= s.config.MaxRecords {
 			window.Dropped++
-			http.Error(w, "retention exhausted", 429)
+			http.Error(w, "retention exhausted", http.StatusTooManyRequests)
 			return
 		}
 		s.seen[sample.ID] = true
@@ -292,6 +292,10 @@ func assess(w *ScaleWindow, participating []bool, c ScaleConfig, protocolFailure
 // The output directory must be new; finished scale runs replay their immutable
 // manifest rather than restart partial workers under an existing identity.
 func RunScale(ctx context.Context, c ScaleConfig, directory string) (*ScaleManifest, error) {
+	return runScale(ctx, c, directory, verifyInputs, func(path string, m *ScaleManifest) error { return writeJSON(path, m) })
+}
+
+func runScale(ctx context.Context, c ScaleConfig, directory string, verify func(string, string, string, string, map[string]string) error, checkpoint func(string, *ScaleManifest) error) (*ScaleManifest, error) {
 	if e := c.Validate(); e != nil {
 		return nil, e
 	}
@@ -337,7 +341,7 @@ func RunScale(ctx context.Context, c ScaleConfig, directory string) (*ScaleManif
 		return nil, fmt.Errorf("scale directory must be new: %w", e)
 	}
 	m := &ScaleManifest{SchemaVersion: 1, Identity: identity, Config: c, BinaryHash: bh, ScriptHash: sh, AssetHashes: assets, ClockPolicy: "same-host Unix epoch milliseconds; controller-defined whole-contained windows", PartitionPolicy: "balanced integer quotas by worker ID; zero-quota workers idle; sums bounded by global caps", StartedAt: time.Now().UTC()}
-	save := func() error { return writeJSON(filepath.Join(directory, "scale.json"), m) }
+	save := func() error { return checkpoint(filepath.Join(directory, "scale.json"), m) }
 	if e = save(); e != nil {
 		return m, e
 	}
@@ -469,16 +473,19 @@ func RunScale(ctx context.Context, c ScaleConfig, directory string) (*ScaleManif
 		} else {
 			prefill = value
 		}
-		window := ScaleWindow{Epoch: epoch, StartedAt: time.Now().UnixMilli(), RequestLimit: request, PrefillLimit: prefill, Sustaining: sustaining}
-		window.FinishedAt = window.StartedAt + period.Milliseconds()
-		if e = verifyInputs(binary, script, bh, sh, assets); e != nil {
+		window := ScaleWindow{Epoch: epoch, RequestLimit: request, PrefillLimit: prefill, Sustaining: sustaining}
+		if e = verify(binary, script, bh, sh, assets); e != nil {
 			m.StopReason = "assets_changed"
 			break
 		}
 		m.Windows = append(m.Windows, window)
-		m.Windows[len(m.Windows)-1].Reason = "assessment_in_progress"
+		m.Windows[len(m.Windows)-1].Reason = "admission_pending"
 		if e = save(); e != nil {
 			m.StopReason = "checkpoint_failed"
+			break
+		}
+		if ctx.Err() != nil {
+			m.StopReason = "cancelled"
 			break
 		}
 		closeWindow := func(reason string) {
@@ -494,6 +501,9 @@ func RunScale(ctx context.Context, c ScaleConfig, directory string) (*ScaleManif
 			m.Windows[len(m.Windows)-1] = window
 		}
 		control.mu.Lock()
+		// The durable pending receipt precedes activation. Its zero timestamps
+		// cannot be mistaken for an assessed window after a crash.
+		startScaleWindow(&window, period)
 		control.window = &window
 		control.participating = make([]bool, c.Workers)
 		control.active = true
@@ -592,4 +602,16 @@ func pause(ctx context.Context, d time.Duration) bool {
 	case <-ctx.Done():
 		return false
 	}
+}
+
+// startScaleWindow runs only after integrity checks and the pending checkpoint.
+func startScaleWindow(window *ScaleWindow, period time.Duration) {
+	window.StartedAt = time.Now().UnixMilli()
+	window.FinishedAt = window.StartedAt + period.Milliseconds()
+}
+
+// coherentScaleLatency uses the measurement replay tolerance in milliseconds.
+// Epoch floating-point timestamps can introduce small subtraction roundoff.
+func coherentScaleLatency(s ScaleSample) bool {
+	return finite(s.Latency) && s.Latency >= 0 && math.Abs(s.Latency-(s.FinishedAt-s.DispatchedAt)) <= .002
 }
