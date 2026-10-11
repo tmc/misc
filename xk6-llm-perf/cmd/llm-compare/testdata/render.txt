@@ -1,0 +1,17 @@
+exec $CLI -format json a.json b.json
+stdout '"run_id":"a"'
+stdout '"run_id":"b"'
+stdout 'NOT statistically gated'
+stdout '"policy_complete":'
+exec $CLI -format svg a.json b.json
+stdout '<svg'
+stdout 'N/A'
+stdout 'SLO limits unavailable'
+! exec $CLI -format png a.json b.json
+stderr 'PNG requires explicit renderer and SHA256'
+! exec $CLI -format json a.json a.json
+stderr 'distinct nonempty run IDs'
+-- a.json --
+{"schema_version":1,"run_id":"a","started_at":1000,"finished_at":2000,"duration":1,"attempts":0,"successes":0,"failures":0,"records":[]}
+-- b.json --
+{"schema_version":1,"run_id":"b","started_at":1000,"finished_at":2000,"duration":1,"attempts":0,"successes":0,"failures":0,"records":[]}
