@@ -1,0 +1,15 @@
+-r optuna-campaign-requirements.txt
+# Install Torch 2.13.0 (or official 2.13.0+cpu) from the platform's CPU index.
+botorch==0.18.1
+gpytorch==1.15.2
+linear_operator==0.6.1
+optuna-integration==4.9.0
+scikit-learn==1.9.1
+pyre-extensions==0.0.32
+multipledispatch==1.0.0
+threadpoolctl==3.7.0
+ninja==1.13.2
+joblib==1.6.0
+typing-inspect==0.9.0
+mypy-extensions==1.1.0
+narwhals==2.27.1
