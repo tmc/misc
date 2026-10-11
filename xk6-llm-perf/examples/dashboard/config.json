@@ -1,0 +1,326 @@
+{
+  "title": "LLM performance",
+  "tabs": [
+    {
+      "title": "LLM overview",
+      "id": "llm",
+      "summary": "Request timing, output throughput and SLO compliance. Verify provider stream semantics before treating results as qualified.",
+      "sections": [
+        {
+          "title": "Requests and goodput",
+          "panels": [
+            {
+              "title": "Completed attempts / s",
+              "kind": "stat",
+              "summary": "",
+              "series": [
+                {
+                  "query": "llm_attempts[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "Successful requests / s",
+              "kind": "stat",
+              "summary": "",
+              "series": [
+                {
+                  "query": "llm_successes[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "SLO goodput / s",
+              "kind": "stat",
+              "summary": "",
+              "series": [
+                {
+                  "query": "llm_good_requests[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "Failures / s",
+              "kind": "stat",
+              "summary": "",
+              "series": [
+                {
+                  "query": "llm_failures[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "SLO compliance",
+              "kind": "stat",
+              "summary": "",
+              "series": [
+                {
+                  "query": "llm_slo_compliance[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "Output tokens / s",
+              "kind": "stat",
+              "summary": "",
+              "series": [
+                {
+                  "query": "llm_completion_tokens[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "Request outcomes",
+              "kind": "chart",
+              "summary": "",
+              "series": [
+                {
+                  "query": "llm_attempts[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "Output throughput",
+              "kind": "chart",
+              "summary": "",
+              "series": [
+                {
+                  "query": "llm_completion_tokens[?!tags && rate]"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Streaming timings",
+          "summary": "Missing values remain unavailable. Timing distributions include only requests that emitted the corresponding metric.",
+          "panels": [
+            {
+              "title": "First token p95",
+              "kind": "chart",
+              "summary": "First recognized reasoning or visible output event; milliseconds.",
+              "series": [
+                {
+                  "query": "llm_ttft[?!tags && p95]"
+                }
+              ]
+            },
+            {
+              "title": "First visible output p95",
+              "kind": "chart",
+              "summary": "First visible content or tool output; milliseconds.",
+              "series": [
+                {
+                  "query": "llm_ttfo[?!tags && p95]"
+                }
+              ]
+            },
+            {
+              "title": "Second content event p95",
+              "kind": "chart",
+              "summary": "Dispatch to the second recognized content-bearing event, including reasoning or visible output. This is not a physical token-arrival timestamp.",
+              "series": [
+                {
+                  "query": "llm_dispatch_ttst[?!tags && p95]"
+                }
+              ]
+            },
+            {
+              "title": "Last content p95",
+              "kind": "chart",
+              "summary": "",
+              "series": [
+                {
+                  "query": "llm_last_content_latency[?!tags && p95]"
+                }
+              ]
+            },
+            {
+              "title": "Full response p95",
+              "kind": "chart",
+              "summary": "Includes trailing usage and stream completion.",
+              "series": [
+                {
+                  "query": "llm_full_response_latency[?!tags && p95]"
+                }
+              ]
+            },
+            {
+              "title": "Inter-token latency p95",
+              "kind": "chart",
+              "summary": "Derived from token counts and last-content timing, not observed token arrival times. Missing first-chunk counts affect validity.",
+              "series": [
+                {
+                  "query": "llm_inter_token_latency[?!tags && p95]"
+                }
+              ]
+            },
+            {
+              "title": "Pooled all-SSE inter-event interval p95",
+              "kind": "chart",
+              "summary": "95th percentile across every parsed SSE inter-event gap in the dashboard window. Event-weighted across requests, including non-content events. Compare with request-weighted content mean/max; this does not measure physical token arrivals.",
+              "series": [
+                {
+                  "query": "llm_inter_chunk_latency[?!tags && p95]"
+                }
+              ]
+            },
+            {
+              "title": "Per-request mean content interval p95",
+              "kind": "chart",
+              "summary": "95th percentile across per-request mean gaps between recognized content-bearing events. One sample per request with a complete, nonempty interval vector; requests are not weighted by event count. Excludes role-only, usage-only and terminal events; not physical token latency.",
+              "series": [
+                {
+                  "query": "llm_mean_content_interval[?!tags && p95]"
+                }
+              ]
+            },
+            {
+              "title": "Per-request max content interval p95",
+              "kind": "chart",
+              "summary": "95th percentile across per-request max gaps between recognized content-bearing events. One sample per request with a complete, nonempty interval vector; requests are not weighted by event count. Excludes role-only, usage-only and terminal events; not physical token latency.",
+              "series": [
+                {
+                  "query": "llm_max_content_interval[?!tags && p95]"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Capacity and token provenance",
+          "panels": [
+            {
+              "title": "Active virtual users",
+              "kind": "chart",
+              "summary": "",
+              "series": [
+                {
+                  "query": "vus[?!tags && value]"
+                }
+              ]
+            },
+            {
+              "title": "Dropped arrivals / s",
+              "kind": "chart",
+              "summary": "",
+              "series": [
+                {
+                  "query": "dropped_iterations[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "Admission wait p95",
+              "kind": "chart",
+              "summary": "",
+              "series": [
+                {
+                  "query": "llm_admission_wait[?!tags && p95]"
+                }
+              ]
+            },
+            {
+              "title": "Reported output requests / s",
+              "kind": "chart",
+              "summary": "",
+              "series": [
+                {
+                  "query": "dashboard_output_reported[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "Estimated output requests / s",
+              "kind": "chart",
+              "summary": "",
+              "series": [
+                {
+                  "query": "dashboard_output_estimated[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "Client-counted output requests / s",
+              "kind": "chart",
+              "summary": "",
+              "series": [
+                {
+                  "query": "dashboard_output_client[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "Unavailable output requests / s",
+              "kind": "chart",
+              "summary": "",
+              "series": [
+                {
+                  "query": "dashboard_output_unavailable[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "Usage discrepancies / s",
+              "kind": "chart",
+              "summary": "",
+              "series": [
+                {
+                  "query": "llm_usage_discrepant_requests[?!tags && rate]"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Cumulative summary",
+      "id": "summary",
+      "summary": "Whole-run timings, counters and rates. Complete raw metric distributions remain in summary.json.",
+      "sections": [
+        {
+          "title": "Cumulative metrics",
+          "panels": [
+            {
+              "title": "Timing distributions",
+              "kind": "summary",
+              "series": [
+                {
+                  "query": "[?!tags && trend && metric.contains == 'time']"
+                }
+              ]
+            },
+            {
+              "title": "Request and token counts",
+              "kind": "summary",
+              "series": [
+                {
+                  "query": "[?!tags && counter]"
+                }
+              ]
+            },
+            {
+              "title": "Rates and SLOs",
+              "kind": "summary",
+              "series": [
+                {
+                  "query": "[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "title": "Current gauges",
+              "kind": "summary",
+              "series": [
+                {
+                  "query": "[?!tags && gauge]"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
