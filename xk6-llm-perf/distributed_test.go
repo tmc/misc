@@ -10,7 +10,7 @@ import (
 
 func workerFixture(id string, offset float64) WorkerRun {
 	zero := 0.0
-	r := RunSummary{SchemaVersion: 1, WorkerID: id, RunID: "shared", StartedAt: 1000 - offset, FinishedAt: 3000 - offset, Duration: 2, Attempts: 1, Successes: 1, GoodRequests: 1, InputTokens: 2, OutputTokens: 4, Workload: "fixture", TraceHash: "sha256:fixture", Records: []Measurement{{RequestID: id + ":1:1", SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, Outcome: "success", Good: true, StartedAt: 1500 - offset, DispatchedAt: 1500 - offset, FinishedAt: 2000 - offset, InputTokens: count(2, "reported"), OutputTokens: count(4, "reported")}}}
+	r := RunSummary{MeasurementPolicy: measurementPolicy, SchemaVersion: 1, WorkerID: id, RunID: "shared", StartedAt: 1000 - offset, FinishedAt: 3000 - offset, Duration: 2, Attempts: 1, Successes: 1, GoodRequests: 1, InputTokens: 2, OutputTokens: 4, WindowPolicy: "attempt started and completed inside window; successful token totals", Workload: "fixture", TraceHash: "sha256:fixture", Records: []Measurement{{SLO: &SLOReceipt{}, RequestID: id + ":1:1", SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, Outcome: "success", Good: true, StartedAt: 1500 - offset, DispatchedAt: 1500 - offset, FinishedAt: 2000 - offset, FullResponseLatency: 500, InputTokens: count(2, "reported"), OutputTokens: count(4, "reported")}}}
 	return WorkerRun{Run: r, ClockOffset: offset, ClockUncertainty: &zero, ClockBasis: "injected shared clock"}
 }
 func ExampleMergeRuns() {

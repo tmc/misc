@@ -127,14 +127,25 @@ func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
 	}
 	var result CompletionResponse
 	if protocol == "" || protocol == "openai-chat" {
+		var envelope struct {
+			Error json.RawMessage `json:"error"`
+		}
+		if err := json.Unmarshal(data, &envelope); err != nil {
+			return result, err
+		}
+		if len(envelope.Error) > 0 && string(envelope.Error) != "null" {
+			return result, fmt.Errorf("provider error response")
+		}
 		return result, json.Unmarshal(data, &result)
 	}
 	var raw struct {
-		ID      string          `json:"id"`
-		Model   string          `json:"model"`
-		Error   json.RawMessage `json:"error"`
-		Usage   json.RawMessage `json:"usage"`
-		Choices []struct {
+		Status     string          `json:"status"`
+		StopReason string          `json:"stop_reason"`
+		ID         string          `json:"id"`
+		Model      string          `json:"model"`
+		Error      json.RawMessage `json:"error"`
+		Usage      json.RawMessage `json:"usage"`
+		Choices    []struct {
 			Index        int    `json:"index"`
 			Text         string `json:"text"`
 			FinishReason string `json:"finish_reason"`
@@ -149,6 +160,7 @@ func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
 				Text string `json:"text"`
 			} `json:"summary"`
 			Content []struct {
+				Type string `json:"type"`
 				Text string `json:"text"`
 			} `json:"content"`
 		} `json:"output"`
@@ -177,7 +189,14 @@ func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
 		result.Body = append(json.RawMessage(nil), data...)
 		return result, nil
 	}
-	var vendor CompletionResponse
+	var vendor struct {
+		Metrics struct {
+			SpeculativeDecoding json.RawMessage `json:"speculative_decoding"`
+		} `json:"metrics"`
+		Choices []struct {
+			SpeculativeDecoding json.RawMessage `json:"speculative_decoding"`
+		} `json:"choices"`
+	}
 	if err := json.Unmarshal(data, &vendor); err != nil {
 		return result, err
 	}
@@ -194,6 +213,10 @@ func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
 			result.Choices = append(result.Choices, choice)
 		}
 	case "openai-responses":
+		result.ProviderStatus = raw.Status
+		if err := responsesStatus(raw.Status); err != nil {
+			return result, err
+		}
 		for _, item := range raw.Output {
 			if item.Type == "function_call" {
 				tools = append(tools, normalizedTool(len(tools), item.CallID, item.Name, item.Arguments))
@@ -202,7 +225,11 @@ func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
 				reasoning.WriteString(part.Text)
 			}
 			for _, part := range item.Content {
-				text.WriteString(part.Text)
+				if item.Type == "reasoning" || part.Type == "reasoning_text" {
+					reasoning.WriteString(part.Text)
+				} else {
+					text.WriteString(part.Text)
+				}
 			}
 		}
 	case "anthropic":
@@ -215,7 +242,7 @@ func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
 		}
 	}
 	if protocol != "openai-completions" && (text.Len() > 0 || reasoning.Len() > 0 || len(tools) > 0) {
-		result.Choices = []Choice{{Message: Message{Role: "assistant", Content: text.String(), ReasoningContent: reasoning.String(), ToolCalls: tools}}}
+		result.Choices = []Choice{{Message: Message{Role: "assistant", Content: text.String(), ReasoningContent: reasoning.String(), ToolCalls: tools}, FinishReason: raw.StopReason}}
 	}
 	result.Body = append(json.RawMessage(nil), data...)
 	return result, nil
@@ -229,7 +256,15 @@ func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error
 	if protocol == "" || protocol == "openai-chat" {
 		return result, false, json.Unmarshal(data, &result)
 	}
-	var vendor ChatCompletionChunk
+	var vendor struct {
+		Metrics struct {
+			SpeculativeDecoding json.RawMessage `json:"speculative_decoding"`
+		} `json:"metrics"`
+		Choices []struct {
+			Index               int             `json:"index"`
+			SpeculativeDecoding json.RawMessage `json:"speculative_decoding"`
+		} `json:"choices"`
+	}
 	if err := json.Unmarshal(data, &vendor); err != nil {
 		return result, false, err
 	}
@@ -270,7 +305,7 @@ func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return result, false, err
 	}
-	if raw.Type == "error" || raw.Type == "response.failed" || len(raw.Error) > 0 && string(raw.Error) != "null" {
+	if raw.Type == "error" || len(raw.Error) > 0 && string(raw.Error) != "null" {
 		return result, false, fmt.Errorf("provider stream error")
 	}
 	result.ID, result.Model = raw.ID, raw.Model
@@ -299,7 +334,7 @@ func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error
 			if err := json.Unmarshal(raw.Delta, &content); err != nil {
 				return result, false, err
 			}
-		case "response.reasoning_summary_text.delta":
+		case "response.reasoning_text.delta", "response.reasoning_summary_text.delta":
 			if err := json.Unmarshal(raw.Delta, &reasoning); err != nil {
 				return result, false, err
 			}
@@ -313,16 +348,35 @@ func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error
 				return result, false, err
 			}
 			tools = append(tools, normalizedTool(raw.OutputIndex, "", "", args))
-		case "response.completed":
-			var response struct {
-				ID    string          `json:"id"`
-				Model string          `json:"model"`
-				Usage json.RawMessage `json:"usage"`
+		case "response.completed", "response.incomplete", "response.failed":
+			var response *struct {
+				Metrics struct {
+					SpeculativeDecoding json.RawMessage `json:"speculative_decoding"`
+				} `json:"metrics"`
+				Status string          `json:"status"`
+				ID     string          `json:"id"`
+				Model  string          `json:"model"`
+				Usage  json.RawMessage `json:"usage"`
+				Error  json.RawMessage `json:"error"`
 			}
-			if err := json.Unmarshal(raw.Response, &response); err != nil {
-				return result, false, err
+			if err := json.Unmarshal(raw.Response, &response); err != nil || response == nil {
+				return result, false, fmt.Errorf("response terminal snapshot must be a non-null object")
+			}
+			if len(response.Error) > 0 && strings.TrimSpace(string(response.Error)) != "null" {
+				return result, false, fmt.Errorf("provider terminal error response")
 			}
 			result.ID, result.Model, raw.Usage = response.ID, response.Model, response.Usage
+			result.Metrics.SpeculativeDecoding, result.specDecodeUnavailable = terminalSpecDecode(result.Metrics.SpeculativeDecoding, response.Metrics.SpeculativeDecoding)
+			result.ProviderStatus = response.Status
+			if result.ProviderStatus == "" {
+				result.ProviderStatus = strings.TrimPrefix(raw.Type, "response.")
+			}
+			if result.ProviderStatus != strings.TrimPrefix(raw.Type, "response.") {
+				return result, false, fmt.Errorf("response status conflicts with terminal event")
+			}
+			if err := responsesStatus(result.ProviderStatus); err != nil {
+				return result, false, err
+			}
 			complete = true
 		}
 	case "anthropic":
@@ -351,6 +405,18 @@ func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error
 			if delta.Type == "input_json_delta" {
 				tools = append(tools, normalizedTool(raw.Index, "", "", delta.PartialJSON))
 			}
+		}
+		if raw.Type == "message_delta" {
+			var delta struct {
+				StopReason string `json:"stop_reason"`
+			}
+			// Usage snapshots may omit a content or stop-reason delta.
+			if len(raw.Delta) > 0 {
+				if err := json.Unmarshal(raw.Delta, &delta); err != nil {
+					return result, false, err
+				}
+			}
+			finish = delta.StopReason
 		}
 		complete = raw.Type == "message_stop"
 	case "tgi":
@@ -434,4 +500,39 @@ func validateCompletedTools(choices []Choice) error {
 		}
 	}
 	return nil
+}
+
+func responsesStatus(status string) error {
+	switch status {
+	case "", "completed":
+		return nil
+	case "failed", "incomplete", "cancelled":
+		return fmt.Errorf("provider response status: %s", status)
+	default:
+		return fmt.Errorf("nonterminal or unknown provider response status")
+	}
+}
+
+// A terminal snapshot must agree with a same-event root snapshot. Neither is
+// an increment; malformed statistics never make generated text unusable.
+func terminalSpecDecode(root, terminal json.RawMessage) (json.RawMessage, string) {
+	present := func(raw json.RawMessage) bool { return len(raw) != 0 && string(raw) != "null" }
+	if !present(root) {
+		return terminal, ""
+	}
+	if !present(terminal) {
+		return root, ""
+	}
+	a, err := parseSpecDecode(root)
+	if err != nil {
+		return nil, "root: " + err.Error()
+	}
+	b, err := parseSpecDecode(terminal)
+	if err != nil {
+		return nil, "terminal: " + err.Error()
+	}
+	if !sameSpecDecode(a, b) {
+		return nil, "conflicting root and terminal speculative snapshots"
+	}
+	return terminal, ""
 }

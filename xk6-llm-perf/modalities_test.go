@@ -81,7 +81,11 @@ func TestAudioNormalization(t *testing.T) {
 		body, text string
 		bad        bool
 	}{{"spoken text", "spoken text", false}, {`{"text":"hello","usage":{"completion_tokens":0}}`, "hello", false}, {`{"text":""}`, "", false}, {`{}`, "", true}, {`{"error":"no"}`, "", true}, {`{"text":5}`, "", true}} {
-		r, err := decodeAudioResponse([]byte(tt.body))
+		format := "json"
+		if tt.body == "spoken text" {
+			format = "text"
+		}
+		r, err := decodeAudioResponseFormat([]byte(tt.body), format, "")
 		if (err != nil) != tt.bad {
 			t.Fatalf("%s: %v", tt.body, err)
 		}

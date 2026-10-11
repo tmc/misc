@@ -23,12 +23,28 @@ var MetricDefinitions = []struct {
 	{Name: "llm_spec_acceptance_rate", Type: metrics.Trend},
 	{Name: "llm_spec_acceptance_length", Type: metrics.Trend},
 	{Name: "llm_attempts", Type: metrics.Counter},
+	{Name: "llm_content_span_windows", Type: metrics.Counter},
+	{Name: "llm_content_span_goodput", Type: metrics.Trend},
+	{Name: "llm_content_span_duration_ms", Type: metrics.Trend, ValueType: metrics.Time},
+	{Name: "llm_content_span_good_requests", Type: metrics.Trend},
+	{Name: "llm_content_span_attempts", Type: metrics.Trend},
+	{Name: "llm_work_accepted", Type: metrics.Counter},
+	{Name: "llm_work_rejected", Type: metrics.Counter},
+	{Name: "llm_work_unavailable", Type: metrics.Counter},
+	{Name: "llm_work_acceptance", Type: metrics.Rate},
+	{Name: "llm_work_good_requests", Type: metrics.Counter},
 	{Name: "llm_successes", Type: metrics.Counter},
 	{Name: "llm_failures", Type: metrics.Counter},
 	{Name: "llm_good_requests", Type: metrics.Counter},
 	{Name: "llm_slo_compliance", Type: metrics.Rate},
+	{Name: "llm_slo_ttft_ms", Type: metrics.Trend, ValueType: metrics.Time},
+	{Name: "llm_slo_tpot_ms", Type: metrics.Trend, ValueType: metrics.Time},
+	{Name: "llm_slo_e2e_ms", Type: metrics.Trend, ValueType: metrics.Time},
 	{Name: "llm_dispatch_ttft", Type: metrics.Trend, ValueType: metrics.Time},
 	{Name: "llm_dispatch_ttfo", Type: metrics.Trend, ValueType: metrics.Time},
+	{Name: "llm_dispatch_ttst", Type: metrics.Trend, ValueType: metrics.Time},
+	{Name: "llm_mean_content_interval", Type: metrics.Trend, ValueType: metrics.Time},
+	{Name: "llm_max_content_interval", Type: metrics.Trend, ValueType: metrics.Time},
 	{Name: "llm_admission_wait", Type: metrics.Trend, ValueType: metrics.Time},
 	{Name: "llm_full_response_latency", Type: metrics.Trend, ValueType: metrics.Time},
 	{Name: "llm_last_content_latency", Type: metrics.Trend, ValueType: metrics.Time},
@@ -67,6 +83,7 @@ type LLMPerfMetrics struct {
 	registry *metrics.Registry
 	samples  chan<- metrics.SampleContainer
 	metrics  map[string]*metrics.Metric
+	pipeline pipelineInstrumentation
 }
 
 func newMetrics(registry *metrics.Registry) (*LLMPerfMetrics, error) {
@@ -109,7 +126,7 @@ func (m *LLMPerfMetrics) RecordMetric(name string, value float64) {
 		}
 	}
 	if metric, ok := m.metrics[name]; ok && samples != nil {
-		metrics.PushIfNotDone(ctx, samples, metrics.Sample{
+		m.pipeline.push(ctx, samples, metrics.Sample{
 			TimeSeries: metrics.TimeSeries{
 				Metric: metric,
 				Tags:   tags,

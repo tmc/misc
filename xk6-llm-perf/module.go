@@ -20,6 +20,8 @@ type (
 		requestLimiters prefillLimiters
 		transport       *http.Transport
 		transportOnce   sync.Once
+		transportMu     sync.Mutex
+		transports      map[int]*http.Transport
 	}
 
 	moduleInstance struct {
@@ -63,10 +65,13 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 		if err := exportValue(call.Argument(0), &config); err != nil {
 			common.Throw(rt, fmt.Errorf("invalid config: %w", err))
 		}
+		if config.MaxConnsPerHost < 0 || config.MaxConnsPerHost > 65536 || config.UseK6Transport && config.MaxConnsPerHost != 0 {
+			common.Throw(rt, fmt.Errorf("maxConnsPerHost must be 0..65536 and excludes useK6Transport"))
+		}
 		client := &Client{
 			controls: &root.controls,
 			config:   config, metrics: mi.metrics, vu: mi.vu,
-			transport: mi.root.sharedTransport(), limiters: &mi.root.limiters, requestLimiters: &mi.root.requestLimiters,
+			transport: mi.root.transportFor(config.MaxConnsPerHost), limiters: &mi.root.limiters, requestLimiters: &mi.root.requestLimiters,
 			warmupRemaining: int64(config.WarmupCount),
 			run:             &mi.root.run,
 		}
@@ -89,20 +94,21 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 		must(call.This.Set("chat", chat))
 		must(call.This.Set("request", func(call sobek.FunctionCall) sobek.Value {
 			var opts struct {
-				Multipart   *RawMultipart  `json:"multipart"`
-				Poll        *VideoPolling  `json:"poll"`
-				Stream      *bool          `json:"stream"`
-				ScheduledAt *float64       `json:"scheduledAt"`
-				CancelAfter string         `json:"cancelAfter"`
-				Path        string         `json:"path"`
-				Protocol    string         `json:"protocol"`
-				Body        map[string]any `json:"body"`
-				Measurement *TokenCounts   `json:"measurement"`
+				Multipart   *RawMultipart    `json:"multipart"`
+				Poll        *VideoPolling    `json:"poll"`
+				Stream      *bool            `json:"stream"`
+				ScheduledAt *float64         `json:"scheduledAt"`
+				CancelAfter string           `json:"cancelAfter"`
+				Path        string           `json:"path"`
+				Protocol    string           `json:"protocol"`
+				Body        map[string]any   `json:"body"`
+				Measurement *TokenCounts     `json:"measurement"`
+				Work        *WorkExpectation `json:"work"`
 			}
 			if err := exportValue(call.Argument(0), &opts); err != nil {
 				return rt.NewGoError(err)
 			}
-			value, err := jsonValue(rt, CompletionRequest{ScheduledAt: opts.ScheduledAt, CancelAfter: opts.CancelAfter, Raw: &RawRequest{Multipart: opts.Multipart, Poll: opts.Poll, Stream: opts.Stream, Path: opts.Path, Protocol: opts.Protocol, Body: opts.Body}, Measurement: opts.Measurement})
+			value, err := jsonValue(rt, CompletionRequest{ScheduledAt: opts.ScheduledAt, CancelAfter: opts.CancelAfter, Raw: &RawRequest{Multipart: opts.Multipart, Poll: opts.Poll, Stream: opts.Stream, Path: opts.Path, Protocol: opts.Protocol, Body: opts.Body}, Measurement: opts.Measurement, Work: opts.Work})
 			must(err)
 			result := client.Complete(sobek.FunctionCall{Arguments: []sobek.Value{value}})
 			if err, ok := result.Export().(error); ok {
@@ -119,6 +125,7 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 		return nil
 	}
 	must(mi.exports.Set("Client", constructor))
+	must(mi.exportRuntimeTemplate())
 	must(mi.exports.Set("setControlLimits", func(name string, v sobek.Value) {
 		var limits ControlLimits
 		must(exportValue(v, &limits))
@@ -173,6 +180,14 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 		must(err)
 		return value
 	}))
+	must(mi.exports.Set("pipelineSnapshot", func() sobek.Value {
+		value, err := jsonValue(rt, mi.metrics.PipelineSnapshot())
+		must(err)
+		return value
+	}))
+	must(mi.exports.Set("resetPipeline", func() {
+		must(mi.metrics.ResetPipeline())
+	}))
 	must(mi.exports.Set("beginMeasurement", func(v sobek.Value) {
 		var opts RunOptions
 		if err := exportValue(v, &opts); err != nil {
@@ -186,6 +201,13 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 		s, err := mi.root.run.finish()
 		if err != nil {
 			common.Throw(rt, err)
+		}
+		if observed := s.Observation; observed != nil {
+			mi.metrics.RecordMetric("llm_content_span_windows", 1)
+			mi.metrics.RecordMetric("llm_content_span_goodput", observed.Goodput)
+			mi.metrics.RecordMetric("llm_content_span_duration_ms", observed.Duration*1000)
+			mi.metrics.RecordMetric("llm_content_span_good_requests", float64(observed.GoodRequests))
+			mi.metrics.RecordMetric("llm_content_span_attempts", float64(observed.Attempts))
 		}
 		value, err := jsonValue(rt, s)
 		must(err)
@@ -222,6 +244,25 @@ func (root *rootModule) sharedTransport() *http.Transport {
 	return root.transport
 }
 
+// transportFor shares each explicitly bounded connection pool across VUs.
+func (root *rootModule) transportFor(limit int) *http.Transport {
+	if limit == 0 {
+		return root.sharedTransport()
+	}
+	root.transportMu.Lock()
+	defer root.transportMu.Unlock()
+	if root.transports == nil {
+		root.transports = make(map[int]*http.Transport)
+	}
+	if root.transports[limit] == nil {
+		transport := newTransport()
+		transport.MaxConnsPerHost = limit
+		transport.MaxIdleConnsPerHost = min(limit, transport.MaxIdleConnsPerHost)
+		root.transports[limit] = transport
+	}
+	return root.transports[limit]
+}
+
 func exportValue(v sobek.Value, dst interface{}) error {
 	if v == nil || sobek.IsUndefined(v) || sobek.IsNull(v) {
 		return nil
@@ -241,6 +282,6 @@ func exportValue(v sobek.Value, dst interface{}) error {
 func (mi *moduleInstance) Exports() modules.Exports {
 	return modules.Exports{
 		Default: mi.exports,
-		Named:   map[string]interface{}{"Client": mi.exports.Get("Client"), "setControlLimits": mi.exports.Get("setControlLimits"), "controlSnapshot": mi.exports.Get("controlSnapshot"), "renderRequestTemplate": mi.exports.Get("renderRequestTemplate"), "calibrateHTTP": mi.exports.Get("calibrateHTTP"), "calibrateTCP": mi.exports.Get("calibrateTCP"), "beginMeasurement": mi.exports.Get("beginMeasurement"), "endMeasurement": mi.exports.Get("endMeasurement"), "measurementSummary": mi.exports.Get("measurementSummary")},
+		Named:   map[string]interface{}{"Client": mi.exports.Get("Client"), "setControlLimits": mi.exports.Get("setControlLimits"), "controlSnapshot": mi.exports.Get("controlSnapshot"), "renderRequestTemplate": mi.exports.Get("renderRequestTemplate"), "evaluateRuntimeTemplate": mi.exports.Get("evaluateRuntimeTemplate"), "calibrateHTTP": mi.exports.Get("calibrateHTTP"), "calibrateTCP": mi.exports.Get("calibrateTCP"), "beginMeasurement": mi.exports.Get("beginMeasurement"), "endMeasurement": mi.exports.Get("endMeasurement"), "measurementSummary": mi.exports.Get("measurementSummary"), "pipelineSnapshot": mi.exports.Get("pipelineSnapshot"), "resetPipeline": mi.exports.Get("resetPipeline")},
 	}
 }

@@ -75,3 +75,28 @@ func (s streamChoices) choices() []Choice {
 	}
 	return result
 }
+
+// complete checks EOF completion. A provider-wide terminal event or [DONE]
+// explicitly closes all choices; otherwise each observed choice must finish.
+func (s streamChoices) complete() bool {
+	if len(s) == 0 {
+		return false
+	}
+	for _, c := range s {
+		if c.choice.FinishReason == "" {
+			return false
+		}
+	}
+	return true
+}
+
+func validateResponseChoices(choices []Choice) error {
+	seen := make(map[int]bool)
+	for _, c := range choices {
+		if c.Index < 0 || c.Index >= 128 || seen[c.Index] {
+			return fmt.Errorf("invalid or duplicate response choice index")
+		}
+		seen[c.Index] = true
+	}
+	return nil
+}

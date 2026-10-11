@@ -99,7 +99,7 @@ func TestMeasurementJavaScriptAndFailure(t *testing.T) {
 			t.Errorf("temperature zero lost: %v", req)
 		}
 		if req["model"] == "fail" {
-			http.Error(w, "private provider text", 503)
+			http.Error(w, "private provider text", http.StatusServiceUnavailable)
 			return
 		}
 		fmt.Fprint(w, `{"choices":[{"message":{"role":"assistant","content":"hello"}}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}`)

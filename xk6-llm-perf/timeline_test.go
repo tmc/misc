@@ -7,7 +7,7 @@ import (
 )
 
 func ExampleAnalyzeTimeline() {
-	run := RunSummary{SchemaVersion: 1, StartedAt: 1000, FinishedAt: 5000, Duration: 4, Attempts: 1, Records: []Measurement{{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 2000, FinishedAt: 4000}}}
+	run := RunSummary{SchemaVersion: 1, StartedAt: 1000, FinishedAt: 5000, Duration: 4, Attempts: 1, Successes: 1, MissingInputCounts: 1, MissingOutputCounts: 1, Records: []Measurement{{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 2000, FinishedAt: 4000, FullResponseLatency: 2000, Outcome: "success", InputTokens: TokenCount{Source: "unavailable"}, OutputTokens: TokenCount{Source: "unavailable"}}}}
 	timeline, err := AnalyzeTimeline(run)
 	if err != nil {
 		fmt.Println(err)
@@ -37,7 +37,7 @@ func TestTimelineRefusesPartialRecords(t *testing.T) {
 }
 
 func TestTimelinePhases(t *testing.T) {
-	run := RunSummary{SchemaVersion: 1, StartedAt: 1000, FinishedAt: 5000, Duration: 4, Attempts: 1, Records: []Measurement{{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 2000, FinishedAt: 4000, TTFT: floatPtr(500), LastContentLatency: floatPtr(1500), FullResponseLatency: 2000}}}
+	run := RunSummary{SchemaVersion: 1, StartedAt: 1000, FinishedAt: 5000, Duration: 4, Attempts: 1, Successes: 1, MissingInputCounts: 1, MissingOutputCounts: 1, Records: []Measurement{{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 2000, FinishedAt: 4000, TTFT: floatPtr(500), LastContentLatency: floatPtr(1500), FullResponseLatency: 2000, Outcome: "success", InputTokens: TokenCount{Source: "unavailable"}, OutputTokens: TokenCount{Source: "unavailable"}}}}
 	timeline, err := AnalyzeTimeline(run)
 	if err != nil {
 		t.Fatal(err)
@@ -48,11 +48,11 @@ func TestTimelinePhases(t *testing.T) {
 }
 
 func TestRateAnalysisWeightedIdleAndFailure(t *testing.T) {
-	run := RunSummary{SchemaVersion: 1, StartedAt: 0, FinishedAt: 10000, Duration: 10, Attempts: 3}
+	run := RunSummary{SchemaVersion: 1, StartedAt: 0, FinishedAt: 10000, Duration: 10, Attempts: 3, Successes: 2, Failures: 1, InputTokens: 30, OutputTokens: 12}
 	run.Records = []Measurement{
-		{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 0, FinishedAt: 2000, FullResponseLatency: 2000, Outcome: "success", TTFT: floatPtr(1000), LastContentLatency: floatPtr(2000), InputTokens: count(10, "reported"), DecodeTokens: intPtr(2)},
-		{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 1000, FinishedAt: 5000, FullResponseLatency: 4000, Outcome: "success", TTFT: floatPtr(2000), LastContentLatency: floatPtr(4000), InputTokens: count(20, "reported"), DecodeTokens: intPtr(8)},
-		{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 6000, FinishedAt: 7000, FullResponseLatency: 1000, Outcome: "failure", TTFT: floatPtr(500), LastContentLatency: floatPtr(1000), InputTokens: count(900, "reported"), DecodeTokens: intPtr(900)},
+		{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 0, FinishedAt: 2000, FullResponseLatency: 2000, Outcome: "success", TTFT: floatPtr(1000), LastContentLatency: floatPtr(2000), OutputTokens: count(3, "reported"), FirstChunkSource: "assumed_one", InputTokens: count(10, "reported"), DecodeTokens: intPtr(2)},
+		{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 1000, FinishedAt: 5000, FullResponseLatency: 4000, Outcome: "success", TTFT: floatPtr(2000), LastContentLatency: floatPtr(4000), OutputTokens: count(9, "reported"), FirstChunkSource: "assumed_one", InputTokens: count(20, "reported"), DecodeTokens: intPtr(8)},
+		{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 6000, FinishedAt: 7000, FullResponseLatency: 1000, Outcome: "failure", TTFT: floatPtr(500), LastContentLatency: floatPtr(1000), OutputTokens: count(901, "reported"), FirstChunkSource: "assumed_one", InputTokens: count(900, "reported"), DecodeTokens: intPtr(900)},
 	}
 	got, err := AnalyzeTimeline(run)
 	if err != nil {

@@ -22,6 +22,7 @@ type ToolCall struct {
 }
 
 type CompletionRequest struct {
+	Work                *WorkExpectation  `json:"work,omitempty"`
 	ScheduledAt         *float64          `json:"scheduledAt,omitempty"`
 	CancelAfter         string            `json:"cancelAfter,omitempty"`
 	Raw                 *RawRequest       `json:"raw,omitempty"`
@@ -48,14 +49,15 @@ type CompletionResponse struct {
 	Metrics struct {
 		SpeculativeDecoding json.RawMessage `json:"speculative_decoding"`
 	} `json:"metrics,omitempty"`
-	ID          string       `json:"id"`
-	Object      string       `json:"object"`
-	Created     int64        `json:"created"`
-	Model       string       `json:"model"`
-	Choices     []Choice     `json:"choices"`
-	Usage       Usage        `json:"usage"`
-	Status      int          `json:"status"`
-	Measurement *Measurement `json:"measurement,omitempty"`
+	ID             string       `json:"id"`
+	Object         string       `json:"object"`
+	Created        int64        `json:"created"`
+	Model          string       `json:"model"`
+	Choices        []Choice     `json:"choices"`
+	Usage          Usage        `json:"usage"`
+	Status         int          `json:"status"`
+	ProviderStatus string       `json:"provider_status,omitempty"`
+	Measurement    *Measurement `json:"measurement,omitempty"`
 }
 
 type Choice struct {
@@ -77,8 +79,10 @@ type Usage struct {
 }
 
 type ChatCompletionChunk struct {
-	Sources json.RawMessage `json:"sources,omitempty"`
-	Metrics struct {
+	specDecodeUnavailable string
+	ProviderStatus        string          `json:"provider_status,omitempty"`
+	Sources               json.RawMessage `json:"sources,omitempty"`
+	Metrics               struct {
 		SpeculativeDecoding json.RawMessage `json:"speculative_decoding"`
 	} `json:"metrics,omitempty"`
 	ID      string `json:"id"`
@@ -100,6 +104,7 @@ type ChatCompletionChunk struct {
 }
 
 type Config struct {
+	MaxConnsPerHost      int      `json:"maxConnsPerHost"`
 	ControlGroup         string   `json:"controlGroup"`
 	APIKey               string   `json:"apiKey"`
 	BaseURL              string   `json:"baseURL"`
@@ -112,11 +117,53 @@ type Config struct {
 	UseK6Transport       bool     `json:"useK6Transport"`
 	PrefillConcurrency   int      `json:"prefillConcurrency"`
 	WarmupCount          int      `json:"warmupCount"`
-	MaxTTFT              int      `json:"maxTTFT"`
-	MaxTTFO              int      `json:"maxTTFO"`
-	MaxTokenLatency      int      `json:"maxTokenLatency"`
+	MaxTTFT              float64  `json:"maxTTFT"`
+	MaxTTFO              float64  `json:"maxTTFO"`
+	MaxTPOT              float64  `json:"maxTPOT"`
+	MaxE2E               float64  `json:"maxE2E"`
+	MaxTokenLatency      float64  `json:"maxTokenLatency"`
 	StrictMeasurement    bool     `json:"strictMeasurement"`
 	Phase                string   `json:"phase"`
 	RTTSource            string   `json:"rttSource"`
 	DiscrepancyTolerance *float64 `json:"discrepancyTolerance"`
+}
+
+// UnmarshalJSON normalizes the reasoning aliases used by compatible providers.
+func (m *Message) UnmarshalJSON(data []byte) error {
+	type plain Message
+	var v struct {
+		*plain
+		Reasoning string `json:"reasoning"`
+	}
+	v.plain = (*plain)(m)
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	if m.ReasoningContent == "" {
+		m.ReasoningContent = v.Reasoning
+	}
+	return nil
+}
+
+func (c *ChatCompletionChunk) UnmarshalJSON(data []byte) error {
+	type plain ChatCompletionChunk
+	if err := json.Unmarshal(data, (*plain)(c)); err != nil {
+		return err
+	}
+	var aliases struct {
+		Choices []struct {
+			Delta struct {
+				Reasoning string `json:"reasoning"`
+			} `json:"delta"`
+		} `json:"choices"`
+	}
+	if err := json.Unmarshal(data, &aliases); err != nil {
+		return err
+	}
+	for i := range c.Choices {
+		if c.Choices[i].Delta.ReasoningContent == "" {
+			c.Choices[i].Delta.ReasoningContent = aliases.Choices[i].Delta.Reasoning
+		}
+	}
+	return nil
 }

@@ -138,6 +138,13 @@ func weighted(segs []segment) Weighted {
 // AnalyzeTimeline reconstructs concurrency from retained request records.
 // It refuses incomplete exports rather than presenting partial distributions.
 func AnalyzeTimeline(run RunSummary) (Timeline, error) {
+	if err := validateRun(run); err != nil {
+		return Timeline{}, err
+	}
+	return reconstructTimeline(run)
+}
+
+func reconstructTimeline(run RunSummary) (Timeline, error) {
 	if run.AggregateError != "" {
 		return Timeline{}, fmt.Errorf("incomplete aggregate: %s", run.AggregateError)
 	}

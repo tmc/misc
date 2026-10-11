@@ -53,10 +53,10 @@ func TestCalibrationFailureRetention(t *testing.T) {
 		handler http.HandlerFunc
 		stage   string
 	}{
-		{"status", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(503) }, "http_status"},
+		{"status", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusServiceUnavailable) }, "http_status"},
 		{"budget", func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, strings.Repeat("x", 101)) }, "body_budget"},
 		{"redirect", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, "http://must-not-be-contacted.invalid", 302)
+			http.Redirect(w, r, "http://must-not-be-contacted.invalid", http.StatusFound)
 		}, "http_status"},
 		{"timeout", func(w http.ResponseWriter, r *http.Request) { <-r.Context().Done() }, "transport"},
 	} {
@@ -64,7 +64,9 @@ func TestCalibrationFailureRetention(t *testing.T) {
 			s := httptest.NewServer(tc.handler)
 			defer s.Close()
 			o := calibrationOptions(s.URL)
-			o.Timeout = "20ms"
+			if tc.name == "timeout" {
+				o.Timeout = "20ms"
+			}
 			r, err := CalibrateHTTP(context.Background(), s.Client(), o)
 			if err != nil {
 				t.Fatal(err)

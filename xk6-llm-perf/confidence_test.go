@@ -11,6 +11,13 @@ func confidenceFixture() RunSummary {
 	for range 2 {
 		run.Records = append(run.Records, Measurement{SchemaVersion: 1, Phase: "measurement", Recorded: true, Attempted: true, DispatchedAt: 2000, FinishedAt: 2100, FullResponseLatency: 100, Outcome: "success"})
 	}
+	run.Successes = 2
+	run.MissingInputCounts = 2
+	run.MissingOutputCounts = 2
+	for i := range run.Records {
+		run.Records[i].InputTokens.Source = "unavailable"
+		run.Records[i].OutputTokens.Source = "unavailable"
+	}
 	return run
 }
 func ExampleLatencyConfidence() {
@@ -25,6 +32,7 @@ func ExampleLatencyConfidence() {
 func TestConfidenceSeedAndRefusals(t *testing.T) {
 	run := confidenceFixture()
 	run.Records[1].FullResponseLatency = 300
+	run.Records[1].FinishedAt = 2300
 	opts := ConfidenceOptions{Seed: 42, Replicates: 100, Level: .95, Independent: true}
 	a, err := LatencyConfidence(run, opts)
 	if err != nil {
@@ -51,7 +59,8 @@ func TestConfidenceSeedAndRefusals(t *testing.T) {
 func TestConfidenceSuccessPopulation(t *testing.T) {
 	run := confidenceFixture()
 	run.Attempts++
-	run.Records = append(run.Records, Measurement{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 2000, FinishedAt: 4000, FullResponseLatency: 2000, Outcome: "timeout"})
+	run.Failures++
+	run.Records = append(run.Records, Measurement{SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 2000, FinishedAt: 4000, FullResponseLatency: 2000, InputTokens: TokenCount{Source: "unavailable"}, OutputTokens: TokenCount{Source: "unavailable"}, Outcome: "timeout"})
 	got, err := LatencyConfidence(run, ConfidenceOptions{Seed: 7, Replicates: 100, Level: .9, Independent: true})
 	if err != nil {
 		t.Fatal(err)

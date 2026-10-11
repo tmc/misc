@@ -23,70 +23,116 @@ type TokenCount struct {
 	Source string `json:"source"`
 }
 
+// SLOReceipt records the limits used to classify a successful request.
+// Zero disables a limit; finite non-negative values use milliseconds.
+// TPOT and E2E pointers preserve unavailable limits in archived receipts.
+type SLOReceipt struct {
+	MaxTTFT         float64  `json:"max_ttft_ms"`
+	MaxTTFO         float64  `json:"max_ttfo_ms"`
+	MaxChunkLatency float64  `json:"max_chunk_latency_ms"`
+	MaxTPOT         *float64 `json:"max_tpot_ms,omitempty"`
+	MaxE2E          *float64 `json:"max_e2e_ms,omitempty"`
+}
+
+// Equal reports whether receipts describe the same limits and availability.
+func (s SLOReceipt) Equal(t SLOReceipt) bool {
+	return s.MaxTTFT == t.MaxTTFT && s.MaxTTFO == t.MaxTTFO && s.MaxChunkLatency == t.MaxChunkLatency && equalSLOLimit(s.MaxTPOT, t.MaxTPOT) && equalSLOLimit(s.MaxE2E, t.MaxE2E)
+}
+
+func equalSLOLimit(a, b *float64) bool {
+	return a == nil && b == nil || a != nil && b != nil && *a == *b
+}
+
+func sloLimit(v *float64) float64 {
+	if v == nil {
+		return 0
+	}
+	return *v
+}
+
 // Measurement is a sanitized request record. Durations are milliseconds;
 // timestamps are Unix milliseconds. No prompt, response text, or credential is stored.
 type Measurement struct {
-	ChoicePolicy             string     `json:"choice_policy"`
-	MultiChoice              bool       `json:"multi_choice"`
-	ProviderTotalTokens      *int       `json:"provider_total_tokens"`
-	ClientTokenizer          string     `json:"client_tokenizer,omitempty"`
-	RequestID                string     `json:"request_id,omitempty"`
-	ScheduledAt              *float64   `json:"scheduled_at"`
-	ArrivalLag               *float64   `json:"arrival_lag"`                // Unavailable if admission fails before dispatch.
-	ScheduledResponseLatency *float64   `json:"scheduled_response_latency"` // Includes completion of failed admission.
-	HTTPTrace                *HTTPTrace `json:"http_trace"`
-	trace                    *transportTrace
-	Protocol                 string      `json:"protocol"`
-	SchemaVersion            int         `json:"schema_version"`
-	Phase                    string      `json:"phase"`
-	Endpoint                 string      `json:"endpoint"`
-	Model                    string      `json:"model"`
-	Outcome                  string      `json:"outcome"`
-	ErrorStage               string      `json:"error_stage,omitempty"`
-	Status                   int         `json:"status"`
-	Attempted                bool        `json:"attempted"`
-	Recorded                 bool        `json:"recorded"`
-	Good                     bool        `json:"good"`
-	StartedAt                float64     `json:"started_at"`
-	DispatchedAt             float64     `json:"dispatched_at"`
-	FinishedAt               float64     `json:"finished_at"`
-	AdmissionWait            float64     `json:"admission_wait"`
-	FullResponseLatency      float64     `json:"full_response_latency"`
-	LastContentLatency       *float64    `json:"last_content_latency"`
-	TTFT                     *float64    `json:"ttft"`
-	TTFO                     *float64    `json:"ttfo"`
-	MaxChunkLatency          *float64    `json:"max_chunk_latency"`
-	ITL                      *float64    `json:"itl"`
-	FullResponseITL          *float64    `json:"full_response_itl"`
-	DecodeTokens             *int        `json:"decode_tokens"`
-	FirstChunkSource         string      `json:"first_chunk_source"`
-	InputTokens              TokenCount  `json:"input_tokens"`
-	OutputTokens             TokenCount  `json:"output_tokens"`
-	RTT                      float64     `json:"rtt"`
-	RTTSource                string      `json:"rtt_source"`
-	UsageDiscrepancy         bool        `json:"usage_discrepancy"`
-	PromptDifference         *float64    `json:"prompt_difference"`
-	OutputDifference         *float64    `json:"output_difference"`
-	ReasoningTokens          *int        `json:"reasoning_tokens"`
-	CachedTokens             *int        `json:"cached_tokens"`
-	SpecDecode               *SpecDecode `json:"spec_decode"`
-	SpecDecodeUnavailable    string      `json:"spec_decode_unavailable,omitempty"`
-	start                    time.Time
-	requestStart             time.Time
-	first                    time.Time
-	firstOutput              time.Time
-	last                     time.Time
-	maxChunk                 time.Duration
-	counts                   *TokenCounts
-	firstChunk               *int
-	reported                 Usage
-	estimatedInput           int
-	estimatedOutput          int
-	finalized                bool
-	noInputEstimate          bool
-	noOutputEstimate         bool
-	responseEnd              time.Time
-	runGeneration            uint64
+	RequestBodyBytes          int64        `json:"request_body_bytes,omitempty"`
+	ResponseBodyBytes         int64        `json:"response_body_bytes,omitempty"`
+	MaxConnsPerHost           int          `json:"max_connections_per_host,omitempty"`
+	TransportProfile          string       `json:"transport_profile,omitempty"`
+	Stream                    bool         `json:"stream,omitempty"`
+	SerializationLatency      *float64     `json:"serialization_latency_ms,omitempty"`
+	ParsingLatency            *float64     `json:"parsing_latency_ms,omitempty"`
+	Work                      *WorkReceipt `json:"work,omitempty"`
+	ContentIntervals          []float64    `json:"content_intervals_ms"`
+	ContentIntervalsTruncated bool         `json:"content_intervals_truncated"`
+	ContentEventCount         int          `json:"content_event_count"`
+	TTST                      *float64     `json:"ttst"`
+	TTSTPolicy                string       `json:"ttst_policy,omitempty"`
+	secondContent             time.Time
+	SLO                       *SLOReceipt `json:"slo,omitempty"`
+	ChoicePolicy              string      `json:"choice_policy"`
+	MultiChoice               bool        `json:"multi_choice"`
+	ProviderTotalTokens       *int        `json:"provider_total_tokens"`
+	ClientTokenizer           string      `json:"client_tokenizer,omitempty"`
+	RequestID                 string      `json:"request_id,omitempty"`
+	ScheduledAt               *float64    `json:"scheduled_at"`
+	ArrivalLag                *float64    `json:"arrival_lag"`                // Unavailable if admission fails before dispatch.
+	ScheduledResponseLatency  *float64    `json:"scheduled_response_latency"` // Includes completion of failed admission.
+	HTTPTrace                 *HTTPTrace  `json:"http_trace"`
+	trace                     *transportTrace
+	Protocol                  string      `json:"protocol"`
+	SchemaVersion             int         `json:"schema_version"`
+	Phase                     string      `json:"phase"`
+	Endpoint                  string      `json:"endpoint"`
+	Model                     string      `json:"model"`
+	Outcome                   string      `json:"outcome"`
+	ErrorStage                string      `json:"error_stage,omitempty"`
+	Status                    int         `json:"status"`
+	Attempted                 bool        `json:"attempted"`
+	Recorded                  bool        `json:"recorded"`
+	Good                      bool        `json:"good"`
+	StartedAt                 float64     `json:"started_at"`
+	DispatchedAt              float64     `json:"dispatched_at"`
+	FinishedAt                float64     `json:"finished_at"`
+	TimestampBasis            string      `json:"timestamp_basis,omitempty"`
+	AdmissionWait             float64     `json:"admission_wait"`
+	FullResponseLatency       float64     `json:"full_response_latency"`
+	LastContentLatency        *float64    `json:"last_content_latency"`
+	TTFT                      *float64    `json:"ttft"`
+	TTFO                      *float64    `json:"ttfo"`
+	MaxChunkLatency           *float64    `json:"max_chunk_latency"`
+	ITL                       *float64    `json:"itl"`
+	FullResponseITL           *float64    `json:"full_response_itl"`
+	DecodeTokens              *int        `json:"decode_tokens"`
+	FirstChunkTokens          *int        `json:"first_chunk_tokens,omitempty"`
+	FirstChunkOrigin          string      `json:"first_chunk_origin,omitempty"`
+	FirstChunkUnavailable     string      `json:"first_chunk_unavailable,omitempty"`
+	FirstChunkSource          string      `json:"first_chunk_source"`
+	InputTokens               TokenCount  `json:"input_tokens"`
+	OutputTokens              TokenCount  `json:"output_tokens"`
+	RTT                       float64     `json:"rtt"`
+	RTTSource                 string      `json:"rtt_source"`
+	UsageDiscrepancy          bool        `json:"usage_discrepancy"`
+	PromptDifference          *float64    `json:"prompt_difference"`
+	OutputDifference          *float64    `json:"output_difference"`
+	ReasoningTokens           *int        `json:"reasoning_tokens"`
+	CachedTokens              *int        `json:"cached_tokens"`
+	SpecDecode                *SpecDecode `json:"spec_decode"`
+	SpecDecodeUnavailable     string      `json:"spec_decode_unavailable,omitempty"`
+	start                     time.Time
+	requestStart              time.Time
+	first                     time.Time
+	firstOutput               time.Time
+	last                      time.Time
+	maxChunk                  time.Duration
+	counts                    *TokenCounts
+	firstChunk                *int
+	reported                  Usage
+	estimatedInput            int
+	estimatedOutput           int
+	finalized                 bool
+	noInputEstimate           bool
+	noOutputEstimate          bool
+	responseEnd               time.Time
+	runGeneration             uint64
 }
 
 func (u *Usage) UnmarshalJSON(data []byte) error {
@@ -150,7 +196,12 @@ func resolveCount(n int, present bool, declared *int, estimated int, strict bool
 }
 
 func (m *Measurement) content(now time.Time, output bool, u Usage) {
+	m.ContentEventCount++
+	if m.ContentEventCount == 2 {
+		m.secondContent = now
+	}
 	if m.first.IsZero() {
+		m.ContentIntervals = []float64{}
 		m.first = now
 		if u.completionPresent {
 			n := u.CompletionTokens
@@ -161,7 +212,13 @@ func (m *Measurement) content(now time.Time, output bool, u Usage) {
 		m.firstOutput = now
 	}
 	if !m.last.IsZero() {
-		m.maxChunk = maxDuration(m.maxChunk, now.Sub(m.last))
+		gap := now.Sub(m.last)
+		m.maxChunk = maxDuration(m.maxChunk, gap)
+		if len(m.ContentIntervals) < 4096 {
+			m.ContentIntervals = append(m.ContentIntervals, ms(gap))
+		} else {
+			m.ContentIntervalsTruncated = true
+		}
 	}
 	m.last = now
 }
@@ -178,7 +235,30 @@ func (c *Client) finishMeasurement(m *Measurement) {
 	if now.IsZero() {
 		now = time.Now()
 	}
+	anchor := m.requestStart
+	if anchor.IsZero() {
+		anchor = m.start
+	}
+	m.FullResponseLatency = ms(now.Sub(anchor))
 	m.FinishedAt = millis(now)
+	if m.Attempted && !m.requestStart.IsZero() {
+		if m.DispatchedAt == 0 {
+			m.DispatchedAt = millis(m.requestStart)
+		}
+		// Unix clock samples and monotonic durations need not advance identically.
+		// Keep all request timing on one monotonic span with a wall-clock anchor.
+		m.FinishedAt = m.DispatchedAt + m.FullResponseLatency
+		if !m.start.IsZero() {
+			m.StartedAt = m.DispatchedAt - ms(m.requestStart.Sub(m.start))
+		}
+		m.TimestampBasis = "dispatch Unix clock anchor plus monotonic elapsed time"
+	} else if !m.start.IsZero() {
+		if m.StartedAt == 0 {
+			m.StartedAt = millis(m.start)
+		}
+		m.FinishedAt = m.StartedAt + m.FullResponseLatency
+		m.TimestampBasis = "request Unix clock anchor plus monotonic elapsed time"
+	}
 	if m.ScheduledAt != nil {
 		if m.Attempted {
 			v := m.DispatchedAt - *m.ScheduledAt
@@ -191,11 +271,11 @@ func (c *Client) finishMeasurement(m *Measurement) {
 		v := m.trace.finish(now)
 		m.HTTPTrace = &v
 	}
-	anchor := m.requestStart
-	if anchor.IsZero() {
-		anchor = m.start
+	if !m.secondContent.IsZero() {
+		v := ms(m.secondContent.Sub(anchor))
+		m.TTST = &v
+		m.TTSTPolicy = "second recognized content event; not a physical second-token observation"
 	}
-	m.FullResponseLatency = ms(now.Sub(anchor))
 	if !m.first.IsZero() {
 		v := ms(m.first.Sub(anchor))
 		m.TTFT = &v
@@ -223,22 +303,28 @@ func (c *Client) finishMeasurement(m *Measurement) {
 		m.ProviderTotalTokens = &v
 	}
 	m.ReasoningTokens, m.CachedTokens = m.reported.ReasoningTokens, m.reported.CachedTokens
-	if m.Outcome == "success" {
-		m.Good = c.measurementGood(m)
-	}
+	tpot, e2e := c.config.MaxTPOT, c.config.MaxE2E
+	m.SLO = &SLOReceipt{MaxTTFT: c.config.MaxTTFT, MaxTTFO: c.config.MaxTTFO, MaxChunkLatency: c.config.MaxTokenLatency, MaxTPOT: &tpot, MaxE2E: &e2e}
 	m.FirstChunkSource = "unavailable"
 	if first != nil {
 		m.firstChunk, m.FirstChunkSource = first, "client_declared"
 	} else if m.firstChunk != nil {
 		m.FirstChunkSource = "reported"
 	}
-	if !m.MultiChoice && m.OutputTokens.Value != nil && *m.OutputTokens.Value >= 2 && m.TTFT != nil && m.LastContentLatency != nil && (m.firstChunk == nil || *m.firstChunk > 0 && *m.firstChunk < *m.OutputTokens.Value) {
+	m.FirstChunkTokens = m.firstChunk
+	if m.firstChunk != nil {
+		m.FirstChunkOrigin = m.FirstChunkSource
+	}
+	if !m.MultiChoice && m.OutputTokens.Value != nil && *m.OutputTokens.Value >= 2 && m.TTFT != nil && m.LastContentLatency != nil {
 		n := *m.OutputTokens.Value
-		if m.firstChunk != nil {
+		if m.firstChunk != nil && *m.firstChunk > 0 && *m.firstChunk < n {
 			n -= *m.firstChunk
 		} else {
 			n--
 			m.FirstChunkSource = "assumed_one"
+			if m.firstChunk != nil {
+				m.FirstChunkUnavailable = "first chunk count outside output count"
+			}
 		}
 		m.DecodeTokens = &n
 		v := (*m.LastContentLatency - *m.TTFT) / float64(n)
@@ -246,6 +332,7 @@ func (c *Client) finishMeasurement(m *Measurement) {
 		full := (m.FullResponseLatency - *m.TTFT) / float64(n)
 		m.FullResponseITL = &full
 	}
+	m.Good = m.Outcome == "success" && c.measurementGood(m)
 	tolerance := 10.0
 	if c.config.DiscrepancyTolerance != nil {
 		tolerance = *c.config.DiscrepancyTolerance
@@ -264,7 +351,21 @@ func (c *Client) finishMeasurement(m *Measurement) {
 			m.UsageDiscrepancy = true
 		}
 	}
+	if m.Work != nil {
+		m.Work.Status, m.Work.Reasons = classifyWork(m)
+	}
 	if m.Recorded && m.Attempted {
+		if m.Work != nil {
+			c.metrics.RecordMetric("llm_work_"+m.Work.Status, 1)
+			accepted := 0.0
+			if m.Work.Status == "accepted" {
+				accepted = 1
+				if m.Good {
+					c.metrics.RecordMetric("llm_work_good_requests", 1)
+				}
+			}
+			c.metrics.RecordMetric("llm_work_acceptance", accepted)
+		}
 		if m.ReasoningTokens != nil {
 			c.metrics.RecordMetric("llm_reasoning_tokens", float64(*m.ReasoningTokens))
 		}
@@ -285,17 +386,31 @@ func (c *Client) finishMeasurement(m *Measurement) {
 		good := 0.0
 		if m.Good {
 			good = 1
-			c.metrics.RecordMetric("llm_good_requests", 1)
 		}
+		c.metrics.RecordMetric("llm_good_requests", good)
 		c.metrics.RecordMetric("llm_slo_compliance", good)
-		name := "llm_failures"
+		c.metrics.RecordMetric("llm_good_request", good)
+		c.metrics.RecordMetric("llm_slo_ttft_ms", m.SLO.MaxTTFT)
+		c.metrics.RecordMetric("llm_slo_tpot_ms", *m.SLO.MaxTPOT)
+		c.metrics.RecordMetric("llm_slo_e2e_ms", *m.SLO.MaxE2E)
+		success := 0.0
 		if m.Outcome == "success" {
-			name = "llm_successes"
+			success = 1
 		}
-		c.metrics.RecordMetric(name, 1)
+		c.metrics.RecordMetric("llm_successes", success)
+		c.metrics.RecordMetric("llm_failures", 1-success)
 		c.metrics.RecordMetric("llm_admission_wait", m.AdmissionWait)
 		c.metrics.RecordMetric("llm_full_response_latency", m.FullResponseLatency)
-		for name, v := range map[string]*float64{"llm_dispatch_ttft": m.TTFT, "llm_dispatch_ttfo": m.TTFO, "llm_last_content_latency": m.LastContentLatency, "llm_inter_token_latency": m.ITL, "llm_full_response_itl": m.FullResponseITL, "llm_usage_prompt_difference": m.PromptDifference, "llm_usage_output_difference": m.OutputDifference} {
+		if !m.ContentIntervalsTruncated && len(m.ContentIntervals) > 0 {
+			var total, largest float64
+			for _, v := range m.ContentIntervals {
+				total += v
+				largest = max(largest, v)
+			}
+			c.metrics.RecordMetric("llm_mean_content_interval", total/float64(len(m.ContentIntervals)))
+			c.metrics.RecordMetric("llm_max_content_interval", largest)
+		}
+		for name, v := range map[string]*float64{"llm_dispatch_ttft": m.TTFT, "llm_dispatch_ttfo": m.TTFO, "llm_dispatch_ttst": m.TTST, "llm_last_content_latency": m.LastContentLatency, "llm_inter_token_latency": m.ITL, "llm_full_response_itl": m.FullResponseITL, "llm_usage_prompt_difference": m.PromptDifference, "llm_usage_output_difference": m.OutputDifference} {
 			if v != nil {
 				c.metrics.RecordMetric(name, *v)
 			}
@@ -317,10 +432,10 @@ func (c *Client) finishMeasurement(m *Measurement) {
 
 func (c *Client) measurementGood(m *Measurement) bool {
 	for _, s := range []struct {
-		limit int
+		limit float64
 		value *float64
-	}{{c.config.MaxTTFT, m.TTFT}, {c.config.MaxTTFO, m.TTFO}, {c.config.MaxTokenLatency, m.MaxChunkLatency}} {
-		if s.limit > 0 && (s.value == nil || *s.value > float64(s.limit)) {
+	}{{c.config.MaxTTFT, m.TTFT}, {c.config.MaxTTFO, m.TTFO}, {c.config.MaxTokenLatency, m.MaxChunkLatency}, {c.config.MaxTPOT, m.ITL}, {c.config.MaxE2E, m.LastContentLatency}} {
+		if s.limit > 0 && (s.value == nil || !finite(*s.value) || *s.value < 0 || *s.value > s.limit) {
 			return false
 		}
 	}
@@ -339,3 +454,5 @@ func (c *Client) resolveCounts(m *Measurement) (TokenCount, TokenCount) {
 	}
 	return in, out
 }
+
+func validSLOLimit(v float64) bool { return finite(v) && v >= 0 }

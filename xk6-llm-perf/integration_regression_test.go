@@ -13,13 +13,13 @@ import (
 	"time"
 )
 
-func TestBundledWholeOutputHasNoDecodeDenominator(t *testing.T) {
+func TestInconsistentFirstChunkFallsBack(t *testing.T) {
 	for _, first := range []int{0, 6, 7} {
 		origin := time.Now().Add(-time.Second)
 		m := &Measurement{start: origin, requestStart: origin, first: origin.Add(time.Millisecond), last: origin.Add(10 * time.Millisecond), reported: Usage{CompletionTokens: 6, completionPresent: true}, counts: &TokenCounts{FirstChunkTokens: intPtr(first)}, Outcome: "success"}
 		c := &Client{config: Config{StrictMeasurement: true}}
 		c.finishMeasurement(m)
-		if m.ITL != nil || m.FullResponseITL != nil || m.DecodeTokens != nil || m.FirstChunkSource != "client_declared" {
+		if m.ITL == nil || *m.ITL != 1.8 || m.DecodeTokens == nil || *m.DecodeTokens != 5 || m.FirstChunkSource != "assumed_one" || m.FirstChunkUnavailable == "" {
 			t.Fatalf("first=%d: %+v", first, m)
 		}
 	}

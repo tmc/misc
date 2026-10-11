@@ -31,7 +31,7 @@ func ExampleTimeSlices() {
 }
 
 func TestTimeSlicesBoundary(t *testing.T) {
-	run := RunSummary{SchemaVersion: 1, StartedAt: 1000, FinishedAt: 3000, Duration: 2, Attempts: 1, Records: []Measurement{{SchemaVersion: 1, Phase: "measurement", Recorded: true, Attempted: true, DispatchedAt: 1500, FinishedAt: 2000, Outcome: "success", Good: true, OutputTokens: count(4, "reported")}}}
+	run := RunSummary{SchemaVersion: 1, StartedAt: 1000, FinishedAt: 3000, Duration: 2, Attempts: 1, Successes: 1, GoodRequests: 1, OutputTokens: 4, MissingInputCounts: 1, Records: []Measurement{{SchemaVersion: 1, Phase: "measurement", Recorded: true, Attempted: true, DispatchedAt: 1500, FinishedAt: 2000, FullResponseLatency: 500, InputTokens: TokenCount{Source: "unavailable"}, Outcome: "success", Good: true, OutputTokens: count(4, "reported")}}}
 	s, err := TimeSlices(run, 1)
 	if err != nil {
 		t.Fatal(err)
@@ -56,7 +56,7 @@ func analysisFixture() RunSummary {
 		if i == 2 {
 			outcome = "timeout"
 		}
-		run.Records = append(run.Records, Measurement{RequestID: fmt.Sprint(i), SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 1000, FinishedAt: 1000 + latency, FullResponseLatency: latency, Outcome: outcome, InputTokens: count(2, "reported"), OutputTokens: count(4, "reported"), ITL: floatPtr(0)})
+		run.Records = append(run.Records, Measurement{RequestID: fmt.Sprint(i), SchemaVersion: 1, Phase: "measurement", Attempted: true, Recorded: true, DispatchedAt: 1000, FinishedAt: 1000 + latency, FullResponseLatency: latency, Outcome: outcome, InputTokens: count(2, "reported"), OutputTokens: count(4, "reported")})
 	}
 	return run
 }
@@ -115,7 +115,7 @@ func TestRequestPopulationAndMissing(t *testing.T) {
 	}
 	speed := got.Metrics["decode_token_speed"]
 	if speed.Samples != 0 || speed.Missing != 2 || speed.Mean != nil || speed.P99 != nil {
-		t.Fatalf("zero ITL=%+v", speed)
+		t.Fatalf("unavailable ITL=%+v", speed)
 	}
 	if got.Metrics["ttft"].Missing != 2 {
 		t.Fatal("missing timing counted")

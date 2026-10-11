@@ -48,6 +48,7 @@ func TestBinaryModalities(t *testing.T) {
 			if r.URL.Path == "/audio/text" {
 				fmt.Fprint(w, "spoken words")
 			} else if r.URL.Path == "/audio/json" {
+				w.Header().Set("Content-Type", "application/json")
 				fmt.Fprint(w, `{"text":"spoken words"}`)
 			} else {
 				fmt.Fprint(w, `{"data":[{"b64_json":"YQ=="}]}`)

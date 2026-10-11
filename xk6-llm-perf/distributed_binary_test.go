@@ -46,7 +46,7 @@ func testBinaryDistributed(t *testing.T, fail bool) {
 		seen[id]++
 		mu.Unlock()
 		if fail && (strings.HasSuffix(id, "1") || strings.HasSuffix(id, "3") || strings.HasSuffix(id, "5") || strings.HasSuffix(id, "7")) {
-			http.Error(w, "fixture request failure", 503)
+			http.Error(w, "fixture request failure", http.StatusServiceUnavailable)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -125,9 +125,11 @@ func testBinaryDistributed(t *testing.T, fail bool) {
 	}
 	cli := exec.CommandContext(ctx, "go", "run", "./cmd/llm-merge", "-manifest", manifestFile)
 	cli.Env = append(os.Environ(), "GOWORK=off")
-	output, err := cli.CombinedOutput()
+	var cliStderr bytes.Buffer
+	cli.Stderr = &cliStderr
+	output, err := cli.Output()
 	if err != nil {
-		t.Fatalf("actual worker CLI merge: %v\n%s", err, output)
+		t.Fatalf("actual worker CLI merge: %v\n%s\n%s", err, output, cliStderr.Bytes())
 	}
 	replay, err := ReadRun(bytes.NewReader(output))
 	if err != nil {

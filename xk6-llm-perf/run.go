@@ -11,23 +11,36 @@ import (
 
 // RunOptions configures an explicit process-local measurement window.
 type RunOptions struct {
-	StartedAt      *float64 `json:"startedAt,omitempty"`
-	MaxRecordBytes int64    `json:"maxRecordBytes"`
-	WorkerID       string   `json:"workerId"`
-	RunID          string   `json:"runId"`
-	MaxRecords     int      `json:"maxRecords"`
-	TraceHash      string   `json:"traceHash"`
-	Seed           int64    `json:"seed"`
-	Workload       string   `json:"workload"`
-	StartDelay     string   `json:"startDelay"`
-	Duration       string   `json:"duration"`
+	ServingManifest *ServingManifest `json:"servingManifest,omitempty"`
+	StartedAt       *float64         `json:"startedAt,omitempty"`
+	MaxRecordBytes  int64            `json:"maxRecordBytes"`
+	WorkerID        string           `json:"workerId"`
+	RunID           string           `json:"runId"`
+	MaxRecords      int              `json:"maxRecords"`
+	TraceHash       string           `json:"traceHash"`
+	Seed            int64            `json:"seed"`
+	Workload        string           `json:"workload"`
+	StartDelay      string           `json:"startDelay"`
+	Duration        string           `json:"duration"`
 }
 
 // RunSummary contains a versioned manifest and aggregates for requests wholly
 // inside the declared window. Dropped records affect replay, not counters.
 // AggregateError marks incomplete token totals; derived rates are unavailable
 // and export as null in that case, despite the Go numeric fields being zero.
+const measurementPolicy = "dispatch-content-v1/success-token-counts-v1/success-slo-v1"
+
 type RunSummary struct {
+	Observation              *ObservationReceipt    `json:"observation,omitempty"`
+	ObservationUnavailable   string                 `json:"observation_unavailable,omitempty"`
+	WorkQualified            int                    `json:"work_qualified,omitempty"`
+	WorkAccepted             int                    `json:"work_accepted,omitempty"`
+	WorkRejected             int                    `json:"work_rejected,omitempty"`
+	WorkUnavailable          int                    `json:"work_unavailable,omitempty"`
+	WorkGoodRequests         int                    `json:"work_good_requests,omitempty"`
+	WorkGoodput              float64                `json:"work_goodput,omitempty"`
+	ServingManifest          *ServingManifest       `json:"serving_manifest,omitempty"`
+	MeasurementPolicy        string                 `json:"measurement_policy,omitempty"`
 	AggregateError           string                 `json:"aggregate_error,omitempty"`
 	RetainedRecordBytes      int64                  `json:"retained_record_bytes"`
 	RecordLimit              int                    `json:"record_limit"`
@@ -100,6 +113,17 @@ func (r *runState) snapshot() (RunSummary, error) {
 }
 
 func (r *runState) begin(opts RunOptions) error {
+	if opts.ServingManifest != nil {
+		data, err := json.Marshal(opts.ServingManifest)
+		if err != nil {
+			return err
+		}
+		var manifest ServingManifest
+		if err := json.Unmarshal(data, &manifest); err != nil {
+			return fmt.Errorf("serving manifest: %w", err)
+		}
+		opts.ServingManifest = &manifest
+	}
 	delay, duration := time.Duration(0), time.Duration(0)
 	var err error
 	if opts.StartDelay != "" {
@@ -155,7 +179,7 @@ func (r *runState) begin(opts RunOptions) error {
 	r.maxBytes = opts.MaxRecordBytes
 	r.generation++
 	r.inflight = 0
-	r.summary = RunSummary{RecordLimit: opts.MaxRecords, RecordByteLimit: opts.MaxRecordBytes, WorkerID: opts.WorkerID, SchemaVersion: 1, RunID: opts.RunID, StartedAt: millis(now), TraceHash: opts.TraceHash, Seed: opts.Seed, Workload: opts.Workload, WindowPolicy: "attempt started and completed inside window; successful token totals", WarmupPolicy: "phase=measurement and per-client warmup exhausted", Versions: buildVersions(), Records: []Measurement{}, active: true, start: now}
+	r.summary = RunSummary{ServingManifest: opts.ServingManifest, MeasurementPolicy: measurementPolicy, RecordLimit: opts.MaxRecords, RecordByteLimit: opts.MaxRecordBytes, WorkerID: opts.WorkerID, SchemaVersion: 1, RunID: opts.RunID, StartedAt: millis(now), TraceHash: opts.TraceHash, Seed: opts.Seed, Workload: opts.Workload, WindowPolicy: "attempt started and completed inside window; successful token totals", WarmupPolicy: "phase=measurement and per-client warmup exhausted", Versions: buildVersions(), Records: []Measurement{}, active: true, start: now}
 	if duration > 0 {
 		r.summary.end = now.Add(duration)
 	}
@@ -203,6 +227,7 @@ func (r *runState) add(m Measurement) {
 		return
 	}
 	s.Attempts++
+	addWorkCounts(s, m)
 	if m.Outcome == "success" {
 		s.Successes++
 		if m.Good {
@@ -274,6 +299,9 @@ func (r *runState) finish() (RunSummary, error) {
 	s.FinishedAt = millis(now)
 	s.Duration = now.Sub(s.start).Seconds()
 	s.InflightAtEnd = r.inflight
+	if s.Duration > 0 {
+		s.WorkGoodput = float64(s.WorkGoodRequests) / s.Duration
+	}
 	if s.Duration > 0 && s.AggregateError == "" {
 		s.Goodput = float64(s.GoodRequests) / s.Duration
 		s.OutputThroughput = float64(s.OutputTokens) / s.Duration
@@ -283,6 +311,11 @@ func (r *runState) finish() (RunSummary, error) {
 		s.Timeline = &t
 	} else {
 		s.TimelineUnavailable = err.Error()
+	}
+	if observed, err := AnalyzeObservation(*s); err == nil {
+		s.Observation = &observed
+	} else {
+		s.ObservationUnavailable = err.Error()
 	}
 	return *s, nil
 }

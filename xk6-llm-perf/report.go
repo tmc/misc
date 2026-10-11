@@ -38,10 +38,28 @@ func ReadRun(r io.Reader) (RunSummary, error) {
 	}
 	for name, check := range map[string]struct{ actual, expected float64 }{
 		"goodput":           {run.Goodput, float64(run.GoodRequests) / run.Duration},
+		"work_goodput":      {run.WorkGoodput, float64(run.WorkGoodRequests) / run.Duration},
 		"input_throughput":  {run.InputThroughput, float64(run.InputTokens) / run.Duration},
 		"output_throughput": {run.OutputThroughput, float64(run.OutputTokens) / run.Duration},
 	} {
-		if _, present := fields[name]; present && math.Abs(check.actual-check.expected) > 1e-9*math.Max(1, math.Abs(check.expected)) {
+		if raw, present := fields[name]; present {
+			if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+				return run, fmt.Errorf("%s must not be null", name)
+			}
+		} else {
+			switch name {
+			case "work_goodput":
+				run.WorkGoodput = check.expected
+			case "goodput":
+				run.Goodput = check.expected
+			case "input_throughput":
+				run.InputThroughput = check.expected
+			case "output_throughput":
+				run.OutputThroughput = check.expected
+			}
+			continue
+		}
+		if math.Abs(check.actual-check.expected) > 1e-9*math.Max(1, math.Abs(check.expected)) {
 			return run, fmt.Errorf("%s disagrees with aggregate accounting", name)
 		}
 	}
@@ -49,6 +67,14 @@ func ReadRun(r io.Reader) (RunSummary, error) {
 }
 
 func validateRun(run RunSummary) error {
+	if err := validateWorkRun(run); err != nil {
+		return err
+	}
+	if run.ServingManifest != nil {
+		if err := ValidateServingManifest(*run.ServingManifest); err != nil {
+			return fmt.Errorf("serving manifest: %w", err)
+		}
+	}
 	if run.AggregateError != "" {
 		return fmt.Errorf("incomplete aggregate: %s", run.AggregateError)
 	}
@@ -67,7 +93,7 @@ func validateRun(run RunSummary) error {
 		return fmt.Errorf("run duration does not match window")
 	}
 	if run.DroppedRecords == 0 {
-		timeline, err := AnalyzeTimeline(run)
+		timeline, err := reconstructTimeline(run)
 		if err != nil {
 			return err
 		}
@@ -81,11 +107,55 @@ func validateRun(run RunSummary) error {
 	}
 	{
 		var successes, failures, good int
+		var missingInput, missingOutput, estimatedInput, estimatedOutput int
 		var input, output int64
 		seen := map[string]bool{}
 		for _, m := range run.Records {
+			if err := validateSpecDecodeRecord(m.SpecDecode); err != nil {
+				return fmt.Errorf("speculative record: %w", err)
+			}
+			if m.SpecDecode != nil && m.SpecDecodeUnavailable != "" {
+				return fmt.Errorf("speculative record has contradictory availability")
+			}
+			if err := validateRecordTiming(m, run); err != nil {
+				return err
+			}
 			if m.SchemaVersion != 1 || !m.Recorded || !m.Attempted || !finite(m.FullResponseLatency) || m.FullResponseLatency < 0 {
 				return fmt.Errorf("invalid retained record")
+			}
+			if m.ContentEventCount == 0 && len(m.ContentIntervals) > 0 {
+				return fmt.Errorf("content intervals lack event population")
+			}
+			if m.TTST != nil && (m.ContentEventCount < 2 || m.TTFT == nil || *m.TTST < *m.TTFT || m.LastContentLatency == nil || *m.TTST > *m.LastContentLatency || m.TTSTPolicy != "second recognized content event; not a physical second-token observation") {
+				return fmt.Errorf("invalid second content observation")
+			}
+			if m.ContentEventCount < 0 || len(m.ContentIntervals) > 4096 || m.ContentEventCount > 0 && !m.ContentIntervalsTruncated && len(m.ContentIntervals) != m.ContentEventCount-1 || m.ContentIntervalsTruncated && (len(m.ContentIntervals) != 4096 || m.ContentEventCount <= 4097) {
+				return fmt.Errorf("invalid content interval accounting")
+			}
+			var span float64
+			for _, v := range m.ContentIntervals {
+				if !finite(v) || v < 0 || v > m.FullResponseLatency+.001 {
+					return fmt.Errorf("invalid content interval")
+				}
+				span += v
+			}
+			if m.ContentEventCount > 1 && m.TTST == nil {
+				return fmt.Errorf("second content observation missing")
+			}
+			if m.ContentEventCount > 0 && (m.TTFT == nil || m.LastContentLatency == nil) {
+				return fmt.Errorf("content event population lacks timing")
+			}
+			if m.ContentEventCount > 1 && m.TTST != nil && len(m.ContentIntervals) > 0 && math.Abs(*m.TTST-(*m.TTFT+m.ContentIntervals[0])) > .001 {
+				return fmt.Errorf("second content timing disagrees with intervals")
+			}
+			if m.ContentEventCount > 0 && !m.ContentIntervalsTruncated && math.Abs(span-(*m.LastContentLatency-*m.TTFT)) > .001 {
+				return fmt.Errorf("content span disagrees with intervals")
+			}
+			if span > m.FullResponseLatency+.001 {
+				return fmt.Errorf("content intervals exceed response latency")
+			}
+			if m.SLO != nil && (!validSLOLimit(m.SLO.MaxTTFT) || !validSLOLimit(m.SLO.MaxTTFO) || !validSLOLimit(m.SLO.MaxChunkLatency) || m.SLO.MaxTPOT != nil && !validSLOLimit(*m.SLO.MaxTPOT) || m.SLO.MaxE2E != nil && !validSLOLimit(*m.SLO.MaxE2E)) {
+				return fmt.Errorf("negative SLO limit")
 			}
 			if m.RequestID != "" {
 				if seen[m.RequestID] {
@@ -104,6 +174,18 @@ func validateRun(run RunSummary) error {
 			switch m.Outcome {
 			case "success":
 				successes++
+				if m.InputTokens.Value == nil {
+					missingInput++
+				}
+				if m.OutputTokens.Value == nil {
+					missingOutput++
+				}
+				if m.InputTokens.Source == "estimated" {
+					estimatedInput++
+				}
+				if m.OutputTokens.Source == "estimated" {
+					estimatedOutput++
+				}
 				if m.Good {
 					good++
 				}
@@ -128,8 +210,54 @@ func validateRun(run RunSummary) error {
 				return fmt.Errorf("unknown request outcome")
 			}
 		}
+		for _, c := range []int{run.MissingInputCounts, run.MissingOutputCounts, run.EstimatedInputCounts, run.EstimatedOutputCounts} {
+			if c > run.Successes {
+				return fmt.Errorf("completeness counter exceeds successful population")
+			}
+		}
+		if missingInput > run.MissingInputCounts || missingOutput > run.MissingOutputCounts || estimatedInput > run.EstimatedInputCounts || estimatedOutput > run.EstimatedOutputCounts || run.MissingInputCounts-missingInput > run.Successes-successes || run.MissingOutputCounts-missingOutput > run.Successes-successes || run.EstimatedInputCounts-estimatedInput > run.Successes-successes || run.EstimatedOutputCounts-estimatedOutput > run.Successes-successes {
+			return fmt.Errorf("retained records disagree with completeness bounds")
+		}
+		if run.MissingInputCounts > run.Successes-run.EstimatedInputCounts || run.MissingOutputCounts > run.Successes-run.EstimatedOutputCounts || run.Successes == 0 && (run.InputTokens != 0 || run.OutputTokens != 0) {
+			return fmt.Errorf("invalid successful token population accounting")
+		}
+		if run.DroppedRecords == 0 && (missingInput != run.MissingInputCounts || missingOutput != run.MissingOutputCounts || estimatedInput != run.EstimatedInputCounts || estimatedOutput != run.EstimatedOutputCounts) {
+			return fmt.Errorf("records disagree with completeness accounting")
+		}
+		if successes > run.Successes || failures > run.Failures || good > run.GoodRequests || run.Successes-successes > run.DroppedRecords || run.Failures-failures > run.DroppedRecords || run.GoodRequests-good > run.Successes-successes || input > run.InputTokens || output > run.OutputTokens {
+			return fmt.Errorf("retained records exceed aggregate accounting bounds")
+		}
+		droppedSuccesses := run.Successes - successes
+		for _, c := range []struct {
+			missing, retainedMissing, estimated, retainedEstimated int
+			total, retainedTotal                                   int64
+		}{
+			{run.MissingInputCounts, missingInput, run.EstimatedInputCounts, estimatedInput, run.InputTokens, input},
+			{run.MissingOutputCounts, missingOutput, run.EstimatedOutputCounts, estimatedOutput, run.OutputTokens, output},
+		} {
+			missingDropped := c.missing - c.retainedMissing
+			estimatedDropped := c.estimated - c.retainedEstimated
+			if missingDropped > droppedSuccesses-estimatedDropped {
+				return fmt.Errorf("dropped successful count populations overlap")
+			}
+			if missingDropped == droppedSuccesses && c.total != c.retainedTotal {
+				return fmt.Errorf("tokens exceed available successful count population")
+			}
+		}
 		if run.DroppedRecords == 0 && (successes != run.Successes || failures != run.Failures || good != run.GoodRequests || input != run.InputTokens || output != run.OutputTokens) {
 			return fmt.Errorf("records disagree with aggregate accounting")
+		}
+	}
+	if run.Observation != nil {
+		if run.ObservationUnavailable != "" {
+			return fmt.Errorf("observation has contradictory availability")
+		}
+		observed, err := observationReceipt(run)
+		if err != nil {
+			return err
+		}
+		if *run.Observation != observed {
+			return fmt.Errorf("observation receipt disagrees with retained records")
 		}
 	}
 	return nil
@@ -335,6 +463,7 @@ func WriteRun(w io.Writer, run RunSummary) error {
 	if err := validateRun(run); err != nil {
 		return err
 	}
+	run.WorkGoodput = float64(run.WorkGoodRequests) / run.Duration
 	run.Goodput = float64(run.GoodRequests) / run.Duration
 	run.InputThroughput = float64(run.InputTokens) / run.Duration
 	run.OutputThroughput = float64(run.OutputTokens) / run.Duration
@@ -451,6 +580,130 @@ func ReconcileRecords(run RunSummary, records []Measurement) error {
 	}
 	if !bytes.Equal(a, b) {
 		return fmt.Errorf("JSONL records disagree with retained manifest records")
+	}
+	return nil
+}
+
+func validateRecordTiming(m Measurement, run RunSummary) error {
+	if m.RequestBodyBytes < 0 || m.ResponseBodyBytes < 0 || m.MaxConnsPerHost < 0 || m.MaxConnsPerHost > 65536 || m.TransportProfile != "" && m.TransportProfile != "shared-http2-enabled-v1" && m.TransportProfile != "k6-transport" || m.TransportProfile != "shared-http2-enabled-v1" && m.MaxConnsPerHost != 0 {
+		return fmt.Errorf("invalid client transport or wire body evidence")
+	}
+	for _, v := range []*float64{m.SerializationLatency, m.ParsingLatency} {
+		if v != nil && (!finite(*v) || *v < 0) {
+			return fmt.Errorf("invalid client overhead timing")
+		}
+	}
+	if m.ParsingLatency != nil && *m.ParsingLatency > m.FullResponseLatency+.002 {
+		return fmt.Errorf("parsing timing exceeds response latency")
+	}
+	if err := validateWorkMeasurement(&m); err != nil {
+		return err
+	}
+	if m.TimestampBasis != "" && m.TimestampBasis != "dispatch Unix clock anchor plus monotonic elapsed time" {
+		return fmt.Errorf("unknown request timestamp basis")
+	}
+	if !finite(m.AdmissionWait) || m.AdmissionWait < 0 || !finite(m.RTT) || m.RTT < 0 {
+		return fmt.Errorf("invalid admission or RTT observation")
+	}
+	for _, v := range []*float64{m.ArrivalLag, m.ScheduledResponseLatency, m.PromptDifference, m.OutputDifference} {
+		if v != nil && (!finite(*v) || *v < 0) {
+			return fmt.Errorf("invalid optional observation")
+		}
+	}
+	if (m.ArrivalLag != nil || m.ScheduledResponseLatency != nil) && m.ScheduledAt == nil {
+		return fmt.Errorf("scheduled observation lacks schedule anchor")
+	}
+	if m.ScheduledAt != nil {
+		if !finite(*m.ScheduledAt) {
+			return fmt.Errorf("invalid schedule timestamp")
+		}
+		if m.ArrivalLag != nil && math.Abs(*m.ArrivalLag-(m.DispatchedAt-*m.ScheduledAt)) > .002 {
+			return fmt.Errorf("arrival lag disagrees with timestamps")
+		}
+		if m.ScheduledResponseLatency != nil && math.Abs(*m.ScheduledResponseLatency-(m.FinishedAt-*m.ScheduledAt)) > .001 {
+			return fmt.Errorf("scheduled latency disagrees with timestamps")
+		}
+	}
+	if m.SLO != nil && m.Outcome == "success" {
+		good := true
+		for _, b := range []struct {
+			limit float64
+			value *float64
+		}{{m.SLO.MaxTTFT, m.TTFT}, {m.SLO.MaxTTFO, m.TTFO}, {m.SLO.MaxChunkLatency, m.MaxChunkLatency}, {sloLimit(m.SLO.MaxTPOT), m.ITL}, {sloLimit(m.SLO.MaxE2E), m.LastContentLatency}} {
+			if b.limit > 0 && (b.value == nil || *b.value > b.limit) {
+				good = false
+			}
+		}
+		if good != m.Good {
+			return fmt.Errorf("good outcome disagrees with SLO receipt")
+		}
+	}
+
+	if m.TimestampBasis != "" && (!finite(m.StartedAt) || m.StartedAt > m.DispatchedAt || m.AdmissionWait > m.DispatchedAt-m.StartedAt+.002) {
+		return fmt.Errorf("admission wait exceeds projected request preparation interval")
+	}
+	if !finite(m.DispatchedAt) || !finite(m.FinishedAt) || m.DispatchedAt < run.StartedAt || m.FinishedAt > run.FinishedAt || m.FinishedAt < m.DispatchedAt || m.Phase != "measurement" {
+		return fmt.Errorf("record outside measurement window")
+	}
+	if math.Abs(m.FullResponseLatency-(m.FinishedAt-m.DispatchedAt)) > .002 {
+		return fmt.Errorf("full response latency %.9f disagrees with timestamp span %.9f", m.FullResponseLatency, m.FinishedAt-m.DispatchedAt)
+	}
+	for _, v := range []*float64{m.TTFT, m.TTFO, m.LastContentLatency, m.MaxChunkLatency, m.ITL, m.FullResponseITL, m.TTST} {
+		if v != nil && (!finite(*v) || *v < 0 || *v > m.FullResponseLatency+.001) {
+			return fmt.Errorf("invalid optional response timing")
+		}
+	}
+	if m.TTFT != nil && m.LastContentLatency != nil && *m.LastContentLatency < *m.TTFT {
+		return fmt.Errorf("last content precedes first content")
+	}
+	if m.TTFO != nil && m.TTFT != nil && *m.TTFO < *m.TTFT {
+		return fmt.Errorf("output precedes first content")
+	}
+	if m.DecodeTokens != nil && (*m.DecodeTokens < 0 || m.OutputTokens.Value != nil && *m.DecodeTokens > *m.OutputTokens.Value) {
+		return fmt.Errorf("invalid decode count")
+	}
+	if m.ITL != nil || m.FullResponseITL != nil {
+		if m.MultiChoice || m.DecodeTokens == nil || *m.DecodeTokens <= 0 || m.OutputTokens.Value == nil || *m.OutputTokens.Value < 2 || m.TTFT == nil {
+			return fmt.Errorf("token-normalized timing lacks eligible operands")
+		}
+		if m.ITL != nil && m.LastContentLatency == nil {
+			return fmt.Errorf("inter-token latency lacks last-content anchor")
+		}
+		if m.ITL != nil && math.Abs(*m.ITL-(*m.LastContentLatency-*m.TTFT)/float64(*m.DecodeTokens)) > .002 {
+			return fmt.Errorf("inter-token latency disagrees with content span and decode count")
+		}
+		if m.FullResponseITL != nil && math.Abs(*m.FullResponseITL-(m.FullResponseLatency-*m.TTFT)/float64(*m.DecodeTokens)) > .002 {
+			return fmt.Errorf("full-response inter-token latency disagrees with response span and decode count")
+		}
+	}
+	if m.DecodeTokens != nil && *m.DecodeTokens > 0 {
+		if m.MultiChoice || m.OutputTokens.Value == nil || *m.OutputTokens.Value < 2 {
+			return fmt.Errorf("decode count lacks eligible output population")
+		}
+		first := 1
+		switch m.FirstChunkSource {
+		case "assumed_one":
+			if m.FirstChunkTokens != nil {
+				if *m.FirstChunkTokens > 0 && *m.FirstChunkTokens < *m.OutputTokens.Value || m.FirstChunkUnavailable != "first chunk count outside output count" || m.FirstChunkOrigin != "reported" && m.FirstChunkOrigin != "client_declared" {
+					return fmt.Errorf("invalid first-chunk fallback provenance")
+				}
+			} else if m.FirstChunkUnavailable != "" || m.FirstChunkOrigin != "" {
+				return fmt.Errorf("first-chunk fallback lacks original count")
+			}
+		case "reported", "client_declared":
+			if m.FirstChunkTokens == nil || *m.FirstChunkTokens <= 0 || *m.FirstChunkTokens >= *m.OutputTokens.Value || m.FirstChunkUnavailable != "" || m.FirstChunkOrigin != "" && m.FirstChunkOrigin != m.FirstChunkSource {
+				return fmt.Errorf("invalid exact first-chunk provenance")
+			}
+			first = *m.FirstChunkTokens
+		default:
+			return fmt.Errorf("decode count lacks first-chunk provenance")
+		}
+		if *m.DecodeTokens != *m.OutputTokens.Value-first {
+			return fmt.Errorf("decode count disagrees with output and first-chunk counts")
+		}
+	}
+	if m.ReasoningTokens != nil && *m.ReasoningTokens < 0 || m.CachedTokens != nil && *m.CachedTokens < 0 || m.ProviderTotalTokens != nil && *m.ProviderTotalTokens < 0 {
+		return fmt.Errorf("negative auxiliary token count")
 	}
 	return nil
 }

@@ -3,6 +3,7 @@ package llmperf
 import (
 	"fmt"
 	"math"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -50,6 +51,7 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 	}
 	workers = append([]WorkerRun(nil), workers...)
 	sort.Slice(workers, func(i, j int) bool { return workers[i].Run.WorkerID < workers[j].Run.WorkerID })
+	var slo *SLOReceipt
 	seen, requests := map[string]bool{}, map[string]bool{}
 	for i, w := range workers {
 		r := w.Run
@@ -63,6 +65,12 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 		if err := validateRun(r); err != nil {
 			return result, fmt.Errorf("worker accounting: %w", err)
 		}
+		if r.MeasurementPolicy != measurementPolicy {
+			return result, fmt.Errorf("unknown worker measurement policy")
+		}
+		if r.WindowPolicy != "attempt started and completed inside window; successful token totals" {
+			return result, fmt.Errorf("unsupported worker population window")
+		}
 		if r.TraceHash == "" || r.Workload == "" {
 			return result, fmt.Errorf("worker workload and trace identities required")
 		}
@@ -71,8 +79,8 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 		}
 		start, end := r.StartedAt+w.ClockOffset, r.FinishedAt+w.ClockOffset
 		if i == 0 {
-			result = RunSummary{SchemaVersion: 1, RunID: r.RunID, WorkerID: "aggregate", WorkerClocks: map[string]WorkerClock{}, StartedAt: start, FinishedAt: end, Duration: r.Duration, Seed: r.Seed, Workload: r.Workload, TraceHash: r.TraceHash, Versions: map[string]string{}, WindowPolicy: "identical clock-mapped whole-contained worker windows; successful token totals", WarmupPolicy: r.WarmupPolicy, Records: []Measurement{}}
-		} else if r.RunID != result.RunID || math.Abs(start-result.StartedAt) > .001 || math.Abs(end-result.FinishedAt) > .001 || r.Duration != result.Duration || r.Seed != result.Seed || r.Workload != result.Workload || r.TraceHash != result.TraceHash || r.WarmupPolicy != result.WarmupPolicy {
+			result = RunSummary{ServingManifest: r.ServingManifest, MeasurementPolicy: r.MeasurementPolicy, SchemaVersion: 1, RunID: r.RunID, WorkerID: "aggregate", WorkerClocks: map[string]WorkerClock{}, StartedAt: start, FinishedAt: end, Duration: r.Duration, Seed: r.Seed, Workload: r.Workload, TraceHash: r.TraceHash, Versions: map[string]string{}, WindowPolicy: r.WindowPolicy, WarmupPolicy: r.WarmupPolicy, Records: []Measurement{}}
+		} else if !reflect.DeepEqual(r.ServingManifest, result.ServingManifest) || r.RunID != result.RunID || math.Abs(start-result.StartedAt) > .001 || math.Abs(end-result.FinishedAt) > .001 || r.Duration != result.Duration || r.Seed != result.Seed || r.Workload != result.Workload || r.TraceHash != result.TraceHash || r.WarmupPolicy != result.WarmupPolicy {
 			return result, fmt.Errorf("incompatible worker workload or window")
 		}
 		if i > 0 && len(r.Versions) != len(result.Versions) {
@@ -92,6 +100,15 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 		result.ExcludedBoundaryRequests += r.ExcludedBoundaryRequests
 		result.InflightAtEnd += r.InflightAtEnd
 		for _, m := range r.Records {
+			if m.SLO == nil {
+				return result, fmt.Errorf("worker SLO receipt unavailable")
+			}
+			if slo == nil {
+				copy := *m.SLO
+				slo = &copy
+			} else if !slo.Equal(*m.SLO) {
+				return result, fmt.Errorf("worker SLO limits differ")
+			}
 			if !strings.HasPrefix(m.RequestID, r.WorkerID+":") || requests[m.RequestID] {
 				return result, fmt.Errorf("missing or duplicate request identity")
 			}
@@ -151,6 +168,7 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 			default:
 				return result, fmt.Errorf("unknown worker request outcome")
 			}
+			addWorkCounts(&result, m)
 			result.Records = append(result.Records, m)
 		}
 	}
@@ -172,6 +190,7 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 		return result, fmt.Errorf("required workers are missing")
 	}
 	if result.Duration > 0 {
+		result.WorkGoodput = float64(result.WorkGoodRequests) / result.Duration
 		result.Goodput = float64(result.GoodRequests) / result.Duration
 		result.InputThroughput = float64(result.InputTokens) / result.Duration
 		result.OutputThroughput = float64(result.OutputTokens) / result.Duration

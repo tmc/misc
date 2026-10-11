@@ -103,13 +103,53 @@ func safePartName(s string) bool {
 	return s != "" && len(s) <= 256 && utf8.ValidString(s) && !strings.ContainsAny(s, "\r\n\x00")
 }
 
+// decodeAudioResponse uses the transcription API's default JSON format.
 func decodeAudioResponse(data []byte) (CompletionResponse, error) {
+	return decodeAudioResponseFormat(data, "json", "")
+}
+
+// An explicit response format and media type must agree. Without a requested
+// format, the media type selects text or JSON; an absent media type defaults to
+// JSON, the transcription API default. Empty transcripts are valid.
+func decodeAudioResponseFormat(data []byte, format, contentType string) (CompletionResponse, error) {
 	var r CompletionResponse
 	if len(data) > modalityLimit || !utf8.Valid(data) {
 		return r, fmt.Errorf("invalid audio transcript")
 	}
+	mode := ""
+	if contentType != "" {
+		media, _, err := mime.ParseMediaType(contentType)
+		if err != nil {
+			return r, fmt.Errorf("invalid audio response content type")
+		}
+		switch media {
+		case "text/plain":
+			mode = "text"
+		case "application/json":
+			mode = "json"
+		default:
+			return r, fmt.Errorf("unsupported audio response content type")
+		}
+	}
+	switch format {
+	case "":
+		if mode == "" {
+			mode = "json"
+		}
+	case "text", "json", "verbose_json":
+		requested := format
+		if requested == "verbose_json" {
+			requested = "json"
+		}
+		if mode != "" && mode != requested {
+			return r, fmt.Errorf("audio response format conflicts with content type")
+		}
+		mode = requested
+	default:
+		return r, fmt.Errorf("unsupported audio response format")
+	}
 	text := string(data)
-	if json.Valid(data) {
+	if mode == "json" {
 		var v struct {
 			Text  *string         `json:"text"`
 			Usage json.RawMessage `json:"usage"`
@@ -130,10 +170,8 @@ func decodeAudioResponse(data []byte) (CompletionResponse, error) {
 		if err != nil {
 			return r, err
 		}
-	}
-	r.Body = append(json.RawMessage(nil), data...)
-	// Plain text is stored as a JSON string so the response remains serializable.
-	if !json.Valid(data) {
+		r.Body = append(json.RawMessage(nil), data...)
+	} else {
 		r.Body, _ = json.Marshal(text)
 	}
 	r.Choices = []Choice{{Message: Message{Role: "assistant", Content: text}}}
