@@ -702,7 +702,7 @@ func validateRecordTiming(m Measurement, run RunSummary) error {
 			return fmt.Errorf("decode count disagrees with output and first-chunk counts")
 		}
 	}
-	if m.ReasoningTokens != nil && *m.ReasoningTokens < 0 || m.CachedTokens != nil && *m.CachedTokens < 0 || m.ProviderTotalTokens != nil && *m.ProviderTotalTokens < 0 {
+	if m.CacheWriteTokens != nil && *m.CacheWriteTokens < 0 || m.ReasoningTokens != nil && *m.ReasoningTokens < 0 || m.CachedTokens != nil && *m.CachedTokens < 0 || m.ProviderTotalTokens != nil && *m.ProviderTotalTokens < 0 {
 		return fmt.Errorf("negative auxiliary token count")
 	}
 	return nil

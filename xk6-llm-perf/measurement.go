@@ -115,6 +115,7 @@ type Measurement struct {
 	OutputDifference          *float64    `json:"output_difference"`
 	ReasoningTokens           *int        `json:"reasoning_tokens"`
 	CachedTokens              *int        `json:"cached_tokens"`
+	CacheWriteTokens          *int        `json:"cache_write_tokens"`
 	SpecDecode                *SpecDecode `json:"spec_decode"`
 	SpecDecodeUnavailable     string      `json:"spec_decode_unavailable,omitempty"`
 	start                     time.Time
@@ -140,6 +141,7 @@ func (u *Usage) UnmarshalJSON(data []byte) error {
 		Prompt        *int `json:"prompt_tokens"`
 		Completion    *int `json:"completion_tokens"`
 		Total         *int `json:"total_tokens"`
+		CacheWrite    *int `json:"cache_write_tokens"`
 		PromptDetails struct {
 			Cached *int `json:"cached_tokens"`
 		} `json:"prompt_tokens_details"`
@@ -151,7 +153,7 @@ func (u *Usage) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	*u = Usage{}
-	for _, p := range []*int{v.Prompt, v.Completion, v.Total, v.PromptDetails.Cached, v.CompletionDetails.Reasoning} {
+	for _, p := range []*int{v.Prompt, v.Completion, v.Total, v.PromptDetails.Cached, v.CompletionDetails.Reasoning, v.CacheWrite} {
 		if p != nil && *p < 0 {
 			return fmt.Errorf("negative usage count")
 		}
@@ -166,6 +168,7 @@ func (u *Usage) UnmarshalJSON(data []byte) error {
 		u.TotalTokens, u.totalPresent = *v.Total, true
 	}
 	u.CachedTokens, u.ReasoningTokens = v.PromptDetails.Cached, v.CompletionDetails.Reasoning
+	u.CacheWriteTokens = v.CacheWrite
 	return nil
 }
 
@@ -303,6 +306,7 @@ func (c *Client) finishMeasurement(m *Measurement) {
 		m.ProviderTotalTokens = &v
 	}
 	m.ReasoningTokens, m.CachedTokens = m.reported.ReasoningTokens, m.reported.CachedTokens
+	m.CacheWriteTokens = m.reported.CacheWriteTokens
 	tpot, e2e := c.config.MaxTPOT, c.config.MaxE2E
 	m.SLO = &SLOReceipt{MaxTTFT: c.config.MaxTTFT, MaxTTFO: c.config.MaxTTFO, MaxChunkLatency: c.config.MaxTokenLatency, MaxTPOT: &tpot, MaxE2E: &e2e}
 	m.FirstChunkSource = "unavailable"
@@ -368,6 +372,9 @@ func (c *Client) finishMeasurement(m *Measurement) {
 		}
 		if m.ReasoningTokens != nil {
 			c.metrics.RecordMetric("llm_reasoning_tokens", float64(*m.ReasoningTokens))
+		}
+		if m.CacheWriteTokens != nil {
+			c.metrics.RecordMetric("llm_cache_write_tokens", float64(*m.CacheWriteTokens))
 		}
 		if m.CachedTokens != nil {
 			c.metrics.RecordMetric("llm_cached_tokens", float64(*m.CachedTokens))

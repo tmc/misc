@@ -75,7 +75,7 @@ declare module 'k6/x/llm-perf' {
     first_chunk_unavailable?: string; input_tokens: TokenCount; output_tokens: TokenCount;
     rtt: number; rtt_source: string; usage_discrepancy: boolean;
     prompt_difference: number | null; output_difference: number | null;
-    reasoning_tokens: number | null; cached_tokens: number | null;
+    reasoning_tokens: number | null; cached_tokens: number | null; cache_write_tokens: number | null;
     http_trace: null | { dns: number | null; connect: number | null; tls: number | null;
       sending: number | null; waiting: number | null; receiving: number | null; reused: boolean | null };
     spec_decode: null | { engine: string; source?: string; choice_index?: number; accepted: number; drafted: number; steps: number;
@@ -86,7 +86,7 @@ declare module 'k6/x/llm-perf' {
     id: string; object: string; created: number; model: string; status: number; provider_status?: string;
     choices: { index: number; message: Message; finish_reason?: string }[];
     usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number;
-      reasoning_tokens?: number; cached_tokens?: number };
+      reasoning_tokens?: number; cached_tokens?: number; cache_write_tokens?: number };
     sources?:unknown; body?: unknown; measurement?: Measurement;
   }
   export interface MeasurementError extends Error { measurement?: Measurement; }

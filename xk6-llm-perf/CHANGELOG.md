@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Include Anthropic cache reads and writes in reported prompt tokens; retain
+  optional cache-write counts without changing previously saved receipts.
+
 - Update to k6 v2.3.0 and pin xk6 v1.4.14.
 - Add named imports, strict option decoding, JavaScript errors, and API typings.
 - Preserve VU tags and fractional milliseconds; honor cancellation for metrics.

@@ -175,7 +175,10 @@ func TestDetailUsageZeroNullAndNegative(t *testing.T) {
 	if err := json.Unmarshal([]byte(`{"prompt_tokens_details":{"cached_tokens":null},"completion_tokens_details":{"reasoning_tokens":null}}`), &u); err != nil {
 		t.Fatal(err)
 	}
-	got := mergeUsage(base, u)
+	got, err := mergeUsage(base, u)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if got.CachedTokens == nil || *got.CachedTokens != 2 || got.ReasoningTokens == nil || *got.ReasoningTokens != 1 || got.PromptTokens != 3 || got.CompletionTokens != 4 {
 		t.Fatalf("null erased usage=%+v", got)
 	}

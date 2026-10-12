@@ -66,7 +66,7 @@ func TestAdditionalProtocolTools(t *testing.T) {
 			if tt.protocol == "openai-responses" && r.Choices[0].Message.ReasoningContent != "checking" {
 				t.Fatal("reasoning discarded")
 			}
-			if tt.protocol == "anthropic" && (r.Usage.CachedTokens == nil || *r.Usage.CachedTokens != 1) {
+			if tt.protocol == "anthropic" && (r.Usage.CachedTokens == nil || *r.Usage.CachedTokens != 1 || r.Usage.PromptTokens != 3) {
 				t.Fatal("cache count discarded")
 			}
 			choices := streamChoices{}

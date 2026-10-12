@@ -76,6 +76,8 @@ type Usage struct {
 	totalPresent      bool
 	ReasoningTokens   *int `json:"reasoning_tokens,omitempty"`
 	CachedTokens      *int `json:"cached_tokens,omitempty"`
+	CacheWriteTokens  *int `json:"cache_write_tokens,omitempty"`
+	anthropicInput    *int
 }
 
 type ChatCompletionChunk struct {

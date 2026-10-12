@@ -80,6 +80,9 @@ func canonicalUsage(raw json.RawMessage, protocol string) (Usage, error) {
 	if protocol != "anthropic" && protocol != "openai-responses" {
 		return u, json.Unmarshal(raw, &u)
 	}
+	if protocol == "anthropic" {
+		return anthropicUsage(raw)
+	}
 	var v map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &v); err != nil {
 		return u, err
@@ -96,14 +99,47 @@ func canonicalUsage(raw json.RawMessage, protocol string) (Usage, error) {
 	if n, ok := v["output_tokens_details"]; ok {
 		v["completion_tokens_details"] = n
 	}
-	if protocol == "anthropic" {
-		if cached, ok := v["cache_read_input_tokens"]; ok {
-			details, _ := json.Marshal(map[string]json.RawMessage{"cached_tokens": cached})
-			v["prompt_tokens_details"] = details
-		}
-	}
 	data, _ := json.Marshal(v)
 	return u, json.Unmarshal(data, &u)
+}
+
+// anthropicUsage accepts only native count sources. Normalized aliases cannot
+// supply missing native counts; when both are reported they must agree.
+func anthropicUsage(raw json.RawMessage) (Usage, error) {
+	var v struct {
+		Input           *int `json:"input_tokens"`
+		Output          *int `json:"output_tokens"`
+		Read            *int `json:"cache_read_input_tokens"`
+		Write           *int `json:"cache_creation_input_tokens"`
+		Total           *int `json:"total_tokens"`
+		PromptAlias     *int `json:"prompt_tokens"`
+		CompletionAlias *int `json:"completion_tokens"`
+	}
+	if err := json.Unmarshal(raw, &v); err != nil {
+		return Usage{}, err
+	}
+	for _, n := range []*int{v.Input, v.Output, v.Read, v.Write, v.Total, v.PromptAlias, v.CompletionAlias} {
+		if n != nil && *n < 0 {
+			return Usage{}, fmt.Errorf("negative usage count")
+		}
+	}
+	u := Usage{anthropicInput: v.Input, CachedTokens: v.Read, CacheWriteTokens: v.Write}
+	if err := u.normalizeAnthropicPrompt(); err != nil {
+		return Usage{}, err
+	}
+	if u.promptPresent && v.PromptAlias != nil && *v.PromptAlias != u.PromptTokens {
+		return Usage{}, fmt.Errorf("anthropic prompt token aliases disagree")
+	}
+	if v.Output != nil {
+		u.CompletionTokens, u.completionPresent = *v.Output, true
+		if v.CompletionAlias != nil && *v.CompletionAlias != *v.Output {
+			return Usage{}, fmt.Errorf("anthropic completion token aliases disagree")
+		}
+	}
+	if v.Total != nil {
+		u.TotalTokens, u.totalPresent = *v.Total, true
+	}
+	return u, nil
 }
 
 func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
@@ -454,7 +490,7 @@ func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error
 	return result, complete, nil
 }
 
-func mergeUsage(previous, next Usage) Usage {
+func mergeUsage(previous, next Usage) (Usage, error) {
 	if next.promptPresent {
 		previous.PromptTokens, previous.promptPresent = next.PromptTokens, true
 	}
@@ -470,7 +506,35 @@ func mergeUsage(previous, next Usage) Usage {
 	if next.ReasoningTokens != nil {
 		previous.ReasoningTokens = next.ReasoningTokens
 	}
-	return previous
+	if next.CacheWriteTokens != nil {
+		previous.CacheWriteTokens = next.CacheWriteTokens
+	}
+	if next.anthropicInput != nil {
+		previous.anthropicInput = next.anthropicInput
+	}
+	if err := previous.normalizeAnthropicPrompt(); err != nil {
+		return Usage{}, err
+	}
+	return previous, nil
+}
+
+// normalizeAnthropicPrompt sums reported buckets only. Missing input leaves the
+// prompt unavailable; absent cache buckets remain unavailable, rather than zero.
+func (u *Usage) normalizeAnthropicPrompt() error {
+	if u.anthropicInput == nil {
+		return nil
+	}
+	n := *u.anthropicInput
+	for _, bucket := range []*int{u.CachedTokens, u.CacheWriteTokens} {
+		if bucket != nil {
+			if *bucket > int(^uint(0)>>1)-n {
+				return fmt.Errorf("anthropic prompt token count overflows int")
+			}
+			n += *bucket
+		}
+	}
+	u.PromptTokens, u.promptPresent = n, true
+	return nil
 }
 
 func normalizedTool(index int, id, name, args string) ToolCall {

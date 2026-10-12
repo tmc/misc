@@ -71,3 +71,11 @@ version of the producer's file. The staged snapshot remains available through
 run completion and is then removed. Its displayed table includes each metric's
 population, estimators and token-source counts; schema-2 coverage and content
 interval policies also remain in config.
+
+Anthropic reported prompt tokens include `input_tokens` plus each reported
+`cache_read_input_tokens` and `cache_creation_input_tokens` bucket. Missing
+input does not become a partial prompt sum. Cache reads and writes remain
+unavailable when omitted or null; reported zero remains zero. Measurement
+records add nullable `cache_write_tokens`, and `llm_cache_write_tokens` counts
+reported writes on successful recorded requests. Previously saved version-1
+records retain their original prompt counts when replayed.

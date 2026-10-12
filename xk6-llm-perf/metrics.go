@@ -18,6 +18,7 @@ var MetricDefinitions = []struct {
 }{
 	{Name: "llm_reasoning_tokens", Type: metrics.Counter},
 	{Name: "llm_cached_tokens", Type: metrics.Counter},
+	{Name: "llm_cache_write_tokens", Type: metrics.Counter},
 	{Name: "llm_spec_accepted_tokens", Type: metrics.Counter},
 	{Name: "llm_spec_draft_tokens", Type: metrics.Counter},
 	{Name: "llm_spec_acceptance_rate", Type: metrics.Trend},

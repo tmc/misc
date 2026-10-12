@@ -330,7 +330,7 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	m.Outcome, m.ErrorStage = "success", ""
 	observeWork(m, completion)
 	c.finishMeasurement(m)
-	completion.Usage = Usage{ReasoningTokens: m.ReasoningTokens, CachedTokens: m.CachedTokens}
+	completion.Usage = Usage{ReasoningTokens: m.ReasoningTokens, CachedTokens: m.CachedTokens, CacheWriteTokens: m.CacheWriteTokens}
 	if m.InputTokens.Value != nil {
 		completion.Usage.PromptTokens = *m.InputTokens.Value
 	}
@@ -615,8 +615,11 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 				result.Choices = []Choice{{FinishReason: choice.FinishReason}}
 			}
 		}
-		if chunk.Usage.totalPresent || chunk.Usage.promptPresent || chunk.Usage.completionPresent || chunk.Usage.CachedTokens != nil || chunk.Usage.ReasoningTokens != nil {
-			usage = mergeUsage(usage, chunk.Usage)
+		if chunk.Usage.totalPresent || chunk.Usage.promptPresent || chunk.Usage.completionPresent || chunk.Usage.CachedTokens != nil || chunk.Usage.ReasoningTokens != nil || chunk.Usage.CacheWriteTokens != nil {
+			usage, err = mergeUsage(usage, chunk.Usage)
+			if err != nil {
+				return result, err
+			}
 		}
 		if c.measurement != nil {
 			c.measurement.reported = usage
