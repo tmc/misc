@@ -216,7 +216,7 @@ func Summarize(run llm.RunSummary) (Document, error) {
 		name, unit string
 		v          float64
 	}{{"goodput", "request/s", run.Goodput}, {"input_throughput", "token/s", run.InputThroughput}, {"output_throughput", "token/s", run.OutputThroughput}} {
-		if s.name == "input_throughput" && run.MissingInputCounts > 0 || s.name == "output_throughput" && run.MissingOutputCounts > 0 {
+		if s.name == "input_throughput" && !run.InputThroughputAvailable() || s.name == "output_throughput" && !run.OutputThroughputAvailable() {
 			d.Metrics = append(d.Metrics, Statistic{Name: s.name, Unit: s.unit})
 			continue
 		}

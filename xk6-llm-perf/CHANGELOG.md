@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Export token throughput as unavailable when successful counts are missing;
+  keep historical partial rates readable without qualifying them as totals.
+
 - Include Anthropic cache reads and writes in reported prompt tokens; retain
   optional cache-write counts without changing previously saved receipts.
 

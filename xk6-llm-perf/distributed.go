@@ -192,8 +192,12 @@ func MergeRuns(workers []WorkerRun, opts MergeOptions) (RunSummary, error) {
 	if result.Duration > 0 {
 		result.WorkGoodput = float64(result.WorkGoodRequests) / result.Duration
 		result.Goodput = float64(result.GoodRequests) / result.Duration
-		result.InputThroughput = float64(result.InputTokens) / result.Duration
-		result.OutputThroughput = float64(result.OutputTokens) / result.Duration
+		if result.InputThroughputAvailable() {
+			result.InputThroughput = float64(result.InputTokens) / result.Duration
+		}
+		if result.OutputThroughputAvailable() {
+			result.OutputThroughput = float64(result.OutputTokens) / result.Duration
+		}
 	}
 	timeline, err := AnalyzeTimeline(result)
 	if err != nil {

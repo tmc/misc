@@ -102,8 +102,12 @@ func Stream(ctx context.Context, reader io.Reader, client *http.Client, opts Str
 			}
 		}
 		run.Goodput = float64(run.GoodRequests) / run.Duration
-		run.InputThroughput = float64(run.InputTokens) / run.Duration
-		run.OutputThroughput = float64(run.OutputTokens) / run.Duration
+		if run.InputThroughputAvailable() {
+			run.InputThroughput = float64(run.InputTokens) / run.Duration
+		}
+		if run.OutputThroughputAvailable() {
+			run.OutputThroughput = float64(run.OutputTokens) / run.Duration
+		}
 		var payload []byte
 		var err error
 		if opts.Format == "otlp" {

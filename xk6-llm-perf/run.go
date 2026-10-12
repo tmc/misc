@@ -304,8 +304,12 @@ func (r *runState) finish() (RunSummary, error) {
 	}
 	if s.Duration > 0 && s.AggregateError == "" {
 		s.Goodput = float64(s.GoodRequests) / s.Duration
-		s.OutputThroughput = float64(s.OutputTokens) / s.Duration
-		s.InputThroughput = float64(s.InputTokens) / s.Duration
+		if s.OutputThroughputAvailable() {
+			s.OutputThroughput = float64(s.OutputTokens) / s.Duration
+		}
+		if s.InputThroughputAvailable() {
+			s.InputThroughput = float64(s.InputTokens) / s.Duration
+		}
 	}
 	if t, err := AnalyzeTimeline(*s); err == nil {
 		s.Timeline = &t
@@ -320,17 +324,36 @@ func (r *runState) finish() (RunSummary, error) {
 	return *s, nil
 }
 
-// MarshalJSON exports null derived rates when AggregateError marks incomplete
-// token accounting. The retained numeric totals are diagnostic partial totals.
+// InputThroughputAvailable reports whether the whole successful population has
+// input counts. Estimated counts retain their existing aggregate policy.
+func (s RunSummary) InputThroughputAvailable() bool {
+	return s.AggregateError == "" && s.MissingInputCounts == 0
+}
+
+// OutputThroughputAvailable reports whether the whole successful population has
+// output counts. An observed zero is available; an absent count is not.
+func (s RunSummary) OutputThroughputAvailable() bool {
+	return s.AggregateError == "" && s.MissingOutputCounts == 0
+}
+
+// MarshalJSON exports unavailable whole-population rates as null. Retained
+// numeric token totals remain diagnostic partial totals when counts are missing.
 func (s RunSummary) MarshalJSON() ([]byte, error) {
 	type summary RunSummary
+	var good, input, output *float64
 	if s.AggregateError == "" {
-		return json.Marshal(summary(s))
+		good = &s.Goodput
+	}
+	if s.InputThroughputAvailable() {
+		input = &s.InputThroughput
+	}
+	if s.OutputThroughputAvailable() {
+		output = &s.OutputThroughput
 	}
 	return json.Marshal(struct {
 		summary
 		Goodput          *float64 `json:"goodput"`
 		InputThroughput  *float64 `json:"input_throughput"`
 		OutputThroughput *float64 `json:"output_throughput"`
-	}{summary: summary(s)})
+	}{summary: summary(s), Goodput: good, InputThroughput: input, OutputThroughput: output})
 }

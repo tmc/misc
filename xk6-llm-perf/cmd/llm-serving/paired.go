@@ -376,8 +376,14 @@ func readPairedArtifacts(x pairedExecution, l serving.LifecycleReceipt, started 
 		case "goodput":
 			r.Metrics[name] = run.Goodput
 		case "output_throughput":
+			if !run.OutputThroughputAvailable() {
+				return fmt.Errorf("output throughput unavailable: token counts are missing")
+			}
 			r.Metrics[name] = run.OutputThroughput
 		case "input_throughput":
+			if !run.InputThroughputAvailable() {
+				return fmt.Errorf("input throughput unavailable: token counts are missing")
+			}
 			r.Metrics[name] = run.InputThroughput
 		default:
 			const suffix = ".mean"

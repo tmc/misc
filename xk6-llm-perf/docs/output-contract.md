@@ -10,8 +10,16 @@ number of available observations, so omitted values differ from observed zero.
 in-flight requests and missing/estimated token counters describe coverage.
 Token statistics include counts by provenance, including unavailable counts.
 Rates use aggregate counts divided by the declared run window, including idle
-time, rather than averaging per-request rates. An incomplete aggregate fails
-validation; the exporter does not report unknown totals as zero throughput.
+time, rather than averaging per-request rates. Missing input or output counts make that whole-population token rate
+unavailable independently, exported as null in run JSON. Numeric token totals
+remain diagnostic partial sums; they are never divided into a partial rate
+presented as the whole population. Reported zero and fully observed estimates
+retain their existing rate policy. A window with no successful requests and
+no missing counts retains zero token rates. Time slices apply the same
+independent rule to successful completions in each slice. Overflowed aggregates
+fail validation. Historical partial numeric rates remain readable after their
+arithmetic is checked, but cannot supply rate evidence; canonical re-export
+uses null without modifying the original receipt.
 
 | Metric | Endpoint |
 | --- | --- |

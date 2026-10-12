@@ -42,6 +42,21 @@ func ReadRun(r io.Reader) (RunSummary, error) {
 		"input_throughput":  {run.InputThroughput, float64(run.InputTokens) / run.Duration},
 		"output_throughput": {run.OutputThroughput, float64(run.OutputTokens) / run.Duration},
 	} {
+		available := name != "input_throughput" || run.InputThroughputAvailable()
+		available = available && (name != "output_throughput" || run.OutputThroughputAvailable())
+		if !available {
+			// Historical exports could contain a partial numeric rate. Check its
+			// arithmetic, then discard it as whole-population rate evidence.
+			if raw, present := fields[name]; present && !bytes.Equal(bytes.TrimSpace(raw), []byte("null")) && math.Abs(check.actual-check.expected) > 1e-9*math.Max(1, math.Abs(check.expected)) {
+				return run, fmt.Errorf("%s disagrees with aggregate accounting", name)
+			}
+			if name == "input_throughput" {
+				run.InputThroughput = 0
+			} else {
+				run.OutputThroughput = 0
+			}
+			continue
+		}
 		if raw, present := fields[name]; present {
 			if bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
 				return run, fmt.Errorf("%s must not be null", name)
@@ -266,19 +281,39 @@ func validateRun(run RunSummary) error {
 // SliceSummary counts completions in a half-open time interval. Requests may
 // start before the slice; concurrency is clipped at its boundaries.
 type SliceSummary struct {
-	StartedAt        float64     `json:"started_at"`
-	FinishedAt       float64     `json:"finished_at"`
-	Attempts         int         `json:"completed_attempts"`
-	Successes        int         `json:"successes"`
-	Failures         int         `json:"failures"`
-	GoodRequests     int         `json:"good_requests"`
-	InputTokens      int64       `json:"input_tokens"`
-	InputThroughput  float64     `json:"input_throughput"`
-	OutputTokens     int64       `json:"output_tokens"`
-	Goodput          float64     `json:"goodput"`
-	OutputThroughput float64     `json:"output_throughput"`
-	Requests         Concurrency `json:"requests"`
-	Policy           string      `json:"policy"`
+	StartedAt           float64     `json:"started_at"`
+	FinishedAt          float64     `json:"finished_at"`
+	Attempts            int         `json:"completed_attempts"`
+	Successes           int         `json:"successes"`
+	Failures            int         `json:"failures"`
+	GoodRequests        int         `json:"good_requests"`
+	InputTokens         int64       `json:"input_tokens"`
+	InputThroughput     float64     `json:"input_throughput"`
+	OutputTokens        int64       `json:"output_tokens"`
+	Goodput             float64     `json:"goodput"`
+	OutputThroughput    float64     `json:"output_throughput"`
+	MissingInputCounts  int         `json:"missing_input_counts"`
+	MissingOutputCounts int         `json:"missing_output_counts"`
+	Requests            Concurrency `json:"requests"`
+	Policy              string      `json:"policy"`
+}
+
+// MarshalJSON emits a null token rate for a slice with missing successful
+// counts. Empty slices and observed zero counts retain a measured zero rate.
+func (s SliceSummary) MarshalJSON() ([]byte, error) {
+	type summary SliceSummary
+	var input, output *float64
+	if s.MissingInputCounts == 0 {
+		input = &s.InputThroughput
+	}
+	if s.MissingOutputCounts == 0 {
+		output = &s.OutputThroughput
+	}
+	return json.Marshal(struct {
+		summary
+		InputThroughput  *float64 `json:"input_throughput"`
+		OutputThroughput *float64 `json:"output_throughput"`
+	}{summary: summary(s), InputThroughput: input, OutputThroughput: output})
 }
 
 // TimeSlices derives non-overlapping slices from a complete retained run.
@@ -314,18 +349,26 @@ func TimeSlices(run RunSummary, width float64) ([]SliceSummary, error) {
 				}
 				if m.InputTokens.Value != nil {
 					s.InputTokens += int64(*m.InputTokens.Value)
+				} else {
+					s.MissingInputCounts++
 				}
 				if m.OutputTokens.Value != nil {
 					s.OutputTokens += int64(*m.OutputTokens.Value)
+				} else {
+					s.MissingOutputCounts++
 				}
 			} else {
 				s.Failures++
 			}
 		}
 		duration := (end - start) / 1000
-		s.InputThroughput = float64(s.InputTokens) / duration
+		if s.MissingInputCounts == 0 {
+			s.InputThroughput = float64(s.InputTokens) / duration
+		}
 		s.Goodput = float64(s.GoodRequests) / duration
-		s.OutputThroughput = float64(s.OutputTokens) / duration
+		if s.MissingOutputCounts == 0 {
+			s.OutputThroughput = float64(s.OutputTokens) / duration
+		}
 		s.Requests = concurrency(intervals, start, end)
 		slices = append(slices, s)
 		start = end
@@ -465,8 +508,14 @@ func WriteRun(w io.Writer, run RunSummary) error {
 	}
 	run.WorkGoodput = float64(run.WorkGoodRequests) / run.Duration
 	run.Goodput = float64(run.GoodRequests) / run.Duration
-	run.InputThroughput = float64(run.InputTokens) / run.Duration
-	run.OutputThroughput = float64(run.OutputTokens) / run.Duration
+	run.InputThroughput = 0
+	if run.InputThroughputAvailable() {
+		run.InputThroughput = float64(run.InputTokens) / run.Duration
+	}
+	run.OutputThroughput = 0
+	if run.OutputThroughputAvailable() {
+		run.OutputThroughput = float64(run.OutputTokens) / run.Duration
+	}
 	data, err := json.Marshal(run)
 	if err != nil {
 		return fmt.Errorf("encode run: %w", err)
