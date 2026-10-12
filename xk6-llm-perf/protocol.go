@@ -1,9 +1,12 @@
 package llmperf
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/tmc/misc/xk6-llm-perf/internal/jsoncheck"
 )
 
 // RawRequest sends an authored JSON payload. Protocol selects a response
@@ -111,9 +114,63 @@ func canonicalUsage(raw json.RawMessage, protocol string) (Usage, error) {
 	return u, json.Unmarshal(data, &u)
 }
 
+// checkAnthropicJSON retains member identity before typed or map decoding can
+// replace duplicate evidence. Null stays available to the usage presence policy.
+func checkAnthropicJSON(data []byte) error {
+	d := json.NewDecoder(bytes.NewReader(data))
+	d.UseNumber()
+	return jsoncheck.Check(d, jsoncheck.Options{})
+}
+
+// checkAnthropicFields checks case aliases only for fields decoded into fixed
+// structs. Opaque tool inputs and metadata keep their case-sensitive identities.
+func checkAnthropicFields(data []byte, fields ...string) error {
+	var object map[string]json.RawMessage
+	if err := json.Unmarshal(data, &object); err != nil {
+		return err
+	}
+	for _, field := range fields {
+		found := false
+		for name := range object {
+			if strings.EqualFold(name, field) {
+				if found {
+					return fmt.Errorf("duplicate anthropic JSON field %q", field)
+				}
+				found = true
+			}
+		}
+	}
+	return nil
+}
+
+func checkAnthropicEnvelope(data []byte) error {
+	if err := checkAnthropicJSON(data); err != nil {
+		return err
+	}
+	if err := checkAnthropicFields(data, "type", "content", "usage", "message", "delta", "content_block", "index", "error", "id", "model", "stop_reason"); err != nil {
+		return err
+	}
+	var envelope struct {
+		Message json.RawMessage `json:"message"`
+	}
+	if err := json.Unmarshal(data, &envelope); err != nil {
+		return err
+	}
+	if len(envelope.Message) > 0 {
+		return checkAnthropicFields(envelope.Message, "usage", "id", "model")
+	}
+	return nil
+}
+
 // anthropicUsage accepts only native count sources. Normalized aliases cannot
 // supply missing native counts; when both are reported they must agree.
 func anthropicUsage(raw json.RawMessage) (Usage, error) {
+	if err := checkAnthropicJSON(raw); err != nil {
+		return Usage{}, err
+	}
+	if err := checkAnthropicFields(raw, "input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "total_tokens", "prompt_tokens", "completion_tokens"); err != nil {
+		return Usage{}, err
+	}
 	var v struct {
 		Input           *int `json:"input_tokens"`
 		Output          *int `json:"output_tokens"`
@@ -151,6 +208,11 @@ func anthropicUsage(raw json.RawMessage) (Usage, error) {
 }
 
 func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
+	if protocol == "anthropic" {
+		if err := checkAnthropicEnvelope(data); err != nil {
+			return CompletionResponse{}, err
+		}
+	}
 	if protocol == "providerwire-v4" {
 		return decodeProviderwireResponse(data)
 	}
@@ -296,6 +358,11 @@ func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
 }
 
 func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error) {
+	if protocol == "anthropic" {
+		if err := checkAnthropicEnvelope(data); err != nil {
+			return ChatCompletionChunk{}, false, err
+		}
+	}
 	if protocol == "solido-rag" {
 		return decodeSolidoChunk(data)
 	}
