@@ -111,3 +111,34 @@ func TestProviderwireCancellation(t *testing.T) {
 		t.Fatalf("result %T measurement %+v", result, c.measurement)
 	}
 }
+
+func TestProviderwireMetadataHTTP(t *testing.T) {
+	for _, tt := range providerwireMetadataCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "text/event-stream")
+				for _, b := range tt.events {
+					fmt.Fprintf(w, "data: %s\n\n", b)
+				}
+			}))
+			defer server.Close()
+			c := setupTestClient(t, server.URL)
+			stream := true
+			v := protocolRequest(t, c, CompletionRequest{Raw: &RawRequest{Path: "/language-model", Protocol: "providerwire-v4", Body: map[string]any{"prompt": []any{}}, Stream: &stream}})
+			_, failed := v.(error)
+			if failed != tt.bad {
+				t.Fatalf("result %T %+v", v, v)
+			}
+			if tt.bad {
+				if c.measurement.Outcome != "failure" || c.measurement.Good {
+					t.Fatalf("measurement %+v", c.measurement)
+				}
+				return
+			}
+			r := v.(map[string]any)
+			if r["id"] != tt.id || r["model"] != tt.model {
+				t.Fatalf("identity %+v", r)
+			}
+		})
+	}
+}

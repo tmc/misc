@@ -211,3 +211,64 @@ func TestProviderwireSensitiveErrors(t *testing.T) {
 		}
 	}
 }
+
+func providerwireMetadataCases() []struct {
+	name      string
+	events    []string
+	bad       bool
+	id, model string
+} {
+	start := `{"type":"stream-start","warnings":[]}`
+	meta := `{"type":"response-metadata","id":"first","modelId":"first-model"}`
+	changed := `{"type":"response-metadata","id":"changed","modelId":"changed-model"}`
+	text := []string{`{"type":"text-start","id":"t"}`, `{"type":"text-delta","id":"t","delta":"answer"}`, `{"type":"text-end","id":"t"}`}
+	finish := `{"type":"finish","finishReason":{"unified":"stop"},"usage":{"inputTokens":{"total":2},"outputTokens":{"total":3}}}`
+	cases := []struct {
+		name      string
+		events    []string
+		bad       bool
+		id, model string
+	}{
+		{name: "no-metadata", events: append(append([]string{start}, text...), finish)},
+		{name: "single-metadata", events: append(append([]string{start, meta}, text...), finish), id: "first", model: "first-model"},
+		{name: "duplicate-metadata", events: []string{start, meta, changed}, bad: true},
+		{name: "late-text-start", events: []string{start, text[0], changed}, bad: true},
+		{name: "late-visible", events: []string{start, text[0], text[1], changed}, bad: true},
+		{name: "late-reasoning", events: []string{start, `{"type":"reasoning-start","id":"r"}`, changed}, bad: true},
+		{name: "late-tool", events: []string{start, `{"type":"tool-input-start","id":"c","toolName":"f"}`, changed}, bad: true},
+		{name: "late-tool-call", events: []string{start, `{"type":"tool-call","toolCallId":"c","toolName":"f","input":"{}"}`, changed}, bad: true},
+	}
+	return cases
+}
+
+func TestProviderwireMetadataState(t *testing.T) {
+	for _, tt := range providerwireMetadataCases() {
+		t.Run(tt.name, func(t *testing.T) {
+			var s providerwireStream
+			var id, model string
+			var lastErr error
+			for _, b := range tt.events {
+				c, _, e := s.decode([]byte(b))
+				if e != nil {
+					lastErr = e
+					if c.ID != "" || c.Model != "" {
+						t.Fatalf("refused metadata exposed identity %+v", c)
+					}
+					break
+				}
+				if c.ID != "" {
+					id = c.ID
+				}
+				if c.Model != "" {
+					model = c.Model
+				}
+			}
+			if (lastErr != nil) != tt.bad {
+				t.Fatalf("error %v", lastErr)
+			}
+			if !tt.bad && (id != tt.id || model != tt.model) {
+				t.Fatalf("identity %q %q", id, model)
+			}
+		})
+	}
+}

@@ -205,9 +205,10 @@ func providerwireCounts(raw json.RawMessage, keys string) (map[string]*int, erro
 // A stream owns its identifiers, boundaries, and pending tool inputs. Completed
 // tool-call events confirm streamed input without adding the arguments twice.
 type providerwireStream struct {
-	started, finished bool
-	blocks            map[string]bool
-	tools             map[string]*providerwireTool
+	started, finished           bool
+	metadataSeen, outputStarted bool
+	blocks                      map[string]bool
+	tools                       map[string]*providerwireTool
 }
 type providerwireTool struct {
 	index         int
@@ -282,6 +283,9 @@ func (s *providerwireStream) decode(data []byte) (ChatCompletionChunk, bool, err
 		}
 		s.started = true
 	case "response-metadata":
+		if s.metadataSeen || s.outputStarted {
+			return c, false, fmt.Errorf("providerwire duplicate or late response metadata")
+		}
 		for _, k := range []string{"id", "modelId", "timestamp"} {
 			if _, ok := m[k]; ok {
 				v, e := providerwireString(m, k, false)
@@ -300,6 +304,7 @@ func (s *providerwireStream) decode(data []byte) (ChatCompletionChunk, bool, err
 				}
 			}
 		}
+		s.metadataSeen = true
 	case "text-start", "reasoning-start", "text-end", "reasoning-end", "text-delta", "reasoning-delta":
 		id, e := providerwireString(m, "id", true)
 		if e != nil {
@@ -309,6 +314,7 @@ func (s *providerwireStream) decode(data []byte) (ChatCompletionChunk, bool, err
 		key := kind + ":" + id
 		switch {
 		case strings.HasSuffix(tag.Type, "-start"):
+			s.outputStarted = true
 			if _, ok := s.blocks[key]; ok || len(s.blocks) >= 128 {
 				return c, false, fmt.Errorf("duplicate or excessive providerwire block")
 			}
@@ -344,6 +350,7 @@ func (s *providerwireStream) decode(data []byte) (ChatCompletionChunk, bool, err
 		t := s.tools[id]
 		switch tag.Type {
 		case "tool-input-start":
+			s.outputStarted = true
 			if t != nil || len(s.tools) >= 128 {
 				return c, false, fmt.Errorf("duplicate or excessive providerwire tool")
 			}
@@ -373,6 +380,7 @@ func (s *providerwireStream) decode(data []byte) (ChatCompletionChunk, bool, err
 			}
 			t.ended = true
 		case "tool-call":
+			s.outputStarted = true
 			name, e := providerwireString(m, "toolName", true)
 			if e != nil {
 				return c, false, e

@@ -18,6 +18,10 @@ calls. File/custom/source parts, tool-result output, tool-history prompts,
 provider-executed or dynamic tools, header overrides and raw chunks are refused.
 Unknown fields and events fail rather than being silently omitted.
 
+Response metadata is optional and may appear once before any text, reasoning or
+tool output starts. Duplicate or late metadata fails before changing response
+identity. This is the strict supported stream scope.
+
 Streams require `stream-start`, matching text/reasoning boundaries, complete
 tool calls, and a `finish` event. EOF or `[DONE]` without `finish` fails. Tool input
 is assembled once and checked against the completed call. Reasoning starts TTFT;
