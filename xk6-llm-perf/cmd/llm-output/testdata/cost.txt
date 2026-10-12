@@ -1,0 +1,17 @@
+# Price tables are post-run JSON ledgers only.
+! exec $CLI -format json -prices prices.json
+stderr 'prices require non-streaming cost format without a sink'
+! exec $CLI -format cost
+stderr 'prices require non-streaming cost format without a sink'
+! exec $CLI -format cost -prices prices.json -stream
+stderr 'prices require non-streaming cost format without a sink'
+! exec $CLI -format cost -prices prices.json -endpoint https://example.com
+stderr 'prices require non-streaming cost format without a sink'
+exec $CLI -input run.json -format cost -prices prices.json
+stdout '"price_sha256":"[0-9a-f]{64}"'
+stdout '"total":0'
+stdout '"currency":"USD"'
+-- run.json --
+{"schema_version":1,"run_id":"fixture","started_at":1000,"finished_at":2000,"duration":1,"attempts":0,"successes":0,"failures":0,"records":[]}
+-- prices.json --
+{"currency":"USD","source_url":"https://example.com/prices","effective_date":"2026-10-11","models":{"m":{"input":2,"output":4}}}

@@ -16,10 +16,11 @@ import (
 )
 
 func main() {
+	prices := flag.String("prices", "", "explicit price table file (format=cost only)")
 	stream := flag.Bool("stream", false, "consume measurement JSONL with serial sink backpressure")
 	streamRun := flag.String("stream-run", "", "benchmark run ID for OTLP streaming")
 	input := flag.String("input", "", "run JSON file; default stdin")
-	format := flag.String("format", "json", "json, csv, html, otlp or mlflow")
+	format := flag.String("format", "json", "json, csv, html, cost, otlp or mlflow")
 	endpoint := flag.String("endpoint", "", "explicit HTTP sink URL (otlp/mlflow only)")
 	runID := flag.String("mlflow-run", "", "existing MLflow run ID")
 	authEnv := flag.String("authorization-env", "", "environment variable holding HTTP Authorization header")
@@ -35,7 +36,13 @@ func main() {
 		reader = f
 	}
 	var err error
-	if *stream {
+	if *prices != "" || *format == "cost" {
+		if *stream || *format != "cost" || *prices == "" || *endpoint != "" {
+			err = fmt.Errorf("prices require non-streaming cost format without a sink")
+		} else {
+			err = runCost(reader, *prices)
+		}
+	} else if *stream {
 		id := *streamRun
 		if *format == "mlflow" {
 			id = *runID
@@ -115,4 +122,25 @@ func run(reader io.Reader, format, endpoint, runID, authEnv string) error {
 	}
 	_, err = os.Stdout.Write(append(b, '\n'))
 	return err
+}
+
+func runCost(reader io.Reader, path string) error {
+	run, err := llm.ReadRun(reader)
+	if err != nil {
+		return err
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	prices, err := output.ReadPrices(f)
+	if err != nil {
+		return err
+	}
+	ledger, err := output.DeriveCost(run, prices)
+	if err != nil {
+		return err
+	}
+	return json.NewEncoder(os.Stdout).Encode(ledger)
 }
