@@ -53,6 +53,12 @@ extension does not currently claim full AIPerf parity.
   populations in JSON, SVG, HTML, optional pinned PNG rendering and a loopback
   refreshing dashboard. These are descriptive views with explicit statistical
   status.
+- [Explicit-price cost estimates](cost.md) derive a separate ledger from
+  reported token buckets and a hashed caller-supplied price table. Missing
+  buckets or rates remain unavailable; these estimates are not provider bills.
+- [ProviderWire v4](endpoint-adapters/providerwire-v4.md) supports an authored
+  text/reasoning/function-tool subset against pinned Grafana AI SDK schemas.
+  Schema and protocol fixtures do not establish hosted-provider compatibility.
 - [Native producer interchange](telemetry/NATIVE-CONTRACT.md) retains latest
   managed/DCGM lineage for diagnostics. Such lineage is refused for qualified
   window/energy admission until its conversion and timing evidence is verified.

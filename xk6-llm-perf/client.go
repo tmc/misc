@@ -126,7 +126,7 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 	path := "/chat/completions"
 	if req.Raw != nil {
 		payload, path = req.Raw.Body, req.Raw.Path
-		if _, ok := req.Raw.Body["model"]; req.Raw.Body != nil && !ok && req.Model != "" && c.protocol != "tgi" && c.protocol != "hf-tei-rankings" && c.protocol != "nim-image-retrieval" && c.protocol != "nv-embedqa" && c.protocol != "solido-rag" {
+		if _, ok := req.Raw.Body["model"]; req.Raw.Body != nil && !ok && req.Model != "" && c.protocol != "tgi" && c.protocol != "hf-tei-rankings" && c.protocol != "nim-image-retrieval" && c.protocol != "nv-embedqa" && c.protocol != "solido-rag" && c.protocol != "providerwire-v4" {
 			req.Raw.Body["model"] = req.Model
 		}
 	}
@@ -159,6 +159,11 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 		httpReq.Header.Set("anthropic-version", "2023-06-01")
 	} else {
 		httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.APIKey))
+	}
+	if c.protocol == "providerwire-v4" {
+		httpReq.Header.Set("Ai-Language-Model-Id", req.Model)
+		httpReq.Header.Set("Ai-Language-Model-Specification-Version", "4")
+		httpReq.Header.Set("Ai-Language-Model-Streaming", fmt.Sprint(req.Stream))
 	}
 	if req.Stream {
 		httpReq.Header.Set("Accept", "text/event-stream")
@@ -477,6 +482,7 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 	defer release()
 
 	result.Status = resp.StatusCode
+	var providerwire providerwireStream
 	for {
 		event, err := reader.Read()
 		if err == io.EOF {
@@ -487,6 +493,9 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 		}
 
 		if event.Data == "[DONE]" {
+			if c.protocol == "providerwire-v4" {
+				return result, fmt.Errorf("providerwire requires finish event")
+			}
 			wideTerminal = true
 			complete = true
 			break
@@ -504,7 +513,13 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 		if streamBytes > 16*1024*1024 {
 			return result, fmt.Errorf("stream exceeds 16 MiB response limit")
 		}
-		chunk, terminal, err := decodeChunk([]byte(event.Data), c.protocol)
+		var chunk ChatCompletionChunk
+		var terminal bool
+		if c.protocol == "providerwire-v4" {
+			chunk, terminal, err = providerwire.decode([]byte(event.Data))
+		} else {
+			chunk, terminal, err = decodeChunk([]byte(event.Data), c.protocol)
+		}
 		c.addParsingTime(parsingStart)
 		if err != nil {
 			return result, fmt.Errorf("unmarshal chunk: %w", err)
@@ -1045,6 +1060,16 @@ func validateCompletionRequest(req CompletionRequest) error {
 		}
 	}
 	if req.Raw != nil {
+		if req.Raw.Protocol == "providerwire-v4" {
+			if strings.TrimSpace(req.Model) == "" {
+				return fmt.Errorf("providerwire model is required")
+			}
+			for _, r := range req.Model {
+				if r < 32 || r == 127 {
+					return fmt.Errorf("invalid providerwire model header")
+				}
+			}
+		}
 		if req.Measurement != nil {
 			if req.Measurement.Tokenizer == "" {
 				return fmt.Errorf("measurement.tokenizer is required")

@@ -219,8 +219,12 @@ queries, fragments, or another host. Response adapters include chat, completions
 image, video, embeddings, ranking and retrieval. See
 [modality lifecycles](docs/modalities/README.md) and
 [endpoint templates](docs/endpoint-adapters/templates.md).
+The [ProviderWire v4 adapter](docs/endpoint-adapters/providerwire-v4.md) accepts
+authored V4 bodies and sends model and stream settings in protocol headers.
 The JSON adapter returns `body` and leaves generated-token counts unavailable
 unless supplied. Responses and Anthropic adapters normalize protocol-specific content and usage.
+Anthropic prompt counts include reported cache-read and cache-write buckets;
+absent native input remains unavailable. Saved older records retain their counts.
 Media output units remain separate from generated text tokens. Video requests
 retain one job lifecycle; HTTP traces cover the submission, with polling bounded
 by the same cancellation deadline.
@@ -232,6 +236,10 @@ request/prefill/decode concurrency and completion-based timeslices. Effective
 concurrency includes idle duration; active concurrency excludes idle duration.
 These are client phase proxies. They do not measure device concurrency.
 Replay refuses partial retained record sets.
+
+For a post-run cost estimate, pass `--format cost --prices prices.json` to
+`go run ./cmd/llm-output`. The [price table contract](docs/cost.md) requires
+explicit rates and provenance. Missing usage or prices remain unavailable.
 
 An optional `-telemetry window.json` joins a benchmark-specific version-1
 `TelemetryWindow` interchange. This is a consumer adapter format, not an

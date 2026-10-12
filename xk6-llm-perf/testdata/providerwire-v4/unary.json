@@ -1,0 +1,29 @@
+{
+  "warnings": [],
+  "content": [
+    {
+      "type": "reasoning",
+      "text": "think"
+    },
+    {
+      "type": "text",
+      "text": "answer"
+    }
+  ],
+  "finishReason": {
+    "unified": "stop"
+  },
+  "usage": {
+    "inputTokens": {
+      "total": 9,
+      "noCache": 2,
+      "cacheRead": 3,
+      "cacheWrite": 4
+    },
+    "outputTokens": {
+      "total": 5,
+      "text": 2,
+      "reasoning": 3
+    }
+  }
+}

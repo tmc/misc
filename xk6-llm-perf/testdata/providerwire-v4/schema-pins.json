@@ -1,0 +1,21 @@
+{
+  "revision": "bb0cacce07ab19e8018112902ddd0ee3806e00bb",
+  "schemas": {
+    "request": {
+      "url": "https://raw.githubusercontent.com/grafana/ai-sdk/bb0cacce07ab19e8018112902ddd0ee3806e00bb/ai-gateway/providerwire/v4/schema/request.json",
+      "sha256": "be5b5a1c286e0d99f59a49aec1e301562e9a673a4db5a7d0a2791b3774239dfa"
+    },
+    "error": {
+      "url": "https://raw.githubusercontent.com/grafana/ai-sdk/bb0cacce07ab19e8018112902ddd0ee3806e00bb/ai-gateway/providerwire/v4/schema/error.json",
+      "sha256": "ac8497507b7348a84bc2337d542fc077ef2e94d87843315eb765b74d06d500a4"
+    },
+    "stream_event": {
+      "url": "https://raw.githubusercontent.com/grafana/ai-sdk/bb0cacce07ab19e8018112902ddd0ee3806e00bb/ai-gateway/providerwire/v4/schema/stream_event.json",
+      "sha256": "32fb4dd3c80ade68205a31844e0bed67504cd1d39626e51e89a207fa556f0d1e"
+    },
+    "unary_success": {
+      "url": "https://raw.githubusercontent.com/grafana/ai-sdk/bb0cacce07ab19e8018112902ddd0ee3806e00bb/ai-gateway/providerwire/v4/schema/unary_success.json",
+      "sha256": "8f72b4ded932a8546b6d2d6c9eace070c0e97303ed3d70eedbb334144a467a5f"
+    }
+  }
+}

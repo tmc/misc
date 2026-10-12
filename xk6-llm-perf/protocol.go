@@ -19,7 +19,7 @@ type RawRequest struct {
 
 func generatedTokenProtocol(protocol string) bool {
 	switch protocol {
-	case "", "openai-chat", "openai-completions", "openai-responses", "anthropic", "tgi", "solido-rag":
+	case "", "openai-chat", "openai-completions", "openai-responses", "anthropic", "tgi", "solido-rag", "providerwire-v4":
 		return true
 	}
 	return false
@@ -36,9 +36,17 @@ func validateRaw(r *RawRequest) error {
 		return fmt.Errorf("raw path must be an absolute API path without query or traversal")
 	}
 	switch r.Protocol {
-	case "openai-chat", "openai-completions", "openai-responses", "anthropic", "tgi", "json", "audio-transcription", "image", "video", "retrieval", "openai-embeddings", "cohere-rankings", "nim-rankings", "hf-tei-rankings", "nim-image-retrieval", "nv-embedqa", "chat-embeddings", "nim-embeddings", "solido-rag":
+	case "providerwire-v4", "openai-chat", "openai-completions", "openai-responses", "anthropic", "tgi", "json", "audio-transcription", "image", "video", "retrieval", "openai-embeddings", "cohere-rankings", "nim-rankings", "hf-tei-rankings", "nim-image-retrieval", "nv-embedqa", "chat-embeddings", "nim-embeddings", "solido-rag":
 	default:
 		return fmt.Errorf("unsupported response protocol")
+	}
+	if r.Protocol == "providerwire-v4" {
+		if r.Multipart != nil {
+			return fmt.Errorf("providerwire requires a JSON body")
+		}
+		if err := validateProviderwireBody(r.Body); err != nil {
+			return err
+		}
 	}
 	if err := validateEndpointBody(r.Protocol, r.Body); err != nil {
 		return err
@@ -143,6 +151,9 @@ func anthropicUsage(raw json.RawMessage) (Usage, error) {
 }
 
 func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
+	if protocol == "providerwire-v4" {
+		return decodeProviderwireResponse(data)
+	}
 	if protocol == "solido-rag" {
 		return decodeSolidoResponse(data)
 	}

@@ -46,7 +46,7 @@ declare module 'k6/x/llm-perf' {
     tools?: Record<string, unknown>[]; tool_choice?: unknown;
     work?: WorkExpectation; measurement?: TokenCounts; scheduledAt?: number; cancelAfter?: string;
   }
-  export type Protocol = 'openai-chat' | 'openai-completions' | 'openai-responses' | 'anthropic' | 'tgi' | 'json' | 'audio-transcription' | 'image' | 'video' | 'retrieval' | 'openai-embeddings' | 'cohere-rankings' | 'nim-rankings' | 'hf-tei-rankings' | 'nim-image-retrieval' | 'nv-embedqa' | 'chat-embeddings' | 'nim-embeddings' | 'solido-rag';
+  export type Protocol = 'providerwire-v4' | 'openai-chat' | 'openai-completions' | 'openai-responses' | 'anthropic' | 'tgi' | 'json' | 'audio-transcription' | 'image' | 'video' | 'retrieval' | 'openai-embeddings' | 'cohere-rankings' | 'nim-rankings' | 'hf-tei-rankings' | 'nim-image-retrieval' | 'nv-embedqa' | 'chat-embeddings' | 'nim-embeddings' | 'solido-rag';
   export interface RawRequest {
     path: string; protocol: Protocol; stream?: boolean; body?: Record<string, unknown>;
     multipart?: { fields?: Record<string,string>; files: {name:string; filename:string; contentType:string; base64:string}[] };
