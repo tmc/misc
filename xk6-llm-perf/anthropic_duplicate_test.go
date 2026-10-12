@@ -112,3 +112,72 @@ func TestAnthropicOpaqueCaseKeys(t *testing.T) {
 		}
 	}
 }
+
+var ambiguousAnthropicParts = []struct {
+	stream bool
+	body   string
+}{
+	{true, `{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"a","Text":"b"}}`},
+	{true, `{"type":"message_delta","delta":{"stop_reason":"end_turn","Stop_Reason":"max_tokens"},"usage":{"output_tokens":3}}`},
+	{true, `{"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"c","name":"a","Name":"b","input":{}}}`},
+	{false, `{"content":[{"type":"text","text":"a","TEXT":"b"}],"usage":{"input_tokens":0,"output_tokens":0}}`},
+}
+
+func TestAnthropicNestedFixedAliases(t *testing.T) {
+	for i, tt := range ambiguousAnthropicParts {
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			if err := checkAnthropicEnvelope([]byte(tt.body)); err == nil || !strings.Contains(err.Error(), "duplicate") {
+				t.Fatalf("nested alias: %v", err)
+			}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if tt.stream {
+					w.Header().Set("Content-Type", "text/event-stream")
+					fmt.Fprintf(w, "data: %s\n\ndata: {\"type\":\"message_stop\"}\n\n", tt.body)
+				} else {
+					fmt.Fprint(w, tt.body)
+				}
+			}))
+			defer server.Close()
+			c := setupTestClient(t, server.URL)
+			c.config.StrictMeasurement = true
+			v := protocolRequest(t, c, CompletionRequest{Raw: &RawRequest{Protocol: "anthropic", Stream: &tt.stream, Path: "/messages", Body: map[string]any{"messages": []Message{{Role: "user", Content: "hello"}}}}})
+			err, failed := v.(error)
+			if !failed || !strings.Contains(err.Error(), "duplicate") {
+				t.Fatalf("actualclient admission: %+v", v)
+			}
+		})
+	}
+	for _, body := range []string{
+		`{"type":"error","error":{"type":"a","TYPE":"b"}}`,
+		`{"type":"error","error":{"message":"a","Message":"b"}}`,
+	} {
+		if err := checkAnthropicEnvelope([]byte(body)); err == nil {
+			t.Fatal("error alias admitted")
+		}
+	}
+	for _, body := range []string{
+		`{"type":"content_block_delta","delta":{"type":"text_delta","text":"a"}}`,
+		`{"type":"content_block_start","content_block":{"type":"tool_use","id":"c","name":"a","input":{"A":1,"a":2}}}`,
+		`{"content":[{"type":"text","text":"a"},{"type":"tool_use","id":"c","name":"a","input":{"A":1,"a":2}}]}`,
+		`{"error":{"type":"provider_error","message":"failed"}}`,
+	} {
+		if err := checkAnthropicEnvelope([]byte(body)); err != nil {
+			t.Fatalf("ordinary fixed fields: %v", err)
+		}
+	}
+}
+
+func TestAnthropicNestedFixedFieldsUnchanged(t *testing.T) {
+	c, _, err := decodeChunk([]byte(`{"type":"content_block_delta","delta":{"type":"text_delta","text":"a"}}`), "anthropic")
+	if err != nil || len(c.Choices) != 1 || c.Choices[0].Delta.Content != "a" {
+		t.Fatalf("ordinary text: %+v %v", c, err)
+	}
+	c, _, err = decodeChunk([]byte(`{"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"c","name":"a","input":{"A":1,"a":2}}}`), "anthropic")
+	if err != nil || len(c.Choices) != 1 || len(c.Choices[0].Delta.ToolCalls) != 1 || c.Choices[0].Delta.ToolCalls[0].Function.Name != "a" {
+		t.Fatalf("ordinary tool: %+v %v", c, err)
+	}
+	r, err := decodeResponse([]byte(`{"content":[{"type":"text","text":"a"}]}`), "anthropic")
+	if err != nil || len(r.Choices) != 1 || r.Choices[0].Message.Content != "a" {
+		t.Fatalf("ordinary unary: %+v %v", r, err)
+	}
+}

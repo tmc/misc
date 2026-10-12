@@ -19,6 +19,18 @@ func TestBinaryAnthropicDuplicateAdmission(t *testing.T) {
 		t.Skip("set K6_SMOKE_BINARY")
 	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/part/") {
+			var index int
+			fmt.Sscanf(r.URL.Path, "/part/%d", &index)
+			part := ambiguousAnthropicParts[index]
+			if part.stream {
+				w.Header().Set("Content-Type", "text/event-stream")
+				fmt.Fprintf(w, "data: %s\n\ndata: {\"type\":\"message_stop\"}\n\n", part.body)
+			} else {
+				fmt.Fprint(w, part.body)
+			}
+			return
+		}
 		usage := `{"input_tokens":2,"output_tokens":1,"cache_creation_input_tokens":0}`
 		for i, raw := range ambiguousAnthropicUsage {
 			if strings.HasSuffix(r.URL.Path, fmt.Sprint(i)) {
@@ -54,7 +66,8 @@ export const options={vus:1,iterations:1,thresholds:{checks:['rate==1']}};
 const c=new llm.Client({baseURL:%q,strictMeasurement:true});
 export default function(){for(const stream of [false,true]){for(const suffix of ['0','1','2','3','4','5','container','valid','opaque']){
 const r=c.request({protocol:'anthropic',path:(stream?'/stream/':'/sync/')+suffix,stream,body:{messages:[{role:'user',content:'hello'}]}});
-check(r,{'duplicate admission':r=>(r instanceof Error)===(suffix!=='valid'&&suffix!=='opaque')});}}}`, server.URL)
+check(r,{'duplicate admission':r=>(r instanceof Error)===(suffix!=='valid'&&suffix!=='opaque')});}}
+for(const [index,stream] of [[0,true],[1,true],[2,true],[3,false]]){const r=c.request({protocol:'anthropic',path:'/part/'+index,stream,body:{messages:[{role:'user',content:'hello'}]}});check(r,{'nested fixed aliases refuse':r=>r instanceof Error});}}`, server.URL)
 	path := filepath.Join(t.TempDir(), "duplicates.js")
 	if err := os.WriteFile(path, []byte(script), 0600); err != nil {
 		t.Fatal(err)

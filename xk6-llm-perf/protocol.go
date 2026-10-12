@@ -151,13 +151,36 @@ func checkAnthropicEnvelope(data []byte) error {
 		return err
 	}
 	var envelope struct {
-		Message json.RawMessage `json:"message"`
+		Message      json.RawMessage   `json:"message"`
+		Delta        json.RawMessage   `json:"delta"`
+		ContentBlock json.RawMessage   `json:"content_block"`
+		Content      []json.RawMessage `json:"content"`
+		Error        json.RawMessage   `json:"error"`
 	}
 	if err := json.Unmarshal(data, &envelope); err != nil {
 		return err
 	}
 	if len(envelope.Message) > 0 {
-		return checkAnthropicFields(envelope.Message, "usage", "id", "model")
+		if err := checkAnthropicFields(envelope.Message, "usage", "id", "model"); err != nil {
+			return err
+		}
+	}
+	if len(envelope.Delta) > 0 {
+		if err := checkAnthropicFields(envelope.Delta, "type", "text", "thinking", "partial_json", "stop_reason", "stop_sequence"); err != nil {
+			return err
+		}
+	}
+	for _, block := range append(envelope.Content, envelope.ContentBlock) {
+		if len(block) > 0 {
+			if err := checkAnthropicFields(block, "type", "id", "name", "input", "text", "thinking"); err != nil {
+				return err
+			}
+		}
+	}
+	if len(envelope.Error) > 0 {
+		if err := checkAnthropicFields(envelope.Error, "type", "message"); err != nil {
+			return err
+		}
 	}
 	return nil
 }
