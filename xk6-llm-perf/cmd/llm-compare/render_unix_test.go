@@ -39,17 +39,23 @@ func TestRendererValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 	renderer := filepath.Join(dir, "renderer")
-	if err := os.WriteFile(renderer, []byte("#!/bin/sh\ncat '"+data+"'\n"), 0700); err != nil {
+	if err := os.WriteFile(renderer, []byte("#!/bin/sh\ncat > \"$0.svg\"\ncat '"+data+"'\n"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	if b, err := renderPNG(renderer, []byte("<svg/>")); err != nil || !bytes.Equal(b, pngData.Bytes()) {
 		t.Fatalf("valid renderer: %v", err)
 	}
-	if err := os.WriteFile(renderer, []byte("#!/bin/sh\nprintf 'not PNG'\n"), 0700); err != nil {
+	if got, err := os.ReadFile(renderer + ".svg"); err != nil || string(got) != "<svg/>" {
+		t.Fatalf("renderer input = %q, error %v", got, err)
+	}
+	if err := os.WriteFile(renderer, []byte("#!/bin/sh\ncat > \"$0.svg\"\nprintf 'not PNG'\n"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := renderPNG(renderer, []byte("<svg/>")); err == nil {
-		t.Fatal("invalid PNG accepted")
+	if _, err := renderPNG(renderer, []byte("<svg><path/></svg>")); err == nil || err.Error() != "renderer did not produce PNG" {
+		t.Fatalf("invalid PNG: %v", err)
+	}
+	if got, err := os.ReadFile(renderer + ".svg"); err != nil || string(got) != "<svg><path/></svg>" {
+		t.Fatalf("invalid renderer input = %q, error %v", got, err)
 	}
 }
 func TestRendererBufferBound(t *testing.T) {
