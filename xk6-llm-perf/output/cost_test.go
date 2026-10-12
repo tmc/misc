@@ -40,7 +40,7 @@ func TestRecordCost(t *testing.T) {
 		{"missing read", func(m *llm.Measurement) { m.CachedTokens = nil }, false},
 		{"legacy anthropic", func(m *llm.Measurement) { m.CacheWriteTokens = nil }, false},
 		{"estimated", func(m *llm.Measurement) { m.InputTokens.Source = "estimated" }, false},
-		{"inconsistent", func(m *llm.Measurement) { m.UsageDiscrepancy = true }, true},
+		{"provider inconsistent", func(m *llm.Measurement) { n := 151; m.ProviderTotalTokens = &n }, true},
 		{"reasoning overflow", func(m *llm.Measurement) { n := 51; m.ReasoningTokens = &n }, true},
 		{"cache overflow", func(m *llm.Measurement) { n := 101; m.CachedTokens = &n }, true},
 	} {
@@ -119,6 +119,64 @@ func TestCostBucketPrices(t *testing.T) {
 	m.ReasoningTokens = nil
 	a, w, e = recordCost(m, map[string]TokenPrices{"m": rates})
 	if a != nil || w != "reasoning count unavailable" || e != nil {
+		t.Fatal(a, w, e)
+	}
+}
+
+func TestReportedCostIgnoresClientEstimate(t *testing.T) {
+	in, out, zero, total := 21, 8, 0, 29
+	rate := 1.0
+	difference := 10.526
+	m := llm.Measurement{Protocol: "openai-chat", Model: "m", InputTokens: llm.TokenCount{Value: &in, Source: "reported"}, OutputTokens: llm.TokenCount{Value: &out, Source: "reported"}, CachedTokens: &zero, ProviderTotalTokens: &total, PromptDifference: &difference, UsageDiscrepancy: true}
+	models := map[string]TokenPrices{"m": {Input: &rate, Output: &rate}}
+	a, w, e := recordCost(m, models)
+	if e != nil || w != "" || a == nil || math.Abs(*a-.000029) > 1e-20 {
+		t.Fatal(a, w, e)
+	}
+	total = 30
+	if _, _, e := recordCost(m, models); e == nil {
+		t.Fatal("contradictory provider total admitted")
+	}
+	max := int(^uint(0) >> 1)
+	m.InputTokens.Value = &max
+	m.OutputTokens.Value = &max
+	m.ProviderTotalTokens = &max
+	if _, _, e := recordCost(m, models); e == nil {
+		t.Fatal("overflowing input/output sum admitted")
+	}
+}
+func TestLegacyAnthropicCostBeforeInclusiveBounds(t *testing.T) {
+	in, out, read, write := 2, 8, 1000, 0
+	rate := 1.0
+	m := llm.Measurement{Protocol: "anthropic", Model: "m", InputTokens: llm.TokenCount{Value: &in, Source: "reported"}, OutputTokens: llm.TokenCount{Value: &out, Source: "reported"}, CachedTokens: &read}
+	models := map[string]TokenPrices{"m": {Input: &rate, CacheRead: &rate, Output: &rate}}
+	a, w, e := recordCost(m, models)
+	if e != nil || a != nil || w != "cache write presence unavailable" {
+		t.Fatal(a, w, e)
+	}
+	in = 1002
+	m.CacheWriteTokens = &write
+	a, w, e = recordCost(m, models)
+	if e != nil || w != "" || a == nil || math.Abs(*a-.001010) > 1e-18 {
+		t.Fatal(a, w, e)
+	}
+	in = 999
+	if _, _, e := recordCost(m, models); e == nil {
+		t.Fatal("normalized contradictory cache admitted")
+	}
+}
+
+func TestLegacyAnthropicZeroCost(t *testing.T) {
+	zero := 0
+	m := llm.Measurement{Protocol: "anthropic", Model: "m", InputTokens: llm.TokenCount{Value: &zero, Source: "reported"}, OutputTokens: llm.TokenCount{Value: &zero, Source: "reported"}, CachedTokens: &zero}
+	models := map[string]TokenPrices{"m": {}}
+	a, w, e := recordCost(m, models)
+	if e != nil || a != nil || w != "cache write presence unavailable" {
+		t.Fatal(a, w, e)
+	}
+	m.CacheWriteTokens = &zero
+	a, w, e = recordCost(m, models)
+	if e != nil || w != "" || a == nil || *a != 0 {
 		t.Fatal(a, w, e)
 	}
 }

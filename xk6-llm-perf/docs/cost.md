@@ -8,7 +8,9 @@ pricing service or report a provider invoice. No prices are bundled.
 {"currency":"USD","source_url":"https://example.com/prices","effective_date":"2026-10-11","models":{"my-model":{"input":2,"cache_read":1,"cache_write":3,"output":4}}}
 ```
 
-Rates are currency units per million tokens. Use exact model names. The table
+Rates are currency units per million tokens. Use exact requested model names
+(`Measurement.Model`), including gateway routing requests. Observed model
+identities do not select a different price automatically. The table
 is strict JSON, at most 1 MiB; unknown fields, duplicate members, null rates,
 negative rates and nonfinite numbers are rejected. Currency is three uppercase
 letters, not a checked currency registry. Source URL and effective date are
@@ -20,8 +22,10 @@ reasons and no amount. Missing counts or prices produce null amounts with
 reasons; zero tokens need no rate. A zero rate explicitly declares a free bucket.
 A missing model remains unavailable, even for zero tokens.
 
-Input counts include cache reads and writes. Anthropic and providerwire-v4
-require explicit cache bucket counts for positive input. Old Anthropic receipts
+Input counts include cache reads and writes. Anthropic requires an explicit cache-write count even for zero input,
+which establishes the inclusive input convention. Positive input also needs
+an explicit cache-read count. Providerwire-v4 requires both cache counts for
+positive input; its explicit zero total requires no rates. Old Anthropic receipts
 without a cache-write count cannot establish normalized inclusive input and
 are unavailable. OpenAI chat, completions and Responses use an explicit cache
 read count; cache writes are not applicable, and a cache-write rate is rejected.
@@ -31,8 +35,11 @@ unavailable until mapped and validated.
 Reasoning tokens are a subset of output. Without a reasoning rate, output
 prices apply to the whole completion. With a reasoning rate, explicit reasoning
 counts split completion into ordinary and reasoning output, preventing double
-billing. Contradictory cache or reasoning counts and inconsistent usage are
-errors. Estimated or derived counts are unavailable.
+billing. Contradictory cache or reasoning counts and inconsistent provider
+usage are errors. When present, provider total must equal reported input plus
+output. Client
+estimator disagreement does not invalidate consistent reported billing counts.
+Estimated or derived counts are unavailable.
 
 `known_subtotal` sums available eligible records. `total` is null if any eligible
 record is unavailable or records were dropped. This is a retained-run estimate;

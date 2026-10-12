@@ -177,9 +177,6 @@ func DeriveCost(run llm.RunSummary, p Prices) (CostLedger, error) {
 	return l, nil
 }
 func recordCost(m llm.Measurement, models map[string]TokenPrices) (*float64, string, error) {
-	if m.UsageDiscrepancy {
-		return nil, "", fmt.Errorf("inconsistent usage")
-	}
 	if m.InputTokens.Value == nil || m.OutputTokens.Value == nil {
 		return nil, "missing token counts", nil
 	}
@@ -200,6 +197,22 @@ func recordCost(m llm.Measurement, models map[string]TokenPrices) (*float64, str
 	if m.CacheWriteTokens != nil {
 		write = *m.CacheWriteTokens
 	}
+	switch m.Protocol {
+	case "", "openai-chat", "openai-completions", "openai-responses":
+		if write != 0 {
+			return nil, "", fmt.Errorf("unsupported cache write bucket")
+		}
+	case "anthropic":
+		if m.CacheWriteTokens == nil {
+			return nil, "cache write presence unavailable", nil
+		}
+	case "providerwire-v4":
+		if (in > 0 || read > 0) && m.CacheWriteTokens == nil {
+			return nil, "cache write presence unavailable", nil
+		}
+	default:
+		return nil, "unsupported protocol billing convention", nil
+	}
 	if read < 0 || write < 0 || read > in || write > in-read {
 		return nil, "", fmt.Errorf("cache buckets exceed inclusive input")
 	}
@@ -210,17 +223,12 @@ func recordCost(m llm.Measurement, models map[string]TokenPrices) (*float64, str
 			return nil, "", fmt.Errorf("reasoning exceeds output")
 		}
 	}
-	switch m.Protocol {
-	case "", "openai-chat", "openai-completions", "openai-responses":
-		if write != 0 {
-			return nil, "", fmt.Errorf("unsupported cache write bucket")
+	if m.ProviderTotalTokens != nil {
+		total := *m.ProviderTotalTokens
+		// Subtraction avoids overflowing an input+output sum.
+		if total < in || total-in != out {
+			return nil, "", fmt.Errorf("provider usage inconsistent")
 		}
-	case "anthropic", "providerwire-v4":
-		if in > 0 && m.CacheWriteTokens == nil {
-			return nil, "cache write presence unavailable", nil
-		}
-	default:
-		return nil, "unsupported protocol billing convention", nil
 	}
 	rates, ok := models[m.Model]
 	if !ok {
