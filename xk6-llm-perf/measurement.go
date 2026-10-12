@@ -137,6 +137,9 @@ type Measurement struct {
 }
 
 func (u *Usage) UnmarshalJSON(data []byte) error {
+	if err := checkOpenAIUsage(data); err != nil {
+		return err
+	}
 	var v struct {
 		Prompt        *int `json:"prompt_tokens"`
 		Completion    *int `json:"completion_tokens"`

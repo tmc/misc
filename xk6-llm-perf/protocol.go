@@ -85,6 +85,40 @@ func validateRaw(r *RawRequest) error {
 
 func canonicalUsage(raw json.RawMessage, protocol string) (Usage, error) {
 	var u Usage
+	if protocol == "openai-responses" && len(raw) > 0 {
+		if err := checkOpenAIUsage(raw); err != nil {
+			return u, err
+		}
+		var aliases struct {
+			Input        *int `json:"input_tokens"`
+			Prompt       *int `json:"prompt_tokens"`
+			Output       *int `json:"output_tokens"`
+			Completion   *int `json:"completion_tokens"`
+			InputDetails struct {
+				Cached *int `json:"cached_tokens"`
+			} `json:"input_tokens_details"`
+			PromptDetails struct {
+				Cached *int `json:"cached_tokens"`
+			} `json:"prompt_tokens_details"`
+			OutputDetails struct {
+				Reasoning *int `json:"reasoning_tokens"`
+			} `json:"output_tokens_details"`
+			CompletionDetails struct {
+				Reasoning *int `json:"reasoning_tokens"`
+			} `json:"completion_tokens_details"`
+		}
+		if err := json.Unmarshal(raw, &aliases); err != nil {
+			return u, err
+		}
+		for _, pair := range [][2]*int{{aliases.Input, aliases.Prompt}, {aliases.Output, aliases.Completion}, {aliases.InputDetails.Cached, aliases.PromptDetails.Cached}, {aliases.OutputDetails.Reasoning, aliases.CompletionDetails.Reasoning}} {
+			if pair[0] != nil && *pair[0] < 0 || pair[1] != nil && *pair[1] < 0 {
+				return u, fmt.Errorf("negative usage count")
+			}
+			if pair[0] != nil && pair[1] != nil && *pair[0] != *pair[1] {
+				return u, fmt.Errorf("responses usage aliases disagree")
+			}
+		}
+	}
 	if len(raw) == 0 || string(raw) == "null" {
 		return u, nil
 	}
@@ -97,6 +131,17 @@ func canonicalUsage(raw json.RawMessage, protocol string) (Usage, error) {
 	var v map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &v); err != nil {
 		return u, err
+	}
+	// Typed alias admission uses encoding/json's field identity; preserve that
+	// same identity when converting Responses native names through a map.
+	for name, value := range v {
+		for _, canonical := range []string{"input_tokens", "output_tokens", "prompt_tokens", "completion_tokens", "input_tokens_details", "output_tokens_details", "prompt_tokens_details", "completion_tokens_details"} {
+			if name != canonical && strings.EqualFold(name, canonical) {
+				delete(v, name)
+				v[canonical] = value
+				break
+			}
+		}
 	}
 	if n, ok := v["input_tokens"]; ok {
 		v["prompt_tokens"] = n
@@ -114,17 +159,17 @@ func canonicalUsage(raw json.RawMessage, protocol string) (Usage, error) {
 	return u, json.Unmarshal(data, &u)
 }
 
-// checkAnthropicJSON retains member identity before typed or map decoding can
+// checkProviderJSON retains member identity before typed or map decoding can
 // replace duplicate evidence. Null stays available to the usage presence policy.
-func checkAnthropicJSON(data []byte) error {
+func checkProviderJSON(data []byte) error {
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.UseNumber()
 	return jsoncheck.Check(d, jsoncheck.Options{})
 }
 
-// checkAnthropicFields checks case aliases only for fields decoded into fixed
+// checkProviderFields checks case aliases only for fields decoded into fixed
 // structs. Opaque tool inputs and metadata keep their case-sensitive identities.
-func checkAnthropicFields(data []byte, fields ...string) error {
+func checkProviderFields(data []byte, fields ...string) error {
 	var object map[string]json.RawMessage
 	if err := json.Unmarshal(data, &object); err != nil {
 		return err
@@ -134,7 +179,7 @@ func checkAnthropicFields(data []byte, fields ...string) error {
 		for name := range object {
 			if strings.EqualFold(name, field) {
 				if found {
-					return fmt.Errorf("duplicate anthropic JSON field %q", field)
+					return fmt.Errorf("duplicate provider JSON field %q", field)
 				}
 				found = true
 			}
@@ -144,10 +189,10 @@ func checkAnthropicFields(data []byte, fields ...string) error {
 }
 
 func checkAnthropicEnvelope(data []byte) error {
-	if err := checkAnthropicJSON(data); err != nil {
+	if err := checkProviderJSON(data); err != nil {
 		return err
 	}
-	if err := checkAnthropicFields(data, "type", "content", "usage", "message", "delta", "content_block", "index", "error", "id", "model", "stop_reason"); err != nil {
+	if err := checkProviderFields(data, "type", "content", "usage", "message", "delta", "content_block", "index", "error", "id", "model", "stop_reason"); err != nil {
 		return err
 	}
 	var envelope struct {
@@ -161,37 +206,113 @@ func checkAnthropicEnvelope(data []byte) error {
 		return err
 	}
 	if len(envelope.Message) > 0 {
-		if err := checkAnthropicFields(envelope.Message, "usage", "id", "model"); err != nil {
+		if err := checkProviderFields(envelope.Message, "usage", "id", "model"); err != nil {
 			return err
 		}
 	}
 	if len(envelope.Delta) > 0 {
-		if err := checkAnthropicFields(envelope.Delta, "type", "text", "thinking", "partial_json", "stop_reason", "stop_sequence"); err != nil {
+		if err := checkProviderFields(envelope.Delta, "type", "text", "thinking", "partial_json", "stop_reason", "stop_sequence"); err != nil {
 			return err
 		}
 	}
 	for _, block := range append(envelope.Content, envelope.ContentBlock) {
 		if len(block) > 0 {
-			if err := checkAnthropicFields(block, "type", "id", "name", "input", "text", "thinking"); err != nil {
+			if err := checkProviderFields(block, "type", "id", "name", "input", "text", "thinking"); err != nil {
 				return err
 			}
 		}
 	}
 	if len(envelope.Error) > 0 {
-		if err := checkAnthropicFields(envelope.Error, "type", "message"); err != nil {
+		if err := checkProviderFields(envelope.Error, "type", "message"); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+// checkOpenAIUsage checks reported count identities without treating opaque
+// provider extensions as fixed-schema objects.
+func checkOpenAIUsage(data []byte) error {
+	if err := checkProviderJSON(data); err != nil {
+		return err
+	}
+	if err := checkProviderFields(data, "prompt_tokens", "completion_tokens", "total_tokens", "cache_write_tokens", "prompt_tokens_details", "completion_tokens_details", "input_tokens", "output_tokens", "input_tokens_details", "output_tokens_details"); err != nil {
+		return err
+	}
+	var v struct {
+		Prompt     json.RawMessage `json:"prompt_tokens_details"`
+		Completion json.RawMessage `json:"completion_tokens_details"`
+		Input      json.RawMessage `json:"input_tokens_details"`
+		Output     json.RawMessage `json:"output_tokens_details"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	for _, item := range []struct {
+		raw   json.RawMessage
+		field string
+	}{{v.Prompt, "cached_tokens"}, {v.Input, "cached_tokens"}, {v.Completion, "reasoning_tokens"}, {v.Output, "reasoning_tokens"}} {
+		if len(item.raw) > 0 {
+			if err := checkProviderFields(item.raw, item.field); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func checkOpenAIEnvelope(data []byte, responses bool) error {
+	if err := checkProviderJSON(data); err != nil {
+		return err
+	}
+	if err := checkProviderFields(data, "usage"); err != nil {
+		return err
+	}
+	var v struct {
+		Usage    json.RawMessage `json:"usage"`
+		Response json.RawMessage `json:"response"`
+	}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return err
+	}
+	if len(v.Usage) > 0 {
+		if err := checkOpenAIUsage(v.Usage); err != nil {
+			return err
+		}
+	}
+	if responses {
+		if err := checkProviderFields(data, "response"); err != nil {
+			return err
+		}
+		if len(v.Response) > 0 {
+			if err := checkProviderFields(v.Response, "usage"); err != nil {
+				return err
+			}
+			var nested struct {
+				Usage json.RawMessage `json:"usage"`
+			}
+			if err := json.Unmarshal(v.Response, &nested); err != nil {
+				return err
+			}
+			if len(nested.Usage) > 0 {
+				return checkOpenAIUsage(nested.Usage)
+			}
+		}
+	}
+	return nil
+}
+
+func openAIUsageProtocol(protocol string) bool {
+	return protocol == "" || protocol == "openai-chat" || protocol == "openai-completions" || protocol == "openai-responses"
+}
+
 // anthropicUsage accepts only native count sources. Normalized aliases cannot
 // supply missing native counts; when both are reported they must agree.
 func anthropicUsage(raw json.RawMessage) (Usage, error) {
-	if err := checkAnthropicJSON(raw); err != nil {
+	if err := checkProviderJSON(raw); err != nil {
 		return Usage{}, err
 	}
-	if err := checkAnthropicFields(raw, "input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "total_tokens", "prompt_tokens", "completion_tokens"); err != nil {
+	if err := checkProviderFields(raw, "input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "total_tokens", "prompt_tokens", "completion_tokens"); err != nil {
 		return Usage{}, err
 	}
 	var v struct {
@@ -231,6 +352,11 @@ func anthropicUsage(raw json.RawMessage) (Usage, error) {
 }
 
 func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
+	if openAIUsageProtocol(protocol) {
+		if err := checkOpenAIEnvelope(data, protocol == "openai-responses"); err != nil {
+			return CompletionResponse{}, err
+		}
+	}
 	if protocol == "anthropic" {
 		if err := checkAnthropicEnvelope(data); err != nil {
 			return CompletionResponse{}, err
@@ -381,6 +507,11 @@ func decodeResponse(data []byte, protocol string) (CompletionResponse, error) {
 }
 
 func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error) {
+	if openAIUsageProtocol(protocol) {
+		if err := checkOpenAIEnvelope(data, protocol == "openai-responses"); err != nil {
+			return ChatCompletionChunk{}, false, err
+		}
+	}
 	if protocol == "anthropic" {
 		if err := checkAnthropicEnvelope(data); err != nil {
 			return ChatCompletionChunk{}, false, err
