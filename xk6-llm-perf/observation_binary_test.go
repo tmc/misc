@@ -86,14 +86,15 @@ export function handleSummary(data){return {[%q]:JSON.stringify(data),[%q]:JSON.
 		t.Fatal(err)
 	}
 	observed := run.Observation
-	if observed == nil {
-		t.Fatal("observation receipt absent")
+	if observed == nil || observed.InputThroughput == nil || observed.OutputThroughput == nil {
+		t.Fatal("observation receipt or token rates absent")
 	}
 	for name, expected := range map[string]struct {
 		stat  string
 		value float64
 	}{
 		"llm_content_span_windows": {"count", 1}, "llm_content_span_goodput": {"avg", observed.Goodput}, "llm_content_span_duration_ms": {"avg", observed.Duration * 1000}, "llm_content_span_good_requests": {"avg", 1}, "llm_content_span_attempts": {"avg", 2}, "llm_attempts": {"count", 2},
+		"llm_content_span_input_throughput": {"avg", *observed.InputThroughput}, "llm_content_span_output_throughput": {"avg", *observed.OutputThroughput},
 	} {
 		got, ok := summary.Metrics[name].Values[expected.stat]
 		if !ok || math.Abs(got-expected.value) > 1e-12*math.Max(1, math.Abs(expected.value)) {

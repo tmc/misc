@@ -108,7 +108,7 @@ declare module 'k6/x/llm-perf' {
   export interface Concurrency { effective: Weighted; active: Weighted; }
   export interface RateAnalysis {effective:Weighted; active:Weighted; eligible_requests:number; excluded_requests:number; policy:string}
   export interface RunSummary {
-    observation?: {policy: string; started_at: number; finished_at: number; duration: number; attempts: number; good_requests: number; goodput: number};
+    observation?: {policy: string; started_at: number; finished_at: number; duration: number; attempts: number; good_requests: number; goodput: number; input_throughput: number | null; output_throughput: number | null};
     observation_unavailable?: string;
     work_qualified?: number; work_accepted?: number; work_rejected?: number;
     work_unavailable?: number; work_good_requests?: number; work_goodput?: number;

@@ -68,7 +68,12 @@ successful request with content and ends at the final successful content
 response. Failed requests do not define those bounds, including failures before
 or after the content span. They remain in `observation.attempts` and the SLO
 attainment denominator. The good count divided by the observed duration in
-seconds gives `observation.goodput`.
+seconds gives `observation.goodput`. The run's input and output token totals
+divided by the same duration give `observation.input_throughput` and
+`observation.output_throughput`, matching AIPerf's default token throughput.
+Each is null when the corresponding run-level rate is unavailable. Receipts
+written before these fields existed replay without them, and `WriteRun`
+completes them from the retained records.
 
 This is AIPerf's default benchmark-duration policy. AIPerf can instead use
 explicit analysis-window bounds; the existing `RunSummary.goodput` retains this
@@ -85,7 +90,9 @@ changed bounds, duration, population, policy or derived value reject.
 
 A qualified `endMeasurement()` emits one observation into each of
 `llm_content_span_goodput`, `llm_content_span_duration_ms`,
-`llm_content_span_good_requests`, and `llm_content_span_attempts`, and increments
+`llm_content_span_good_requests`, and `llm_content_span_attempts`, one into each
+available `llm_content_span_input_throughput` and
+`llm_content_span_output_throughput`, and increments
 `llm_content_span_windows`. Named goodput searches require exactly one complete
 window per process and verify the duration, population and objective witnesses.
 Multiple window averages cannot silently replace one benchmark span.

@@ -28,7 +28,7 @@ func TestObservationContentWindow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Policy != contentSpanPolicy || got.StartedAt != 1100 || got.FinishedAt != 1180 || got.Duration != .08 || got.Goodput != 12.5 || got.Attempts != 3 || got.GoodRequests != 1 {
+	if got.Policy != contentSpanPolicy || got.StartedAt != 1100 || got.FinishedAt != 1180 || got.Duration != .08 || got.Goodput != 12.5 || got.Attempts != 3 || got.GoodRequests != 1 || got.InputThroughput == nil || *got.InputThroughput != 50 || got.OutputThroughput == nil || *got.OutputThroughput != 50 {
 		t.Fatalf("content observation=%+v", got)
 	}
 	// Declared-window idle and HTTP usage trailers are different windows.
@@ -39,7 +39,7 @@ func TestObservationContentWindow(t *testing.T) {
 	r.InputThroughput = 4.0 / 3
 	r.OutputThroughput = 4.0 / 3
 	got2, err := AnalyzeObservation(r)
-	if err != nil || got2 != got {
+	if err != nil || !got2.equal(got) {
 		t.Fatal("idle changed observation", got2, err)
 	}
 	r.Observation = &got
@@ -48,7 +48,7 @@ func TestObservationContentWindow(t *testing.T) {
 		t.Fatal(err)
 	}
 	replay, err := ReadRun(bytes.NewReader(data))
-	if err != nil || replay.Observation == nil || *replay.Observation != got {
+	if err != nil || replay.Observation == nil || !replay.Observation.equal(got) {
 		t.Fatal("observation replay", err)
 	}
 }
@@ -114,6 +114,10 @@ func TestObservationReceiptReplayRejectsMutation(t *testing.T) {
 		{"goodput", func(o *ObservationReceipt) { o.Goodput = 1 }},
 		{"population", func(o *ObservationReceipt) { o.Attempts++ }},
 		{"good count", func(o *ObservationReceipt) { o.GoodRequests++ }},
+		{"input rate", func(o *ObservationReceipt) { *o.InputThroughput = 4 }},
+		{"output rate", func(o *ObservationReceipt) { *o.OutputThroughput = 4 }},
+		{"input rate null", func(o *ObservationReceipt) { o.InputThroughput = nil }},
+		{"output rate null", func(o *ObservationReceipt) { o.OutputThroughput = nil }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			r := observationRun()
@@ -132,6 +136,114 @@ func TestObservationReceiptReplayRejectsMutation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestObservationTokenRates(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		mutate  func(*RunSummary)
+		in, out *float64
+	}{
+		{"complete", func(r *RunSummary) {}, floatPtr(50), floatPtr(50)},
+		{"reported zero", func(r *RunSummary) {
+			r.Records[0].InputTokens = count(0, "reported")
+			r.InputTokens = 0
+			r.InputThroughput = 0
+		}, floatPtr(0), floatPtr(50)},
+		{"input missing", func(r *RunSummary) {
+			r.Records[0].InputTokens = TokenCount{Source: "unavailable"}
+			r.InputTokens = 0
+			r.MissingInputCounts = 1
+			r.InputThroughput = 0
+		}, nil, floatPtr(50)},
+		{"output missing", func(r *RunSummary) {
+			m := &r.Records[0]
+			m.OutputTokens = TokenCount{Source: "unavailable"}
+			m.DecodeTokens, m.ITL, m.FullResponseITL, m.FirstChunkSource = nil, nil, nil, ""
+			r.OutputTokens = 0
+			r.MissingOutputCounts = 1
+			r.OutputThroughput = 0
+		}, floatPtr(50), nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := observationRun()
+			tc.mutate(&r)
+			got, err := AnalyzeObservation(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !got.equal(ObservationReceipt{Policy: got.Policy, StartedAt: 1100, FinishedAt: 1180, Duration: got.Duration, Attempts: 1, GoodRequests: 1, Goodput: got.Goodput, InputThroughput: tc.in, OutputThroughput: tc.out}) {
+				t.Fatalf("rates in=%v out=%v", got.InputThroughput, got.OutputThroughput)
+			}
+			r.Observation = &got
+			var buf bytes.Buffer
+			if err := WriteRun(&buf, r); err != nil {
+				t.Fatal(err)
+			}
+			replay, err := ReadRun(&buf)
+			if err != nil || !replay.Observation.equal(got) {
+				t.Fatal("replay", err)
+			}
+		})
+	}
+}
+
+func TestObservationLegacyReceipt(t *testing.T) {
+	r := observationRun()
+	o, err := AnalyzeObservation(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Observation = &o
+	data, err := json.Marshal(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(data, &fields); err != nil {
+		t.Fatal(err)
+	}
+	observed := fields["observation"].(map[string]any)
+	delete(observed, "input_throughput")
+	delete(observed, "output_throughput")
+	legacy, err := json.Marshal(fields)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replay, err := ReadRun(bytes.NewReader(legacy))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if replay.Observation.InputThroughput != nil || replay.Observation.OutputThroughput != nil {
+		t.Fatal("legacy receipt admitted token rates")
+	}
+	var buf bytes.Buffer
+	if err := WriteRun(&buf, replay); err != nil {
+		t.Fatal(err)
+	}
+	canonical, err := ReadRun(&buf)
+	if err != nil || !canonical.Observation.equal(o) || canonical.Observation.legacy {
+		t.Fatal("canonical rewrite", err)
+	}
+	delete(observed, "goodput")
+	observed["goodput"] = 1.0
+	if _, err := ReadRun(bytes.NewReader(mustJSON(t, fields))); err == nil {
+		t.Fatal("legacy receipt skipped goodput check")
+	}
+	observed["goodput"] = o.Goodput
+	observed["input_throughput"] = 50.0
+	if _, err := ReadRun(bytes.NewReader(mustJSON(t, fields))); err == nil {
+		t.Fatal("one token rate accepted")
+	}
+}
+
+func mustJSON(t *testing.T, v any) []byte {
+	t.Helper()
+	data, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
 }
 
 func ExampleAnalyzeObservation() {

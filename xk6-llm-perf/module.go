@@ -208,6 +208,12 @@ func (root *rootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 			mi.metrics.RecordMetric("llm_content_span_duration_ms", observed.Duration*1000)
 			mi.metrics.RecordMetric("llm_content_span_good_requests", float64(observed.GoodRequests))
 			mi.metrics.RecordMetric("llm_content_span_attempts", float64(observed.Attempts))
+			if v := observed.InputThroughput; v != nil {
+				mi.metrics.RecordMetric("llm_content_span_input_throughput", *v)
+			}
+			if v := observed.OutputThroughput; v != nil {
+				mi.metrics.RecordMetric("llm_content_span_output_throughput", *v)
+			}
 		}
 		value, err := jsonValue(rt, s)
 		must(err)

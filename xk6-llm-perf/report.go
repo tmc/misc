@@ -271,7 +271,7 @@ func validateRun(run RunSummary) error {
 		if err != nil {
 			return err
 		}
-		if *run.Observation != observed {
+		if !run.Observation.equal(observed) {
 			return fmt.Errorf("observation receipt disagrees with retained records")
 		}
 	}
@@ -515,6 +515,14 @@ func WriteRun(w io.Writer, run RunSummary) error {
 	run.OutputThroughput = 0
 	if run.OutputThroughputAvailable() {
 		run.OutputThroughput = float64(run.OutputTokens) / run.Duration
+	}
+	if run.Observation != nil {
+		// validateRun matched the receipt; this completes a legacy one.
+		observed, err := observationReceipt(run)
+		if err != nil {
+			return err
+		}
+		run.Observation = &observed
 	}
 	data, err := json.Marshal(run)
 	if err != nil {

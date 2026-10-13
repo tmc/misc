@@ -1,26 +1,66 @@
 package llmperf
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 const contentSpanPolicy = "single-process-successful-content-span-v1"
 
-// ObservationReceipt retains goodput over the successful content span.
-// Timestamps are Unix milliseconds; Duration is seconds. Attempts includes
-// failed requests, which do not define the content span.
+// ObservationReceipt retains goodput and token throughput over the successful
+// content span. Timestamps are Unix milliseconds; Duration is seconds.
+// Attempts includes failed requests, which do not define the content span.
+// InputThroughput and OutputThroughput divide the run's token totals by
+// Duration. They are nil when the run-level rate is unavailable, and in
+// receipts written before these fields existed.
 type ObservationReceipt struct {
-	Policy       string  `json:"policy"`
-	StartedAt    float64 `json:"started_at"`
-	FinishedAt   float64 `json:"finished_at"`
-	Duration     float64 `json:"duration"`
-	Attempts     int     `json:"attempts"`
-	GoodRequests int     `json:"good_requests"`
-	Goodput      float64 `json:"goodput"`
+	Policy           string   `json:"policy"`
+	StartedAt        float64  `json:"started_at"`
+	FinishedAt       float64  `json:"finished_at"`
+	Duration         float64  `json:"duration"`
+	Attempts         int      `json:"attempts"`
+	GoodRequests     int      `json:"good_requests"`
+	Goodput          float64  `json:"goodput"`
+	InputThroughput  *float64 `json:"input_throughput"`
+	OutputThroughput *float64 `json:"output_throughput"`
+
+	// legacy records that the decoded receipt predates the token rates.
+	legacy bool
+}
+
+func (o *ObservationReceipt) UnmarshalJSON(data []byte) error {
+	type plain ObservationReceipt
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	if err := json.Unmarshal(data, (*plain)(o)); err != nil {
+		return err
+	}
+	_, in := fields["input_throughput"]
+	_, out := fields["output_throughput"]
+	if in != out {
+		return fmt.Errorf("observation token rates must be present together")
+	}
+	o.legacy = !in
+	return nil
+}
+
+// equal reports whether o retains the receipt p recomputed from records.
+// A legacy receipt has no token rates to compare.
+func (o ObservationReceipt) equal(p ObservationReceipt) bool {
+	rate := func(a, b *float64) bool { return a == nil && b == nil || a != nil && b != nil && *a == *b }
+	return (o.legacy || rate(o.InputThroughput, p.InputThroughput) && rate(o.OutputThroughput, p.OutputThroughput)) &&
+		o.Policy == p.Policy && o.StartedAt == p.StartedAt && o.FinishedAt == p.FinishedAt && o.Duration == p.Duration &&
+		o.Attempts == p.Attempts && o.GoodRequests == p.GoodRequests && o.Goodput == p.Goodput
 }
 
 // AnalyzeObservation derives goodput from complete validated run records.
 // The span starts at the earliest successful request with content and ends at
 // the final successful content response. It excludes usage-only trailers and
 // idle time outside that span. Missing or incomplete observations are errors.
+// Token rates use the run's whole successful population, as in AIPerf's
+// default benchmark duration.
 func AnalyzeObservation(run RunSummary) (ObservationReceipt, error) {
 	if err := validateRun(run); err != nil {
 		return ObservationReceipt{}, err
@@ -75,6 +115,14 @@ func observationReceipt(run RunSummary) (ObservationReceipt, error) {
 	result.Goodput = float64(result.GoodRequests) / result.Duration
 	if !finite(result.Goodput) {
 		return ObservationReceipt{}, fmt.Errorf("observation goodput is not finite")
+	}
+	if run.InputThroughputAvailable() {
+		v := float64(run.InputTokens) / result.Duration
+		result.InputThroughput = &v
+	}
+	if run.OutputThroughputAvailable() {
+		v := float64(run.OutputTokens) / result.Duration
+		result.OutputThroughput = &v
 	}
 	return result, nil
 }

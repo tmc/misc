@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add input and output token throughput over the observation content span,
+  matching AIPerf's default benchmark duration.
+
 - Export token throughput as unavailable when successful counts are missing;
   keep historical partial rates readable without qualifying them as totals.
 

@@ -29,6 +29,8 @@ var MetricDefinitions = []struct {
 	{Name: "llm_content_span_duration_ms", Type: metrics.Trend, ValueType: metrics.Time},
 	{Name: "llm_content_span_good_requests", Type: metrics.Trend},
 	{Name: "llm_content_span_attempts", Type: metrics.Trend},
+	{Name: "llm_content_span_input_throughput", Type: metrics.Trend},
+	{Name: "llm_content_span_output_throughput", Type: metrics.Trend},
 	{Name: "llm_work_accepted", Type: metrics.Counter},
 	{Name: "llm_work_rejected", Type: metrics.Counter},
 	{Name: "llm_work_unavailable", Type: metrics.Counter},
