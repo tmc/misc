@@ -7,6 +7,10 @@
   field under encoding/json case folding, and null or undefined values, are
   refused before dispatch.
 
+- Read SGLang's top-level `usage.reasoning_tokens` as reasoning evidence in
+  all OpenAI-shaped usage (chat, completions, Responses, request templates
+  and SOLIDO); refuse it when it disagrees with the details count.
+
 - Add input and output token throughput over the observation content span,
   matching AIPerf's default benchmark duration.
 

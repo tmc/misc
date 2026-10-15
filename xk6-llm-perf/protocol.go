@@ -236,7 +236,7 @@ func checkOpenAIUsage(data []byte) error {
 	if err := checkProviderJSON(data); err != nil {
 		return err
 	}
-	if err := checkProviderFields(data, "prompt_tokens", "completion_tokens", "total_tokens", "cache_write_tokens", "prompt_tokens_details", "completion_tokens_details", "input_tokens", "output_tokens", "input_tokens_details", "output_tokens_details"); err != nil {
+	if err := checkProviderFields(data, "prompt_tokens", "completion_tokens", "total_tokens", "cache_write_tokens", "reasoning_tokens", "prompt_tokens_details", "completion_tokens_details", "input_tokens", "output_tokens", "input_tokens_details", "output_tokens_details"); err != nil {
 		return err
 	}
 	var v struct {

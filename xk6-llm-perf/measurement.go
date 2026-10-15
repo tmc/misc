@@ -145,6 +145,7 @@ func (u *Usage) UnmarshalJSON(data []byte) error {
 		Completion    *int `json:"completion_tokens"`
 		Total         *int `json:"total_tokens"`
 		CacheWrite    *int `json:"cache_write_tokens"`
+		Reasoning     *int `json:"reasoning_tokens"`
 		PromptDetails struct {
 			Cached *int `json:"cached_tokens"`
 		} `json:"prompt_tokens_details"`
@@ -156,10 +157,18 @@ func (u *Usage) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	*u = Usage{}
-	for _, p := range []*int{v.Prompt, v.Completion, v.Total, v.PromptDetails.Cached, v.CompletionDetails.Reasoning, v.CacheWrite} {
+	for _, p := range []*int{v.Prompt, v.Completion, v.Total, v.PromptDetails.Cached, v.CompletionDetails.Reasoning, v.Reasoning, v.CacheWrite} {
 		if p != nil && *p < 0 {
 			return fmt.Errorf("negative usage count")
 		}
+	}
+	// SGLang reports reasoning beside the counts rather than in the details.
+	reasoning := v.CompletionDetails.Reasoning
+	if v.Reasoning != nil {
+		if reasoning != nil && *reasoning != *v.Reasoning {
+			return fmt.Errorf("usage reasoning aliases disagree")
+		}
+		reasoning = v.Reasoning
 	}
 	if v.Prompt != nil {
 		u.PromptTokens, u.promptPresent = *v.Prompt, true
@@ -170,7 +179,7 @@ func (u *Usage) UnmarshalJSON(data []byte) error {
 	if v.Total != nil {
 		u.TotalTokens, u.totalPresent = *v.Total, true
 	}
-	u.CachedTokens, u.ReasoningTokens = v.PromptDetails.Cached, v.CompletionDetails.Reasoning
+	u.CachedTokens, u.ReasoningTokens = v.PromptDetails.Cached, reasoning
 	u.CacheWriteTokens = v.CacheWrite
 	return nil
 }

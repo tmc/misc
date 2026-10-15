@@ -110,3 +110,67 @@ func TestResponsesCaseAndDetailAliases(t *testing.T) {
 		t.Fatalf("consistentdetail identity: %+v %v", u, err)
 	}
 }
+
+func TestOpenAITopLevelReasoningUsage(t *testing.T) {
+	tests := []struct {
+		name  string
+		usage string
+		want  *int
+		fail  bool
+	}{
+		{"top level", `{"prompt_tokens":5,"completion_tokens":4,"reasoning_tokens":3}`, intPtr(3), false},
+		{"top level zero", `{"prompt_tokens":5,"completion_tokens":4,"reasoning_tokens":0}`, intPtr(0), false},
+		{"top level null", `{"prompt_tokens":5,"completion_tokens":4,"reasoning_tokens":null}`, nil, false},
+		{"details", `{"completion_tokens_details":{"reasoning_tokens":3}}`, intPtr(3), false},
+		{"agree", `{"reasoning_tokens":3,"completion_tokens_details":{"reasoning_tokens":3}}`, intPtr(3), false},
+		{"null detail", `{"reasoning_tokens":3,"completion_tokens_details":{"reasoning_tokens":null}}`, intPtr(3), false},
+		{"disagree", `{"reasoning_tokens":3,"completion_tokens_details":{"reasoning_tokens":2}}`, nil, true},
+		{"negative", `{"reasoning_tokens":-1}`, nil, true},
+		{"case alias", `{"reasoning_tokens":3,"Reasoning_Tokens":3}`, nil, true},
+		{"duplicate", `{"reasoning_tokens":-1,"reasoning_tokens":3}`, nil, true},
+	}
+	for _, protocol := range []string{"openai-chat", "openai-completions", "openai-responses", "json"} {
+		for _, tt := range tests {
+			u, err := canonicalUsage(json.RawMessage(tt.usage), protocol)
+			if (err != nil) != tt.fail || !tt.fail && !sameCount(u.ReasoningTokens, tt.want) {
+				t.Errorf("%s/%s: reasoning=%v err=%v", protocol, tt.name, u.ReasoningTokens, err)
+			}
+		}
+	}
+	if _, err := canonicalUsage(json.RawMessage(`{"reasoning_tokens":2,"output_tokens_details":{"reasoning_tokens":3}}`), "openai-responses"); err == nil {
+		t.Error("responses detail and top-level reasoning disagreement admitted")
+	}
+}
+
+// TestOpenAIChatUsageBuckets covers the SGLang top-level reasoning count and
+// the TRT-LLM prompt cache count in final streamed and unary chat usage.
+func TestOpenAIChatUsageBuckets(t *testing.T) {
+	usage := `{"prompt_tokens":5,"completion_tokens":4,"total_tokens":9,"reasoning_tokens":3,"prompt_tokens_details":{"cached_tokens":2}}`
+	for _, stream := range []bool{false, true} {
+		t.Run(fmt.Sprintf("stream=%v", stream), func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if !stream {
+					fmt.Fprint(w, openAIAdmissionBody("openai-chat", usage, false))
+					return
+				}
+				w.Header().Set("Content-Type", "text/event-stream")
+				fmt.Fprint(w, "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hello\"},\"finish_reason\":\"stop\"}]}\n\n")
+				fmt.Fprintf(w, "data: {\"choices\":[],\"usage\":%s}\n\ndata: [DONE]\n\n", usage)
+			}))
+			defer server.Close()
+			c := setupTestClient(t, server.URL)
+			c.config.StrictMeasurement = true
+			v := protocolRequest(t, c, CompletionRequest{Raw: &RawRequest{Protocol: "openai-chat", Stream: &stream, Path: "/work", Body: map[string]any{"messages": []Message{{Role: "user", Content: "hello"}}}}})
+			r, ok := v.(map[string]any)
+			if !ok {
+				t.Fatalf("response=%T %+v", v, v)
+			}
+			for _, key := range []string{"usage", "measurement"} {
+				got, _ := r[key].(map[string]any)
+				if fmt.Sprint(got["reasoning_tokens"]) != "3" || fmt.Sprint(got["cached_tokens"]) != "2" {
+					t.Fatalf("%s=%v", key, got)
+				}
+			}
+		})
+	}
+}

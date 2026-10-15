@@ -87,3 +87,12 @@ unavailable when omitted or null; reported zero remains zero. Measurement
 records add nullable `cache_write_tokens`, and `llm_cache_write_tokens` counts
 reported writes on successful recorded requests. Previously saved version-1
 records retain their original prompt counts when replayed.
+
+OpenAI-shaped usage (chat, completions, Responses, request templates and
+SOLIDO) reads `reasoning_tokens` from `completion_tokens_details`
+(`output_tokens_details` for Responses) or from the top level of `usage`,
+where SGLang reports it. When both are present in one usage object they must
+agree; a disagreement, a negative count or a case-variant duplicate is
+refused. Across streamed usage chunks the last reported count wins. `cached_tokens` comes from `prompt_tokens_details`
+(`input_tokens_details` for Responses), in unary responses and in the final
+streamed usage chunk alike. Absent or null counts remain unavailable.
