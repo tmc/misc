@@ -16,6 +16,9 @@
   and Responses event type, delta, item, status, output and content-part
   fields. Function arguments and extension objects stay opaque.
 
+- Report both incomplete eligible usage and dropped records as cost ledger
+  unavailability causes; dropped records no longer mask the former.
+
 - Add input and output token throughput over the observation content span,
   matching AIPerf's default benchmark duration.
 

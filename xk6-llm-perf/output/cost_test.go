@@ -94,6 +94,43 @@ func TestCostLedgerUnavailableAndProvenance(t *testing.T) {
 	}
 }
 
+func TestCostLedgerUnavailableReasons(t *testing.T) {
+	p, err := ReadPrices(strings.NewReader(testPrices))
+	if err != nil {
+		t.Fatal(err)
+	}
+	in, out, zero := 10, 5, 0
+	priced := llm.Measurement{SchemaVersion: 1, Attempted: true, Recorded: true, Good: true, Phase: "measurement", Outcome: "success", Protocol: "anthropic", Model: "m", StartedAt: 1100, DispatchedAt: 1100, FinishedAt: 1200, FullResponseLatency: 100, InputTokens: llm.TokenCount{Value: &in, Source: "reported"}, OutputTokens: llm.TokenCount{Value: &out, Source: "reported"}, CachedTokens: &zero, CacheWriteTokens: &zero, ReasoningTokens: &zero}
+	legacy := priced
+	legacy.CacheWriteTokens = nil
+	for _, tc := range []struct {
+		name    string
+		record  llm.Measurement
+		dropped int
+		want    string
+	}{
+		{"complete", priced, 0, ""},
+		{"incomplete", legacy, 0, "incomplete eligible usage or prices"},
+		{"dropped", priced, 1, "dropped records"},
+		{"incomplete and dropped", legacy, 1, "incomplete eligible usage or prices; dropped records"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			n := 1 + tc.dropped
+			r := llm.RunSummary{SchemaVersion: 1, RunID: "cost", StartedAt: 1000, FinishedAt: 2000, Duration: 1, Attempts: n, Successes: n, GoodRequests: n, InputTokens: int64(in * n), OutputTokens: int64(out * n), Goodput: float64(n), InputThroughput: float64(in * n), OutputThroughput: float64(out * n), DroppedRecords: tc.dropped, Records: []llm.Measurement{tc.record}}
+			l, err := DeriveCost(r, p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if l.Unavailable != tc.want || (l.Total == nil) != (tc.want != "") {
+				t.Fatalf("ledger unavailable %q total %v, want %q", l.Unavailable, l.Total, tc.want)
+			}
+			if tc.record.CacheWriteTokens == nil && (l.Records[0].Unavailable != "cache write presence unavailable" || l.Records[0].Amount != nil) {
+				t.Fatalf("record unavailable %q amount %v", l.Records[0].Unavailable, l.Records[0].Amount)
+			}
+		})
+	}
+}
+
 func TestPriceModelIdentity(t *testing.T) {
 	p, err := ReadPrices(strings.NewReader(`{"currency":"USD","source_url":"https://example.com/prices","effective_date":"2026-10-11","models":{"Model":{"input":1},"model":{"input":2}}}`))
 	if err != nil || len(p.Models) != 2 || *p.Models["Model"].Input != 1 || *p.Models["model"].Input != 2 {

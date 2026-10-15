@@ -109,7 +109,8 @@ type CostRecord struct {
 }
 
 // CostLedger is a derived estimate for retained measured successes, not a provider bill.
-// Total is unavailable if any eligible record is unavailable or records were dropped.
+// Total is unavailable if any eligible record is unavailable or records were dropped;
+// Unavailable names each cause, and record reasons stay on their records.
 type CostLedger struct {
 	SchemaVersion int          `json:"schema_version"`
 	RunID         string       `json:"run_id"`
@@ -168,7 +169,10 @@ func DeriveCost(run llm.RunSummary, p Prices) (CostLedger, error) {
 		l.Records = append(l.Records, r)
 	}
 	if run.DroppedRecords > 0 {
-		l.Unavailable = "dropped records"
+		if l.Unavailable != "" {
+			l.Unavailable += "; "
+		}
+		l.Unavailable += "dropped records"
 	}
 	if l.Unavailable == "" {
 		v := l.KnownSubtotal

@@ -42,7 +42,10 @@ estimator disagreement does not invalidate consistent reported billing counts.
 Estimated or derived counts are unavailable.
 
 `known_subtotal` sums available eligible records. `total` is null if any eligible
-record is unavailable or records were dropped. This is a retained-run estimate;
+record is unavailable or records were dropped. The ledger `unavailable` field
+names every cause that applies (`incomplete eligible usage or prices`,
+`dropped records`, or both separated by `; `); each record keeps its own
+reason. This is a retained-run estimate;
 boundary exclusions, in-flight requests, failed requests and provider billing
 rules can create additional charges outside this ledger. Cost output is JSON
 only and cannot be streamed or posted to a sink.
