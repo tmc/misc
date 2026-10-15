@@ -62,6 +62,13 @@ export default function () {
 Operational failures return a JavaScript Error object. Check the response and
 set a `checks` threshold so failed checks fail the run.
 
+Unknown request fields are refused. Engine body fields that the typed request
+does not define, such as `ignore_eos` or `min_tokens`, go in `extensions` and
+are sent beside the typed fields: `extensions: { ignore_eos: true }`. A key that
+names a typed field under the case folding Go's encoding/json uses, such as
+`messages`, `Stream`, `ſtream` or `model`, is refused before dispatch, as is a
+null or undefined value; omit a field to leave it absent.
+
 ## Configuration
 
 | Option | Behavior |

@@ -136,13 +136,26 @@ export function dag(nodes, execute) {
     return results;
 }
 
-// Each turn may supply request options, such as max_tokens or work. The helper
-// owns messages and streaming; request options cannot replace either.
+// Each turn may supply request options, such as max_tokens, work or engine
+// extensions like {ignore_eos: true}. The helper owns messages and streaming;
+// neither request options nor extensions can replace either.
 export function conversation(client, turns, initial = [], policy = 'append') {
     if (!Array.isArray(turns) || turns.length > 1000 || !Array.isArray(initial) || initial.length > 1000 || !['append', 'independent'].includes(policy)) throw new Error('invalid conversation');
     for (const message of initial) if (!message || typeof message.role !== 'string' || typeof message.content !== 'string' || message.content.length > 1024 * 1024) throw new Error('invalid initial context');
     for (const turn of turns) if (!turn || typeof turn.prompt !== 'string' || turn.prompt.length > 1024 * 1024 || !Number.isFinite(turn.gap || 0) || (turn.gap || 0) < 0 || (turn.gap || 0) > 3600) throw new Error('invalid conversation turn');
-    for (const turn of turns) if (turn.request !== undefined && (!turn.request || typeof turn.request !== 'object' || Array.isArray(turn.request) || 'messages' in turn.request || 'stream' in turn.request)) throw new Error('invalid conversation request options');
+    // fold matches keys the way encoding/json does: ASCII case plus the long s
+    // and Kelvin sign, which fold to s and k.
+    const fold = key => key.toLowerCase().replace(/\u017f/g, 's');
+    const owned = key => ['messages', 'stream'].includes(fold(key));
+    for (const turn of turns) {
+        const request = turn.request;
+        if (request === undefined) continue;
+        if (!request || typeof request !== 'object' || Array.isArray(request) || Object.keys(request).some(owned)) throw new Error('invalid conversation request options');
+        const keys = Object.keys(request).filter(key => fold(key) === 'extensions');
+        if (keys.length > 1) throw new Error('invalid conversation request extensions');
+        const extensions = keys.length ? request[keys[0]] : undefined;
+        if (extensions !== undefined && (!extensions || typeof extensions !== 'object' || Array.isArray(extensions) || Object.keys(extensions).some(owned))) throw new Error('invalid conversation request extensions');
+    }
     let messages = initial.slice();
     const results = [];
     for (const turn of turns) {

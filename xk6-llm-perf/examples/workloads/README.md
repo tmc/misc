@@ -48,7 +48,15 @@ wait each turn gap after the preceding response completes. `append` is default;
 `independent` resets to the initial context each turn. Validate all turns before
 sending. Each turn may include `request` options such as `max_tokens`,
 `temperature` or `work`; the helper owns `messages` and `stream` and rejects
-those keys in `request` before dispatch. See [multi-turn.js](multi-turn.js).
+those keys, in any case folding, in `request` or its `extensions` before
+dispatch. Engine fields the
+typed request lacks go in `extensions`, for example
+`request: {max_tokens: 256, extensions: {ignore_eos: true}}` to hold vLLM,
+SGLang or TensorRT-LLM output length fixed; every turn still appends the live
+reply and records its measurement. The client refuses any other extension key
+that names a typed field, such as `model`, or has a null or undefined value,
+when that turn is sent. See
+[multi-turn.js](multi-turn.js).
 DAGs validate cycles before side effects; failed parents skip their
 descendants, and callbacks receive the completed parent-result map.
 

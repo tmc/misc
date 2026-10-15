@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add `extensions` to typed chat requests for engine body fields such as
+  `ignore_eos`, so `conversation()` can fix output length; keys naming a typed
+  field under encoding/json case folding, and null or undefined values, are
+  refused before dispatch.
+
 - Add input and output token throughput over the observation content span,
   matching AIPerf's default benchmark duration.
 

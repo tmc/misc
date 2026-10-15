@@ -122,15 +122,18 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 
 	serializationStart := time.Now()
 	// Prepare request body
-	var payload any = req
+	var body []byte
+	var err error
 	path := "/chat/completions"
 	if req.Raw != nil {
-		payload, path = req.Raw.Body, req.Raw.Path
+		path = req.Raw.Path
 		if _, ok := req.Raw.Body["model"]; req.Raw.Body != nil && !ok && req.Model != "" && c.protocol != "tgi" && c.protocol != "hf-tei-rankings" && c.protocol != "nim-image-retrieval" && c.protocol != "nv-embedqa" && c.protocol != "solido-rag" && c.protocol != "providerwire-v4" {
 			req.Raw.Body["model"] = req.Model
 		}
+		body, err = json.Marshal(req.Raw.Body)
+	} else {
+		body, err = marshalTyped(req)
 	}
-	body, err := json.Marshal(payload)
 	contentType := "application/json"
 	if req.Raw != nil && req.Raw.Multipart != nil {
 		body, contentType, err = encodeMultipart(req.Raw.Multipart)
@@ -1080,7 +1083,18 @@ func validateCompletionRequest(req CompletionRequest) error {
 				}
 			}
 		}
+		if req.Extensions != nil {
+			return fmt.Errorf("extensions require a typed request; put raw fields in body")
+		}
 		return validateRaw(req.Raw)
+	}
+	for key, value := range req.Extensions {
+		if key == "" || namesTypedField(key) {
+			return fmt.Errorf("extension field %q is empty or names a typed request field", key)
+		}
+		if value == nil {
+			return fmt.Errorf("extension field %q is null or undefined; omit absent fields", key)
+		}
 	}
 	if strings.TrimSpace(req.Model) == "" {
 		return fmt.Errorf("model is required")

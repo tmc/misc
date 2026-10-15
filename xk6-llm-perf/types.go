@@ -1,6 +1,11 @@
 package llmperf
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strings"
+)
 
 type Message struct {
 	Role             string     `json:"role"`
@@ -36,6 +41,56 @@ type CompletionRequest struct {
 	Tools               []json.RawMessage `json:"tools,omitempty"`
 	ToolChoice          any               `json:"tool_choice,omitempty"`
 	MaxCompletionTokens int               `json:"max_completion_tokens,omitempty"`
+	// Extensions holds engine body fields, such as ignore_eos, that the
+	// typed request does not define. Keys may not name a typed field.
+	Extensions map[string]any `json:"extensions,omitempty"`
+}
+
+// typedRequestFields holds the JSON names of CompletionRequest fields.
+var typedRequestFields = func() []string {
+	var fields []string
+	t := reflect.TypeFor[CompletionRequest]()
+	for i := range t.NumField() {
+		name, _, _ := strings.Cut(t.Field(i).Tag.Get("json"), ",")
+		fields = append(fields, name)
+	}
+	return fields
+}()
+
+// namesTypedField reports whether key matches a typed request field under
+// the Unicode simple case folding encoding/json uses to match keys, so an
+// extension can neither shadow a typed field nor alias it ("ſtream" for
+// stream) on a server that decodes keys the same way.
+func namesTypedField(key string) bool {
+	for _, name := range typedRequestFields {
+		if strings.EqualFold(key, name) {
+			return true
+		}
+	}
+	return false
+}
+
+// marshalTyped encodes the wire body of a typed request, merging its
+// extension fields beside the typed ones.
+func marshalTyped(req CompletionRequest) ([]byte, error) {
+	extensions := req.Extensions
+	req.Extensions = nil
+	data, err := json.Marshal(req)
+	if err != nil || len(extensions) == 0 {
+		return data, err
+	}
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(data, &body); err != nil {
+		return nil, err
+	}
+	for key, value := range extensions {
+		raw, err := json.Marshal(value)
+		if err != nil {
+			return nil, fmt.Errorf("marshal extension %q: %w", key, err)
+		}
+		body[key] = raw
+	}
+	return json.Marshal(body)
 }
 
 type StreamOptions struct {

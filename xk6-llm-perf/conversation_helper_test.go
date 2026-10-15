@@ -30,15 +30,16 @@ const client = {chat:{completions:{create(request) {
 }}}};
 const work = {minOutputTokens:2};
 const initial = [{role:'system',content:'system'}];
-const turns = [{prompt:'first',request:{max_tokens:8,temperature:0,work}}, {prompt:'second',request:{max_tokens:16}}];
+const turns = [{prompt:'first',request:{max_tokens:8,temperature:0,work,extensions:{ignore_eos:true}}}, {prompt:'second',request:{max_tokens:16,extensions:undefined}}];
 conversation(client, turns, initial);
 if (calls.length !== 2 || calls[0].max_tokens !== 8 || calls[0].temperature !== 0 || calls[0].work.minOutputTokens !== 2 || calls[1].max_tokens !== 16) throw new Error('request options lost');
+if (calls[0].extensions.ignore_eos !== true || calls[1].extensions !== undefined) throw new Error('request extensions lost');
 if (calls[0].messages.length !== 2 || calls[1].messages.length !== 4 || !calls.every(r => r.stream)) throw new Error('conversation context lost');
 if (initial.length !== 1 || turns[0].request.messages !== undefined) throw new Error('input mutated');
 calls.length = 0;
 conversation(client, [{prompt:'first'}, {prompt:'second'}], initial, 'independent');
 if (calls.some(r => r.messages.length !== 2)) throw new Error('independent context lost');
-for (const request of [null, [], 'options', {messages:[]}, {stream:false}]) {
+for (const request of [null, [], 'options', {messages:[]}, {stream:false}, {extensions:null}, {extensions:[]}, {extensions:{messages:[]}}, {extensions:{Stream:false}}, {Messages:[]}, {'\u017ftream':false}, {Extensions:{stream:false}}, {Extensions:{'\u017ftream':false}}, {extensions:{},Extensions:{}}]) {
     calls.length = 0;
     let rejected = false;
     try { conversation(client, [{prompt:'valid'}, {prompt:'invalid',request}]); } catch (error) { rejected = true; }

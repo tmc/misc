@@ -45,6 +45,8 @@ declare module 'k6/x/llm-perf' {
     stream_options?: { include_usage?: boolean; continuous_usage_stats?: boolean };
     tools?: Record<string, unknown>[]; tool_choice?: unknown;
     work?: WorkExpectation; measurement?: TokenCounts; scheduledAt?: number; cancelAfter?: string;
+    /** Engine body fields sent beside the typed ones, e.g. { ignore_eos: true }. Keys naming a typed field in any case folding, and null or undefined values, are refused. */
+    extensions?: Record<string, unknown>;
   }
   export type Protocol = 'providerwire-v4' | 'openai-chat' | 'openai-completions' | 'openai-responses' | 'anthropic' | 'tgi' | 'json' | 'audio-transcription' | 'image' | 'video' | 'retrieval' | 'openai-embeddings' | 'cohere-rankings' | 'nim-rankings' | 'hf-tei-rankings' | 'nim-image-retrieval' | 'nv-embedqa' | 'chat-embeddings' | 'nim-embeddings' | 'solido-rag';
   export interface RawRequest {
