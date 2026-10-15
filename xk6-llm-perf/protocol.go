@@ -167,32 +167,35 @@ func checkProviderJSON(data []byte) error {
 	return jsoncheck.Check(d, jsoncheck.Options{})
 }
 
-// checkProviderFields checks case aliases only for fields decoded into fixed
-// structs. Opaque tool inputs and metadata keep their case-sensitive identities.
-func checkProviderFields(data []byte, fields ...string) error {
+// providerFields checks case aliases only for fields decoded into fixed
+// structs and returns their values by canonical name. Opaque tool inputs and
+// metadata keep their case-sensitive identities.
+func providerFields(data []byte, fields ...string) (map[string]json.RawMessage, error) {
 	var object map[string]json.RawMessage
 	if err := json.Unmarshal(data, &object); err != nil {
-		return err
+		return nil, err
 	}
+	values := make(map[string]json.RawMessage, len(fields))
 	for _, field := range fields {
 		found := false
-		for name := range object {
+		for name, value := range object {
 			if strings.EqualFold(name, field) {
 				if found {
-					return fmt.Errorf("duplicate provider JSON field %q", field)
+					return nil, fmt.Errorf("duplicate provider JSON field %q", field)
 				}
 				found = true
+				values[field] = value
 			}
 		}
 	}
-	return nil
+	return values, nil
 }
 
 func checkAnthropicEnvelope(data []byte) error {
 	if err := checkProviderJSON(data); err != nil {
 		return err
 	}
-	if err := checkProviderFields(data, "type", "content", "usage", "message", "delta", "content_block", "index", "error", "id", "model", "stop_reason"); err != nil {
+	if _, err := providerFields(data, "type", "content", "usage", "message", "delta", "content_block", "index", "error", "id", "model", "stop_reason"); err != nil {
 		return err
 	}
 	var envelope struct {
@@ -206,24 +209,24 @@ func checkAnthropicEnvelope(data []byte) error {
 		return err
 	}
 	if len(envelope.Message) > 0 {
-		if err := checkProviderFields(envelope.Message, "usage", "id", "model"); err != nil {
+		if _, err := providerFields(envelope.Message, "usage", "id", "model"); err != nil {
 			return err
 		}
 	}
 	if len(envelope.Delta) > 0 {
-		if err := checkProviderFields(envelope.Delta, "type", "text", "thinking", "partial_json", "stop_reason", "stop_sequence"); err != nil {
+		if _, err := providerFields(envelope.Delta, "type", "text", "thinking", "partial_json", "stop_reason", "stop_sequence"); err != nil {
 			return err
 		}
 	}
 	for _, block := range append(envelope.Content, envelope.ContentBlock) {
 		if len(block) > 0 {
-			if err := checkProviderFields(block, "type", "id", "name", "input", "text", "thinking"); err != nil {
+			if _, err := providerFields(block, "type", "id", "name", "input", "text", "thinking"); err != nil {
 				return err
 			}
 		}
 	}
 	if len(envelope.Error) > 0 {
-		if err := checkProviderFields(envelope.Error, "type", "message"); err != nil {
+		if _, err := providerFields(envelope.Error, "type", "message"); err != nil {
 			return err
 		}
 	}
@@ -236,7 +239,7 @@ func checkOpenAIUsage(data []byte) error {
 	if err := checkProviderJSON(data); err != nil {
 		return err
 	}
-	if err := checkProviderFields(data, "prompt_tokens", "completion_tokens", "total_tokens", "cache_write_tokens", "reasoning_tokens", "prompt_tokens_details", "completion_tokens_details", "input_tokens", "output_tokens", "input_tokens_details", "output_tokens_details"); err != nil {
+	if _, err := providerFields(data, "prompt_tokens", "completion_tokens", "total_tokens", "cache_write_tokens", "reasoning_tokens", "prompt_tokens_details", "completion_tokens_details", "input_tokens", "output_tokens", "input_tokens_details", "output_tokens_details"); err != nil {
 		return err
 	}
 	var v struct {
@@ -253,7 +256,7 @@ func checkOpenAIUsage(data []byte) error {
 		field string
 	}{{v.Prompt, "cached_tokens"}, {v.Input, "cached_tokens"}, {v.Completion, "reasoning_tokens"}, {v.Output, "reasoning_tokens"}} {
 		if len(item.raw) > 0 {
-			if err := checkProviderFields(item.raw, item.field); err != nil {
+			if _, err := providerFields(item.raw, item.field); err != nil {
 				return err
 			}
 		}
@@ -265,37 +268,132 @@ func checkOpenAIEnvelope(data []byte, responses bool) error {
 	if err := checkProviderJSON(data); err != nil {
 		return err
 	}
-	if err := checkProviderFields(data, "usage"); err != nil {
+	fields := []string{"usage", "choices", "error", "id", "model", "metrics"}
+	if responses {
+		fields = append(fields, "response", "type", "status", "stop_reason", "delta", "item", "output", "output_index")
+	}
+	v, err := providerFields(data, fields...)
+	if err != nil {
 		return err
 	}
-	var v struct {
-		Usage    json.RawMessage `json:"usage"`
-		Response json.RawMessage `json:"response"`
-	}
-	if err := json.Unmarshal(data, &v); err != nil {
-		return err
-	}
-	if len(v.Usage) > 0 {
-		if err := checkOpenAIUsage(v.Usage); err != nil {
+	if len(v["usage"]) > 0 {
+		if err := checkOpenAIUsage(v["usage"]); err != nil {
 			return err
 		}
+	}
+	if len(v["choices"]) > 0 {
+		if err := checkOpenAIChoices(v["choices"]); err != nil {
+			return err
+		}
+	}
+	if err := checkOpenAIMetrics(v["metrics"]); err != nil {
+		return err
 	}
 	if responses {
-		if err := checkProviderFields(data, "response"); err != nil {
+		return checkResponsesFields(v)
+	}
+	return nil
+}
+
+func checkOpenAIMetrics(data []byte) error {
+	if len(data) == 0 {
+		return nil
+	}
+	_, err := providerFields(data, "speculative_decoding")
+	return err
+}
+
+// checkResponsesFields checks the fixed Responses members that feed content,
+// reasoning, tool, status and usage measurements.
+func checkResponsesFields(v map[string]json.RawMessage) error {
+	if len(v["response"]) > 0 {
+		r, err := providerFields(v["response"], "usage", "metrics", "status", "id", "model", "error")
+		if err != nil {
 			return err
 		}
-		if len(v.Response) > 0 {
-			if err := checkProviderFields(v.Response, "usage"); err != nil {
+		if len(r["usage"]) > 0 {
+			if err := checkOpenAIUsage(r["usage"]); err != nil {
 				return err
 			}
-			var nested struct {
-				Usage json.RawMessage `json:"usage"`
-			}
-			if err := json.Unmarshal(v.Response, &nested); err != nil {
+		}
+		if err := checkOpenAIMetrics(r["metrics"]); err != nil {
+			return err
+		}
+	}
+	if len(v["item"]) > 0 {
+		if _, err := providerFields(v["item"], "type", "id", "call_id", "name"); err != nil {
+			return err
+		}
+	}
+	if len(v["output"]) == 0 {
+		return nil
+	}
+	items, err := providerFieldsEach(v["output"], "type", "id", "call_id", "name", "arguments", "summary", "content")
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		if len(item["summary"]) > 0 {
+			if _, err := providerFieldsEach(item["summary"], "text"); err != nil {
 				return err
 			}
-			if len(nested.Usage) > 0 {
-				return checkOpenAIUsage(nested.Usage)
+		}
+		if len(item["content"]) > 0 {
+			if _, err := providerFieldsEach(item["content"], "type", "text"); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// providerFieldsEach applies providerFields to each element of a JSON array.
+func providerFieldsEach(data []byte, fields ...string) ([]map[string]json.RawMessage, error) {
+	var elems []json.RawMessage
+	if err := json.Unmarshal(data, &elems); err != nil {
+		return nil, err
+	}
+	values := make([]map[string]json.RawMessage, len(elems))
+	for i, elem := range elems {
+		v, err := providerFields(elem, fields...)
+		if err != nil {
+			return nil, err
+		}
+		values[i] = v
+	}
+	return values, nil
+}
+
+// checkOpenAIChoices checks the fixed chat and completions choice members
+// that feed content, finish and tool measurements. Function arguments, content
+// parts and extension objects are opaque.
+func checkOpenAIChoices(data []byte) error {
+	choices, err := providerFieldsEach(data, "index", "delta", "message", "finish_reason", "text", "speculative_decoding")
+	if err != nil {
+		return err
+	}
+	for _, c := range choices {
+		for _, raw := range []json.RawMessage{c["delta"], c["message"]} {
+			if len(raw) == 0 {
+				continue
+			}
+			m, err := providerFields(raw, "role", "content", "reasoning_content", "reasoning", "tool_calls", "refusal", "tool_call_id", "name")
+			if err != nil {
+				return err
+			}
+			if len(m["tool_calls"]) == 0 {
+				continue
+			}
+			tools, err := providerFieldsEach(m["tool_calls"], "index", "id", "type", "function")
+			if err != nil {
+				return err
+			}
+			for _, t := range tools {
+				if len(t["function"]) > 0 {
+					if _, err := providerFields(t["function"], "name", "arguments"); err != nil {
+						return err
+					}
+				}
 			}
 		}
 	}
@@ -312,7 +410,7 @@ func anthropicUsage(raw json.RawMessage) (Usage, error) {
 	if err := checkProviderJSON(raw); err != nil {
 		return Usage{}, err
 	}
-	if err := checkProviderFields(raw, "input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "total_tokens", "prompt_tokens", "completion_tokens"); err != nil {
+	if _, err := providerFields(raw, "input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens", "total_tokens", "prompt_tokens", "completion_tokens"); err != nil {
 		return Usage{}, err
 	}
 	var v struct {

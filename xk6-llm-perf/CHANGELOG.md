@@ -11,6 +11,11 @@
   all OpenAI-shaped usage (chat, completions, Responses, request templates
   and SOLIDO); refuse it when it disagrees with the details count.
 
+- Refuse case-variant duplicates of fixed OpenAI fields: chat and completions
+  choice, message, delta, tool-call and speculative-decoding metrics fields,
+  and Responses event type, delta, item, status, output and content-part
+  fields. Function arguments and extension objects stay opaque.
+
 - Add input and output token throughput over the observation content span,
   matching AIPerf's default benchmark duration.
 

@@ -232,6 +232,11 @@ The JSON adapter returns `body` and leaves generated-token counts unavailable
 unless supplied. Responses and Anthropic adapters normalize protocol-specific content and usage.
 Anthropic prompt counts include reported cache-read and cache-write buckets;
 absent native input remains unavailable. Saved older records retain their counts.
+Provider fields decoded into fixed shapes (OpenAI usage, metrics, choices,
+messages, deltas and tool calls; Responses events, items, output and content
+parts; Anthropic envelopes and blocks) refuse case-variant duplicates, which
+encoding/json would otherwise resolve silently. Function arguments, tool inputs
+and extension objects keep case-distinct keys.
 Media output units remain separate from generated text tokens. Video requests
 retain one job lifecycle; HTTP traces cover the submission, with polling bounded
 by the same cancellation deadline.
