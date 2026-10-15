@@ -26,6 +26,7 @@ func TestWorkAcceptance(t *testing.T) {
 		{"missing usage", WorkExpectation{RequireExactUsage: true}, `{"choices":[{"message":{"content":"x"},"finish_reason":"stop"}]}`, "unavailable"},
 		{"early eos", WorkExpectation{AllowedFinishReasons: []string{"stop"}, MaxOutputTokens: &two}, `{"choices":[{"message":{"content":"x"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}`, "accepted"},
 		{"wrong model", WorkExpectation{ExpectedModel: "expected"}, `{"model":"other","choices":[{"message":{"content":"x"},"finish_reason":"stop"}]}`, "rejected"},
+		{"oversized model", WorkExpectation{ExpectedModel: "expected"}, `{"model":"` + strings.Repeat("x", 1025) + `","choices":[{"message":{"content":"x"},"finish_reason":"stop"}]}`, "rejected"},
 		{"digest mismatch", WorkExpectation{TextDigest: strings.Repeat("0", 64)}, `{"choices":[{"message":{"content":"x"},"finish_reason":"stop"}]}`, "rejected"},
 		{"token IDs absent", WorkExpectation{TokenIDsDigest: strings.Repeat("0", 64)}, `{"choices":[{"message":{"content":"x"},"finish_reason":"stop"}]}`, "unavailable"},
 		{"empty below minimum", WorkExpectation{MinOutputTokens: &one}, `{"choices":[{"message":{"content":""},"finish_reason":"stop"}],"usage":{"prompt_tokens":0,"completion_tokens":0,"total_tokens":0}}`, "rejected"},
@@ -61,6 +62,22 @@ func TestWorkAcceptance(t *testing.T) {
 				t.Fatal("forged status accepted")
 			}
 		})
+	}
+}
+
+func TestWorkOversizedModel(t *testing.T) {
+	m := &Measurement{Outcome: "success", Work: &WorkReceipt{}}
+	observeWork(m, CompletionResponse{Model: strings.Repeat("x", 1025)})
+	if m.Work.ObservedModel != "" || !m.Work.ObservedModelOversized {
+		t.Fatalf("work = %+v", m.Work)
+	}
+	m.Work.Status, m.Work.Reasons = classifyWork(m)
+	if err := validateWorkMeasurement(m); err != nil {
+		t.Fatal(err)
+	}
+	m.Work.ObservedModel = "x"
+	if validateWorkMeasurement(m) == nil {
+		t.Fatal("model retained beside oversized flag")
 	}
 }
 

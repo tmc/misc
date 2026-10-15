@@ -100,9 +100,13 @@ func validatePrices(p Prices) error {
 }
 
 // CostRecord preserves unavailable and excluded records without assigning a zero charge.
+// PriceModel is the table key used for an eligible record; PriceBasis is
+// "observed" for a provider-reported response model, else "requested".
 type CostRecord struct {
 	Index       int      `json:"index"`
 	Model       string   `json:"model"`
+	PriceModel  string   `json:"price_model,omitempty"`
+	PriceBasis  string   `json:"price_basis,omitempty"`
 	Amount      *float64 `json:"amount"`
 	Unavailable string   `json:"unavailable,omitempty"`
 	Excluded    string   `json:"excluded,omitempty"`
@@ -144,7 +148,7 @@ func DeriveCost(run llm.RunSummary, p Prices) (CostLedger, error) {
 	if _, err := hex.DecodeString(p.hash); err != nil {
 		return CostLedger{}, fmt.Errorf("invalid price provenance")
 	}
-	l := CostLedger{SchemaVersion: 1, RunID: run.RunID, Currency: p.Currency, SourceURL: p.SourceURL, EffectiveDate: p.EffectiveDate, PriceHash: p.hash, Policy: "caller-declared prices per million reported tokens; retained measurement successes only; cache buckets subtract from inclusive input; reasoning is a subset of output; no provider charge claim", Records: []CostRecord{}}
+	l := CostLedger{SchemaVersion: 2, RunID: run.RunID, Currency: p.Currency, SourceURL: p.SourceURL, EffectiveDate: p.EffectiveDate, PriceHash: p.hash, Policy: "caller-declared prices per million reported tokens; retained measurement successes only; cache buckets subtract from inclusive input; reasoning is a subset of output; prices keyed by retained observed response model, else requested model; no provider charge claim", Records: []CostRecord{}}
 	for i, m := range run.Records {
 		r := CostRecord{Index: i, Model: m.Model}
 		if m.Phase != "measurement" {
@@ -152,7 +156,8 @@ func DeriveCost(run llm.RunSummary, p Prices) (CostLedger, error) {
 		} else if m.Outcome != "success" {
 			r.Excluded = "unsuccessful request"
 		} else {
-			amount, why, err := recordCost(m, p.Models)
+			r.PriceModel, r.PriceBasis = priceModel(m)
+			amount, why, err := recordCost(m, r.PriceModel, r.PriceBasis, p.Models)
 			if err != nil {
 				return CostLedger{}, fmt.Errorf("cost record %d: %w", i, err)
 			}
@@ -180,7 +185,7 @@ func DeriveCost(run llm.RunSummary, p Prices) (CostLedger, error) {
 	}
 	return l, nil
 }
-func recordCost(m llm.Measurement, models map[string]TokenPrices) (*float64, string, error) {
+func recordCost(m llm.Measurement, model, basis string, models map[string]TokenPrices) (*float64, string, error) {
 	if m.InputTokens.Value == nil || m.OutputTokens.Value == nil {
 		return nil, "missing token counts", nil
 	}
@@ -234,7 +239,13 @@ func recordCost(m llm.Measurement, models map[string]TokenPrices) (*float64, str
 			return nil, "", fmt.Errorf("provider usage inconsistent")
 		}
 	}
-	rates, ok := models[m.Model]
+	if model == "" {
+		return nil, "observed model not retained", nil
+	}
+	rates, ok := models[model]
+	if !ok && basis == "observed" && model != m.Model {
+		return nil, "observed model price missing", nil
+	}
 	if !ok {
 		return nil, "model price missing", nil
 	}
@@ -268,6 +279,16 @@ func recordCost(m llm.Measurement, models map[string]TokenPrices) (*float64, str
 		return nil, "", fmt.Errorf("cost overflow")
 	}
 	return &total, "", nil
+}
+
+// priceModel keys prices by the provider-reported response model when one was
+// retained, so aliases and routing never borrow the requested model's rates.
+// A reported model too long to retain yields an empty observed key.
+func priceModel(m llm.Measurement) (model, basis string) {
+	if m.Work != nil && (m.Work.ObservedModel != "" || m.Work.ObservedModelOversized) {
+		return m.Work.ObservedModel, "observed"
+	}
+	return m.Model, "requested"
 }
 
 // Typed decoding accepts case-folded field aliases; the price format does not.

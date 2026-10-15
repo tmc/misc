@@ -124,6 +124,28 @@ func TestChoiceEOFCompletion(t *testing.T) {
 	}
 }
 
+func TestStreamModelChanged(t *testing.T) {
+	for _, tt := range []struct {
+		name, second string
+		ok           bool
+	}{
+		{"same", "cheap", true},
+		{"omitted", "", true},
+		{"changed", "pricey", false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			wire := "data: {\"model\":\"cheap\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"a\"}}]}\n\n" +
+				"data: {\"model\":\"" + tt.second + "\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":1,\"completion_tokens\":1,\"total_tokens\":2}}\n\ndata: [DONE]\n\n"
+			c := setupTestClient(t, "http://unused")
+			resp := &http.Response{StatusCode: 200, Body: ioNopCloser{strings.NewReader(wire)}}
+			got, err := c.handleStreamingResponse(resp, time.Now(), 0, func() {}, false)
+			if (err == nil) != tt.ok || tt.ok && got.Model != "cheap" {
+				t.Fatalf("model %q, err %v", got.Model, err)
+			}
+		})
+	}
+}
+
 type ioNopCloser struct{ *strings.Reader }
 
 func (ioNopCloser) Close() error { return nil }

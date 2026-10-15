@@ -27,7 +27,7 @@ func TestRecordCost(t *testing.T) {
 	}
 	in, out, read, write, reason := 100, 50, 20, 10, 5
 	m := llm.Measurement{Protocol: "anthropic", Model: "m", InputTokens: llm.TokenCount{Value: &in, Source: "reported"}, OutputTokens: llm.TokenCount{Value: &out, Source: "reported"}, CachedTokens: &read, CacheWriteTokens: &write, ReasoningTokens: &reason}
-	amount, why, e := recordCost(m, p.Models)
+	amount, why, e := costOf(m, p.Models)
 	want := float64(70*2+20+10*3+45*4+5*5) / 1e6
 	if e != nil || why != "" || amount == nil || *amount != want {
 		t.Fatalf("got %v %q %v want %v", amount, why, e, want)
@@ -47,7 +47,7 @@ func TestRecordCost(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			v := m
 			tc.edit(&v)
-			a, w, e := recordCost(v, p.Models)
+			a, w, e := costOf(v, p.Models)
 			if tc.bad {
 				if e == nil {
 					t.Fatal("accepted contradiction")
@@ -61,19 +61,19 @@ func TestRecordCost(t *testing.T) {
 func TestCostZeroAndOpenAI(t *testing.T) {
 	z, n := 0, 10
 	m := llm.Measurement{Protocol: "openai-chat", Model: "m", InputTokens: llm.TokenCount{Value: &z, Source: "reported"}, OutputTokens: llm.TokenCount{Value: &z, Source: "reported"}}
-	a, w, e := recordCost(m, map[string]TokenPrices{"m": {}})
+	a, w, e := costOf(m, map[string]TokenPrices{"m": {}})
 	if e != nil || w != "" || a == nil || *a != 0 {
 		t.Fatal(a, w, e)
 	}
 	rate := 2.0
 	m.InputTokens.Value = &n
 	m.CachedTokens = &z
-	a, w, e = recordCost(m, map[string]TokenPrices{"m": {Input: &rate}})
+	a, w, e = costOf(m, map[string]TokenPrices{"m": {Input: &rate}})
 	if e != nil || w != "" || a == nil || *a != .00002 {
 		t.Fatal(a, w, e)
 	}
 	m.CachedTokens = nil
-	a, w, e = recordCost(m, map[string]TokenPrices{"m": {Input: &rate}})
+	a, w, e = costOf(m, map[string]TokenPrices{"m": {Input: &rate}})
 	if e != nil || a != nil || w == "" {
 		t.Fatal(a, w, e)
 	}
@@ -143,18 +143,18 @@ func TestCostBucketPrices(t *testing.T) {
 	rate := 1.0
 	m := llm.Measurement{Protocol: "anthropic", Model: "m", InputTokens: llm.TokenCount{Value: &in, Source: "reported"}, OutputTokens: llm.TokenCount{Value: &out, Source: "reported"}, CachedTokens: &read, CacheWriteTokens: &write, ReasoningTokens: &reason}
 	rates := TokenPrices{Input: &rate, Output: &rate}
-	a, w, e := recordCost(m, map[string]TokenPrices{"m": rates})
+	a, w, e := costOf(m, map[string]TokenPrices{"m": rates})
 	if a != nil || w != "cache_read price missing" || e != nil {
 		t.Fatal(a, w, e)
 	}
 	rates.CacheRead = &rate
-	a, w, e = recordCost(m, map[string]TokenPrices{"m": rates})
+	a, w, e = costOf(m, map[string]TokenPrices{"m": rates})
 	if a == nil || math.Abs(*a-.000015) > 1e-20 || w != "" || e != nil {
 		t.Fatal(a, w, e)
 	}
 	rates.Reasoning = &rate
 	m.ReasoningTokens = nil
-	a, w, e = recordCost(m, map[string]TokenPrices{"m": rates})
+	a, w, e = costOf(m, map[string]TokenPrices{"m": rates})
 	if a != nil || w != "reasoning count unavailable" || e != nil {
 		t.Fatal(a, w, e)
 	}
@@ -166,19 +166,19 @@ func TestReportedCostIgnoresClientEstimate(t *testing.T) {
 	difference := 10.526
 	m := llm.Measurement{Protocol: "openai-chat", Model: "m", InputTokens: llm.TokenCount{Value: &in, Source: "reported"}, OutputTokens: llm.TokenCount{Value: &out, Source: "reported"}, CachedTokens: &zero, ProviderTotalTokens: &total, PromptDifference: &difference, UsageDiscrepancy: true}
 	models := map[string]TokenPrices{"m": {Input: &rate, Output: &rate}}
-	a, w, e := recordCost(m, models)
+	a, w, e := costOf(m, models)
 	if e != nil || w != "" || a == nil || math.Abs(*a-.000029) > 1e-20 {
 		t.Fatal(a, w, e)
 	}
 	total = 30
-	if _, _, e := recordCost(m, models); e == nil {
+	if _, _, e := costOf(m, models); e == nil {
 		t.Fatal("contradictory provider total admitted")
 	}
 	max := int(^uint(0) >> 1)
 	m.InputTokens.Value = &max
 	m.OutputTokens.Value = &max
 	m.ProviderTotalTokens = &max
-	if _, _, e := recordCost(m, models); e == nil {
+	if _, _, e := costOf(m, models); e == nil {
 		t.Fatal("overflowing input/output sum admitted")
 	}
 }
@@ -187,18 +187,18 @@ func TestLegacyAnthropicCostBeforeInclusiveBounds(t *testing.T) {
 	rate := 1.0
 	m := llm.Measurement{Protocol: "anthropic", Model: "m", InputTokens: llm.TokenCount{Value: &in, Source: "reported"}, OutputTokens: llm.TokenCount{Value: &out, Source: "reported"}, CachedTokens: &read}
 	models := map[string]TokenPrices{"m": {Input: &rate, CacheRead: &rate, Output: &rate}}
-	a, w, e := recordCost(m, models)
+	a, w, e := costOf(m, models)
 	if e != nil || a != nil || w != "cache write presence unavailable" {
 		t.Fatal(a, w, e)
 	}
 	in = 1002
 	m.CacheWriteTokens = &write
-	a, w, e = recordCost(m, models)
+	a, w, e = costOf(m, models)
 	if e != nil || w != "" || a == nil || math.Abs(*a-.001010) > 1e-18 {
 		t.Fatal(a, w, e)
 	}
 	in = 999
-	if _, _, e := recordCost(m, models); e == nil {
+	if _, _, e := costOf(m, models); e == nil {
 		t.Fatal("normalized contradictory cache admitted")
 	}
 }
@@ -207,13 +207,96 @@ func TestLegacyAnthropicZeroCost(t *testing.T) {
 	zero := 0
 	m := llm.Measurement{Protocol: "anthropic", Model: "m", InputTokens: llm.TokenCount{Value: &zero, Source: "reported"}, OutputTokens: llm.TokenCount{Value: &zero, Source: "reported"}, CachedTokens: &zero}
 	models := map[string]TokenPrices{"m": {}}
-	a, w, e := recordCost(m, models)
+	a, w, e := costOf(m, models)
 	if e != nil || a != nil || w != "cache write presence unavailable" {
 		t.Fatal(a, w, e)
 	}
 	m.CacheWriteTokens = &zero
-	a, w, e = recordCost(m, models)
+	a, w, e = costOf(m, models)
 	if e != nil || w != "" || a == nil || *a != 0 {
 		t.Fatal(a, w, e)
 	}
+}
+
+func TestCostPriceModel(t *testing.T) {
+	in, out, zero := 10, 5, 0
+	alias, routed := 1.0, 3.0
+	models := map[string]TokenPrices{"alias": {Input: &alias, Output: &alias}, "routed-v2": {Input: &routed, Output: &routed}}
+	for _, tc := range []struct {
+		name             string
+		requested        string
+		work             *llm.WorkReceipt
+		wantModel, basis string
+		amount           float64
+		unavailable      string
+	}{
+		{"no work receipt", "alias", nil, "alias", "requested", 15e-6, ""},
+		{"work without model", "alias", &llm.WorkReceipt{}, "alias", "requested", 15e-6, ""},
+		{"observed same", "alias", &llm.WorkReceipt{ObservedModel: "alias"}, "alias", "observed", 15e-6, ""},
+		{"observed routed", "alias", &llm.WorkReceipt{ObservedModel: "routed-v2"}, "routed-v2", "observed", 45e-6, ""},
+		{"observed unpriced", "alias", &llm.WorkReceipt{ObservedModel: "alias-2026"}, "alias-2026", "observed", 0, "observed model price missing"},
+		{"requested unpriced", "other", nil, "other", "requested", 0, "model price missing"},
+		{"observed same unpriced", "other", &llm.WorkReceipt{ObservedModel: "other"}, "other", "observed", 0, "model price missing"},
+		{"observed oversized", "alias", &llm.WorkReceipt{ObservedModelOversized: true}, "", "observed", 0, "observed model not retained"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m := llm.Measurement{Protocol: "openai-chat", Model: tc.requested, Work: tc.work, InputTokens: llm.TokenCount{Value: &in, Source: "reported"}, OutputTokens: llm.TokenCount{Value: &out, Source: "reported"}, CachedTokens: &zero}
+			if model, basis := priceModel(m); model != tc.wantModel || basis != tc.basis {
+				t.Fatalf("priceModel = %q %q, want %q %q", model, basis, tc.wantModel, tc.basis)
+			}
+			a, w, e := costOf(m, models)
+			if e != nil || w != tc.unavailable {
+				t.Fatalf("recordCost = %v %q %v, want unavailable %q", a, w, e, tc.unavailable)
+			}
+			if tc.unavailable != "" && a != nil {
+				t.Fatalf("amount = %v, want unavailable", *a)
+			}
+			if tc.unavailable == "" && (a == nil || math.Abs(*a-tc.amount) > 1e-18) {
+				t.Fatalf("amount = %v, want %v", a, tc.amount)
+			}
+		})
+	}
+}
+
+func TestCostLedgerRecordsPriceModel(t *testing.T) {
+	p, err := ReadPrices(strings.NewReader(`{"currency":"USD","source_url":"https://example.com/prices","effective_date":"2026-10-11","models":{"alias":{"input":1,"output":1}}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	in, out, zero := 10, 5, 0
+	r := runFixture()
+	r.MissingOutputCounts, r.WorkQualified, r.WorkAccepted = 0, 1, 1
+	r.InputTokens, r.OutputTokens = int64(in), int64(out)
+	r.InputThroughput, r.OutputThroughput = float64(in)/r.Duration, float64(out)/r.Duration
+	m := &r.Records[0]
+	m.Protocol, m.Model, m.CachedTokens = "openai-chat", "alias", &zero
+	m.InputTokens = llm.TokenCount{Value: &in, Source: "reported"}
+	m.OutputTokens = llm.TokenCount{Value: &out, Source: "reported"}
+	for _, tc := range []struct {
+		name, observed    string
+		oversized         bool
+		model, basis, why string
+	}{
+		{"requested basis", "", false, "alias", "requested", ""},
+		{"observed alias unpriced", "alias-2026", false, "alias-2026", "observed", "observed model price missing"},
+		{"observed oversized", "", true, "", "observed", "observed model not retained"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			m.Work = &llm.WorkReceipt{Status: "accepted", ObservedModel: tc.observed, ObservedModelOversized: tc.oversized, ReportedOutputTokens: &out}
+			l, err := DeriveCost(r, p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := l.Records[0]
+			if l.SchemaVersion != 2 || got.PriceModel != tc.model || got.PriceBasis != tc.basis || got.Unavailable != tc.why || (got.Amount == nil) != (tc.why != "") || (l.Total == nil) != (tc.why != "") {
+				t.Fatalf("ledger record = %+v total %v", got, l.Total)
+			}
+		})
+	}
+}
+
+// costOf prices m as DeriveCost does.
+func costOf(m llm.Measurement, models map[string]TokenPrices) (*float64, string, error) {
+	model, basis := priceModel(m)
+	return recordCost(m, model, basis, models)
 }

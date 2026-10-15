@@ -26,16 +26,19 @@ type WorkExpectation struct {
 // WorkReceipt preserves qualification and bounded evidence without response text.
 // Digests cover the normalized primary choice; multi-choice digests are unavailable.
 type WorkReceipt struct {
-	Expectation          WorkExpectation `json:"expectation"`
-	Status               string          `json:"status"`
-	Reasons              []string        `json:"reasons"`
-	ObservedModel        string          `json:"observed_model,omitempty"`
-	FinishReasons        []string        `json:"finish_reasons,omitempty"`
-	ExactUsage           bool            `json:"exact_usage"`
-	ReportedOutputTokens *int            `json:"reported_output_tokens"`
-	TextDigest           string          `json:"text_digest,omitempty"`
-	ResponseDigest       string          `json:"response_digest,omitempty"`
-	TokenIDsDigest       string          `json:"token_ids_digest,omitempty"`
+	Expectation   WorkExpectation `json:"expectation"`
+	Status        string          `json:"status"`
+	Reasons       []string        `json:"reasons"`
+	ObservedModel string          `json:"observed_model,omitempty"`
+	// ObservedModelOversized records a reported model too long to retain,
+	// so it is not mistaken for an unreported one.
+	ObservedModelOversized bool     `json:"observed_model_oversized,omitempty"`
+	FinishReasons          []string `json:"finish_reasons,omitempty"`
+	ExactUsage             bool     `json:"exact_usage"`
+	ReportedOutputTokens   *int     `json:"reported_output_tokens"`
+	TextDigest             string   `json:"text_digest,omitempty"`
+	ResponseDigest         string   `json:"response_digest,omitempty"`
+	TokenIDsDigest         string   `json:"token_ids_digest,omitempty"`
 }
 
 func validDigest(s string) bool {
@@ -89,6 +92,8 @@ func observeWork(m *Measurement, response CompletionResponse) {
 	w := m.Work
 	if len(response.Model) <= 1024 {
 		w.ObservedModel = response.Model
+	} else {
+		w.ObservedModelOversized = true
 	}
 	w.ExactUsage = m.reported.promptPresent && m.reported.completionPresent && m.reported.totalPresent && m.reported.CompletionTokens <= m.reported.TotalTokens && m.reported.PromptTokens == m.reported.TotalTokens-m.reported.CompletionTokens
 	if m.reported.completionPresent {
@@ -147,7 +152,10 @@ func classifyWork(m *Measurement) (string, []string) {
 	}
 	e := w.Expectation
 	if e.ExpectedModel != "" {
-		if w.ObservedModel == "" {
+		// An oversized model cannot equal an expected model within the size limit.
+		if w.ObservedModelOversized {
+			rejected = append(rejected, "model_mismatch")
+		} else if w.ObservedModel == "" {
 			unavailable = append(unavailable, "model_unobserved")
 		} else if w.ObservedModel != e.ExpectedModel {
 			rejected = append(rejected, "model_mismatch")
@@ -214,6 +222,9 @@ func validateWorkMeasurement(m *Measurement) error {
 	}
 	if len(w.ObservedModel) > 1024 || len(w.FinishReasons) > 128 {
 		return fmt.Errorf("work evidence exceeds size limit")
+	}
+	if w.ObservedModelOversized && w.ObservedModel != "" {
+		return fmt.Errorf("work model contradicts oversized model")
 	}
 	for _, s := range w.FinishReasons {
 		if len(s) > 128 {

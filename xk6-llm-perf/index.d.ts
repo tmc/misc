@@ -35,7 +35,8 @@ declare module 'k6/x/llm-perf' {
   }
   export interface WorkReceipt {
     expectation: WorkExpectation; status: 'accepted' | 'rejected' | 'unavailable';
-    reasons: string[] | null; observed_model?: string; finish_reasons?: string[];
+    reasons: string[] | null; observed_model?: string; observed_model_oversized?: boolean;
+    finish_reasons?: string[];
     exact_usage: boolean; reported_output_tokens: number | null;
     text_digest?: string; response_digest?: string; token_ids_digest?: string;
   }

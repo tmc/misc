@@ -8,9 +8,21 @@ pricing service or report a provider invoice. No prices are bundled.
 {"currency":"USD","source_url":"https://example.com/prices","effective_date":"2026-10-11","models":{"my-model":{"input":2,"cache_read":1,"cache_write":3,"output":4}}}
 ```
 
-Rates are currency units per million tokens. Use exact requested model names
-(`Measurement.Model`), including gateway routing requests. Observed model
-identities do not select a different price automatically. The table
+Rates are currency units per million tokens, keyed by exact model names.
+A record is priced by the response model the provider reported
+(`measurement.work.observed_model`), which is retained when the request carries
+a [`work`](work-acceptance.md) policy; `work: {}` retains it without checks.
+When that model differs from the requested one and the table has no entry for
+it, the record is unavailable with `observed model price missing`; the
+requested model's rate is never borrowed for an alias, route or version suffix.
+A reported model too long to retain (`observed_model_oversized`) is unavailable
+with `observed model not retained`.
+Without a retained response model, including older receipts and requests without
+`work`, the requested model (`Measurement.Model`) is used. Each eligible ledger
+record names the key in `price_model` and its basis, `observed` or `requested`,
+in `price_basis`; both are recomputed from the run on every derivation. Ledger
+`schema_version` 2 marks this observed-model keying; version 1 ledgers keyed every
+record by the requested model. The table
 is strict JSON, at most 1 MiB; unknown fields, duplicate members, null rates,
 negative rates and nonfinite numbers are rejected. Currency is three uppercase
 letters, not a checked currency registry. Source URL and effective date are

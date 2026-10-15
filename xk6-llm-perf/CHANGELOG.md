@@ -19,6 +19,14 @@
 - Report both incomplete eligible usage and dropped records as cost ledger
   unavailability causes; dropped records no longer mask the former.
 
+- Price cost records by the retained response model, falling back to the
+  requested model only when none was retained (older receipts, requests without
+  `work`); an unpriced alias or routed model is unavailable, each record states
+  its `price_model` and `price_basis`, and the ledger is schema version 2.
+
+- Fail a stream whose chunks report different models. Record a response model
+  too long to retain as `work.observed_model_oversized` instead of as unreported.
+
 - Add input and output token throughput over the observation content span,
   matching AIPerf's default benchmark duration.
 

@@ -11,7 +11,17 @@ exec $CLI -input run.json -format cost -prices prices.json
 stdout '"price_sha256":"[0-9a-f]{64}"'
 stdout '"total":0'
 stdout '"currency":"USD"'
+stdout '"schema_version":2'
+
+# A retained response model keys the price; an unpriced alias never borrows
+# the requested model's rate.
+exec $CLI -input routed.json -format cost -prices prices.json
+stdout '"index":0,"model":"m","price_model":"m","price_basis":"requested","amount":0.00004}'
+stdout '"index":1,"model":"m","price_model":"m-2026","price_basis":"observed","amount":null,"unavailable":"observed model price missing"'
+stdout '"total":null'
 -- run.json --
 {"schema_version":1,"run_id":"fixture","started_at":1000,"finished_at":2000,"duration":1,"attempts":0,"successes":0,"failures":0,"records":[]}
 -- prices.json --
 {"currency":"USD","source_url":"https://example.com/prices","effective_date":"2026-10-11","models":{"m":{"input":2,"output":4}}}
+-- routed.json --
+{"work_qualified":1,"work_accepted":1,"schema_version":1,"run_id":"routed","started_at":1000,"finished_at":2000,"duration":1,"attempts":2,"successes":2,"failures":0,"input_tokens":20,"output_tokens":10,"input_throughput":20,"output_throughput":10,"records":[{"protocol":"openai-chat","schema_version":1,"phase":"measurement","model":"m","outcome":"success","attempted":true,"recorded":true,"started_at":1100,"dispatched_at":1100,"finished_at":1200,"full_response_latency":100,"ttft":20,"input_tokens":{"value":10,"source":"reported"},"output_tokens":{"value":5,"source":"reported"},"cached_tokens":0},{"work":{"expectation":{},"status":"accepted","reasons":null,"observed_model":"m-2026","exact_usage":false,"reported_output_tokens":5},"protocol":"openai-chat","schema_version":1,"phase":"measurement","model":"m","outcome":"success","attempted":true,"recorded":true,"started_at":1100,"dispatched_at":1100,"finished_at":1200,"full_response_latency":100,"ttft":20,"input_tokens":{"value":10,"source":"reported"},"output_tokens":{"value":5,"source":"reported"},"cached_tokens":0}]}

@@ -541,6 +541,9 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 			result.Sources = chunk.Sources
 		}
 		if chunk.Model != "" {
+			if result.Model != "" && chunk.Model != result.Model {
+				return result, fmt.Errorf("stream model changed")
+			}
 			result.Model = chunk.Model
 		}
 		if chunk.Object != "" {

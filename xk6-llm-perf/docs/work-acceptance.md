@@ -31,7 +31,10 @@ counts remain unavailable with `exact_usage_unavailable`. A reported partial
 count exceeding the reported total is also a known contradiction. Replay
 reconstructs this distinction from provider count presence and the reported
 total; `exact_usage=false` alone never establishes missing evidence. The model check
-uses the response model, not the requested model. Empty text can qualify when
+uses the response model, not the requested model. A stream whose chunks name
+different models fails. A response model longer than 1024 bytes is not retained;
+`observed_model_oversized` records that one was reported, and an expected-model
+check rejects it with `model_mismatch`. Empty text can qualify when
 zero output is allowed. A policy with no checks accepts protocol success.
 
 Optional `textDigest`, `responseDigest`, and `tokenIDsDigest` are lowercase

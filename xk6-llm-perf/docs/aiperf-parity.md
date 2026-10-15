@@ -54,8 +54,9 @@ extension does not currently claim full AIPerf parity.
   refreshing dashboard. These are descriptive views with explicit statistical
   status.
 - [Explicit-price cost estimates](cost.md) derive a separate ledger from
-  reported token buckets and a hashed caller-supplied price table. Missing
-  buckets or rates remain unavailable; these estimates are not provider bills.
+  reported token buckets and a hashed caller-supplied price table, keyed by the
+  retained response model when present. Missing buckets or rates remain
+  unavailable; these estimates are not provider bills.
 - [ProviderWire v4](endpoint-adapters/providerwire-v4.md) supports an authored
   text/reasoning/function-tool subset against pinned Grafana AI SDK schemas.
   Schema and protocol fixtures do not establish hosted-provider compatibility.
