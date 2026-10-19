@@ -27,10 +27,24 @@ def main():
         p.error("summary exceeds 4 MiB")
     def invalid_constant(value):
         raise ValueError("non-finite JSON number: " + value)
+    def finite_number(value):
+        try:
+            return type(value) in (int, float) and math.isfinite(value)
+        except OverflowError:
+            return False
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate JSON member: " + key)
+            result[key] = value
+        return result
     try:
-        document = json.loads(snapshot, parse_constant=invalid_constant)
+        document = json.loads(snapshot, parse_constant=invalid_constant, object_pairs_hook=unique_object)
     except (ValueError, UnicodeError):
         p.error("invalid summary JSON")
+    if not isinstance(document, dict):
+        p.error("summary must be an object")
     summary_hash = hashlib.sha256(snapshot).hexdigest()
     required = {"schema_version", "run_id", "source_versions", "attempts",
                 "successes", "failures", "dropped_records", "metrics", "policy", "workload", "trace_hash", "seed", "duration_seconds", "window_policy", "warmup_policy"}
@@ -84,17 +98,24 @@ def main():
     value_columns = list(columns)
     columns += ["population", "percentile_method", "standard_deviation_method", "token_sources"]
     rows = []
+    names = set()
+    work_rate = None
     for metric in document["metrics"]:
-        if not set(value_columns) <= set(metric) or not set(metric) <= set(value_columns) | {"sources"}:
+        if not isinstance(metric, dict) or not set(value_columns) <= set(metric) or not set(metric) <= set(value_columns) | {"sources"}:
             p.error("invalid metric schema")
         if not isinstance(metric["name"], str) or not isinstance(metric["unit"], str) or len(metric["name"])>128 or len(metric["unit"])>128:
             p.error("invalid metric identity")
+        if metric["name"] in names:
+            p.error("duplicate metric name")
+        names.add(metric["name"])
+        if metric["name"] == "work_goodput":
+            work_rate = metric
         count_limit = 4096 * 100000 if metric["name"] == "content_inter_chunk_latency" else 100000
         if type(metric["count"]) is not int or not 0 <= metric["count"] <= count_limit:
             p.error("invalid metric count")
         for key in value_columns[3:]:
             value = metric[key]
-            if value is not None and (type(value) not in (int,float) or not math.isfinite(value) or value < 0):
+            if value is not None and (not finite_number(value) or value < 0):
                 p.error("invalid metric value")
         if "sources" in metric:
             sources = metric["sources"]
@@ -120,6 +141,25 @@ def main():
                 percentile = deviation = "not applied"
         rows.append([metric[key] for key in value_columns] +
                     [population, percentile, deviation, json.dumps(metric.get("sources", {}), sort_keys=True)])
+    qualified = document.get("work_qualified", 0)
+    if (work_rate is not None) != (qualified > 0):
+        p.error("work goodput availability contradicts work population")
+    if work_rate is not None:
+        duration = document["duration_seconds"]
+        if not finite_number(duration) or duration <= 0:
+            p.error("invalid work goodput duration")
+        # ReadRun and output.Summarize preserve WorkGoodRequests / Duration as
+        # one aggregate rate, with no request percentiles or token sources.
+        try:
+            expected = float(document.get("work_good_requests", 0)) / duration
+        except (OverflowError, ValueError):
+            p.error("invalid work goodput population")
+        if (work_rate["unit"] != "request/s" or work_rate["count"] != 1
+                or work_rate["mean"] is None or not math.isfinite(expected)
+                or not math.isclose(work_rate["mean"], expected, rel_tol=0, abs_tol=1e-9)
+                or "sources" in work_rate
+                or any(work_rate[key] is not None for key in ("min", "max", "p50", "p90", "p99", "std"))):
+            p.error("work goodput disagrees with aggregate accounting")
     config = {key: value for key, value in document.items() if key != "metrics"}
     config["summary_sha256"] = summary_hash
     config["token_count_sources"] = {metric["name"]: metric["sources"]

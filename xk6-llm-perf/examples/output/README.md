@@ -68,6 +68,10 @@ occurs. Source versions, statistic policy, optional work populations and sanitiz
 serving receipts become run config. Work hashes identify declarations; they
 do not establish applied-engine or physical qualification. Work goodput retains
 its declared-window population, rather than a request-statistics population.
+Duplicate JSON members (including decoded escaped aliases) and repeated metric
+names are refused before SDK initialization. Work goodput must match its
+work-good counter and positive declared duration; missing or contradictory
+populations are refused.
 
 ```sh
 python examples/output/wandb_export.py outputs/summary.json \

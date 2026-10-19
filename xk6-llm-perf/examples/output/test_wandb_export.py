@@ -156,6 +156,77 @@ class ExportTest(unittest.TestCase):
                 self.assertEqual(error.exception.code, 2)
                 self.assertNotIn("config", self.received)
 
+    def work_document(self):
+        document = copy.deepcopy(self.document)
+        document.update(work_qualified=1, work_accepted=1, work_good_requests=1,
+                        work_policy="accepted opted-in requests per declared window",
+                        duration_seconds=2,
+                        serving_manifest={"manifest_digest": "a" * 64, "work_hash": "b" * 64})
+        document["metrics"].append(dict(name="work_goodput", unit="request/s", count=1,
+                                         mean=0.5, min=None, max=None, p50=None, p90=None,
+                                         p99=None, std=None))
+        return document
+
+    def test_duplicate_decoded_json_members_refused_before_sdk(self):
+        raw = json.dumps(self.work_document())
+        invalid = [
+            raw.replace('"work_qualified": 1', '"work_qualified": true, "work_qualified": 1'),
+            raw.replace('"work_qualified": 1', r'"work_\u0071ualified": false, "work_qualified": 1'),
+            raw.replace('"work_hash": "' + 'b' * 64 + '"', '"work_hash": "bad", "work_hash": "' + 'b' * 64 + '"'),
+            raw.replace('"work_hash": "' + 'b' * 64 + '"', r'"work_\u0068ash": "bad", "work_hash": "' + 'b' * 64 + '"'),
+            raw.replace('"mean": 0.5', '"mean": 999, "mean": 0.5'),
+            raw.replace('"sources": {"reported": 1', '"sources": {"reported": 2, "reported": 1'),
+            raw.replace('"source_versions": {}', '"source_versions": {"producer": "bad", "producer": "good"}'),
+        ]
+        for document in invalid:
+            with self.subTest(document=document):
+                self.source.write_text(document)
+                with self.assertRaises(SystemExit) as error:
+                    self.run_export()
+                self.assertEqual(error.exception.code, 2)
+                self.assertNotIn("config", self.received)
+
+    def test_work_goodput_population_coherence_before_sdk(self):
+        base = self.work_document()
+        invalid = []
+        absent = copy.deepcopy(base)
+        for key in list(absent):
+            if key.startswith("work_"):
+                del absent[key]
+        invalid.append(absent)
+        zero = copy.deepcopy(absent)
+        zero.update(work_qualified=0, work_accepted=0, work_good_requests=0)
+        invalid.append(zero)
+        missing = copy.deepcopy(base)
+        missing["metrics"].pop()
+        invalid.append(missing)
+        for changes in ({"mean": 999}, {"unit": "ms"}, {"count": 0}, {"count": 2},
+                        {"count": True}, {"mean": None}, {"mean": True}, {"min": 0},
+                        {"p50": 0.5}, {"std": 0}, {"sources": {}}):
+            document = copy.deepcopy(base)
+            document["metrics"][-1].update(changes)
+            invalid.append(document)
+        for duration in (None, 0, -1, True, float("nan"), float("inf"), 10 ** 400):
+            document = copy.deepcopy(base)
+            document["duration_seconds"] = duration
+            invalid.append(document)
+        duplicate = copy.deepcopy(base)
+        duplicate["metrics"].append(copy.deepcopy(duplicate["metrics"][-1]))
+        invalid.append(duplicate)
+        duplicate = copy.deepcopy(base)
+        duplicate["metrics"].append(dict(duplicate["metrics"][-1], mean=999))
+        invalid.append(duplicate)
+        policy = copy.deepcopy(base)
+        del policy["work_policy"]
+        invalid.append(policy)
+        for document in invalid:
+            with self.subTest(document=document):
+                self.source.write_text(json.dumps(document))
+                with self.assertRaises(SystemExit) as error:
+                    self.run_export()
+                self.assertEqual(error.exception.code, 2)
+                self.assertNotIn("config", self.received)
+
     def test_actual_output_document_work_and_serving_receipts(self):
         binary = os.environ.get("LLM_OUTPUT_BINARY")
         if not binary:
@@ -163,11 +234,16 @@ class ExportTest(unittest.TestCase):
         module = Path(__file__).resolve().parents[2]
         fixtures = (module / "cmd/llm-output/testdata/cost.txt").read_text()
         run = json.loads(fixtures.split("-- routed.json --\n", 1)[1].split("\n-- ", 1)[0])
+        run.update(duration=2, finished_at=3000, input_throughput=10, output_throughput=5)
         values = {"cache": {}, "compile": {}, "device": "fixture", "dtype": "fixture",
                   "max_output_tokens": 1, "resources": {}, "scheduler": {}, "seed": 0,
                   "temperature": 0, "top_k": 0, "top_p": 1}
         for complete in (False, True):
             with self.subTest(complete=complete):
+                good = int(complete)
+                run.update(good_requests=good, work_good_requests=good,
+                           goodput=good / 2, work_goodput=good / 2)
+                run["records"][1]["good"] = complete
                 manifest = {"schema_version": 1, "arm": {"endpoint_identity": "private-endpoint"}}
                 if complete:
                     manifest.update({key: "a" * 64 for key in ("model_digest", "tokenizer_digest",
@@ -192,6 +268,17 @@ class ExportTest(unittest.TestCase):
                 self.assertEqual(self.received["config"]["work_policy"], document["work_policy"])
                 self.assertEqual(self.received["config"]["summary_sha256"], hashlib.sha256(result.stdout.encode()).hexdigest())
                 self.assertEqual(self.received["artifact_bytes"], result.stdout.encode())
+                rate = next(metric for metric in document["metrics"] if metric["name"] == "work_goodput")
+                self.assertEqual(rate["count"], 1)
+                self.assertEqual(rate["unit"], "request/s")
+                self.assertEqual(rate["mean"], document.get("work_good_requests", 0) / document["duration_seconds"])
+                forged = copy.deepcopy(run)
+                forged["work_goodput"] = 999
+                rejected = subprocess.run([binary, "-format", "json"], input=json.dumps(forged),
+                                          text=True, capture_output=True, timeout=15)
+                self.assertNotEqual(rejected.returncode, 0)
+                self.assertEqual(rejected.stdout, "")
+                self.assertIn("work", rejected.stderr)
 
     def test_growth_beyond_limit_refused_despite_stale_stat(self):
         self.source.write_bytes(self.bytes + b" " * (4 * 1024 * 1024 + 1 - len(self.bytes)))
