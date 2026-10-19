@@ -14,23 +14,37 @@ import (
 // policy. Counts are declarations, not tokenized prompts or observed output.
 // Optional fields must be omitted rather than null. No rows are skipped.
 func ReadMooncake(r io.Reader) (SessionTrace, error) {
+	trace, err := ReadMooncakeWithOptions(r, BlockOptions{BlockSize: 512})
+	if err == nil {
+		trace.HashPolicy = "recorded signed integer IDs as decimal strings; file scope; default block size 512"
+	}
+	return trace, err
+}
+
+// ReadMooncakeWithOptions reads Mooncake using an explicitly declared block
+// size instead of the 512-token default. Options do not infer tokenizer or
+// cache acquisition evidence; original integer IDs and file scope are retained.
+func ReadMooncakeWithOptions(r io.Reader, options BlockOptions) (SessionTrace, error) {
+	if err := options.validate(); err != nil {
+		return SessionTrace{}, err
+	}
 	trace, rows, err := readRows(r, "mooncake-jsonl-v1")
 	if err != nil {
 		return trace, err
 	}
 	trace.TimestampPolicy = "source timestamp/delay milliseconds; no rebasing or delay cap"
 	trace.CountPolicy = "declared counts retained; no prompt synthesis or output observation"
-	trace.HashPolicy = "recorded signed integer IDs as decimal strings; file scope; default block size 512"
+	trace.HashPolicy = fmt.Sprintf("recorded signed integer IDs as decimal strings; file scope; declared block size %d", options.BlockSize)
 	index := map[string]int{}
 	totalHashes := 0
 	for _, row := range rows {
-		if err := mooncakeRow(&trace, index, row, &totalHashes); err != nil {
+		if err := mooncakeRow(&trace, index, row, &totalHashes, options.BlockSize); err != nil {
 			return SessionTrace{}, fmt.Errorf("mooncake row %d: %w", row.ordinal, err)
 		}
 	}
 	return trace, nil
 }
-func mooncakeRow(trace *SessionTrace, index map[string]int, row sourceRow, totalHashes *int) error {
+func mooncakeRow(trace *SessionTrace, index map[string]int, row sourceRow, totalHashes *int, blockSize int) error {
 	f := row.fields
 	if _, ok := f["message_mode"]; ok {
 		return fmt.Errorf("message_mode is unsupported; use assistant_responses")
@@ -143,5 +157,5 @@ func mooncakeRow(trace *SessionTrace, index map[string]int, row sourceRow, total
 		}
 		t.Extra = raw
 	}
-	return appendTurn(trace, index, id, mode, "file", 512, t)
+	return appendTurn(trace, index, id, mode, "file", blockSize, t)
 }

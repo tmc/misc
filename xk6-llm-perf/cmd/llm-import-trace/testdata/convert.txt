@@ -14,6 +14,20 @@ stderr 'explicit serial-recorded'
 ! exec sh -c '"$CLI" -format mystery < authored.jsonl'
 stderr 'unsupported format'
 
+exec sh -c '"$CLI" -format mooncake -block-size 4 < authored.jsonl'
+stdout '"blockSize":4'
+! exec sh -c '"$CLI" -format mooncake -block-size 0 < authored.jsonl'
+stderr 'block size must be'
+! stdout .
+! exec sh -c '"$CLI" -format mooncake -block-size true < authored.jsonl'
+stderr 'invalid value'
+! exec sh -c '"$CLI" -format mooncake -block-size 1.5 < authored.jsonl'
+stderr 'invalid value'
+! exec sh -c '"$CLI" -format mooncake -block-size 1000001 < authored.jsonl'
+stderr 'block size must be'
+! exec sh -c '"$CLI" -format bailian -block-size 4 < counts.jsonl'
+stderr 'unsupported for bailian'
+
 -- authored.jsonl --
 {"session_id":"a","timestamp":1000.5,"messages":[{"role":"user","content":"hello"}],"output_length":8}
 {"session_id":"b","payload":{"input":"literal"},"output_length":0}

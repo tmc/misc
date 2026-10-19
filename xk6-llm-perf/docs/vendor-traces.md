@@ -47,6 +47,37 @@ TraceLab's adjusted targets are distinct fields with an explicit count policy.
 Its API/think times are derived proxies, not measured server latency or TTFT.
 The `stop`/input type classification is derived from the source event fields.
 
+## Explicit block sizes
+
+The default readers retain Mooncake's 512-token and TraceLab's 64-token
+blocks. For an explicitly configured source, use
+`ReadMooncakeWithOptions(reader, BlockOptions{BlockSize: 4})` or
+`ReadTraceLabWithOptions(reader, BlockOptions{BlockSize: 4})`. The zero value of
+`BlockOptions` is invalid; default behavior belongs to the wrapper functions.
+Options require an integer in 1..1000000. Upstream requires a positive size
+without this upper limit; 1000000 is this adapter's resource ceiling.
+
+```sh
+./llm-import-trace -format mooncake -block-size 4 < trace.jsonl > normalized.json
+./llm-import-trace -format tracelab -block-size 4 < tracelab.jsonl > normalized.json
+```
+
+An omitted flag selects the format default. Explicit zero, negative, boolean,
+fractional and out-of-range values fail; none silently selects a default.
+Bailian overrides are currently refused by this CLI, keeping its documented
+16-token policy. Selected size and scope are retained on normalized sessions
+and authored replay exports (`block_size`, `hash_scope`). Row extras are raw
+source metadata, not loader configuration: set the option explicitly rather
+than inferring a block size from ancillary row fields.
+
+TraceLab uses the selected size in both prefix reconstruction and whole-import
+allocation checks. A smaller size can exceed the existing aggregate block budget
+and fail before any virtual chain is allocated. An option does not realize
+cache-backed prompts or prove cache hits. This follows pinned
+`config/dataset/config.py:555`, `base_trace_loader.py:150` and
+`tracelab_trace.py:124` override precedence; caller configuration takes precedence
+over plugin defaults.
+
 ## Authored request replay
 
 Only authored request content can be exported now. This input needs no synthetic

@@ -35,6 +35,8 @@ type replayTurn struct {
 	Source  traceworkload.Turn `json:"source"`
 }
 type replaySession struct {
+	BlockSize       int          `json:"block_size"`
+	HashScope       string       `json:"hash_scope"`
 	ID              string       `json:"session_id"`
 	SourceHash      string       `json:"source_sha256"`
 	SourcePolicy    string       `json:"source_policy"`
@@ -44,6 +46,7 @@ type replaySession struct {
 
 func run(args []string, in io.Reader, out io.Writer) error {
 	flags := flag.NewFlagSet("llm-import-trace", flag.ContinueOnError)
+	blockSize := flags.Int("block-size", 0, "explicit hash block tokens for mooncake/tracelab (format default when omitted)")
 	format := flags.String("format", "", "mooncake, bailian or tracelab JSONL")
 	output := flags.String("output", "normalized", "normalized or sessions")
 	policy := flags.String("execution-policy", "", "sessions requires serial-recorded (original timing is metadata only)")
@@ -59,15 +62,35 @@ func run(args []string, in io.Reader, out io.Writer) error {
 	if *output == "normalized" && (*policy != "" || *path != "" || *protocol != "" || *model != "") {
 		return fmt.Errorf("execution flags require sessions output")
 	}
+	blockSet := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "block-size" {
+			blockSet = true
+		}
+	})
+	if blockSet && (*blockSize < 1 || *blockSize > 1000000) {
+		return fmt.Errorf("block size must be 1..1000000")
+	}
 	var trace traceworkload.SessionTrace
 	var err error
 	switch *format {
 	case "mooncake":
-		trace, err = traceworkload.ReadMooncake(in)
+		if blockSet {
+			trace, err = traceworkload.ReadMooncakeWithOptions(in, traceworkload.BlockOptions{BlockSize: *blockSize})
+		} else {
+			trace, err = traceworkload.ReadMooncake(in)
+		}
 	case "bailian":
+		if blockSet {
+			return fmt.Errorf("block-size override is unsupported for bailian; default is 16")
+		}
 		trace, err = traceworkload.ReadBailian(in)
 	case "tracelab":
-		trace, err = traceworkload.ReadTraceLab(in)
+		if blockSet {
+			trace, err = traceworkload.ReadTraceLabWithOptions(in, traceworkload.BlockOptions{BlockSize: *blockSize})
+		} else {
+			trace, err = traceworkload.ReadTraceLab(in)
+		}
 	default:
 		return fmt.Errorf("unsupported format")
 	}
@@ -115,7 +138,7 @@ func export(trace traceworkload.SessionTrace, path, protocol, model string) ([]r
 		if s.ContextMode != "recorded" && !(len(s.Turns) == 1 && s.Turns[0].InputMode == "text") {
 			return nil, fmt.Errorf("session %q requires live context assembly; execution unsupported", s.ID)
 		}
-		row := replaySession{ID: s.ID, SourceHash: trace.SourceHash, SourcePolicy: "serial-recorded authored-body replay; source arrival/delay not scheduled; no cache realization", TimestampPolicy: trace.TimestampPolicy}
+		row := replaySession{ID: s.ID, BlockSize: s.BlockSize, HashScope: s.HashScope, SourceHash: trace.SourceHash, SourcePolicy: "serial-recorded authored-body replay; source arrival/delay not scheduled; no cache realization", TimestampPolicy: trace.TimestampPolicy}
 		for _, t := range s.Turns {
 			if t.InputMode == "counts" || len(t.HashIDs) > 0 {
 				return nil, fmt.Errorf("turn %s is count/cache-only; realize against pinned tokenizer assets before execution", t.ID)

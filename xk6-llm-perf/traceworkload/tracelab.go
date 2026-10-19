@@ -18,16 +18,26 @@ import (
 // included in OutputBudget. Missing event timing and subagent lifecycle tools
 // are refused rather than dropped or reconstructed heuristically.
 func ReadTraceLab(r io.Reader) (SessionTrace, error) {
+	return ReadTraceLabWithOptions(r, BlockOptions{BlockSize: 64})
+}
+
+// ReadTraceLabWithOptions reads TraceLab using an explicit virtual block size.
+// The size controls metadata, prefix reuse and all aggregate expansion checks.
+// It does not enable subagent reconstruction or prompt realization.
+func ReadTraceLabWithOptions(r io.Reader, options BlockOptions) (SessionTrace, error) {
+	if err := options.validate(); err != nil {
+		return SessionTrace{}, err
+	}
 	trace, rows, err := readRows(r, "tracelab-jsonl-v1")
 	if err != nil {
 		return trace, err
 	}
 	trace.TimestampPolicy = "latest input event (or first output); session-relative rounded microseconds converted to milliseconds; origin Unix milliseconds"
 	trace.CountPolicy = "raw counts retained; inputTarget=max(input,1); outputBudget=max(output+reasoning,1); timing proxies not server latency"
-	trace.HashPolicy = "source-defined virtual IDs in session-local namespace; 64-token whole blocks; no inferred subagent links"
+	trace.HashPolicy = fmt.Sprintf("source-defined virtual IDs in session-local namespace; %d-token whole blocks; no inferred subagent links", options.BlockSize)
 	index := map[string]int{}
 	for _, row := range rows {
-		if err := tracelabRow(&trace, index, row); err != nil {
+		if err := tracelabRow(&trace, index, row, options.BlockSize); err != nil {
 			return SessionTrace{}, fmt.Errorf("tracelab row %d: %w", row.ordinal, err)
 		}
 	}
@@ -66,8 +76,8 @@ func ReadTraceLab(r io.Reader) (SessionTrace, error) {
 			}
 			prevEnd = pointer(at + api)
 			total, prefix := *t.InputTokens, *t.PrefixTokens
-			n := total / 64
-			reuse := min(prefix/64, len(previous), n)
+			n := total / s.BlockSize
+			reuse := min(prefix/s.BlockSize, len(previous), n)
 			ids := append([]string{}, previous[:reuse]...)
 			for len(ids) < n {
 				ids = append(ids, strconv.Itoa(next))
@@ -83,7 +93,7 @@ func roundSeconds(v float64) float64 {
 	n, _ := strconv.ParseFloat(strconv.FormatFloat(v, 'f', 6, 64), 64)
 	return n
 }
-func tracelabRow(trace *SessionTrace, index map[string]int, row sourceRow) error {
+func tracelabRow(trace *SessionTrace, index map[string]int, row sourceRow, blockSize int) error {
 	f := row.fields
 	id, err := text(f, "session_id", true)
 	if err != nil {
@@ -217,7 +227,7 @@ func tracelabRow(trace *SessionTrace, index map[string]int, row sourceRow) error
 		}
 		t.APITime = pointer(math.Max(last-submitted, 0))
 	}
-	if err := appendTurn(trace, index, id, "recorded", "session-virtual", 64, t); err != nil {
+	if err := appendTurn(trace, index, id, "recorded", "session-virtual", blockSize, t); err != nil {
 		return err
 	}
 	s := &trace.Sessions[index[id]]

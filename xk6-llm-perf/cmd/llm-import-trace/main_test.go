@@ -178,3 +178,57 @@ func TestReplayAggregateBudget(t *testing.T) {
 		t.Fatalf("replay allocation admitted: %v", err)
 	}
 }
+
+func TestBlockSizeFlag(t *testing.T) {
+	moon := `{"session_id":"s","input_length":8,"hash_ids":[1,2]}`
+	lab := `{"session_id":"s","round_index":0,"input_tokens_total":8,"prefix_tokens":0,"newly_append_tokens":8,"timing_events":[{"event_type":"user_message","timestamp":"2026-10-18T00:00:00Z"}]}`
+	for _, tt := range []struct {
+		name, format, input string
+		args                []string
+		want                int
+	}{
+		{"moon default", "mooncake", moon, nil, 512},
+		{"moon explicit4", "mooncake", moon, []string{"-block-size", "4"}, 4},
+		{"lab default", "tracelab", lab, nil, 64},
+		{"lab explicit4", "tracelab", lab, []string{"-block-size", "4"}, 4},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var out bytes.Buffer
+			args := append([]string{"-format", tt.format}, tt.args...)
+			if err := run(args, strings.NewReader(tt.input), &out); err != nil {
+				t.Fatal(err)
+			}
+			var got struct{ Sessions []struct{ BlockSize int } }
+			if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+				t.Fatal(err)
+			}
+			if got.Sessions[0].BlockSize != tt.want {
+				t.Fatalf("block metadata: %s", out.Bytes())
+			}
+		})
+	}
+	for _, value := range []string{"0", "-1", "1000001", "true", "false", "1.5", "bad", "null"} {
+		t.Run("refuse-"+value, func(t *testing.T) {
+			var out bytes.Buffer
+			if err := run([]string{"-format", "mooncake", "-block-size", value}, strings.NewReader(moon), &out); err == nil || out.Len() != 0 {
+				t.Fatal("invalid block size admitted")
+			}
+		})
+	}
+	var out bytes.Buffer
+	if err := run([]string{"-format", "bailian", "-block-size", "4"}, strings.NewReader(`{"chat_id":1,"timestamp":0,"input_length":8,"output_length":4}`), &out); err == nil || !strings.Contains(err.Error(), "unsupported for bailian") {
+		t.Fatal("Bailian override ignored")
+	}
+	out.Reset()
+	args := append(append([]string(nil), exportArgs...), "-block-size", "4")
+	if err := run(args, strings.NewReader(authored), &out); err != nil {
+		t.Fatal(err)
+	}
+	var exported []replaySession
+	if err := json.Unmarshal(out.Bytes(), &exported); err != nil {
+		t.Fatal(err)
+	}
+	if exported[0].BlockSize != 4 || exported[0].HashScope != "file" {
+		t.Fatal("authored export dropped block declaration")
+	}
+}

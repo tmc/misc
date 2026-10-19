@@ -14,6 +14,21 @@ import (
 	"github.com/tmc/misc/xk6-llm-perf/internal/jsoncheck"
 )
 
+// BlockOptions declares the token granularity of each trace hash block.
+// BlockSize must be in 1..1000000. The zero value is invalid: use the readers
+// without options for format defaults. The upper bound is a local resource
+// limit, not an upstream limit. Block scope remains the reader's stated scope.
+type BlockOptions struct {
+	BlockSize int
+}
+
+func (o BlockOptions) validate() error {
+	if o.BlockSize < 1 || o.BlockSize > maxTokens {
+		return fmt.Errorf("block size must be 1..%d", maxTokens)
+	}
+	return nil
+}
+
 // SessionTrace retains grouped trace input without synthesizing prompt text.
 // TimestampPolicy, CountPolicy and HashPolicy describe conversions explicitly.
 // Raw rows preserve the source fields; SourceHash identifies the complete input.
@@ -280,7 +295,7 @@ func virtualBlockBudget(trace SessionTrace, rows []sourceRow) error {
 	blocks := 0
 	for _, session := range trace.Sessions {
 		for _, turn := range session.Turns {
-			n := *turn.InputTokens / 64
+			n := *turn.InputTokens / session.BlockSize
 			if n > maxCacheBlocks-blocks {
 				return fmt.Errorf("aggregate virtual block budget exceeds %d", maxCacheBlocks)
 			}
