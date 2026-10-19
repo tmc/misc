@@ -13,6 +13,7 @@ import (
 	"math"
 	"sort"
 	"strconv"
+	"strings"
 
 	llm "github.com/tmc/misc/xk6-llm-perf"
 )
@@ -87,6 +88,13 @@ type Document struct {
 // Summarize validates a run before deriving successful-request statistics.
 // Missing observations are omitted individually; Count gives the denominator.
 func Summarize(run llm.RunSummary) (Document, error) {
+	return SummarizeWithOptions(run, llm.ReportOptions{})
+}
+
+// SummarizeWithOptions selects reporting conventions without changing retained
+// successful populations or aggregate rates. AIPerf selects linear percentiles,
+// including pooled recognized-content intervals; it makes no token-event claim.
+func SummarizeWithOptions(run llm.RunSummary, opts llm.ReportOptions) (Document, error) {
 	data, err := json.Marshal(run)
 	if err != nil {
 		return Document{}, err
@@ -119,6 +127,10 @@ func Summarize(run llm.RunSummary) (Document, error) {
 	}
 	d.MeasurementPolicy = run.MeasurementPolicy
 	d.PercentileMethod = "nearest_rank"
+	if opts.AIPerf {
+		d.PercentileMethod = "linear_n_minus_1"
+		d.Policy = strings.Replace(d.Policy, "nearest-rank percentiles", "linear interpolation at (n-1)*q percentiles", 1)
+	}
 	d.TTSTPolicy = "second recognized content event; not a physical second-token observation"
 	d.ContentIntervalPolicy = "pooled retained successful recognized-content intervals; truncated and unavailable request vectors excluded; not physical token intervals"
 	var intervals []float64
@@ -196,7 +208,7 @@ func Summarize(run llm.RunSummary) (Document, error) {
 				}
 			}
 		}
-		stat := stats(m.name, m.unit, values)
+		stat := statsWithOptions(m.name, m.unit, values, opts)
 		if m.name == "input_tokens" || m.name == "output_tokens" {
 			stat.Sources = make(map[string]int)
 			for _, r := range run.Records {
@@ -211,7 +223,7 @@ func Summarize(run llm.RunSummary) (Document, error) {
 		}
 		d.Metrics = append(d.Metrics, stat)
 	}
-	d.Metrics = append(d.Metrics, stats("content_inter_chunk_latency", "ms", intervals))
+	d.Metrics = append(d.Metrics, statsWithOptions("content_inter_chunk_latency", "ms", intervals, opts))
 	for _, s := range []struct {
 		name, unit string
 		v          float64
@@ -229,6 +241,10 @@ func Summarize(run llm.RunSummary) (Document, error) {
 	return d, nil
 }
 func stats(name, unit string, v []float64) Statistic {
+	return statsWithOptions(name, unit, v, llm.ReportOptions{})
+}
+
+func statsWithOptions(name, unit string, v []float64, opts llm.ReportOptions) Statistic {
 	s := Statistic{Name: name, Unit: unit, Count: len(v)}
 	if len(v) == 0 {
 		return s
@@ -248,7 +264,16 @@ func stats(name, unit string, v []float64) Statistic {
 		}
 	}
 	std := scale * math.Sqrt(variance)
-	q := func(p float64) *float64 { x := v[int(math.Ceil(p*float64(len(v))))-1]; return &x }
+	q := func(p float64) *float64 {
+		x := v[int(math.Ceil(p*float64(len(v))))-1]
+		if opts.AIPerf {
+			index := p * float64(len(v)-1)
+			lo := int(index)
+			hi := min(lo+1, len(v)-1)
+			x = v[lo] + (index-float64(lo))*(v[hi]-v[lo])
+		}
+		return &x
+	}
 	s.Mean = &mean
 	s.Min = &v[0]
 	s.Max = &v[len(v)-1]

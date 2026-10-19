@@ -1,0 +1,12 @@
+exec $CLI -input run.json -aiperf-statistics
+stdout '"percentile_method":"linear_n_minus_1"'
+stdout 'successful retained requests'
+stdout 'linear interpolation at \(n-1\)\*q'
+exec $CLI -input run.json
+stdout '"percentile_method":"nearest_rank"'
+! exec $CLI -input run.json -aiperf-statistics -stream
+stderr 'aiperf-statistics requires non-streaming json, csv or html output'
+! exec $CLI -input run.json -aiperf-statistics -format otlp
+stderr 'aiperf-statistics requires non-streaming json, csv or html output'
+-- run.json --
+{"schema_version":1,"started_at":1000,"finished_at":2000,"duration":1,"attempts":0,"successes":0,"failures":0,"good_requests":0,"records":[]}

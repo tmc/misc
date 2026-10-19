@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/tmc/misc/xk6-llm-perf/internal/jsoncheck"
 	"io"
 	"math"
 	"sort"
@@ -278,12 +279,14 @@ func validateRun(run RunSummary) error {
 	return nil
 }
 
-// SliceSummary counts completions in a half-open time interval. Requests may
-// start before the slice; concurrency is clipped at its boundaries.
+// SliceSummary counts requests selected by Policy. Attempts counts completions
+// by default, or dispatch starts when AttemptSelection is dispatch_start.
+// Concurrency is independently clipped at slice boundaries.
 type SliceSummary struct {
 	StartedAt           float64     `json:"started_at"`
 	FinishedAt          float64     `json:"finished_at"`
 	Attempts            int         `json:"completed_attempts"`
+	AttemptSelection    string      `json:"attempt_selection,omitempty"`
 	Successes           int         `json:"successes"`
 	Failures            int         `json:"failures"`
 	GoodRequests        int         `json:"good_requests"`
@@ -301,6 +304,9 @@ type SliceSummary struct {
 // MarshalJSON emits a null token rate for a slice with missing successful
 // counts. Empty slices and observed zero counts retain a measured zero rate.
 func (s SliceSummary) MarshalJSON() ([]byte, error) {
+	if s.AttemptSelection != "" && s.AttemptSelection != "dispatch_start" {
+		return nil, fmt.Errorf("unknown slice attempt selection")
+	}
 	type summary SliceSummary
 	var input, output *float64
 	if s.MissingInputCounts == 0 {
@@ -309,21 +315,155 @@ func (s SliceSummary) MarshalJSON() ([]byte, error) {
 	if s.MissingOutputCounts == 0 {
 		output = &s.OutputThroughput
 	}
+	var completed, selected *int
+	if s.AttemptSelection == "dispatch_start" {
+		selected = &s.Attempts
+	} else {
+		completed = &s.Attempts
+	}
 	return json.Marshal(struct {
 		summary
-		InputThroughput  *float64 `json:"input_throughput"`
-		OutputThroughput *float64 `json:"output_throughput"`
-	}{summary: summary(s), InputThroughput: input, OutputThroughput: output})
+		CompletedAttempts *int     `json:"completed_attempts,omitempty"`
+		SelectedAttempts  *int     `json:"selected_attempts,omitempty"`
+		InputThroughput   *float64 `json:"input_throughput"`
+		OutputThroughput  *float64 `json:"output_throughput"`
+	}{summary: summary(s), CompletedAttempts: completed, SelectedAttempts: selected, InputThroughput: input, OutputThroughput: output})
+}
+
+// UnmarshalJSON restores the selected attempt count and preserves unavailable
+// token rates. Count names must agree with the explicit selection convention.
+func (s *SliceSummary) UnmarshalJSON(data []byte) error {
+	if err := jsoncheck.Check(json.NewDecoder(bytes.NewReader(data)), jsoncheck.Options{FoldNames: true}); err != nil {
+		return fmt.Errorf("decode slice: %w", err)
+	}
+	var members map[string]json.RawMessage
+	if err := json.Unmarshal(data, &members); err != nil {
+		return fmt.Errorf("decode slice: %w", err)
+	}
+	// All schema member names are lowercase ASCII. Reject encoding/json aliases
+	// at every level rather than allowing a differently spelled evidence key.
+	var names any
+	if err := json.Unmarshal(data, &names); err != nil {
+		return err
+	}
+	var canonical func(any) bool
+	canonical = func(value any) bool {
+		switch value := value.(type) {
+		case map[string]any:
+			for name, child := range value {
+				for _, c := range name {
+					if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '_') {
+						return false
+					}
+				}
+				if !canonical(child) {
+					return false
+				}
+			}
+		case []any:
+			for _, child := range value {
+				if !canonical(child) {
+					return false
+				}
+			}
+		}
+		return true
+	}
+	if !canonical(names) {
+		return fmt.Errorf("noncanonical slice member name")
+	}
+	for name, raw := range members {
+		if name != "input_throughput" && name != "output_throughput" && bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+			return fmt.Errorf("null slice field %s", name)
+		}
+	}
+	type summary SliceSummary
+	var wire struct {
+		summary
+		CompletedAttempts *int     `json:"completed_attempts"`
+		SelectedAttempts  *int     `json:"selected_attempts"`
+		InputThroughput   *float64 `json:"input_throughput"`
+		OutputThroughput  *float64 `json:"output_throughput"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&wire); err != nil {
+		return fmt.Errorf("decode slice: %w", err)
+	}
+	restored := SliceSummary(wire.summary)
+	switch restored.AttemptSelection {
+	case "":
+		if wire.CompletedAttempts == nil || wire.SelectedAttempts != nil {
+			return fmt.Errorf("slice requires only completed attempts")
+		}
+		restored.Attempts = *wire.CompletedAttempts
+	case "dispatch_start":
+		if wire.SelectedAttempts == nil || wire.CompletedAttempts != nil {
+			return fmt.Errorf("dispatch slice requires only selected attempts")
+		}
+		restored.Attempts = *wire.SelectedAttempts
+	default:
+		return fmt.Errorf("unknown slice attempt selection")
+	}
+	if restored.Attempts < 0 || restored.Successes < 0 || restored.Failures < 0 || restored.Successes > restored.Attempts || restored.Failures != restored.Attempts-restored.Successes || restored.GoodRequests < 0 || restored.GoodRequests > restored.Successes || restored.InputTokens < 0 || restored.OutputTokens < 0 {
+		return fmt.Errorf("invalid slice accounting")
+	}
+	for _, rate := range []struct {
+		name        string
+		missing     int
+		value       *float64
+		destination *float64
+	}{
+		{"input_throughput", restored.MissingInputCounts, wire.InputThroughput, &restored.InputThroughput},
+		{"output_throughput", restored.MissingOutputCounts, wire.OutputThroughput, &restored.OutputThroughput},
+	} {
+		if _, present := members[rate.name]; !present {
+			return fmt.Errorf("missing slice %s", rate.name)
+		}
+		if rate.missing < 0 || rate.missing > restored.Successes || (rate.missing > 0) != (rate.value == nil) {
+			return fmt.Errorf("contradictory slice %s availability", rate.name)
+		}
+		if rate.value != nil {
+			if !finite(*rate.value) || *rate.value < 0 {
+				return fmt.Errorf("invalid slice %s", rate.name)
+			}
+			*rate.destination = *rate.value
+		}
+	}
+	*s = restored
+	return nil
+}
+
+// ReportOptions selects explicit reporting conventions. Its zero value preserves
+// nearest-rank percentiles and completion-based time slices.
+type ReportOptions struct {
+	// AIPerf uses linear (n-1)*q percentiles and dispatch-start [start,end)
+	// time slices. It does not change success/failure populations or rate policy.
+	AIPerf bool
 }
 
 // TimeSlices derives non-overlapping slices from a complete retained run.
 // width uses seconds. The last slice ends at the declared run end.
 func TimeSlices(run RunSummary, width float64) ([]SliceSummary, error) {
+	return TimeSlicesWithOptions(run, width, ReportOptions{})
+}
+
+// TimeSlicesWithOptions derives slices using the selected window convention.
+// AIPerf dispatch slices require recorded dispatch clock-basis evidence; a
+// missing timestamp must not silently become a dispatch at Unix zero.
+func TimeSlicesWithOptions(run RunSummary, width float64, opts ReportOptions) ([]SliceSummary, error) {
 	if width <= 0 || math.IsNaN(width) || math.IsInf(width, 0) {
 		return nil, fmt.Errorf("slice width must be positive and finite")
 	}
 	if _, err := AnalyzeTimeline(run); err != nil {
 		return nil, err
+	}
+	if opts.AIPerf {
+		for _, m := range run.Records {
+			if m.TimestampBasis != "dispatch Unix clock anchor plus monotonic elapsed time" {
+				return nil, fmt.Errorf("dispatch time unavailable for AIPerf slices")
+			}
+		}
 	}
 	if math.Ceil(run.Duration/width) > 10000 {
 		return nil, fmt.Errorf("more than 10000 time slices")
@@ -335,10 +475,18 @@ func TimeSlices(run RunSummary, width float64) ([]SliceSummary, error) {
 			return nil, fmt.Errorf("slice width below timestamp resolution")
 		}
 		s := SliceSummary{StartedAt: start, FinishedAt: end, Policy: "completion in [start,end); final run endpoint inclusive; tokens from successful completions"}
+		if opts.AIPerf {
+			s.Policy = "dispatch start in [start,end); final endpoint excluded; tokens from successful requests selected by dispatch start"
+			s.AttemptSelection = "dispatch_start"
+		}
 		var intervals []interval
 		for _, m := range run.Records {
 			intervals = append(intervals, interval{m.DispatchedAt, m.FinishedAt})
-			if m.FinishedAt < start || m.FinishedAt >= end && !(end == run.FinishedAt && m.FinishedAt == end) {
+			selected := m.FinishedAt >= start && (m.FinishedAt < end || end == run.FinishedAt && m.FinishedAt == end)
+			if opts.AIPerf {
+				selected = m.DispatchedAt >= start && m.DispatchedAt < end
+			}
+			if !selected {
 				continue
 			}
 			s.Attempts++
@@ -377,7 +525,7 @@ func TimeSlices(run RunSummary, width float64) ([]SliceSummary, error) {
 }
 
 // Distribution summarizes available successful-request observations. Empty
-// populations have null statistics. Quantiles use nearest rank without interpolation.
+// populations have null statistics. Quantiles use the estimator identified by RequestAnalysis.QuantilePolicy.
 type Distribution struct {
 	Unit    string   `json:"unit"`
 	Samples int      `json:"samples"`
@@ -403,10 +551,19 @@ type RequestAnalysis struct {
 // AnalyzeRequests derives latency, count, and speed distributions. Failures stay
 // in outcome counts and are excluded from success-only metrics, not encoded as zero.
 func AnalyzeRequests(run RunSummary) (RequestAnalysis, error) {
+	return AnalyzeRequestsWithOptions(run, ReportOptions{})
+}
+
+// AnalyzeRequestsWithOptions selects the percentile estimator without changing
+// retained successful-request populations, missing values or outcome accounting.
+func AnalyzeRequestsWithOptions(run RunSummary, opts ReportOptions) (RequestAnalysis, error) {
 	if _, err := AnalyzeTimeline(run); err != nil {
 		return RequestAnalysis{}, err
 	}
 	result := RequestAnalysis{Population: "successful whole-contained requests; failures only in outcomes", CountSources: map[string]map[string]int{"input": {}, "output": {}}, Outcomes: map[string]int{}, Metrics: map[string]Distribution{}, QuantilePolicy: "nearest rank ceil(p*n), population standard deviation; unavailable values excluded"}
+	if opts.AIPerf {
+		result.QuantilePolicy = "linear interpolation at (n-1)*q; population standard deviation; unavailable values excluded; successful retained population unchanged"
+	}
 	type metric struct {
 		name, unit string
 		value      func(Measurement) *float64
@@ -473,12 +630,16 @@ func AnalyzeRequests(run RunSummary) (RequestAnalysis, error) {
 			}
 			values = append(values, *v)
 		}
-		result.Metrics[metric.name] = distribution(values, missing, metric.unit)
+		result.Metrics[metric.name] = distributionWithOptions(values, missing, metric.unit, opts)
 	}
 	return result, nil
 }
 
 func distribution(values []float64, missing int, unit string) Distribution {
+	return distributionWithOptions(values, missing, unit, ReportOptions{})
+}
+
+func distributionWithOptions(values []float64, missing int, unit string, opts ReportOptions) Distribution {
 	d := Distribution{Unit: unit, Samples: len(values), Missing: missing}
 	if len(values) == 0 {
 		return d
@@ -493,7 +654,16 @@ func distribution(values []float64, missing int, unit string) Distribution {
 		delta := v - mean
 		std = math.Hypot(std, delta/math.Sqrt(float64(len(values))))
 	}
-	q := func(p float64) *float64 { v := values[max(0, int(math.Ceil(p*float64(len(values))))-1)]; return &v }
+	q := func(p float64) *float64 {
+		v := values[max(0, int(math.Ceil(p*float64(len(values))))-1)]
+		if opts.AIPerf {
+			index := p * float64(len(values)-1)
+			lo := int(index)
+			hi := min(lo+1, len(values)-1)
+			v = values[lo] + (index-float64(lo))*(values[hi]-values[lo])
+		}
+		return &v
+	}
 	lo, hi := values[0], values[len(values)-1]
 	d.Mean, d.StdDev, d.Min, d.Max = &mean, &std, &lo, &hi
 	d.P50, d.P95, d.P99 = q(.5), q(.95), q(.99)

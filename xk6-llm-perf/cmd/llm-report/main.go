@@ -21,6 +21,7 @@ func main() {
 
 func run(args []string, out io.Writer) error {
 	flags := flag.NewFlagSet("llm-report", flag.ContinueOnError)
+	aiperf := flags.Bool("aiperf-statistics", false, "linear percentiles and dispatch-start half-open time slices (requires dispatch clock evidence)")
 	input := flags.String("input", "", "versioned run JSON file")
 	records := flags.String("records", "", "optional retained JSONL file to reconcile against run")
 	width := flags.Duration("slice", 10*time.Second, "time slice width")
@@ -60,7 +61,7 @@ func run(args []string, out io.Writer) error {
 			return err
 		}
 	}
-	distributions, err := llmperf.AnalyzeRequests(summary)
+	distributions, err := llmperf.AnalyzeRequestsWithOptions(summary, llmperf.ReportOptions{AIPerf: *aiperf})
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,7 @@ func run(args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	slices, err := llmperf.TimeSlices(summary, width.Seconds())
+	slices, err := llmperf.TimeSlicesWithOptions(summary, width.Seconds(), llmperf.ReportOptions{AIPerf: *aiperf})
 	if err != nil {
 		return err
 	}

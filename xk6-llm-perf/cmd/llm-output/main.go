@@ -16,6 +16,7 @@ import (
 )
 
 func main() {
+	aiperf := flag.Bool("aiperf-statistics", false, "linear percentiles for retained successful requests and pooled content intervals")
 	prices := flag.String("prices", "", "explicit price table file (format=cost only)")
 	stream := flag.Bool("stream", false, "consume measurement JSONL with serial sink backpressure")
 	streamRun := flag.String("stream-run", "", "benchmark run ID for OTLP streaming")
@@ -36,7 +37,9 @@ func main() {
 		reader = f
 	}
 	var err error
-	if *prices != "" || *format == "cost" {
+	if *aiperf && (*stream || (*format != "json" && *format != "csv" && *format != "html")) {
+		err = fmt.Errorf("aiperf-statistics requires non-streaming json, csv or html output")
+	} else if *prices != "" || *format == "cost" {
 		if *stream || *format != "cost" || *prices == "" || *endpoint != "" {
 			err = fmt.Errorf("prices require non-streaming cost format without a sink")
 		} else {
@@ -64,7 +67,7 @@ func main() {
 			err = streamErr
 		}
 	} else {
-		err = run(reader, *format, *endpoint, *runID, *authEnv)
+		err = runWithOptions(reader, *format, *endpoint, *runID, *authEnv, llm.ReportOptions{AIPerf: *aiperf})
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -72,11 +75,15 @@ func main() {
 	}
 }
 func run(reader io.Reader, format, endpoint, runID, authEnv string) error {
+	return runWithOptions(reader, format, endpoint, runID, authEnv, llm.ReportOptions{})
+}
+
+func runWithOptions(reader io.Reader, format, endpoint, runID, authEnv string, opts llm.ReportOptions) error {
 	r, err := llm.ReadRun(reader)
 	if err != nil {
 		return err
 	}
-	d, err := output.Summarize(r)
+	d, err := output.SummarizeWithOptions(r, opts)
 	if err != nil {
 		return err
 	}
