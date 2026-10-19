@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/tmc/misc/xk6-llm-perf/accuracy"
+	"github.com/tmc/misc/xk6-llm-perf/internal/jsoncheck"
 )
 
 func main() {
@@ -24,6 +25,7 @@ func main() {
 	workerPins := flag.String("dependency-versions", "", "JSON file mapping packages to exact versions")
 	input := flag.String("input", "", "artifact file; default stdin")
 	endpoint := flag.String("endpoint", "", "explicit OpenAI chat endpoint to generate missing predictions")
+	requests := flag.String("requests", "", "JSON object mapping case IDs to recipe generation requests")
 	prompts := flag.String("prompts", "", "JSON object mapping case IDs to independent prompts")
 	authEnv := flag.String("authorization-env", "", "environment variable holding Authorization header")
 	flag.Parse()
@@ -41,13 +43,13 @@ func main() {
 			os.Exit(1)
 		}
 	}
-	err := run(*input, *endpoint, *prompts, *authEnv, opts)
+	err := run(*input, *endpoint, *prompts, *requests, *authEnv, opts)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
-func run(input, endpoint, promptFile, authEnv string, worker accuracy.WorkerOptions) error {
+func run(input, endpoint, promptFile, requestFile, authEnv string, worker accuracy.WorkerOptions) error {
 	var reader io.Reader = os.Stdin
 	if input != "" {
 		f, err := os.Open(input) // #nosec G304 -- local CLI deliberately reads the caller-selected artifact, bounded and validated below
@@ -72,10 +74,14 @@ func run(input, endpoint, promptFile, authEnv string, worker accuracy.WorkerOpti
 		return err
 	}
 	if endpoint != "" {
-		if promptFile == "" {
-			return fmt.Errorf("generation requires separate prompts file")
+		if (promptFile == "") == (requestFile == "") {
+			return fmt.Errorf("generation requires exactly one separate prompts or requests file")
 		}
-		f, err := os.Open(promptFile) // #nosec G304 -- local CLI deliberately reads the caller-selected prompts file, bounded and decoded below
+		path := promptFile
+		if requestFile != "" {
+			path = requestFile
+		}
+		f, err := os.Open(path) // #nosec G304 -- local CLI deliberately reads the caller-selected prompts file, bounded and decoded below
 		if err != nil {
 			return err
 		}
@@ -83,10 +89,6 @@ func run(input, endpoint, promptFile, authEnv string, worker accuracy.WorkerOpti
 		closeErr := f.Close()
 		if err != nil || closeErr != nil || len(promptBytes) > 4<<20 {
 			return fmt.Errorf("prompts exceed budget or read failed")
-		}
-		var prompts map[string]string
-		if err := json.Unmarshal(promptBytes, &prompts); err != nil {
-			return fmt.Errorf("decode prompts: %w", err)
 		}
 		var artifact accuracy.Artifact
 		if err := json.Unmarshal(data, &artifact); err != nil {
@@ -102,7 +104,28 @@ func run(input, endpoint, promptFile, authEnv string, worker accuracy.WorkerOpti
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 		defer cancel()
-		generated, err := accuracy.Generate(ctx, &http.Client{Timeout: 30 * time.Second}, endpoint, auth, artifact, prompts)
+		var generated accuracy.Artifact
+		if requestFile != "" {
+			if err := jsoncheck.Check(json.NewDecoder(bytes.NewReader(promptBytes)), jsoncheck.Options{FoldNames: true, RejectNull: true}); err != nil {
+				return fmt.Errorf("decode requests: %w", err)
+			}
+			var requests map[string]accuracy.GenerationRequest
+			decoder := json.NewDecoder(bytes.NewReader(promptBytes))
+			decoder.DisallowUnknownFields()
+			if err := decoder.Decode(&requests); err != nil {
+				return fmt.Errorf("decode requests: %w", err)
+			}
+			if err := decoder.Decode(new(any)); err != io.EOF {
+				return fmt.Errorf("trailing requests data")
+			}
+			generated, err = accuracy.GenerateRequests(ctx, &http.Client{Timeout: 30 * time.Second}, endpoint, auth, artifact, requests)
+		} else {
+			var prompts map[string]string
+			if err := json.Unmarshal(promptBytes, &prompts); err != nil {
+				return fmt.Errorf("decode prompts: %w", err)
+			}
+			generated, err = accuracy.Generate(ctx, &http.Client{Timeout: 30 * time.Second}, endpoint, auth, artifact, prompts)
+		}
 		if err != nil {
 			return err
 		}
@@ -114,7 +137,7 @@ func run(input, endpoint, promptFile, authEnv string, worker accuracy.WorkerOpti
 		if err != nil {
 			return err
 		}
-	} else if promptFile != "" || authEnv != "" {
+	} else if promptFile != "" || requestFile != "" || authEnv != "" {
 		return fmt.Errorf("generation options require endpoint")
 	}
 	return json.NewEncoder(os.Stdout).Encode(report)

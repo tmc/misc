@@ -90,3 +90,48 @@ func TestGenerateResponseIntegrity(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateRequestsRecipeBoundary(t *testing.T) {
+	a := fixture("exact-match-v1")
+	request := GenerationRequest{Messages: []Message{{Role: "system", Content: "system instruction"}, {Role: "user", Content: "example question"}, {Role: "assistant", Content: "example answer"}, {Role: "user", Content: "independent question"}}, MaxTokens: 32768, Stop: []string{"\nEND"}}
+	calls := 0
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		var got struct {
+			Model     string    `json:"model"`
+			Stream    bool      `json:"stream"`
+			Messages  []Message `json:"messages"`
+			MaxTokens int       `json:"max_tokens"`
+			Stop      []string  `json:"stop"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&got); err != nil {
+			t.Error(err)
+		}
+		b, _ := json.Marshal(got.Messages)
+		want, _ := json.Marshal(request.Messages)
+		if string(b) != string(want) || got.MaxTokens != 32768 || len(got.Stop) != 1 || got.Stop[0] != "\nEND" || got.Model != a.Model || got.Stream || r.Header.Get("Authorization") != "Bearer fixture" {
+			t.Errorf("request changed: %+v", got)
+		}
+		fmt.Fprint(w, `{"choices":[{"index":0,"message":{"content":"A"}}]}`)
+	}))
+	defer s.Close()
+	got, err := GenerateRequests(context.Background(), s.Client(), s.URL, "Bearer fixture", a, map[string]GenerationRequest{"3": request})
+	if err != nil || calls != 1 || got.Cases[2].Prediction == nil || got.PromptSHA256 == "" {
+		t.Fatalf("generation: %+v %v", got, err)
+	}
+	for _, change := range []func(*GenerationRequest){
+		func(r *GenerationRequest) { r.MaxTokens = 0 }, func(r *GenerationRequest) { r.MaxTokens = -1 },
+		func(r *GenerationRequest) { r.Messages = []Message{{Role: "tool", Content: "bad"}} },
+		func(r *GenerationRequest) { r.Messages = []Message{{Role: "assistant", Content: "bad"}} },
+		func(r *GenerationRequest) { r.Stop = []string{""} },
+	} {
+		bad := request
+		change(&bad)
+		if _, err := GenerateRequests(context.Background(), s.Client(), s.URL, "", a, map[string]GenerationRequest{"3": bad}); err == nil {
+			t.Fatal("invalid recipe accepted")
+		}
+	}
+	if calls != 1 {
+		t.Fatal("invalid request dispatched")
+	}
+}

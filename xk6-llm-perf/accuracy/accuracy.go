@@ -91,7 +91,8 @@ func ReferenceHash(cases []Case) (string, error) {
 var rational = regexp.MustCompile(`^[+-]?[0-9]+(?:\.[0-9]+)?(?:/[+-]?[0-9]+)?$`)
 
 // Evaluate reads a bounded strict artifact and verifies its declared reference hash.
-// exact-match-v1 is trimmed, case-sensitive equality; choice-v1 requires a bare
+// aiperf-exact-match-v1 uses the pinned Python whitespace set;
+// exact-match-v1 is Go-trimmed, case-sensitive equality; choice-v1 requires a bare
 // A-Z first line; rational-v1 compares finite decimal/fraction values exactly.
 func Evaluate(reader io.Reader) (Report, error) { return evaluate(reader, nil) }
 
@@ -126,7 +127,7 @@ func evaluate(reader io.Reader, external grader) (Report, error) {
 		}
 	}
 	switch a.Evaluator {
-	case "exact-match-v1", "choice-v1", "rational-v1", "gsm8k-v1", "mmlu-v1", "mmlu-pro-v1", "math-numeric-v1", "aime-numeric-v1", "math-symbolic-v1", "lighteval-expr-v1", "lighteval-latex-v1", "lighteval-gpqa-v1", "code-execution-v1":
+	case "aiperf-exact-match-v1", "exact-match-v1", "choice-v1", "rational-v1", "gsm8k-v1", "mmlu-v1", "mmlu-pro-v1", "math-numeric-v1", "aime-numeric-v1", "math-symbolic-v1", "lighteval-expr-v1", "lighteval-latex-v1", "lighteval-gpqa-v1", "code-execution-v1":
 	default:
 		return Report{}, fmt.Errorf("unsupported evaluator")
 	}
@@ -156,6 +157,8 @@ func evaluate(reader io.Reader, external grader) (Report, error) {
 				item.Status = "incorrect"
 				pred, ref := strings.TrimSpace(*c.Prediction), strings.TrimSpace(c.Reference)
 				switch a.Evaluator {
+				case "aiperf-exact-match-v1":
+					item.Correct, item.Unparsed = aiperfExactMatch(*c.Prediction, c.Reference)
 				case "exact-match-v1":
 					item.Unparsed = pred == "" && ref != ""
 					item.Correct = pred != "" && pred == ref
