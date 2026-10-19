@@ -18,6 +18,7 @@ func TestConversationHelper(t *testing.T) {
 	text := strings.ReplaceAll(string(source), "import { sleep } from 'k6';", "function sleep() {}")
 	text = strings.ReplaceAll(text, "import crypto from 'k6/crypto';", "")
 	text = strings.ReplaceAll(text, "export function", "function")
+	text = strings.ReplaceAll(text, "export async function", "async function")
 	rt := sobek.New()
 	if _, err := rt.RunString(text); err != nil {
 		t.Fatal(err)
