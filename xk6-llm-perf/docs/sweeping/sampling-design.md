@@ -64,3 +64,100 @@ match the existing planner pins before dispatch.
 CPU reference controls and historical worker interface tests establish software
 behavior only. Real model capacity, optimal settings and performance equivalence
 require separately approved workload plans, resources and live evidence.
+
+## Typed upstream fixed-trial plans
+
+The scalar modes above retain their existing contracts. A separate
+`--aiperf-plan-only` mode accepts the actual pinned AIPerf envelope schema:
+
+```json
+{"random_seed":7,"benchmark":{"model":"local","endpoint":{"type":"chat","url":"http://unused.invalid"},"dataset":{"type":"synthetic","entries":1},"phases":[{"name":"profiling","type":"concurrency","concurrency":1,"requests":1}]},"sweep":{"type":"zip","parameters":{"concurrency":[1,2]},"cooldown_seconds":0.25},"multi_run":{"num_runs":2,"cooldown_seconds":0.5,"disable_warmup_after_first":false}}
+```
+
+```sh
+/path/to/pinned/python scripts/sweep-design.py --config envelope.json \
+  --output typed-plan.json --aiperf-plan-only
+```
+
+This mode verifies the installed AIPerf 0.13.0 package, all 1,025 Python source
+files and plugin defaults against the pinned reference before importing its
+loader. It calls `load_config_from_mapping` with environment substitution
+disabled, then `build_benchmark_plan`. The actual `MultiRunOrchestrator` executes
+against a capture-only executor: its sleeps are recorded and no benchmark runs.
+Output retains full normalized benchmark bodies, normalized authored fields,
+variation metadata, variation seeds and per-event trial/variation coordinates,
+actual run seed and cooldown intervals. It also retains the Python/package and
+source-file identities. Only trusted authored configs/templates are supported;
+Jinja/config expansion is upstream code, not an execution sandbox.
+
+Normalization includes singular dataset promotion, named dataset scenario
+merges and per-variation Jinja rendering. Upstream rejects ambiguous singular
+scenario datasets against multiple base datasets. `repeated` is trials outer,
+variations inner; `independent` is variations outer, trials inner. Inter-variation
+cooldown comes from `sweep.cooldown_seconds`, and inter-trial cooldown from
+`multi_run.cooldown_seconds`. No delay is added after the final event.
+The actual upstream seed resolver supplies base-plus-index seeds unless
+`same_seed` is true; `vary_seed_per_trial` uses its label/trial SHA derivation.
+Without an explicit seed, upstream can generate one when `set_consistent_seed`
+is true. With that option false, absent seeds remain null. Zero stays distinct.
+
+Typed mode currently accepts explicit `grid`, `zip` and `scenarios` sweeps and
+fixed trials only. Other typed sweep variants, convergence, postprocessing,
+SLA filters, plots and unknown envelope/sweep options are refused. Existing
+scalar Sobol/LHS and separate search modes remain available. Limits are 12
+scalar axes, 256 values per axis, 256 variations, 1,024 total events, 60 seconds
+per cooldown and 1 MiB input/generated-plan JSON. Upstream supports additional
+configuration forms; this mode does not claim all of them.
+
+## Explicit script realization
+
+`--aiperf-run` executes a narrower contract. It requires a wrapper with exactly:
+
+- `schema_version: 1` and `envelope` as above;
+- `environment`, mapping 1–12 environment names to normalized authored benchmark
+  leaf paths, such as `{"MODEL":"models.items.0.name"}`;
+- absolute `binary` and `script` paths, plus optional absolute `assets`;
+- `seed_environment`, a distinct allowed environment name;
+- `trial_timeout_seconds` (1–60) and `max_duration_seconds` (1–600).
+
+Every normalized authored benchmark leaf must map exactly once, including base
+settings and fields inferred by normalization. Lists use zero-based decimal
+path segments. Authored empty collections, dotted dictionary keys and null leaves cannot
+become scalar parameters;
+unsupported mappings fail before dispatch. Inspect `authored_benchmark` in a
+plan to construct the exact mapping. Execution additionally requires explicit
+integer `random_seed` and `disable_warmup_after_first: false`; it does not
+silently translate upstream warmup removal into a script setting.
+
+The binary is invoked once per ordered event as `binary run --log-format raw --summary-export
+<cell>/summary.json --env NAME=value ... script`. The seed is passed through the
+chosen seed environment name. This directly runs a fixed trial and leaves the
+existing campaign worker's convergence semantics unchanged. The script must
+read those environment values and log exactly one receipt:
+
+```js
+console.log('SWEEP_APPLIED '+JSON.stringify({parameters, seed}));
+```
+
+`parameters` must contain the exact string values actually read by the script,
+and `seed` the exact decimal seed string actually read. This avoids JavaScript
+number rounding for upstream SHA-derived seeds. Missing, duplicate or mismatched
+receipts fail the cell, even when the process exits zero. This guard verifies
+script-reported consumption; it does not prove engine application or prevent a
+trusted script from lying. A valid summary JSON file is also required.
+Use ordinary script checks/thresholds to validate the workload itself.
+
+Each attempted cell retains its exact argv, normalized event, exit/error,
+worker log and summary hashes in `typed-design.json`. Resume revalidates source,
+plan, script/binary/assets and successful artifacts without rerunning completed
+cells. A failed or interrupted cell remains terminal. Elapsed time and
+cooldowns count toward the duration budget. The CLI bounds CPU to 20 seconds,
+address space to 2 GiB and files to 16 MiB; typed planning has a 30-second alarm,
+and execution a 630-second alarm. Child processes inherit these OS limits.
+Logs and configs can contain authored data and must be protected accordingly.
+
+Typed normalization and script realization are separate evidence classes.
+Mapped execution does not implement all BenchmarkConfig defaults in k6,
+translate arbitrary datasets into requests or establish live AIPerf, capacity
+or performance equivalence. The script implements the declared mapped settings;
+engine effects require separate named runtime evidence.

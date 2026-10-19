@@ -104,8 +104,6 @@ class DesignTest(unittest.TestCase):
                 self.assertEqual(child.call_count, 1)
 
 
-if __name__ == '__main__':
-    unittest.main()
 
 class WorkerTest(unittest.TestCase):
     @unittest.skipUnless(os.environ.get('CAMPAIGN_SMOKE_BINARY') and os.environ.get('K6_SMOKE_BINARY'), 'set existing historical worker binaries')
@@ -139,3 +137,119 @@ class UpstreamExpansionTest(unittest.TestCase):
         source = {'benchmark': {}, 'variables': config['base'], 'sweep': {'type': 'scenarios', 'runs': [{'name': r['name'], 'variables': r['parameters']} for r in config['runs']]}}
         expected = [variant['variables'] for variant, variation in expand_sweep(source)]
         self.assertEqual([r['parameters'] for r in bridge.design(config)], [{k: bridge.scalar(v) for k, v in row.items()} for row in expected])
+
+class TypedSweepTest(unittest.TestCase):
+    def envelope(self):
+        return {'benchmark': {'model': 'local', 'endpoint': {'type': 'chat', 'url': 'http://unused.invalid'},
+                              'dataset': {'type': 'synthetic', 'entries': 1},
+                              'phases': [{'name': 'profiling', 'type': 'concurrency', 'concurrency': 1, 'requests': 1}]},
+                'random_seed': 7, 'sweep': {'type': 'zip', 'parameters': {'concurrency': [1, 2]}, 'cooldown_seconds': 0.25},
+                'multi_run': {'num_runs': 2, 'cooldown_seconds': 0.5, 'disable_warmup_after_first': False}}
+
+    def test_actual_order_cooldowns_seeds_and_normalization(self):
+        value = self.envelope()
+        plan = bridge.aiperf_plan(value)
+        self.assertEqual([(e['variation_index'], e['trial_index']) for e in plan['events']], [(0, 0), (1, 0), (0, 1), (1, 1)])
+        self.assertEqual([e['cooldowns_before'] for e in plan['events']], [[], [0.25], [0.5], [0.25]])
+        self.assertEqual([e['seed'] for e in plan['events']], [7, 8, 7, 8])
+        self.assertEqual(plan['events'][0]['authored_benchmark']['datasets'][0]['name'], 'default')
+        value['sweep']['iteration_order'] = 'independent'
+        plan = bridge.aiperf_plan(value)
+        self.assertEqual([(e['variation_index'], e['trial_index']) for e in plan['events']], [(0, 0), (0, 1), (1, 0), (1, 1)])
+        self.assertEqual([e['cooldowns_before'] for e in plan['events']], [[], [0.5], [0.25], [0.5]])
+        value['sweep']['same_seed'] = True
+        self.assertEqual(bridge.aiperf_plan(value)['variation_seeds'], [7, 7])
+        value['multi_run']['vary_seed_per_trial'] = True
+        plan = bridge.aiperf_plan(value)
+        from aiperf.common.random_generator import derive_variation_seed
+        self.assertEqual([e['seed'] for e in plan['events']], [derive_variation_seed(7, e['label']+':trial:'+str(e['trial_index'])) for e in plan['events']])
+        del value['random_seed']
+        value['multi_run']['set_consistent_seed'] = False
+        self.assertEqual([e['seed'] for e in bridge.aiperf_plan(value)['events']], [None]*4)
+
+    def test_actual_scenario_dataset_merge(self):
+        value = self.envelope()
+        value['benchmark']['dataset']['prompts'] = {'isl': {'mean': 8, 'stddev': 0}}
+        value['sweep'] = {'type': 'scenarios', 'runs': [
+            {'name': 'short', 'benchmark': {'dataset': {'entries': 2, 'prompts': {'isl': {'mean': 4}}}}},
+            {'name': 'same', 'benchmark': {'dataset': {'entries': 2, 'prompts': {'isl': {'mean': 4}}}}}]}
+        plan = bridge.aiperf_plan(value)
+        ds = plan['events'][0]['benchmark']['datasets'][0]
+        self.assertEqual(ds['entries'], 2)
+        self.assertEqual(ds['prompts']['isl']['mean'], 4)
+        self.assertEqual(ds['prompts']['isl']['stddev'], 0)
+        self.assertEqual([v['label'] for v in plan['variations']], ['short', 'same'])
+        self.assertEqual(len(plan['events']), 4)
+
+    def config(self):
+        value = self.envelope()
+        plan = bridge.aiperf_plan(value)
+        mapping = {'B%d' % i: path for i, path in enumerate(bridge.leaves(plan['events'][0]['authored_benchmark']))}
+        asset = str(Path(__file__).resolve())
+        return {'schema_version': 1, 'envelope': value, 'environment': mapping,
+                'binary': asset, 'script': asset, 'seed_environment': 'WORKLOAD_SEED',
+                'trial_timeout_seconds': 5, 'max_duration_seconds': 20}
+
+    def test_actual_console_log_format_and_receipt_refusals(self):
+        import json
+        event = {'parameters': {'A': '0'}, 'seed': 9007199254740993}
+        payload = {'parameters': {'A': '0'}, 'seed': '9007199254740993'}
+        message = 'SWEEP_APPLIED '+json.dumps(payload)
+        actual = 'time=\"2026-10-18T19:41:15-07:00\" level=info msg='+json.dumps(message)+' source=console\n'
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary)/'driver.log'
+            for text in (message+'\n', actual):
+                log.write_text(text)
+                bridge.applied_receipt(log, event)
+            for text in (actual+actual, 'SWEEP_APPLIED broken\n', message.replace('9007199254740993', '7'), message.replace('\"seed\":', '\"seed\":\"1\",\"seed\":')):
+                log.write_text(text)
+                with self.assertRaises(ValueError):
+                    bridge.applied_receipt(log, event)
+
+    def test_mapped_execution_receipt_resume_failure_and_refusals(self):
+        config = self.config()
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)/'run'
+            def child(argv, directory, timeout):
+                values = dict(argv[i+1].split('=', 1) for i, arg in enumerate(argv[:-1]) if arg == '--env')
+                seed = values.pop('WORKLOAD_SEED')
+                (directory/'driver.log').write_text('SWEEP_APPLIED '+bridge.core.encoded({'parameters': values, 'seed': seed}).decode()+'\n')
+                bridge.core.write_json(directory/'summary.json', {'metrics': {}})
+                return 0
+            with patch.object(bridge.core, 'run_child', side_effect=child) as worker, patch.object(bridge.time, 'sleep') as sleep:
+                first = bridge.aiperf_run(config, output)
+                self.assertEqual(worker.call_count, 4)
+                self.assertEqual([c.args[0] for c in sleep.call_args_list], [.25, .5, .25])
+                second = bridge.aiperf_run(config, output)
+                self.assertEqual(worker.call_count, 4)
+                self.assertEqual(first['attempts'], second['attempts'])
+                (output/'cell-0000/driver.log').write_text('changed')
+                with self.assertRaisesRegex(ValueError, 'artifact differs'):
+                    bridge.aiperf_run(config, output)
+        for defect in ('mapping', 'seed', 'cooldown', 'convergence', 'type', 'warmup'):
+            bad = copy.deepcopy(config)
+            if defect == 'mapping':
+                bad['environment'].pop(next(iter(bad['environment'])))
+            elif defect == 'seed':
+                del bad['envelope']['random_seed']
+            elif defect == 'cooldown':
+                bad['envelope']['sweep']['cooldown_seconds'] = 61
+            elif defect == 'convergence':
+                bad['envelope']['multi_run']['convergence'] = {'type': 'mean'}
+            elif defect == 'type':
+                bad['envelope']['sweep']['type'] = 'adaptive_search'
+            else:
+                bad['envelope']['multi_run']['disable_warmup_after_first'] = True
+            with self.subTest(defect=defect), self.assertRaises(Exception):
+                bridge.mapped_plan(bad)
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary)/'failure'
+            with patch.object(bridge.core, 'run_child', return_value=7) as worker:
+                with self.assertRaisesRegex(ValueError, 'exit code 7'):
+                    bridge.aiperf_run(config, output)
+                with self.assertRaisesRegex(ValueError, 'failed/interrupted'):
+                    bridge.aiperf_run(config, output)
+                self.assertEqual(worker.call_count, 1)
+
+if __name__ == '__main__':
+    unittest.main()
