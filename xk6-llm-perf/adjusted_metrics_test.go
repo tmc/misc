@@ -139,3 +139,118 @@ func TestAdjustedPopulations(t *testing.T) {
 		}
 	})
 }
+
+func adjustedResponsesFixture() RunSummary {
+	run := adjustedFixture()
+	for i := 0; i < 2; i++ {
+		run.Records[i].Protocol = "openai-responses"
+	}
+	record := &run.Records[0]
+	first, last, viewFirst, viewLast := 5.0, 20.0, 20.0, 80.0
+	events := 2
+	record.TTFT = &first
+	record.LastContentLatency = &last
+	ordinary, full := (last-first)/3, (record.FullResponseLatency-first)/3
+	record.ITL = &ordinary
+	record.FullResponseITL = &full
+	record.AIPerfContentPolicy = responsesContentPolicy
+	record.AIPerfContentEvents = &events
+	record.AIPerfTTFT = &viewFirst
+	record.AIPerfLastContentLatency = &viewLast
+	return run
+}
+
+func TestAdjustedResponsesPinnedView(t *testing.T) {
+	report, err := AnalyzeAdjustedLatencies(adjustedResponsesFixture())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]float64{"request_latency": 80, "time_to_first_token": 20, "decode_duration": 60, "full_decode_duration": 80, "inter_token_latency": 20, "full_response_inter_token_latency": 80.0 / 3} {
+		metric := report.Metrics["adj_"+name]
+		if !metric.Available || metric.SuccessfulObservations != 1 || metric.MissingSuccessfulObservations != 1 || metric.Count != 2 || metric.Min.Value == nil || math.Abs(*metric.Min.Value-want) > 1e-12 {
+			t.Fatalf("%s: %+v want %v", name, metric, want)
+		}
+	}
+	run := adjustedResponsesFixture()
+	run.Records[0].AIPerfContentPolicy = ""
+	run.Records[0].AIPerfContentEvents = nil
+	run.Records[0].AIPerfTTFT = nil
+	run.Records[0].AIPerfLastContentLatency = nil
+	report, err = AnalyzeAdjustedLatencies(run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, metric := range report.Metrics {
+		if metric.Available {
+			t.Fatalf("old Responses record silently fell back: %s", name)
+		}
+	}
+}
+
+func TestAdjustedResponsesFirstChunkIdentity(t *testing.T) {
+	for _, source := range []string{"reported", "client_declared"} {
+		t.Run(source, func(t *testing.T) {
+			run := adjustedResponsesFixture()
+			record := &run.Records[0]
+			firstChunk, decode := 2, 2
+			record.FirstChunkSource = source
+			record.FirstChunkOrigin = source
+			record.FirstChunkTokens = &firstChunk
+			record.DecodeTokens = &decode
+			ordinary, full := (*record.LastContentLatency-*record.TTFT)/2, (record.FullResponseLatency-*record.TTFT)/2
+			record.ITL = &ordinary
+			record.FullResponseITL = &full
+			report, err := AnalyzeAdjustedLatencies(run)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if report.Metrics["adj_inter_token_latency"].Available || report.Metrics["adj_full_response_inter_token_latency"].Available {
+				t.Fatal("first-chunk identity assumed across different anchors")
+			}
+			sameFirst := *record.AIPerfTTFT
+			record.TTFT = &sameFirst
+			ordinary = (*record.LastContentLatency - sameFirst) / 2
+			full = (record.FullResponseLatency - sameFirst) / 2
+			report, err = AnalyzeAdjustedLatencies(run)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if value := report.Metrics["adj_inter_token_latency"].Min.Value; value == nil || *value != 30 {
+				t.Fatalf("reported chunk view ITL: %+v", report)
+			}
+			if value := report.Metrics["adj_full_response_inter_token_latency"].Min.Value; value == nil || *value != 40 {
+				t.Fatal("full reported view ITL")
+			}
+		})
+	}
+	t.Run("unknown policy", func(t *testing.T) {
+		run := adjustedResponsesFixture()
+		record := &run.Records[0]
+		record.FirstChunkSource = "unavailable"
+		record.DecodeTokens = nil
+		record.ITL = nil
+		record.FullResponseITL = nil
+		report, err := AnalyzeAdjustedLatencies(run)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if report.Metrics["adj_inter_token_latency"].Available {
+			t.Fatal("unknown chunk policy replaced with assumed one")
+		}
+	})
+	t.Run("invalid fallback", func(t *testing.T) {
+		run := adjustedResponsesFixture()
+		record := &run.Records[0]
+		chunk := 0
+		record.FirstChunkTokens = &chunk
+		record.FirstChunkOrigin = "reported"
+		record.FirstChunkUnavailable = "first chunk count outside output count"
+		report, err := AnalyzeAdjustedLatencies(run)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if value := report.Metrics["adj_inter_token_latency"].Min.Value; value == nil || *value != 20 {
+			t.Fatal("qualified assumed-one fallback lost")
+		}
+	})
+}

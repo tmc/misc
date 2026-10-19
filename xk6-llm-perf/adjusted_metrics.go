@@ -74,7 +74,7 @@ func AnalyzeAdjustedLatencies(run RunSummary) (AdjustedLatencyReport, error) {
 		PopulationPolicy: "available successful retained observations plus one positive infinity per retained failure/timeout/cancellation in the same run window",
 		Attempts:         run.Attempts, Successes: run.Successes, Failures: run.Failures, DroppedRecords: run.DroppedRecords,
 		ExcludedBoundaryRequests: run.ExcludedBoundaryRequests, InflightAtEnd: run.InflightAtEnd,
-		Limitations: []string{"retained run containment is not automatically an upstream timestamp-mask window", "unattempted invalid local calls are not retained; match the upstream error window separately", "upstream endpoint PRODUCES_TOKENS_ONLY identity is not independently encoded; token-timing fields cover the client's supported text/token subset"},
+		Limitations: []string{"retained run containment is not automatically an upstream timestamp-mask window", "unattempted invalid local calls are not retained; match the upstream error window separately", "upstream endpoint PRODUCES_TOKENS_ONLY identity is not independently encoded; token-timing fields cover the client's supported text/token subset", "Responses streams require the validated pinned content view; old records without that view remain unavailable", "Responses reported/client-declared first-chunk counts require equal pinned and ordinary first-content anchors; otherwise token-normalized view latency is unavailable"},
 		Metrics:     make(map[string]AdjustedLatencyMetric),
 	}
 	specs := []struct {
@@ -82,22 +82,24 @@ func AnalyzeAdjustedLatencies(run RunSummary) (AdjustedLatencyReport, error) {
 		stream     bool
 		value      func(Measurement) *float64
 	}{
-		{"request_latency", "ms", false, func(m Measurement) *float64 { return m.LastContentLatency }},
-		{"time_to_first_token", "ms", true, func(m Measurement) *float64 { return m.TTFT }},
-		{"inter_token_latency", "ms/token", true, func(m Measurement) *float64 { return m.ITL }},
-		{"full_response_inter_token_latency", "ms/token", true, func(m Measurement) *float64 { return m.FullResponseITL }},
+		{"request_latency", "ms", false, func(m Measurement) *float64 { _, last := adjustedContentTimes(m); return last }},
+		{"time_to_first_token", "ms", true, func(m Measurement) *float64 { first, _ := adjustedContentTimes(m); return first }},
+		{"inter_token_latency", "ms/token", true, func(m Measurement) *float64 { return adjustedITL(m, false) }},
+		{"full_response_inter_token_latency", "ms/token", true, func(m Measurement) *float64 { return adjustedITL(m, true) }},
 		{"decode_duration", "ms", true, func(m Measurement) *float64 {
-			if m.LastContentLatency == nil || m.TTFT == nil {
+			first, last := adjustedContentTimes(m)
+			if last == nil || first == nil {
 				return nil
 			}
-			v := *m.LastContentLatency - *m.TTFT
+			v := *last - *first
 			return &v
 		}},
 		{"full_decode_duration", "ms", true, func(m Measurement) *float64 {
-			if m.TTFT == nil {
+			first, _ := adjustedContentTimes(m)
+			if first == nil {
 				return nil
 			}
-			v := m.FullResponseLatency - *m.TTFT
+			v := m.FullResponseLatency - *first
 			return &v
 		}},
 	}
@@ -149,4 +151,60 @@ func AnalyzeAdjustedLatencies(run RunSummary) (AdjustedLatencyReport, error) {
 	}
 	report.Metrics["adj_effective_latency"] = AdjustedLatencyMetric{Name: "adj_effective_latency", Unit: "ms", Unavailable: "upstream credit_issued_ns anchor is unavailable; admission wait and schedule time are not substitutes"}
 	return report, nil
+}
+
+// A Responses done event retains upstream timing even when its duplicate text
+// is excluded from the ordinary recognized-content/token population.
+func adjustedContentTimes(m Measurement) (first, last *float64) {
+	if m.Protocol != "openai-responses" || !m.Stream {
+		return m.TTFT, m.LastContentLatency
+	}
+	if m.AIPerfContentPolicy != responsesContentPolicy || m.AIPerfContentEvents == nil || *m.AIPerfContentEvents == 0 {
+		return nil, nil
+	}
+	return m.AIPerfTTFT, m.AIPerfLastContentLatency
+}
+
+func adjustedITL(m Measurement, full bool) *float64 {
+	if m.Protocol != "openai-responses" || !m.Stream {
+		if full {
+			return m.FullResponseITL
+		}
+		return m.ITL
+	}
+	first, last := adjustedContentTimes(m)
+	if first == nil || last == nil || m.MultiChoice || m.OutputTokens.Value == nil || *m.OutputTokens.Value < 2 {
+		return nil
+	}
+	output := *m.OutputTokens.Value
+	decode := output - 1
+	switch m.FirstChunkSource {
+	case "assumed_one":
+		if m.FirstChunkTokens != nil {
+			if *m.FirstChunkTokens > 0 && *m.FirstChunkTokens < output || m.FirstChunkUnavailable != "first chunk count outside output count" || m.FirstChunkOrigin != "reported" && m.FirstChunkOrigin != "client_declared" {
+				return nil
+			}
+		} else if m.FirstChunkUnavailable != "" || m.FirstChunkOrigin != "" {
+			return nil
+		}
+	case "reported", "client_declared":
+		if m.TTFT == nil || *m.TTFT != *first || m.FirstChunkTokens == nil || *m.FirstChunkTokens <= 0 || *m.FirstChunkTokens >= output || m.FirstChunkUnavailable != "" || m.FirstChunkOrigin != "" && m.FirstChunkOrigin != m.FirstChunkSource {
+			return nil
+		}
+		decode = output - *m.FirstChunkTokens
+	default:
+		return nil
+	}
+	if decode <= 0 {
+		return nil
+	}
+	end := *last
+	if full {
+		end = m.FullResponseLatency
+	}
+	if end < *first {
+		return nil
+	}
+	value := (end - *first) / float64(decode)
+	return &value
 }

@@ -89,3 +89,29 @@ A no-error run includes the named no-companion statuses. The existing CLI still
 refuses dropped-record runs because its timeline and slice reports require all
 attempt records; it emits no partial JSON. Use the separate API to inspect the
 adjusted unavailable statuses for such a run.
+
+## Responses content view
+
+For `Protocol="openai-responses"` with `Stream=true`, these distributions use
+only the separately validated `aiperf-responses-content/f10eb50a` view.
+`AIPerfTTFT` and `AIPerfLastContentLatency` replace the ordinary recognized-content
+anchors for adjusted request latency, TTFT and decode duration. Full decode uses
+`FullResponseLatency - AIPerfTTFT`. A delayed `response.output_text.done` remains
+an upstream timing observation after a delta, even though its repeated text is
+excluded from ordinary token/content accounting. Reasoning-summary events outside
+the pinned upstream content set cannot set the view's first observation.
+
+Responses ITL families are recomputed from those anchors and reported output
+count. The explicit `assumed_one` policy uses output minus one. A reported or
+client-declared first-chunk count is usable only when the pinned view's TTFT
+exactly equals ordinary TTFT, so the stored count is tied to the same first
+chunk. With different first anchors, both token-normalized adjusted metrics
+remain unavailable. Existing count bounds and provenance must also validate;
+unknown first-chunk policy never becomes a new assumed-one declaration.
+
+Older Responses streams without the explicit view remain missing for all six
+families rather than falling back to ordinary timing. Missing-success counts
+retain that exclusion. Other protocols and nonstreamed Responses retain their
+previous observations and eligibility rules. Ordinary default measurements and
+statistics are unchanged; the report's limitations preserve this view/first-chunk
+qualification boundary.
