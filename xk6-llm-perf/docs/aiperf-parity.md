@@ -6,9 +6,50 @@ extension does not currently claim full AIPerf parity.
 
 ## Supported comparison workflows
 
+- [Raw session import](inputs-json.md) preserves authored payloads and session
+  order through a bounded `inputs.json` converter. [BurstGPT import](burstgpt.md)
+  converts declared timestamps and token targets for the existing realization
+  and replay helpers. [Vendor trace normalization](vendor-traces.md) preserves
+  Mooncake, Bailian and TraceLab session/count/cache metadata. Authored payloads
+  can be exported under an explicit serial replay policy; count-only records
+  require realization before execution. [Pinned prefix synthesis](trace-synthesis.md)
+  transforms declared cache patterns and targets without claiming engine cache hits.
+  [Offline text realization](trace-realization.md) verifies complete synthetic
+  snapshots with the actual pinned generator, Hugging Face and an independent
+  Go tokenizer before exporting authored requests.
+- [DAG conversations](dag-conversations.md) run an explicitly limited forest of
+  asynchronous forks, spawns and joins within one VU. The example uses stock
+  `http.asyncRequest`; it does not supply extension measurement provenance or
+  distributed sticky-session scheduling.
+- [Accuracy recipes](accuracy-recipes.md) invoke pinned upstream task recipes
+  against caller-supplied local dataset snapshots, preserving messages,
+  generation limits and stops. Runtime availability, dataset authenticity,
+  grading and real model accuracy each require their own qualification.
+  [Emitted-grade summaries](accuracy-graded.md) separately reproduce phase-scoped
+  per-response aggregation. Graded exports cannot identify requests without
+  grades, so their all-attempt failure and unavailable populations remain unknown.
+- [Sampling designs](sweeping/sampling-design.md) add scalar zip, scenario,
+  Sobol and Latin-hypercube expansions and the pinned shared-SLO boundary
+  planner. [Equivalence plans](serving/equivalence.md) require fixed process
+  pairs, practical margins and receipt verification before an equivalence
+  verdict; the API alone provides no performance evidence.
+- [Explicit statistics conventions](metric-semantics.md) select upstream linear
+  percentiles and dispatch-start time slices. Legacy nearest-rank and
+  completion-based reports remain the default. This option changes those
+  conventions, not the recorded population or availability of missing metrics.
+- [Responses streaming](endpoint-adapters/responses.md) preserves done-only text
+  and a separate pinned content timing view, with duplicate/conflicting terminal
+  evidence refused. Default recognized-content timing remains distinct.
+- [Failure-adjusted latencies](adjusted-metrics.md) retain failed observations as
+  explicit positive infinity in separate distributions. [Specialized metrics](specialized-metrics.md)
+  derive per-request thinking, prefill, cache and declared audio-duration values.
+  These APIs preserve their documented population and source limits.
+- [Missing-usage verification](serving/aiperf-missing-usage.md) separates
+  accounting correctness from observing genuine provider omission. A response
+  with reported usage cannot qualify a missing-usage cell.
 - [Live measurement verification](serving/aiperf-live.md) checks retained
   streaming chat populations, phase/order/concurrency, usage and own-wire
-  timing residuals. A fresh DGX Ollama/Qwen3 campaign at `379fe5b7` passed
+  timing residuals. A historical DGX Ollama/Qwen3 campaign at `379fe5b7` passed
   107 consistency checks over 48 measured requests. A later frozen `31a4a12e`
   C4/C8 cell passed the same accounting checks over 64 measured requests;
   hash-bound verification policies replay both matrices. Both tools retained
@@ -29,6 +70,10 @@ extension does not currently claim full AIPerf parity.
   provides explicit per-VU JSON-only render/select calls, with evaluator cost
   reported separately from HTTP timing. It preserves the documented sandbox
   restrictions and does not alter client SSE or token accounting.
+  The optional [typed AIPerf adapter](endpoint-adapters/aiperf-template.md) invokes
+  actual pinned `RequestInfo`/`Turn` formatting and captured-response parsing;
+  its payload exports feed the raw-session importer. It does not establish live
+  SSE framing or extension measurement provenance for parsed responses.
 - [Optuna campaigns](optuna-campaign.md) use the actual pinned TPE sampler to
   select categorical cells evaluated by independent repeated k6 processes.
   [Numeric and Pareto search](optuna-search.md) adds continuous/logarithmic/stepped
@@ -71,14 +116,14 @@ extension does not currently claim full AIPerf parity.
 | Live endpoints | Other provider/model/dialect cells and real missing-usage populations; bounded Ollama chat success/error cells do not cover them |
 | Applied work identity | Serving template/tokenizer and effective engine settings must be observed, not inferred from model names or declaration hashes |
 | Performance | Independent process comparisons with preregistered equivalence margins, adequate sample size, matched populations and qualified client capacity |
-| Observer overhead | A clean owned GPU lane, equal observation windows, pinned workload/cadence and whole-process paired uncertainty; current DGX desktop activity is a confound |
+| Observer overhead | A clean owned GPU lane, equal observation windows, pinned workload/cadence and whole-process paired uncertainty; historical desktop activity cannot qualify a new run |
 | Physical telemetry | The retained 13.058 W discrepancy exceeds the fixed 10 W gate; HOLD remains, with no retry or tolerance change |
 | Native hardware | Independent physical reference, managed conversion/DCGM acquisition qualification and supporting MIG hardware |
 | Distributed deployment | Independent-host clock mapping, RWX storage and remote registry distribution; same-host nodes do not establish these |
 | Search | CPU proposal, replay and recipe controls do not establish optimal model settings or statistically qualified capacity; pinned AIPerf has metric/operator/bound outcome constraints, not an arbitrary arithmetic-expression language |
-| Templates and tokenization | JSON-only evaluation does not reproduce full upstream Python RequestInfo/Turn object behavior, live SSE conversion or image/audio processor token counts |
+| Templates and tokenization | Typed offline formatting does not qualify live SSE conversion; context truncation, tool framing and image/audio processor token counts need their own implementation and evidence |
 
-A fresh DGX two-node Kubernetes replay at `379fe5b7` retrieved eight unique
+A historical DGX two-node Kubernetes replay at `379fe5b7` retrieved eight unique
 successful worker records and exercised partial loss, startup failure, active-run
 cancellation and UID-safe cleanup. Its 258 sealed artifacts describe same-host
 kind nodes, hostPath storage and local image loading.
