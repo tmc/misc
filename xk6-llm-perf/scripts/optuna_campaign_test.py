@@ -97,7 +97,7 @@ class OptunaCampaignTest(unittest.TestCase):
         def interrupted(_signum, _frame):
             raise KeyboardInterrupt()
         shim = OS()
-        previous = signal.signal(signal.SIGTERM, interrupted)
+        previous = signal.signal(signal.SIGTERM, bridge.deferrable(interrupted))
         try:
             with tempfile.TemporaryDirectory() as temporary, patch.object(bridge.subprocess, "os", shim):
                 with self.assertRaises(KeyboardInterrupt):
@@ -114,14 +114,9 @@ class OptunaCampaignTest(unittest.TestCase):
                 except ProcessLookupError:
                     pass
 
-    def test_child_signal_mask_and_cleanup_errors(self):
+    def test_cleanup_errors_keep_original_error(self):
         with tempfile.TemporaryDirectory() as temporary:
             directory = Path(temporary)
-            code = "import signal; print(sorted(int(s) for s in signal.pthread_sigmask(signal.SIG_BLOCK, [])))"
-            self.assertEqual(bridge.run_child([sys.executable, "-S", "-c", code], directory, 10), 0)
-            blocked = set(json.loads((directory / "driver.log").read_text()))
-            self.assertFalse(blocked & {int(s) for s in bridge.HELD_SIGNALS})
-            self.assertFalse(set(signal.pthread_sigmask(signal.SIG_BLOCK, [])) & set(bridge.HELD_SIGNALS))
             killpg = os.killpg
             def zombie_group(pid, number):
                 # Emulate macOS EPERM for a group holding only zombies.

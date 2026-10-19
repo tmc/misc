@@ -248,6 +248,54 @@ class TypedSweepTest(unittest.TestCase):
                         except ProcessLookupError:
                             pass
 
+    def test_signal_after_fork_with_helper_thread(self):
+        # Signal masks are per thread: a helper thread accepts a process
+        # signal and CPython runs the handler on the main thread right after
+        # fork, inside Popen. The child session must still be cleaned up.
+        import signal
+        import subprocess
+        import threading
+        plan = {'events': [{'index': 0, 'parameters': {}, 'seed': 1, 'cooldowns_before': []}]}
+        saved = {number: signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGHUP, signal.SIGALRM, signal.SIGINT)}
+        stop = threading.Event()
+        helper = threading.Thread(target=stop.wait)
+        helper.start()
+        fork_exec = subprocess._fork_exec
+        pids = []
+        def forked(*args, **kwargs):
+            pid = fork_exec(*args, **kwargs)
+            pids.append(pid)
+            os.kill(os.getpid(), signal.SIGTERM)
+            for _ in range(10000):
+                pass
+            return pid
+        with tempfile.TemporaryDirectory() as temporary:
+            binary = Path(temporary)/'worker'
+            binary.write_text('#!/bin/sh\nexec sleep 30\n')
+            binary.chmod(0o700)
+            config = {'binary': str(binary), 'script': str(binary), 'seed_environment': 'WORKLOAD_SEED',
+                      'trial_timeout_seconds': 20, 'max_duration_seconds': 20}
+            try:
+                bridge.handle_signals()
+                with patch.object(bridge, 'mapped_plan', return_value=plan), patch.object(subprocess, '_fork_exec', forked), self.assertRaises(InterruptedError):
+                    bridge.aiperf_run(config, Path(temporary)/'run')
+                self.assertEqual(len(pids), 1)
+                time.sleep(.1)
+                with self.assertRaises(ProcessLookupError):
+                    os.killpg(pids[0], 0)
+                attempt = bridge.core.read_json(Path(temporary)/'run'/'typed-design.json')['attempts'][0]
+                self.assertEqual(attempt['state'], 'FAIL')
+            finally:
+                for number, handler in saved.items():
+                    signal.signal(number, handler)
+                stop.set()
+                helper.join()
+                for pid in pids:
+                    try:
+                        os.killpg(pid, signal.SIGKILL)
+                    except (ProcessLookupError, PermissionError):
+                        pass
+
     def test_mapped_execution_receipt_resume_failure_and_refusals(self):
         config = self.config()
         with tempfile.TemporaryDirectory() as temporary:

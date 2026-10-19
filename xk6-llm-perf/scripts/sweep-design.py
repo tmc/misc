@@ -477,7 +477,8 @@ def handle_signals():
     """Turn termination, hangup and alarm signals into owned-child cleanup."""
     import signal
     for number in (signal.SIGTERM, signal.SIGHUP, signal.SIGALRM):
-        signal.signal(number, interrupted)
+        signal.signal(number, core.deferrable(interrupted))
+    signal.signal(signal.SIGINT, core.deferrable(signal.default_int_handler))
 
 
 def main():

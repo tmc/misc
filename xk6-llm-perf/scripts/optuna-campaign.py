@@ -110,7 +110,24 @@ def identities(config):
     return {"reference_revision": REFERENCE, "dependency_versions": versions, "input_sha256": hashes, "config_sha256": sha(config), "driver_sha256": file_sha(__file__)}
 
 
-HELD_SIGNALS = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM)
+# deferred collects signals that arrive while run_child is spawning; it is
+# None otherwise. Handlers wrapped by deferrable consult it.
+deferred = None
+
+
+def deferrable(handler):
+    """Wrap a signal handler so run_child can defer it while spawning a child.
+
+    A handler that raised between fork and Popen's return would orphan the new
+    session. Signal masks are per thread, so another thread can accept the
+    signal and CPython then runs the handler on the main thread anywhere.
+    """
+    def deferring(number, frame):
+        if deferred is not None:
+            deferred.append(number)
+        else:
+            handler(number, frame)
+    return deferring
 
 
 def kill_group(pid, number):
@@ -122,21 +139,27 @@ def kill_group(pid, number):
         pass
 
 
+def replay(numbers):
+    for number in numbers:
+        handler = signal.getsignal(number)
+        if callable(handler):
+            handler(number, None)
+
+
 def run_child(arguments, directory, timeout):
+    global deferred
     with open(directory / "driver.log", "wb") as log:
-        # A handler that raises between fork and Popen's return would orphan
-        # the new session. Hold termination signals until cleanup is armed;
-        # the child restores the original mask before exec. Callers are
-        # single-threaded, so preexec_fn is safe.
-        mask = signal.pthread_sigmask(signal.SIG_BLOCK, HELD_SIGNALS)
+        deferred = []
         try:
-            process = subprocess.Popen(arguments, stdout=log, stderr=log, start_new_session=True,
-                                       preexec_fn=lambda: signal.pthread_sigmask(signal.SIG_SETMASK, mask))
+            process = subprocess.Popen(arguments, stdout=log, stderr=log, start_new_session=True)
         except BaseException:
-            signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+            pending, deferred = deferred, None
+            replay(pending)
             raise
         try:
-            signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+            # Cleanup is armed: run any handler deferred during the spawn here.
+            pending, deferred = deferred, None
+            replay(pending)
             status = process.wait(timeout=timeout)
             return status
         except BaseException:
@@ -452,7 +475,8 @@ def main():
     args = parser.parse_args()
     def interrupted(_signum, _frame):
         raise KeyboardInterrupt()
-    signal.signal(signal.SIGTERM, interrupted)
+    signal.signal(signal.SIGTERM, deferrable(interrupted))
+    signal.signal(signal.SIGINT, deferrable(signal.default_int_handler))
     try:
         state = run(read_json(args.config, 1 << 20), Path(args.output).absolute())
         print(state["stop_reason"] + ": " + str(len(state["trials"])) + " proposals; best=" + str(state["best_trial"]))
