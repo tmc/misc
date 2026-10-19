@@ -1,0 +1,20 @@
+exec $CLI -graded-records grades.jsonl -accuracy-phase profiling
+stdout '"record_count":2'
+stdout '"selected_count":1'
+stdout '"total_evaluated":1'
+stdout '"total_passed":0'
+stdout '"failed_requests":null'
+stdout '"unavailable_requests":null'
+! stdout 'secret-reference'
+exec $CLI -graded-records grades.jsonl -accuracy-phase all
+stdout '"total_evaluated":2'
+stdout '"total_passed":1'
+! exec $CLI -graded-records grades.jsonl
+stderr 'explicit accuracy-phase'
+! exec $CLI -graded-records grades.jsonl -accuracy-phase measurement
+stderr 'accuracy phase must be warmup, profiling or all'
+! exec $CLI -graded-records grades.jsonl -accuracy-phase profiling -endpoint http://127.0.0.1:1
+stderr 'require only graded-records'
+-- grades.jsonl --
+{"session_num":0,"x_request_id":"warmup","worker_id":"worker","benchmark_phase":"warmup","timestamp_ns":0,"grader_name":"exact_match","passed":true,"confidence":1,"expected":"secret-reference","actual":"A","explanation":"matched"}
+{"session_num":0,"x_request_id":"profile","worker_id":"worker","benchmark_phase":"profiling","timestamp_ns":1,"grader_name":"exact_match","passed":false,"confidence":1,"expected":"secret-reference","actual":"B","explanation":"different"}

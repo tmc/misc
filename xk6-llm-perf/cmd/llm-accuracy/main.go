@@ -17,6 +17,8 @@ import (
 )
 
 func main() {
+	graded := flag.String("graded-records", "", "bounded AIPerf graded JSONL file, or - for stdin; does not execute grading")
+	phase := flag.String("accuracy-phase", "", "graded-record scope: warmup, profiling or all; explicit phase required")
 	worker := flag.String("worker", "", "explicit confined Python worker script")
 	workerHash := flag.String("worker-sha256", "", "required worker script SHA-256")
 	workerPython := flag.String("worker-python", "python3", "trusted worker launcher")
@@ -29,6 +31,25 @@ func main() {
 	prompts := flag.String("prompts", "", "JSON object mapping case IDs to independent prompts")
 	authEnv := flag.String("authorization-env", "", "environment variable holding Authorization header")
 	flag.Parse()
+	if *graded != "" || *phase != "" {
+		conflict := false
+		flag.Visit(func(f *flag.Flag) {
+			if f.Name != "graded-records" && f.Name != "accuracy-phase" {
+				conflict = true
+			}
+		})
+		var err error
+		if conflict || *graded == "" || *phase == "" {
+			err = fmt.Errorf("graded records require only graded-records and explicit accuracy-phase")
+		} else {
+			err = runGraded(*graded, *phase, os.Stdout)
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	opts := accuracy.WorkerOptions{Python: *workerPython, Script: *worker, ScriptSHA256: *workerHash, AIPerfSource: *workerSource, RuntimeRoot: *workerRuntime}
 	if *worker != "" {
 		f, err := os.Open(*workerPins)
@@ -141,4 +162,22 @@ func run(input, endpoint, promptFile, requestFile, authEnv string, worker accura
 		return fmt.Errorf("generation options require endpoint")
 	}
 	return json.NewEncoder(os.Stdout).Encode(report)
+}
+
+// runGraded summarizes an existing graded stream without generation or workers.
+func runGraded(path, phase string, out io.Writer) error {
+	var reader io.Reader = os.Stdin
+	if path != "-" {
+		file, err := os.Open(path) // #nosec G304 -- caller-selected input is bounded by SummarizeGraded
+		if err != nil {
+			return fmt.Errorf("open graded records: %w", err)
+		}
+		defer file.Close()
+		reader = file
+	}
+	report, err := accuracy.SummarizeGraded(reader, phase)
+	if err != nil {
+		return err
+	}
+	return json.NewEncoder(out).Encode(report)
 }
