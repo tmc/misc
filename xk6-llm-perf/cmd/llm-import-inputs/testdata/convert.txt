@@ -1,0 +1,21 @@
+exec sh -c '"$CLI" -path /chat/completions -protocol json < valid.json'
+stdout '"session_id":"session-a"'
+stdout '"id":"0","request":\{"path":"/chat/completions","protocol":"json","body":\{"messages"'
+stdout '"id":"1"'
+! exec sh -c '"$CLI" -path /chat/completions -protocol json < duplicate.json'
+stderr 'duplicate session_id'
+! stdout .
+! exec sh -c '"$CLI" -path /chat/completions -protocol json < precision.json'
+stderr 'number changes'
+! stdout .
+! exec sh -c '"$CLI" -path /chat/completions -protocol unknown < valid.json'
+stderr 'usage:'
+! exec sh -c '"$CLI" -path //other -protocol json < valid.json'
+stderr 'usage:'
+
+-- valid.json --
+{"data":[{"session_id":"session-a","payloads":[{"messages":[{"role":"user","content":"one"}],"temperature":0.1},{"messages":[{"role":"user","content":"two"}]}]}]}
+-- duplicate.json --
+{"data":[{"session_id":"same","payloads":[{}]},{"session_id":"same","payloads":[{}]}]}
+-- precision.json --
+{"data":[{"session_id":"one","payloads":[{"temperature":0.1234567890123456789}]}]}
