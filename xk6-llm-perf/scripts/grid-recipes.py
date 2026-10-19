@@ -4,6 +4,7 @@ import argparse
 import importlib.util
 import itertools
 import math
+import re
 from pathlib import Path
 import sys
 import stat as filemode
@@ -29,10 +30,12 @@ def logspace(low, high, steps):
 
 
 def plan(config):
-    if not isinstance(config, dict) or config.get('recipe') not in RECIPES or set(config)-{'recipe', 'streaming', 'concurrency', 'isl', 'osl', 'pairs', 'threshold', 'metric', 'stat'}:
+    if not isinstance(config, dict) or config.get('recipe') not in RECIPES or set(config)-{'recipe', 'streaming', 'concurrency', 'isl', 'osl', 'pairs', 'threshold', 'metric', 'stat', 'campaign'}:
         raise ValueError('invalid recipe configuration')
+    if 'campaign' in config:
+        campaign_policy(config['campaign'])
     name = config['recipe']
-    allowed={'concurrency-ramp':{'concurrency','threshold','metric','stat'},'prefill-ttft-curve':{'isl'},'decode-itl-curve':{'concurrency','osl'},'pareto-sweep':{'pairs','concurrency'}}[name] | {'recipe','streaming'}
+    allowed={'concurrency-ramp':{'concurrency','threshold','metric','stat'},'prefill-ttft-curve':{'isl'},'decode-itl-curve':{'concurrency','osl'},'pareto-sweep':{'pairs','concurrency'}}[name] | {'recipe','streaming','campaign'}
     if set(config)-allowed: raise ValueError('unsupported recipe override')
     for key in ('metric','stat'):
         if key in config and (not isinstance(config[key],str) or not 1 <= len(config[key]) <= 256):
@@ -74,14 +77,64 @@ def number(value):
     return float(value)
 
 
-def retained(directory, cell, metrics):
+def campaign_policy(value):
+    """Validate the supported base campaign.Config policy before reading runs.
+
+    Dimensions are filled by core.cell_policy; retained config is never the
+    source of expected objective, constraints or convergence requirements.
+    """
+    required = {'binary', 'script', 'dimensions', 'mode', 'seed', 'objective',
+                'minimize', 'constraints', 'max_candidates', 'max_attempts',
+                'min_runs', 'max_runs', 'retries', 'convergence', 'tolerance',
+                'timeout', 'max_duration'}
+    if not isinstance(value, dict) or not required <= set(value) or set(value) - required - {'assets'}:
+        raise ValueError('caller-pinned campaign policy is required')
+    if value['mode'] != 'grid' or type(value['max_candidates']) is not int or value['max_candidates'] != 1 or value['dimensions'] != []:
+        raise ValueError('campaign policy requires grid, max_candidates=1 and empty base dimensions')
+    for key in ('binary', 'script'):
+        if not isinstance(value[key], str) or not 1 <= len(value[key]) <= 4096 or not Path(value[key]).is_absolute():
+            raise ValueError('campaign binary and script must be absolute paths')
+    assets = value.get('assets', [])
+    if not isinstance(assets, list) or len(assets) > 128 or any(not isinstance(p, str) or not 1 <= len(p) <= 4096 or not Path(p).is_absolute() for p in assets) or len(set(assets)) != len(assets):
+        raise ValueError('invalid campaign assets')
+    for key, low, high in [('seed', 0, 2**64-1), ('max_attempts', 1, 10000), ('min_runs', 2, 1000), ('max_runs', 2, 1000), ('retries', 0, 100)]:
+        if type(value[key]) is not int or not low <= value[key] <= high:
+            raise ValueError('invalid campaign ' + key)
+    if value['max_runs'] < value['min_runs'] or type(value['minimize']) is not bool or value['convergence'] not in ('range', 'cv', 'ci95'):
+        raise ValueError('invalid campaign convergence policy')
+    if type(value['tolerance']) not in (int, float) or not math.isfinite(value['tolerance']) or not 0 <= value['tolerance'] <= 1:
+        raise ValueError('invalid campaign tolerance')
+    units = {'ns': 1e-9, 'us': 1e-6, 'µs': 1e-6, 'ms': .001, 's': 1, 'm': 60, 'h': 3600}
+    for key in ('timeout', 'max_duration'):
+        duration = value[key]
+        if not isinstance(duration, str) or not 1 <= len(duration) <= 128:
+            raise ValueError('invalid campaign duration')
+        pieces = re.findall(r'(\d+(?:\.\d*)?|\.\d+)(ns|us|µs|ms|s|m|h)', duration)
+        if not pieces or ''.join(a+b for a,b in pieces) != duration or not 0 < sum(float(a)*units[b] for a,b in pieces) <= 604800:
+            raise ValueError('campaign duration must be positive and at most 7d')
+    def metric(selector):
+        if not isinstance(selector, dict) or set(selector) != {'name', 'stat'} or any(not isinstance(selector[k], str) or not 1 <= len(selector[k]) <= 256 for k in ('name', 'stat')):
+            raise ValueError('invalid campaign metric selector')
+    metric(value['objective'])
+    if not isinstance(value['constraints'], list) or len(value['constraints']) > 64:
+        raise ValueError('invalid campaign constraints')
+    for item in value['constraints']:
+        if not isinstance(item, dict) or set(item) != {'metric', 'direction', 'bound'} or item['direction'] not in ('le', 'ge') or type(item['bound']) not in (int, float) or not math.isfinite(item['bound']):
+            raise ValueError('invalid campaign constraint')
+        metric(item['metric'])
+    return value
+
+
+def retained(directory, cell, metrics, policy):
     directory=directory.resolve(strict=True)
     manifest_path=directory/'campaign.json'
     if not filemode.S_ISREG(manifest_path.lstat().st_mode) or manifest_path.stat().st_size > 64<<20:
         raise ValueError('manifest must be a bounded regular file')
     manifest=core.read_json(manifest_path)
+    if not isinstance(manifest, dict) or type(manifest.get('schema_version')) is not int or manifest['schema_version'] != 1:
+        raise ValueError('unsupported campaign manifest schema')
     candidates=manifest.get('candidates')
-    if not isinstance(candidates,list) or len(candidates)!=1:
+    if not isinstance(candidates,list) or len(candidates)!=1 or not isinstance(candidates[0],dict):
         raise ValueError('single retained candidate required')
     attempts=candidates[0].get('attempts')
     if not isinstance(attempts,list) or not 1 <= len(attempts) <= 10000:
@@ -92,7 +145,7 @@ def retained(directory, cell, metrics):
         if relative.is_absolute() or '..' in relative.parts or path.resolve(strict=True).parent != (directory/attempt['directory']).absolute() or not filemode.S_ISREG(path.lstat().st_mode) or path.stat().st_size > 64<<20:
             raise ValueError('summary must be a bounded regular contained file')
     parameters = {key:str(value) for key,value in cell.items()}
-    receipt = core.observed(directory, parameters)
+    receipt = core.observed(directory, parameters, policy)
     if receipt['state'] != 'COMPLETE' or any(v > 0 for v in receipt['constraint_violations']):
         raise ValueError('cell is not complete and feasible')
     manifest = core.read_json(directory/'campaign.json')
@@ -114,6 +167,7 @@ def retained(directory, cell, metrics):
 
 def process(config, cells):
     expected=plan(config)
+    policy=campaign_policy(config.get('campaign'))
     if not isinstance(cells,list) or len(cells)>4096:
         raise ValueError('invalid retained cell list')
     name=config['recipe']
@@ -128,13 +182,13 @@ def process(config, cells):
         key=core.sha(entry['parameters'])
         if key in seen: raise ValueError('duplicate cell')
         seen.add(key)
-        values,hashes=retained(Path(entry['directory']),entry['parameters'],metrics)
+        values,hashes=retained(Path(entry['directory']),entry['parameters'],metrics,policy)
         rows.append({'parameters':entry['parameters'],'values':values,'artifact_sha256':hashes})
     if name!='decode-itl-curve' and len(rows)!=len(expected):
         raise ValueError('incomplete grid')
     if len(rows)<2: raise ValueError('at least two retained cells required')
     rows.sort(key=lambda r:tuple(r['parameters'].get(k,0) for k in ('CONCURRENCY','ISL','OSL')))
-    result={'schema_version':1,'recipe':name,'metric_mapping':metrics,'rows':rows,'planned_cells':expected}
+    result={'schema_version':1,'recipe':name,'metric_mapping':metrics,'rows':rows,'planned_cells':expected,'campaign_policy_sha256':core.sha(policy)}
     if name=='concurrency-ramp':
         threshold=number(config.get('threshold',.2)); baseline=rows[0]['values'][0]
         if baseline<=0: raise ValueError('baseline must be positive')

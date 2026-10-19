@@ -67,3 +67,49 @@ at most 1,000,000, and at most 64 log steps. This bridge has stricter failed-cel
 handling than upstream's quarantine/sentinel paths and does not implement
 upstream artifact schemas, automatic plots, dataset generation or engine
 application.
+
+Post-processing additionally requires a caller-pinned `campaign` policy in
+`recipe.json`. Planning without `--cells` may omit it. Use the existing
+`campaign.Config` fields, with `mode: "grid"`, `max_candidates: 1` and empty
+base `dimensions`; replace dimensions with each planned cell when executing
+`llm-campaign`. For example, add this field to the recipe object:
+
+```json
+"campaign": {
+  "binary": "/absolute/path/to/k6",
+  "script": "/absolute/path/to/workload.js",
+  "dimensions": [],
+  "mode": "grid",
+  "seed": 5,
+  "objective": {"name": "llm_request_latency", "stat": "p(99)"},
+  "minimize": true,
+  "constraints": [],
+  "max_candidates": 1,
+  "max_attempts": 2,
+  "min_runs": 2,
+  "max_runs": 2,
+  "retries": 0,
+  "convergence": "range",
+  "tolerance": 0,
+  "timeout": "5s",
+  "max_duration": "10s"
+}
+```
+
+Freeze this policy independently before reading retained manifests. The verifier
+derives the expected per-cell configuration from it and checks the recorded
+objective, constraints, run/retry bounds, convergence and other policy fields.
+It does not obtain its expected policy from the manifest it is verifying.
+Only `range`, `cv` and `ci95` repeated-run convergence are supported here.
+Optional `assets` must be unique absolute paths. Durations must be positive
+Go-style durations of at most seven days. Binary/script paths must be absolute;
+policy identity alone does not prove which executable actually ran.
+
+A valid version-1 manifest needs the exact candidate ID derived from its
+parameters and numbered `<candidate-id>/attempt-0001` summary directories.
+The verifier recomputes objective values, constraint violations, feasibility
+and convergence from raw summaries, checks all summary hashes, and refuses
+failed attempts even if later attempts converged. Output includes
+`campaign_policy_sha256` alongside retained artifact hashes. Preserve the
+caller configuration and its hash separately; an attacker able to replace both
+caller policy and receipts is outside this local consistency check.
