@@ -1,0 +1,21 @@
+exec sh -c '"$CLI" -format mooncake < authored.jsonl'
+stdout '"format":"mooncake-jsonl-v1"'
+stdout '"timestamp":1000.5'
+stdout '"outputTokens":0'
+exec sh -c '"$CLI" -format mooncake -output sessions -execution-policy serial-recorded -path /chat/completions -protocol openai-chat -model fixture < authored.jsonl'
+stdout 'source arrival/delay not scheduled'
+stdout '"body":\{"max_tokens":8,"messages"'
+stdout '"sourceRow":1'
+! exec sh -c '"$CLI" -format bailian -output sessions -execution-policy serial-recorded -path /chat/completions -protocol json < counts.jsonl'
+stderr 'count/cache-only'
+! stdout .
+! exec sh -c '"$CLI" -format mooncake -output sessions < authored.jsonl'
+stderr 'explicit serial-recorded'
+! exec sh -c '"$CLI" -format mystery < authored.jsonl'
+stderr 'unsupported format'
+
+-- authored.jsonl --
+{"session_id":"a","timestamp":1000.5,"messages":[{"role":"user","content":"hello"}],"output_length":8}
+{"session_id":"b","payload":{"input":"literal"},"output_length":0}
+-- counts.jsonl --
+{"chat_id":1,"timestamp":0,"input_length":16,"output_length":4,"hash_ids":[9]}

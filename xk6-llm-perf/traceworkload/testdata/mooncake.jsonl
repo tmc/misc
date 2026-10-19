@@ -1,0 +1,5 @@
+{"session_id":"m","timestamp":1000.5,"input_length":1024,"output_length":8,"hash_ids":[9223372036854775807,-2]}
+{"session_id":"m","delay":25,"input_length":512,"output_length":0,"hash_ids":[9223372036854775807]}
+{"session_id":"raw","timestamp":0,"payload":{"model":"fixture","messages":[{"role":"user","content":"authored"}],"stream":false},"assistant_responses":"recorded"}
+{"session_id":"recorded","messages":[{"role":"user","content":"one"}],"output_length":8,"extra":{"temperature":0.1}}
+{"session_id":"recorded","messages":[{"role":"user","content":"two"}],"assistant_responses":"recorded"}
