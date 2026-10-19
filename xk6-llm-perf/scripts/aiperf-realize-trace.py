@@ -8,7 +8,9 @@ import os
 from pathlib import Path
 import re
 import resource
+import shutil
 import signal
+import stat
 import subprocess
 import sys
 import time
@@ -60,6 +62,7 @@ def write(path, value):
     with Path(path).open('xb') as f:
         os.chmod(path, 0o600)
         f.write(data)
+    return digest(data)
 
 
 def pin(value):
@@ -68,6 +71,60 @@ def pin(value):
 
 def integer(value, low, high):
     return type(value) is int and low <= value <= high
+
+
+def token_ids(value):
+    return isinstance(value, list) and all(integer(x, 0, (1 << 31) - 1) for x in value)
+
+
+def text_digest(text):
+    try:
+        return digest(text.encode('utf-8'))
+    except UnicodeEncodeError:
+        raise ValueError('reference text is not valid UTF-8') from None
+
+
+# The worker may report only reference-stage statuses. VERIFIED is assigned by
+# the parent alone, after its own Go tokenizer run for that row.
+WORKER_STATUSES = ('HF_VERIFIED', 'UNAVAILABLE')
+WORKER_EVIDENCE = {'text', 'text_sha256', 'intended_token_ids', 'hf_token_ids', 'hf_count'}
+WORKER_DIAGNOSTICS = {'stable_terminator_ids', 'block_separator_id', 'reason',
+                      'reference_error_type', 'reference_error_message'}
+
+
+def check_worker(result, row):
+    """Check one worker result against its admitted row; raise on any protocol violation."""
+    if set(result) - set(row) - {'status'} - WORKER_EVIDENCE - WORKER_DIAGNOSTICS:
+        raise ValueError('reference returned fields outside the worker protocol')
+    status = result.get('status')
+    if type(status) is not str or status not in WORKER_STATUSES:
+        raise ValueError('reference returned a status outside the worker protocol')
+    evidence = WORKER_EVIDENCE & set(result)
+    if evidence and evidence != WORKER_EVIDENCE:
+        raise ValueError('reference returned partial evidence')
+    if evidence:
+        if type(result['text']) is not str or result['text_sha256'] != text_digest(result['text']):
+            raise ValueError('reference text digest differs')
+        if not token_ids(result['intended_token_ids']) or not token_ids(result['hf_token_ids']):
+            raise ValueError('reference token IDs are not exact integers')
+        if type(result['hf_count']) is not int or result['hf_count'] != len(result['hf_token_ids']):
+            raise ValueError('reference count differs from its token IDs')
+    if 'stable_terminator_ids' in result and not token_ids(result['stable_terminator_ids']):
+        raise ValueError('reference terminator IDs are not exact integers')
+    if 'block_separator_id' in result and result['block_separator_id'] is not None and not token_ids([result['block_separator_id']]):
+        raise ValueError('reference block separator is not an exact integer')
+    if any(k in result and type(result[k]) is not str for k in ('reason', 'reference_error_type', 'reference_error_message')):
+        raise ValueError('reference diagnostics are not strings')
+    if status == 'UNAVAILABLE':
+        if 'reason' not in result:
+            raise ValueError('unavailable reference result has no reason')
+        return
+    if not evidence or any(k in result for k in ('reason', 'reference_error_type', 'reference_error_message')):
+        raise ValueError('verified reference result is incomplete or carries an error')
+    if len(result['hf_token_ids']) != row['target']:
+        raise ValueError('verified reference count differs from target')
+    if row['hash_ids'] and result['intended_token_ids'] != result['hf_token_ids']:
+        raise ValueError('verified reference cached IDs differ from intended IDs')
 
 
 def validate(config, trace):
@@ -282,11 +339,72 @@ def worker(job, progress=None):
     return results
 
 
+def outputs(output):
+    """Return the digest of every output file outside the private cache and TMPDIR."""
+    return {p: None if p.is_dir() and not p.is_symlink() else digest(read(p, 64 << 20))
+            for p in output.rglob('*') if p.relative_to(output).parts[0] not in ('tmp', 'hf-cache')}
+
+
+def unlock(path):
+    """Clear user flags and add owner rw (rwx for a directory) so path can be moved or removed.
+
+    A symlink or a file with other hard links is left unchanged: its inode may
+    be shared with a file outside the output directory.
+    """
+    try:
+        info = os.lstat(path)
+        if stat.S_ISLNK(info.st_mode) or (not stat.S_ISDIR(info.st_mode) and info.st_nlink > 1):
+            return
+        if hasattr(os, 'chflags'):
+            os.chflags(path, 0)
+        os.chmod(path, info.st_mode | (stat.S_IRWXU if stat.S_ISDIR(info.st_mode) else stat.S_IRUSR | stat.S_IWUSR))
+    except (OSError, NotImplementedError):
+        pass
+
+
+def quarantine(output):
+    """Move sessions.json and status.json off their canonical names; report whether both are clear.
+
+    Only the parent's final step may leave either file, including ones a worker
+    wrote into the shared output directory. It runs after the worker's process
+    group is gone, so it first restores the permissions and flags a worker may
+    have changed. It never raises: a blocked rename target falls back to a
+    numbered name, then to removal.
+    """
+    unlock(output)
+    for name in ('sessions.json', 'status.json'):
+        path = output / name
+        if os.path.lexists(path):
+            unlock(path)
+        for n in range(16):
+            target = output / ('unqualified-' + name + ('.%d' % n if n else ''))
+            if not os.path.lexists(path):
+                break
+            if os.path.lexists(target):
+                continue
+            try:
+                path.rename(target)
+            except OSError:
+                pass
+        if os.path.lexists(path):
+            try:
+                if path.is_dir() and not path.is_symlink():
+                    for top, directories, files in os.walk(path):
+                        for entry in directories + files:
+                            unlock(os.path.join(top, entry))
+                    shutil.rmtree(path)
+                else:
+                    path.unlink()
+            except OSError:
+                pass
+    return not any(os.path.lexists(output / name) for name in ('sessions.json', 'status.json'))
+
+
 def run_child(argv, output, name, environment, seconds):
     if seconds <= 0:
         raise ValueError('aggregate deadline exceeded before dispatch')
     limit = min(30, seconds)
-    write(output / (name + '.command.json'), {'argv': argv, 'timeout_seconds': limit})
+    command = write(output / (name + '.command.json'), {'argv': argv, 'timeout_seconds': limit})
     code = 124
     with (output / (name + '.stdout')).open('xb') as stdout, (output / (name + '.stderr')).open('xb') as stderr:
         process = subprocess.Popen(argv, env=environment, stdout=stdout, stderr=stderr, start_new_session=True,
@@ -304,6 +422,9 @@ def run_child(argv, output, name, environment, seconds):
                 pass
             process.wait(timeout=1)
             write(output / (name + '.exit.json'), {'exit_code': code})
+    # The child shares the output directory; its command receipt stays parent-authored.
+    if digest(read(output / (name + '.command.json'))) != command:
+        raise ValueError(name + ' changed its parent-written command receipt')
     return code
 
 
@@ -319,12 +440,24 @@ def realize(config, rows, assets, output):
     (output / 'tmp').mkdir()
     write(output / 'worker-job.json', {'config': config, 'rows': rows, 'assets': assets,
                                         'adapter_sha256': digest(read(Path(__file__).resolve()))})
+    before = outputs(output)
     code = run_child([sys.executable, str(Path(__file__).resolve()), '--worker', str(output / 'worker-job.json')], output, 'reference', environment, deadline-time.monotonic())
+    # The worker shares the output directory. Apart from its own receipts it
+    # may not add, change or remove anything there.
+    receipts = {output / n for n in ('reference.command.json', 'reference.stdout', 'reference.stderr', 'reference.exit.json', 'reference-progress.jsonl')}
+    if {p: v for p, v in outputs(output).items() if p not in receipts} != before:
+        raise ValueError('reference changed output files outside its protocol')
     if code:
         raise ValueError('reference subprocess failed; retained command/stdout/stderr')
     results = decode(read(output / 'reference.stdout'))
-    if not isinstance(results, list) or len(results) != len(rows) or any(any(result.get(k) != row[k] for k in ('key', 'session_id', 'turn_id', 'scope', 'target', 'hash_ids')) for result, row in zip(results, rows, strict=True)):
+    if not isinstance(results, list) or len(results) != len(rows):
         raise ValueError('reference returned a different attempted population')
+    for result, row in zip(results, rows, strict=True):
+        # Bind every admitted field, including nested provenance and JSON types.
+        # Worker diagnostics may add fields but cannot replace request policy.
+        if not isinstance(result, dict) or any(k not in result for k in row) or encoded({k: result[k] for k in row}) != encoded(row):
+            raise ValueError('reference returned a different attempted population')
+        check_worker(result, row)
     blocks, prefix_checks = {}, []
     for row in results:
         if row['status'] != 'HF_VERIFIED':
@@ -338,6 +471,7 @@ def realize(config, rows, assets, output):
             if not equal:
                 row.update(status='UNAVAILABLE', reason='declared shared prefix IDs changed across rows')
             blocks[key] = block
+    go_verified = set()
     for row in results:
         if row['status'] != 'HF_VERIFIED':
             continue
@@ -351,10 +485,18 @@ def realize(config, rows, assets, output):
             row.update(status='UNAVAILABLE', reason='independent Go tokenizer command failed')
             continue
         go = decode(read(output / (name + '.stdout')))
+        if not isinstance(go, dict):
+            go = {}
         row['go_token_ids'], row['go_count'] = go.get('ids'), go.get('count')
-        row['status'] = 'VERIFIED' if go.get('ids', []) == row['hf_token_ids'] and go.get('count') == row['target'] and go.get('tokenizer_sha256') == assets['files']['tokenizer.json'] and go.get('scope') == 'text without postprocessor' else 'UNAVAILABLE'
-        if row['status'] != 'VERIFIED':
-            row['reason'] = 'independent Go IDs/count differ from actual HF result'
+        # Both vectors are exact integer lists here, so equality cannot pass
+        # through float, bool or null values.
+        if (token_ids(go.get('ids')) and type(go.get('count')) is int and go['count'] == len(go['ids']) == row['target']
+                and go['ids'] == row['hf_token_ids'] and go.get('framed_sha256') == row['text_sha256']
+                and go.get('tokenizer_sha256') == assets['files']['tokenizer.json'] and go.get('scope') == 'text without postprocessor'):
+            row['status'] = 'VERIFIED'
+            go_verified.add(row['key'])
+        else:
+            row.update(status='UNAVAILABLE', reason='independent Go IDs/count/text differ from actual HF result')
     if digest(read(config['go_tokenizer'], 128 << 20)) != config['go_tokenizer_sha256']:
         raise ValueError('Go executable changed during realization')
     runtime_identity(config)
@@ -363,7 +505,7 @@ def realize(config, rows, assets, output):
     write(output / 'realization.json', {'scope': 'offline text IDs; no framing, engine or cache-hit attestation',
                                        'batch_policy': 'one request per unchanged mixin call; shared generator per scope',
                                        'cpu_affinity': affinity, 'prefix_checks': prefix_checks, 'results': results})
-    if any(row['status'] != 'VERIFIED' for row in results):
+    if any(row['status'] != 'VERIFIED' or row['key'] not in go_verified for row in results):
         return False
     sessions = {}
     for row in results:
@@ -390,48 +532,80 @@ def main():
     parser.add_argument('--config-sha256', required=True)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    def interrupted(_signum, _frame):
-        raise TimeoutError('realization interrupted')
+    # The first SIGTERM or SIGINT interrupts realization, which kills any owned
+    # child. Later signals, and any once the final phase starts, are only
+    # recorded: hashing, the status write and the quarantine always finish, and
+    # a recorded signal makes the run unavailable.
+    interrupts, closing = [], []
+    def interrupted(signum, _frame):
+        interrupts.append(signum)
+        if not closing and len(interrupts) == 1:
+            raise TimeoutError('realization interrupted')
     signal.signal(signal.SIGTERM, interrupted)
+    signal.signal(signal.SIGINT, interrupted)
     output = args.output.resolve()
     output.mkdir(parents=True, mode=0o700)
     status = {'schema_version': 1, 'status': 'UNAVAILABLE', 'sessions_available': False,
               'adapter_sha256': digest(read(Path(__file__).resolve())),
               'reference_revision': REFERENCE, 'engine_cache_hits': 'UNOBSERVED'}
+    final = False
     try:
-        raw = read(args.config)
-        if not pin(args.config_sha256) or digest(raw) != args.config_sha256:
-            raise ValueError('configuration hash differs')
-        config = decode(raw)
-        trace_data = read(config.get('trace', ''))
-        if digest(trace_data) != config.get('trace_sha256'):
-            raise ValueError('normalized trace hash differs')
-        rows = validate(config, decode(trace_data))
-        if digest(read(config['go_tokenizer'], 128 << 20)) != config['go_tokenizer_sha256']:
-            raise ValueError('Go tokenizer executable hash differs')
-        identity = runtime_identity(config)
-        write(output / 'runtime-identity.json', identity)
-        for name, data in [('config.json', raw), ('normalized-trace.json', trace_data)]:
-            with (output / name).open('xb') as stream:
-                os.chmod(output / name, 0o600)
-                stream.write(data)
-        assets = copy_assets(config, output)
-        write(output / 'asset-identity.json', assets)
-        available = realize(config, rows, assets, output)
-        if digest(read(Path(__file__).resolve())) != status['adapter_sha256']:
-            if (output / 'sessions.json').exists():
-                (output / 'sessions.json').rename(output / 'unqualified-sessions.json')
-            raise ValueError('adapter source changed during realization')
-        status.update(status='SOFTWARE_PASS' if available else 'UNAVAILABLE', sessions_available=available,
-                      config_sha256=digest(raw), normalized_trace_sha256=digest(trace_data), requested_rows=len(rows),
-                      requested_input_tokens=sum(row['target'] for row in rows))
+        try:
+            raw = read(args.config)
+            if not pin(args.config_sha256) or digest(raw) != args.config_sha256:
+                raise ValueError('configuration hash differs')
+            config = decode(raw)
+            trace_data = read(config.get('trace', ''))
+            if digest(trace_data) != config.get('trace_sha256'):
+                raise ValueError('normalized trace hash differs')
+            rows = validate(config, decode(trace_data))
+            if digest(read(config['go_tokenizer'], 128 << 20)) != config['go_tokenizer_sha256']:
+                raise ValueError('Go tokenizer executable hash differs')
+            identity = runtime_identity(config)
+            write(output / 'runtime-identity.json', identity)
+            for name, data in [('config.json', raw), ('normalized-trace.json', trace_data)]:
+                with (output / name).open('xb') as stream:
+                    os.chmod(output / name, 0o600)
+                    stream.write(data)
+            assets = copy_assets(config, output)
+            write(output / 'asset-identity.json', assets)
+            available = realize(config, rows, assets, output)
+            if digest(read(Path(__file__).resolve())) != status['adapter_sha256']:
+                raise ValueError('adapter source changed during realization')
+            if os.path.lexists(output / 'status.json'):
+                raise ValueError('status.json was written outside the parent')
+            status.update(status='SOFTWARE_PASS' if available else 'UNAVAILABLE', sessions_available=available,
+                          config_sha256=digest(raw), normalized_trace_sha256=digest(trace_data), requested_rows=len(rows),
+                          requested_input_tokens=sum(row['target'] for row in rows))
+        except Exception as error:
+            # Any failed final check invalidates the runnable export, including an
+            # unreadable adapter rather than only a readable hash mismatch.
+            status['reason'] = str(error) if isinstance(error, ValueError) else type(error).__name__
+        closing.append(True)
+        if not status['sessions_available'] and not quarantine(output):
+            raise ValueError('cannot clear sessions.json or status.json')
+        status['artifacts_sha256'] = {str(p.relative_to(output)): digest(read(p, 64 << 20)) for p in sorted(output.rglob('*'))
+                                    if p.is_file() and not p.is_symlink() and p.relative_to(output).parts[0] not in ('tmp', 'hf-cache')}
+        write(output / 'status.json', status)
+        final = True
     except Exception as error:
-        status['reason'] = str(error) if isinstance(error, ValueError) else type(error).__name__
-    status['artifacts_sha256'] = {str(p.relative_to(output)): digest(read(p, 64 << 20)) for p in sorted(output.rglob('*'))
-                                if p.is_file() and 'hf-cache' not in p.parts and 'tmp' not in p.relative_to(output).parts}
-    write(output / 'status.json', status)
-    print(json.dumps({'status': status['status'], 'sessions_available': status['sessions_available']}))
-    return 0 if status['sessions_available'] else 2
+        # No final status.json was written, for example after SIGTERM while
+        # hashing artifacts or a status.json that could not be cleared.
+        status.update(status='UNAVAILABLE', sessions_available=False,
+                      reason=str(error) if isinstance(error, ValueError) else type(error).__name__)
+    finally:
+        closing.append(True)
+        if not final:
+            quarantine(output)
+    # The result is decided once, here: a signal recorded up to this point,
+    # including during the quarantine, makes the run unavailable and its final
+    # status unqualified. A later signal arrives after the result is decided.
+    signalled = bool(interrupts)
+    available = final and status['sessions_available'] and not signalled
+    if final and signalled:
+        quarantine(output)
+    print(json.dumps({'status': 'SOFTWARE_PASS' if available else 'UNAVAILABLE', 'sessions_available': available}))
+    return 0 if available else 2
 
 
 if __name__ == '__main__':

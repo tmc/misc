@@ -143,3 +143,86 @@ Actual-source controls additionally require `AIPERF_REALIZE_REFERENCE=1`,
 `REALIZE_GO_TOKENIZER_SHA256`, and a task-local `TMPDIR`, using the pinned runtime.
 They exercise real counting, singleton/batched source equivalence, shared-prefix
 IDs, zero-target behavior and conflicting hash sizes. They never call a model.
+
+## Worker trust boundary
+
+The reference worker runs pinned AIPerf and Hugging Face code in a child process.
+The parent treats it as adversarial, not only its stdout. The worker shares the
+output directory, so the parent hashes that directory (outside the private HF
+cache and `tmp/`) before dispatch and refuses the run if the worker added,
+changed or removed anything other than its `reference.stdout`,
+`reference.stderr` and `reference-progress.jsonl`. The `reference.command.json`
+and `reference.exit.json` receipts are parent-authored: the parent writes the
+command receipt before starting each child and refuses the run if its bytes
+differ after the child exits, and writes the exit receipt only after killing the
+child's process group. The parent also treats its stdout as untrusted
+evidence and refuses the whole run
+(status `UNAVAILABLE`, exit 2, no `sessions.json`) unless every returned row
+satisfies the worker protocol. A protocol refusal happens before
+`realization.json` is written; the raw worker output stays in `reference.stdout`.
+
+- Every admitted input field, including output budget, block size, source
+  metadata and JSON value types, equals the admitted row.
+- Status is exactly `HF_VERIFIED` or `UNAVAILABLE`. A worker cannot report
+  `VERIFIED` or any other status, and cannot return fields outside the protocol,
+  such as Go IDs.
+- Evidence fields are all present or all absent. Token ID vectors are lists of
+  non-boolean, nonnegative int32-range integers; `hf_count` is a non-boolean integer
+  equal to the HF vector length; `text_sha256` is the SHA256 of the UTF-8 text.
+  Null, float, boolean and truncated values refuse.
+- `HF_VERIFIED` additionally requires the HF vector length to equal the target
+  and, for hashed rows, intended and HF IDs to be equal. `UNAVAILABLE` requires
+  a reason.
+
+Only the parent assigns `VERIFIED`, and only to a row for which it ran its own Go
+tokenizer on the returned text. That run must report a non-boolean integer count
+and integer IDs, with count, ID length and target equal, IDs exactly equal to the
+HF IDs, `framed_sha256` equal to the row's `text_sha256`, the pinned tokenizer
+hash, and raw-text scope. Repeated scope/hash blocks are compared by the parent
+from the checked HF IDs. Any mismatch leaves that row, and therefore the
+population, unavailable.
+
+These checks bind returned evidence to the admitted row and to the parent's own
+Go run. They do not attest that the worker executed the pinned generator: a
+worker that returns well-formed text with matching HF and Go IDs is accepted,
+and the Go tokenizer is the independent check on that text. The intended IDs of
+a no-hash row are recorded but not compared.
+
+Only exit status 0 together with the parent's stdout result
+`{"status": "SOFTWARE_PASS", "sessions_available": true}` means `sessions.json`
+is runnable. Files on disk are diagnostics; any other outcome is unavailable.
+
+Only the parent's final step leaves a `sessions.json` or a `status.json` at
+those names. On every unavailable path, and whenever the final `status.json` was
+not written, any file or directory at either name is moved to
+`unqualified-sessions.json` or `unqualified-status.json`. Because this runs
+after the worker's process group is gone, the parent first clears user flags
+and restores owner permissions on the output directory and the target, which
+undoes a worker's `chmod` or `chflags uchg`. It leaves symlinks and files with
+other hard links unchanged, since their inode may be shared with a file outside
+the output directory; the link itself is still moved. If the name is taken, a numbered
+`unqualified-<name>.<n>` is used; failing that, the target is removed. If even
+that fails, the run exits 2 and its stdout reports it unavailable. A
+`status.json` already present before the parent's final write also makes the
+run unavailable.
+
+The first SIGTERM or SIGINT interrupts realization and kills any owned child.
+Later signals, and any signal once the final phase starts (artifact hashing,
+the status write and the quarantine), are only recorded, so that phase always
+completes. The result is decided once, after the quarantine: if any signal was
+recorded by then, any `sessions.json` and `status.json` are quarantined, stdout
+reports an unavailable result, and the run exits 2. A signal after that point
+arrives after the result is decided and does not change it.
+
+Residual limits: the worker is killed by process group after it exits, and a
+descendant that leaves that group can still write later. A stray `sessions.json`
+or `status.json` is caught only until the final status is written, and other
+late changes are not detected. Root-only flags such as `schg` cannot be cleared,
+and a hard-linked or flagged target that cannot be moved or removed stays at its
+canonical name; the run then exits 2. SIGKILL can leave files at the canonical
+names without a final result. Only exit 0 with the stdout result above is
+authoritative. These checks are not a filesystem sandbox.
+
+Admission controls exercise corrupted worker output, worker-written and locked
+files, Go evidence, interruption and final identity failures with controlled
+subprocess fixtures; those controls do not attest tokenizer behavior.
