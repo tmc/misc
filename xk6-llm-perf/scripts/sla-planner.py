@@ -37,9 +37,11 @@ def runtime_identity():
 
 def validate(config):
     fields = {'schema_version', 'style', 'low', 'high', 'max_iterations', 'sla_replicates', 'filters', 'metrics', 'campaign_binary', 'campaign', 'concurrency_parameter', 'trial_timeout_seconds', 'max_duration_seconds'}
+    if isinstance(config, dict) and config.get('style') == 'multi_tier':
+        fields.add('tiers')
     if not isinstance(config, dict) or set(config) != fields or type(config['schema_version']) is not int or config['schema_version'] != 1:
         raise ValueError('invalid planner configuration')
-    if config['style'] not in ('monotonic', 'smooth_isotonic'):
+    if config['style'] not in ('monotonic', 'smooth_isotonic', 'multi_tier'):
         raise ValueError('unsupported boundary planner')
     for name, minimum, maximum in [('low', 1, 1000000), ('high', 1, 1000000), ('max_iterations', 1, 1000), ('sla_replicates', 0, 100), ('trial_timeout_seconds', 1, 86400), ('max_duration_seconds', 1, 604800)]:
         if type(config[name]) is not int or not minimum <= config[name] <= maximum:
@@ -48,7 +50,18 @@ def validate(config):
         raise ValueError('invalid concurrency domain')
     if not isinstance(config['filters'], list) or not 1 <= len(config['filters']) <= 8:
         raise ValueError('at least one SLA filter required')
-    for item in config['filters']:
+    filters = list(config['filters'])
+    if config['style'] == 'multi_tier':
+        tiers = config['tiers']
+        if not isinstance(tiers, list) or not 2 <= len(tiers) <= 16 or config['sla_replicates'] != 0:
+            raise ValueError('multi-tier requires 2..16 tiers and no SLA replicates')
+        labels = set()
+        for tier in tiers:
+            if not isinstance(tier, dict) or set(tier) != {'label', 'filters'} or not isinstance(tier['label'], str) or not 1 <= len(tier['label']) <= 128 or tier['label'] in labels or not isinstance(tier['filters'], list) or not 1 <= len(tier['filters']) <= 8:
+                raise ValueError('invalid or duplicate SLA tier')
+            labels.add(tier['label'])
+            filters.extend(tier['filters'])
+    for item in filters:
         if not isinstance(item, dict) or set(item) != {'metric_tag', 'stat', 'op', 'threshold'} or item['op'] not in ('lt', 'le', 'gt', 'ge'):
             raise ValueError('invalid SLA filter')
         if isinstance(item['threshold'], bool) or not isinstance(item['threshold'], (int, float)) or not math.isfinite(item['threshold']):
@@ -63,7 +76,7 @@ def validate(config):
             raise ValueError('invalid metric statistic')
     if 'output_token_throughput' not in metrics or 'avg' not in metrics['output_token_throughput']['stats']:
         raise ValueError('output-token throughput objective required')
-    for item in config['filters']:
+    for item in filters:
         if item['metric_tag'] not in metrics or item['stat'] not in metrics[item['metric_tag']]['stats']:
             raise ValueError('SLA metric mapping missing')
     campaign = config['campaign']
@@ -85,7 +98,11 @@ def planner(config):
     from aiperf.orchestrator.search_planner.monotonic import MonotonicSLASearchPlanner
     from aiperf.orchestrator.search_planner.smooth_isotonic import SmoothIsotonicSLAPlanner
     base = BenchmarkConfig.model_validate({'models': ['xk6-artifacts'], 'endpoint': {'urls': ['http://127.0.0.1'], 'type': 'chat'}, 'datasets': [{'name': 'profiling', 'type': 'synthetic'}], 'phases': [{'name': 'profiling', 'type': 'concurrency', 'concurrency': 1, 'requests': 10}]})
-    cfg = AdaptiveSearchSweep(planner=('monotonic_sla' if config['style'] == 'monotonic' else config['style']), search_space=[SearchSpaceDimension(path=PATH, lo=config['low'], hi=config['high'], kind='int')], objectives=[Objective(metric='output_token_throughput', stat='avg', direction='maximize')], max_iterations=config['max_iterations'], n_initial_points=1, sla_filters=[SLAFilter(**item) for item in config['filters']], sla_replicates=config['sla_replicates'])
+    cfg = AdaptiveSearchSweep(planner=('monotonic_sla' if config['style'] in ('monotonic', 'multi_tier') else config['style']), search_space=[SearchSpaceDimension(path=PATH, lo=config['low'], hi=config['high'], kind='int')], objectives=[Objective(metric='output_token_throughput', stat='avg', direction='maximize')], max_iterations=config['max_iterations'], n_initial_points=1, sla_filters=[SLAFilter(**item) for item in config['filters']], sla_replicates=config['sla_replicates'])
+    if config['style'] == 'multi_tier':
+        from aiperf.config.sweep.adaptive import SLOTier
+        from aiperf.orchestrator.search_planner.multi_tier_planner import MultiTierPlanner
+        return MultiTierPlanner(base, cfg, [SLOTier(**tier) for tier in config['tiers']])
     return (SmoothIsotonicSLAPlanner if config['style'] == 'smooth_isotonic' else MonotonicSLASearchPlanner)(base, cfg)
 
 
@@ -98,7 +115,7 @@ def results(directory, parameters, variation, config):
             relative = Path(attempt.get('directory', '')) / 'summary.json'
             if relative.is_absolute() or '..' in relative.parts or not (directory / relative).resolve().is_relative_to(directory.resolve()):
                 raise ValueError('summary artifact escapes owned campaign')
-    receipt = core.observed(directory, parameters)
+    receipt = core.observed(directory, parameters, validate(config))
     if receipt['state'] != 'COMPLETE':
         raise ValueError('campaign failed or did not converge')
     manifest = core.read_json(directory / 'campaign.json')
@@ -129,6 +146,10 @@ def boundary(model):
     if result and result.get('boundary_ci') and any(not math.isfinite(value) for value in result['boundary_ci'].values()):
         result['boundary_ci'] = None
         result['boundary_ci_unavailable_reason'] = 'pinned upstream bootstrap returned nonfinite bounds'
+    if hasattr(model, 'tier_results'):
+        result = dict(result or {})
+        result['tiers'] = [tier.model_dump(mode='json') for tier in model.tier_results()]
+        result['tier_metadata'] = model.tier_metadata()
     return result
 
 
@@ -285,6 +306,9 @@ def run(config, output):
             state['scope'] = 'actual pinned upstream planner; successful converged repeated xk6 runs; upstream any-trial SLA feasibility; no physical or statistical performance qualification'
             core.write_json(checkpoint, state)
         state['elapsed_seconds'] = previous + time.monotonic() - start
+        # MultiTierPlanner finalizes its reason in is_converged, after tell.
+        if model.is_converged():
+            state['stop_reason'] = model.convergence_reason()
         state['boundary'] = boundary(model)
         core.write_json(checkpoint, state)
         return state

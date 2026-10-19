@@ -198,3 +198,77 @@ class PlannerTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+class MultiTierTest(unittest.TestCase):
+    def config(self):
+        cfg = configuration()
+        cfg.update(style='multi_tier', sla_replicates=0, tiers=[{'label': 'strict', 'filters': [dict(cfg['filters'][0], threshold=5)]}, {'label': 'loose', 'filters': [dict(cfg['filters'][0], threshold=15)]}])
+        return cfg
+
+    def test_tier_schema_and_metric_mapping(self):
+        cfg = self.config()
+        self.assertEqual(bridge.validate(cfg)['mode'], 'grid')
+        for key, value in [('tiers', []), ('sla_replicates', 1), ('tiers', [{'label': 'a', 'filters': []}]*2)]:
+            changed = copy.deepcopy(cfg)
+            changed[key] = value
+            with self.assertRaises(ValueError):
+                bridge.validate(changed)
+        cfg['tiers'][1]['filters'][0]['metric_tag'] = 'missing'
+        with self.assertRaises(ValueError):
+            bridge.validate(cfg)
+
+    def test_results_passes_normalized_policy(self):
+        # Fail at the receipt boundary before importing optional AIPerf models.
+        import sys
+        import types
+        modules = {'aiperf.common.models.export_models': types.SimpleNamespace(JsonMetricResult=object), 'aiperf.orchestrator.models': types.SimpleNamespace(RunResult=object)}
+        cfg = self.config()
+        with patch.dict(sys.modules, modules), patch.object(bridge.core, 'read_json', return_value={'candidates': []}), patch.object(bridge.core, 'observed', side_effect=ValueError('receipt gate')) as observed:
+            with self.assertRaisesRegex(ValueError, 'receipt gate'):
+                bridge.results(Path('/owned'), {'CONCURRENCY': '1'}, None, cfg)
+            self.assertEqual(observed.call_args.args[2], bridge.validate(cfg))
+
+    def test_actual_multi_tier_reference(self):
+        bridge.runtime_identity()
+        from aiperf.common.models.export_models import JsonMetricResult
+        from aiperf.orchestrator.models import RunResult
+        cfg = self.config()
+        cfg['filters'][0]['threshold'] = 30
+        first, replay = bridge.planner(cfg), bridge.planner(cfg)
+        seen = []
+        while not first.is_converged():
+            proposal = first.ask()
+            if proposal is None:
+                break
+            variation = proposal[1]
+            x = variation.values[bridge.PATH]
+            other = replay.ask()[1]
+            self.assertEqual(other.values, variation.values)
+            results = [RunResult(label='one', success=True, summary_metrics={'time_to_first_token': JsonMetricResult(unit='ms', p95=x), 'output_token_throughput': JsonMetricResult(unit='tok/s', avg=x)}, variation_label=variation.label, variation_values=variation.values)]
+            first.tell(variation, results)
+            replay.tell(other, results)
+            seen.append(x)
+        self.assertLessEqual(len(seen), cfg['max_iterations'])
+        self.assertTrue(replay.is_converged())
+        self.assertEqual(bridge.boundary(first), bridge.boundary(replay))
+        self.assertEqual(len(bridge.boundary(first)['tiers']), 2)
+        tiers = first.tier_results()
+        self.assertEqual([t.boundary_concurrency for t in tiers], [4, 14])
+
+    @unittest.skipUnless(os.environ.get('CAMPAIGN_SMOKE_BINARY') and os.environ.get('K6_SMOKE_BINARY'), 'set existing historical worker binaries')
+    def test_actual_multi_tier_worker_resume(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            script = root/'workload.js'
+            script.write_text("import { Trend } from 'k6/metrics'; const score = new Trend('score'); export const options = { vus:1,iterations:1 }; export default function(){score.add(Number(__ENV.CONCURRENCY));}\n")
+            cfg = self.config()
+            cfg['campaign']['script'] = str(script)
+            cfg['filters'][0]['threshold'] = 30
+            cfg['high'] = 16
+            output = root/'planner'
+            first = bridge.run(cfg, output)
+            self.assertEqual([t['boundary_concurrency'] for t in first['boundary']['tiers']], [4, 14])
+            self.assertGreater(first['boundary']['tier_metadata']['tier_evaluation_count'], first['boundary']['tier_metadata']['actual_probe_count'])
+            second = bridge.run(cfg, output)
+            self.assertEqual(first['trials'], second['trials'])
+            self.assertEqual(first['boundary'], second['boundary'])
