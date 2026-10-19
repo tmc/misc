@@ -4,6 +4,7 @@ from dataclasses import asdict
 import hashlib
 import importlib.metadata
 import json
+import math
 from pathlib import Path
 import resource
 import signal
@@ -42,6 +43,8 @@ def decode(data):
     def check(item, depth=0):
         if depth > 64:
             raise ValueError('JSON depth exceeds 64')
+        if isinstance(item, float) and not math.isfinite(item):
+            raise ValueError('nonfinite JSON number')
         if isinstance(item, dict):
             for child in item.values():
                 check(child, depth + 1)

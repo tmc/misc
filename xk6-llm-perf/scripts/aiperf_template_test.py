@@ -57,6 +57,20 @@ class TypedTemplateTest(unittest.TestCase):
             with self.subTest(change=change), self.assertRaises(Exception):
                 adapter.evaluate(value)
 
+    def test_unused_nested_overflow_and_finite_numbers(self):
+        for number in ('1e999', '-1e999'):
+            value = request()
+            value['request_info']['turns'][0]['extra_body'] = {'ignored': 'NUMBER'}
+            raw = adapter.encode(value).replace(b'\"NUMBER\"', number.encode())
+            with self.subTest(number=number), self.assertRaisesRegex(ValueError, 'nonfinite'):
+                adapter.decode(raw)
+        for number in (-1.5, 0, 0.0):
+            value = request()
+            value['request_info']['turns'][0]['extra_body'] = {'ignored': number}
+            decoded = adapter.decode(adapter.encode(value))
+            self.assertEqual(decoded['request_info']['turns'][0]['extra_body']['ignored'], number)
+            self.assertEqual(adapter.evaluate(decoded)['payload']['text'], 'last')
+
     def test_source_mismatch_refused(self):
         with patch.object(adapter, 'SOURCE_HASH', '0' * 64):
             with self.assertRaisesRegex(ValueError, 'source differs'):
