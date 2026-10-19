@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 import unittest
+from unittest.mock import patch
 
 SCRIPT = Path(__file__).with_name("optuna-campaign.py")
 spec = importlib.util.spec_from_file_location("optuna_campaign", SCRIPT)
@@ -80,6 +81,57 @@ class OptunaCampaignTest(unittest.TestCase):
                             os.kill(int(pid_path.read_text()), signal.SIGKILL)
                         except ProcessLookupError:
                             pass
+
+    def test_signal_while_spawning_cleans_up_child(self):
+        # Deliver SIGTERM while Popen waits for exec: the child exists but
+        # Popen has not returned. The handler must not orphan the session.
+        class OS:
+            pid = None
+            def __getattr__(self, name):
+                return getattr(os, name)
+            def read(self, fd, size):
+                if self.pid is None:
+                    self.pid = sys._getframe(1).f_locals["self"].pid
+                    os.kill(os.getpid(), signal.SIGTERM)
+                return os.read(fd, size)
+        def interrupted(_signum, _frame):
+            raise KeyboardInterrupt()
+        shim = OS()
+        previous = signal.signal(signal.SIGTERM, interrupted)
+        try:
+            with tempfile.TemporaryDirectory() as temporary, patch.object(bridge.subprocess, "os", shim):
+                with self.assertRaises(KeyboardInterrupt):
+                    bridge.run_child(["/bin/sleep", "30"], Path(temporary), 20)
+            self.assertIsNotNone(shim.pid)
+            time.sleep(.1)
+            result = subprocess.run(["ps", "-o", "stat=", "-p", str(shim.pid)], capture_output=True, text=True, timeout=3)
+            self.assertTrue(not result.stdout.strip() or result.stdout.strip().startswith("Z"), result.stdout)
+        finally:
+            signal.signal(signal.SIGTERM, previous)
+            if shim.pid:
+                try:
+                    os.kill(shim.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+
+    def test_child_signal_mask_and_cleanup_errors(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            code = "import signal; print(sorted(int(s) for s in signal.pthread_sigmask(signal.SIG_BLOCK, [])))"
+            self.assertEqual(bridge.run_child([sys.executable, "-S", "-c", code], directory, 10), 0)
+            blocked = set(json.loads((directory / "driver.log").read_text()))
+            self.assertFalse(blocked & {int(s) for s in bridge.HELD_SIGNALS})
+            self.assertFalse(set(signal.pthread_sigmask(signal.SIG_BLOCK, [])) & set(bridge.HELD_SIGNALS))
+            killpg = os.killpg
+            def zombie_group(pid, number):
+                # Emulate macOS EPERM for a group holding only zombies.
+                try:
+                    killpg(pid, number)
+                except ProcessLookupError:
+                    pass
+                raise PermissionError(1, "Operation not permitted")
+            with patch.object(bridge.os, "killpg", side_effect=zombie_group), self.assertRaises(subprocess.TimeoutExpired):
+                bridge.run_child(["/bin/sleep", "30"], directory, .2)
 
     @unittest.skipUnless(os.environ.get("K6_SMOKE_BINARY") and os.environ.get("CAMPAIGN_SMOKE_BINARY"), "set both binaries for actual campaign execution")
     def test_actual_campaign_resume_and_mutation_refusal(self):

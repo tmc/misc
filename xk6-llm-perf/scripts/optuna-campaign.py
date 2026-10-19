@@ -110,35 +110,49 @@ def identities(config):
     return {"reference_revision": REFERENCE, "dependency_versions": versions, "input_sha256": hashes, "config_sha256": sha(config), "driver_sha256": file_sha(__file__)}
 
 
+HELD_SIGNALS = (signal.SIGTERM, signal.SIGINT, signal.SIGHUP, signal.SIGALRM)
+
+
+def kill_group(pid, number):
+    try:
+        os.killpg(pid, number)
+    except (ProcessLookupError, PermissionError):
+        # macOS reports EPERM for a group holding only zombies; neither
+        # case may replace the error that triggered cleanup.
+        pass
+
+
 def run_child(arguments, directory, timeout):
     with open(directory / "driver.log", "wb") as log:
-        process = subprocess.Popen(arguments, stdout=log, stderr=log, start_new_session=True)
+        # A handler that raises between fork and Popen's return would orphan
+        # the new session. Hold termination signals until cleanup is armed;
+        # the child restores the original mask before exec. Callers are
+        # single-threaded, so preexec_fn is safe.
+        mask = signal.pthread_sigmask(signal.SIG_BLOCK, HELD_SIGNALS)
         try:
+            process = subprocess.Popen(arguments, stdout=log, stderr=log, start_new_session=True,
+                                       preexec_fn=lambda: signal.pthread_sigmask(signal.SIG_SETMASK, mask))
+        except BaseException:
+            signal.pthread_sigmask(signal.SIG_SETMASK, mask)
+            raise
+        try:
+            signal.pthread_sigmask(signal.SIG_SETMASK, mask)
             status = process.wait(timeout=timeout)
             return status
         except BaseException:
-            try:
-                os.killpg(process.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
+            kill_group(process.pid, signal.SIGTERM)
             try:
                 process.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 pass
             # The leader can exit while a descendant ignores TERM. Always signal
             # the owned group, even after wait() has reaped the leader.
-            try:
-                os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            kill_group(process.pid, signal.SIGKILL)
             process.wait(timeout=3)
             raise
         finally:
             # A successful CLI must not leave background workers in its group.
-            try:
-                os.killpg(process.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            kill_group(process.pid, signal.SIGKILL)
 
 
 def policy_equal(left, right):
