@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from types import SimpleNamespace
 import tempfile
+import time
 import unittest
 from unittest.mock import patch
 
@@ -198,13 +199,54 @@ class TypedSweepTest(unittest.TestCase):
         actual = 'time=\"2026-10-18T19:41:15-07:00\" level=info msg='+json.dumps(message)+' source=console\n'
         with tempfile.TemporaryDirectory() as temporary:
             log = Path(temporary)/'driver.log'
-            for text in (message+'\n', actual):
+            for text in (message+'\n', message+'  \t\n', actual):
                 log.write_text(text)
                 bridge.applied_receipt(log, event)
-            for text in (actual+actual, 'SWEEP_APPLIED broken\n', message.replace('9007199254740993', '7'), message.replace('\"seed\":', '\"seed\":\"1\",\"seed\":')):
+            for text in (actual+actual, message+'GARBAGE', message+'{}', message+'\x0bGARBAGE', message+'\u2028'+message, actual.replace(json.dumps(message), json.dumps(message+'GARBAGE')), actual.replace(json.dumps(message), json.dumps(message+'{}')), 'SWEEP_APPLIED broken\n', message.replace('9007199254740993', '7'), message.replace('\"seed\":', '\"seed\":\"1\",\"seed\":')):
                 log.write_text(text)
                 with self.assertRaises(ValueError):
                     bridge.applied_receipt(log, event)
+
+    def test_signal_cleans_up_owned_child(self):
+        import signal
+        import threading
+        plan = {'events': [{'index': 0, 'parameters': {}, 'seed': 1, 'cooldowns_before': []}]}
+        saved = {number: signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGHUP, signal.SIGALRM)}
+        for number in saved:
+            with self.subTest(signal=number), tempfile.TemporaryDirectory() as temporary:
+                pidfile = Path(temporary)/'pid'
+                binary = Path(temporary)/'worker'
+                binary.write_text('#!/bin/sh\necho $$ > %s\nexec sleep 30\n' % pidfile)
+                binary.chmod(0o700)
+                config = {'binary': str(binary), 'script': str(binary), 'seed_environment': 'WORKLOAD_SEED',
+                          'trial_timeout_seconds': 20, 'max_duration_seconds': 20}
+                def deliver():
+                    for _ in range(200):
+                        if pidfile.exists() and pidfile.read_text().endswith('\n'):
+                            break
+                        time.sleep(.01)
+                    os.kill(os.getpid(), number)
+                timer = threading.Thread(target=deliver)
+                pid = None
+                try:
+                    bridge.handle_signals()
+                    timer.start()
+                    with patch.object(bridge, 'mapped_plan', return_value=plan), self.assertRaises(InterruptedError):
+                        bridge.aiperf_run(config, Path(temporary)/'run')
+                    timer.join()
+                    pid = int(pidfile.read_text())
+                    with self.assertRaises(ProcessLookupError):
+                        os.kill(pid, 0)
+                    attempt = bridge.core.read_json(Path(temporary)/'run'/'typed-design.json')['attempts'][0]
+                    self.assertEqual(attempt['state'], 'FAIL')
+                finally:
+                    for number, handler in saved.items():
+                        signal.signal(number, handler)
+                    if pid is not None:
+                        try:
+                            os.kill(pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
 
     def test_mapped_execution_receipt_resume_failure_and_refusals(self):
         config = self.config()
@@ -223,6 +265,23 @@ class TypedSweepTest(unittest.TestCase):
                 second = bridge.aiperf_run(config, output)
                 self.assertEqual(worker.call_count, 4)
                 self.assertEqual(first['attempts'], second['attempts'])
+                original = bridge.core.read_json(output/'typed-design.json')
+                expected = original['attempts'][0]['artifacts']
+                for altered in ({}, {next(iter(expected)): next(iter(expected.values()))}, dict(expected, unexpected='0'*64), {'cell-0000/driver.log': '0'*64, '../summary.json': '0'*64}):
+                    corrupt = copy.deepcopy(original)
+                    corrupt['attempts'][0]['artifacts'] = altered
+                    bridge.core.write_json(output/'typed-design.json', corrupt)
+                    with self.subTest(artifacts=altered), self.assertRaisesRegex(ValueError, 'artifact keys'):
+                        bridge.aiperf_run(config, output)
+                    self.assertEqual(worker.call_count, 4)
+                bridge.core.write_json(output/'typed-design.json', original)
+                summary = output/'cell-0000/summary.json'
+                raw = summary.read_bytes()
+                summary.unlink()
+                with self.assertRaisesRegex(ValueError, 'artifact missing'):
+                    bridge.aiperf_run(config, output)
+                self.assertEqual(worker.call_count, 4)
+                summary.write_bytes(raw)
                 (output/'cell-0000/driver.log').write_text('changed')
                 with self.assertRaisesRegex(ValueError, 'artifact differs'):
                     bridge.aiperf_run(config, output)

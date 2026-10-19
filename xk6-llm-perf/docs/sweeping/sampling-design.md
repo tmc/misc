@@ -142,18 +142,21 @@ console.log('SWEEP_APPLIED '+JSON.stringify({parameters, seed}));
 `parameters` must contain the exact string values actually read by the script,
 and `seed` the exact decimal seed string actually read. This avoids JavaScript
 number rounding for upstream SHA-derived seeds. Missing, duplicate or mismatched
-receipts fail the cell, even when the process exits zero. This guard verifies
+receipts, trailing non-whitespace or a second JSON document fail the cell, even when the process exits zero. This guard verifies
 script-reported consumption; it does not prove engine application or prevent a
 trusted script from lying. A valid summary JSON file is also required.
 Use ordinary script checks/thresholds to validate the workload itself.
 
 Each attempted cell retains its exact argv, normalized event, exit/error,
 worker log and summary hashes in `typed-design.json`. Resume revalidates source,
-plan, script/binary/assets and successful artifacts without rerunning completed
+plan, script/binary/assets and the exact required driver.log/summary.json artifact
+keys and hashes without rerunning completed
 cells. A failed or interrupted cell remains terminal. Elapsed time and
 cooldowns count toward the duration budget. The CLI bounds CPU to 20 seconds,
 address space to 2 GiB and files to 16 MiB; typed planning has a 30-second alarm,
-and execution a 630-second alarm. Child processes inherit these OS limits.
+and execution a 630-second alarm. Child processes inherit these OS limits. SIGTERM, SIGHUP and the wall-clock SIGALRM
+raise an interruption error so owned child-process cleanup and failure checkpoint
+saving run before the CLI exits.
 Logs and configs can contain authored data and must be protected accordingly.
 
 Typed normalization and script realization are separate evidence classes.

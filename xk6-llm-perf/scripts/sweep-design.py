@@ -360,7 +360,9 @@ def applied_receipt(path, event):
     if path.stat().st_size > 16 << 20:
         raise ValueError('worker log exceeds 16 MiB')
     records = []
-    for line in path.read_text().splitlines():
+    # k6 raw logs end lines with newline only; splitlines would also split on
+    # vertical tab, form feed and U+2028, hiding text after a receipt.
+    for line in path.read_text().split('\n'):
         if 'SWEEP_APPLIED ' in line:
             if line.startswith('time=') and ' msg=\"' in line:
                 quoted = line.split(' msg=', 1)[1]
@@ -372,8 +374,7 @@ def applied_receipt(path, event):
             if not message.startswith('SWEEP_APPLIED '):
                 raise ValueError('invalid applied receipt prefix')
             text = message[len('SWEEP_APPLIED '):]
-            _, end = __import__('json').JSONDecoder().raw_decode(text)
-            value = typed_runtime().decode(text[:end].encode())
+            value = typed_runtime().decode(text.encode())
             records.append(value)
     expected = {'parameters': event['parameters'], 'seed': str(event['seed'])}
     if core.encoded(records) != core.encoded([expected]):
@@ -408,8 +409,19 @@ def aiperf_run(config, output):
         for index, attempt in enumerate(state['attempts']):
             if attempt.get('event') != plan['events'][index] or attempt.get('state') != 'COMPLETE':
                 raise ValueError('failed/interrupted or changed cell cannot be replayed')
-            for path, digest in attempt['artifacts'].items():
-                if core.file_sha(output/path) != digest:
+            artifacts = attempt.get('artifacts')
+            expected = {'cell-%04d/driver.log' % index, 'cell-%04d/summary.json' % index}
+            if not isinstance(artifacts, dict) or set(artifacts) != expected:
+                raise ValueError('retained typed artifact keys differ')
+            if type(attempt.get('exit_code')) is not int or attempt['exit_code'] != 0:
+                raise ValueError('retained typed process did not succeed')
+            if any(not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest) for digest in artifacts.values()):
+                raise ValueError('invalid retained typed artifact digest')
+            for path, digest in artifacts.items():
+                target = output/path
+                if target.is_symlink() or target.parent.is_symlink() or not target.is_file():
+                    raise ValueError('retained typed artifact missing or symlink')
+                if core.file_sha(target) != digest:
                     raise ValueError('retained typed artifact differs')
             applied_receipt(output/('cell-%04d/driver.log' % index), attempt['event'])
         try:
@@ -457,6 +469,17 @@ def aiperf_run(config, output):
             save()
 
 
+def interrupted(signum, frame):
+    raise InterruptedError('typed execution interrupted by signal %d' % signum)
+
+
+def handle_signals():
+    """Turn termination, hangup and alarm signals into owned-child cleanup."""
+    import signal
+    for number in (signal.SIGTERM, signal.SIGHUP, signal.SIGALRM):
+        signal.signal(number, interrupted)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--config', type=Path, required=True)
@@ -470,6 +493,7 @@ def main():
     if args.aiperf_plan_only or args.aiperf_run:
         import resource
         import signal
+        handle_signals()
         resource.setrlimit(resource.RLIMIT_CPU, (20, 20))
         resource.setrlimit(resource.RLIMIT_AS, (2 << 30, 2 << 30))
         resource.setrlimit(resource.RLIMIT_FSIZE, (16 << 20, 16 << 20))
