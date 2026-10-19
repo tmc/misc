@@ -12,6 +12,13 @@ spec:
   runner:
     # Must contain this extension; the stock runner does not.
     image: YOUR_REGISTRY/llm-perf@sha256:YOUR_IMAGE_DIGEST
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "256Mi"
+      limits:
+        cpu: "1"
+        memory: "512Mi"
     env:
       - name: POD_NAME
         valueFrom:

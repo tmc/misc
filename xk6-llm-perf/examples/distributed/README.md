@@ -123,3 +123,15 @@ clock measurement, merge accounting and partial-loss qualification separately
 using the workflow above. A finished operator stage or passing mock test does
 not establish those gates. Namespace deletion failure is a failing receipt and
 requires inspection; the harness never deletes an existing namespace.
+
+The execution deadline starts before server validation and apply. Timed-out
+commands retain their partial stdout/stderr and an explicit unavailable exit
+status. All command stdout and stderr are streamed into separate 1 MiB byte
+budgets, including metadata and timeout partial output. Overflow kills the
+command, marks its receipt truncated/incomplete, and refuses further use of
+that output. JSON metadata is also checked before parsing against a 1 MiB
+byte budget, depth 64 and 100000 structural delimiters. Diagnostic capture has a separate 60-second aggregate budget; failed
+commands do not prevent later capture attempts or cleanup. Logs are limited to
+16 pods, 1000 lines and 1 MiB per pod. Check `capture.json` for incomplete
+diagnostics separately from `cleanup.json`. The runner manifest includes CPU
+and memory requests and limits; size these explicitly for each admitted workload.
