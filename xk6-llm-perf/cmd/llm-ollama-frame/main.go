@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"text/template"
 	"unicode/utf8"
@@ -46,6 +47,23 @@ type show struct {
 	Messages     json.RawMessage `json:"messages,omitempty"`
 }
 
+// reconstruction records source-derived values, never engine observations.
+// Pointers preserve omitted generation declarations separately from explicit zero.
+type reconstruction struct {
+	Think       bool    `json:"think"`
+	Stream      bool    `json:"stream"`
+	Temperature float64 `json:"temperature"`
+	MaxTokens   *uint64 `json:"max_tokens"`
+}
+
+func reconstruct(r request, think bool) reconstruction {
+	temperature := 1.0 // pinned OpenAI conversion sets this even when omitted.
+	if r.Temperature != nil {
+		temperature = *r.Temperature
+	}
+	return reconstruction{think, r.Stream, temperature, r.MaxTokens}
+}
+
 type boundedBuffer struct{ bytes.Buffer }
 
 func (b *boundedBuffer) Write(p []byte) (int, error) {
@@ -63,6 +81,11 @@ func render(s show, r request) (string, bool, error) {
 	}
 	if r.Model != "qwen3:0.6b" || len(r.Messages) != 1 || r.Messages[0].Role != "user" || len(r.Messages[0].Content) > 65536 || len(r.Tools) > 0 && string(r.Tools) != "[]" {
 		return "", false, fmt.Errorf("unsupported request population")
+	}
+	// The pinned OpenAI parser uses a signed int for max_tokens. A uint64
+	// declaration outside that range cannot identify the same accepted request.
+	if r.MaxTokens != nil && *r.MaxTokens > math.MaxInt64 {
+		return "", false, fmt.Errorf("unsupported max tokens")
 	}
 	// Model-level defaults are prepended by Ollama before request messages.
 	// This one-user lane can admit their absence or explicit empty values only.
@@ -208,7 +231,7 @@ func run(args []string, out io.Writer) error {
 	}
 	h := sha256.Sum256([]byte(text))
 	th := sha256.Sum256([]byte(s.Template))
-	return json.NewEncoder(out).Encode(map[string]any{"schema_version": 1, "provider_version": *version, "source_revision": sourceRevision, "model": r.Model, "model_show_sha256": *sh, "request_sha256": *rh, "template_sha256": hex.EncodeToString(th[:]), "rendered_sha256": hex.EncodeToString(h[:]), "effective_think": think, "scope": "offline pinned-source/template reconstruction; actual engine prompt not captured"})
+	return json.NewEncoder(out).Encode(map[string]any{"schema_version": 2, "provider_version": *version, "source_revision": sourceRevision, "model": r.Model, "model_show_sha256": *sh, "request_sha256": *rh, "template_sha256": hex.EncodeToString(th[:]), "rendered_sha256": hex.EncodeToString(h[:]), "reconstructed": reconstruct(r, think), "engine_observation_status": "unobserved", "scope": "offline pinned-source/template reconstruction; actual engine prompt not captured"})
 }
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {

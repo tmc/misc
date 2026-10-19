@@ -1,9 +1,13 @@
 exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request default.json -request-sha256 b020735320085baa8d2517524a0b58d4f2b68cd47f9fcd538d2971f60028c880 -tokenizer-input default-out.json
-stdout '"effective_think":true'
+stdout '"think":true'
+stdout '"schema_version":2'
+stdout '"engine_observation_status":"unobserved"'
+stdout '"temperature":1'
+stdout '"max_tokens":null'
 cat default-out.json
 stdout '/no_think /think'
 exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request none.json -request-sha256 5e0b72c12b3136cf32dc071406698ba2cf6a6a6a2c368150a5231ad78a81f246 -tokenizer-input none-out.json
-stdout '"effective_think":false'
+stdout '"think":false'
 cat none-out.json
 stdout '/no_think /no_think'
 ! exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request default.json -request-sha256 b020735320085baa8d2517524a0b58d4f2b68cd47f9fcd538d2971f60028c880 -tokenizer-input default-out.json
@@ -33,7 +37,7 @@ stderr 'refused'
 ! exec $CLI -model-show $MODEL_NULL_MESSAGES -model-show-sha256 $SHA_NULL_MESSAGES -provider-version 0.12.7 -request default.json -request-sha256 b020735320085baa8d2517524a0b58d4f2b68cd47f9fcd538d2971f60028c880 -tokenizer-input NULL_MESSAGES-out.json
 stderr 'refused'
 exec $CLI -model-show $MODEL_EMPTY -model-show-sha256 $SHA_EMPTY -provider-version 0.12.7 -request default.json -request-sha256 b020735320085baa8d2517524a0b58d4f2b68cd47f9fcd538d2971f60028c880 -tokenizer-input empty-metadata-out.json
-stdout '"effective_think":true'
+stdout '"think":true'
 -- default.json --
 {"model":"qwen3:0.6b","messages":[{"role":"user","content":"Say hello in one short sentence. /no_think"}]}
 -- none.json --

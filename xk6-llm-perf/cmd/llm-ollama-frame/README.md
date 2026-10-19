@@ -22,8 +22,8 @@ go run ./cmd/llm-ollama-frame \
 The explicit `tokenizer-input` file contains sensitive rendered prompt text. It
 is created exclusively with permissions 0600; existing destinations are refused.
 Pass it to the pinned HF tokenizer bridge as raw text without special tokens.
-The ordinary stdout receipt contains hashes, effective reconstructed thinking,
-source revision and a scope label; it omits prompt text. Input model/version
+The schema 2 stdout receipt contains hashes, source-derived reconstructed settings,
+source revision and an explicit `engine_observation_status: "unobserved"`; it omits prompt text. Input model/version
 labels and hashes identify supplied evidence and do not attest to a server.
 
 The source policy is Ollama tag `v0.12.7`, revision
@@ -64,3 +64,22 @@ The actual engine prompt, applied flags and GGUF tokenizer IDs were not captured
 Matching offline IDs and provider counts do not establish those identities,
 engine configuration attestation, full GGUF/HF parity or performance equivalence.
 The lane performs no model/GPU calls and does not change the physical HOLD.
+
+Receipt schema 2 replaces schema 1's `effective_think` with `reconstructed.think`.
+Old schema 1 receipts retain their original meaning: the field was a reconstruction,
+not an observed engine setting. Consumers must branch on `schema_version`; no
+schema 1 receipt is rewritten or promoted by this change.
+
+| Schema 2 field | Meaning |
+| --- | --- |
+| `reconstructed.think` | Pinned source/template policy within the admitted request population |
+| `reconstructed.temperature` | Pinned OpenAI conversion: declared value, otherwise 1.0 |
+| `reconstructed.max_tokens` | Declared value; null means the server/model default remains unknown |
+| `reconstructed.stream` | Declared OpenAI streaming flag; omission means false |
+| `engine_observation_status` | Always `unobserved`; none of these fields attest engine application |
+
+`max_tokens` values above the pinned 64-bit OpenAI parser's signed integer range
+are refused before rendering. This is a parser compatibility bound, not a claim
+that the server can generate that many tokens. Model defaults, context truncation,
+tokenizer special tokens and effective generation settings still require separate
+observations. Tool, system and multiturn cells remain explicitly unsupported.

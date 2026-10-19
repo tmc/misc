@@ -160,3 +160,42 @@ func TestModelDefaultsAliases(t *testing.T) {
 		}
 	}
 }
+
+func TestReconstructedSettings(t *testing.T) {
+	zero, tokens := 0.0, uint64(32)
+	for _, tt := range []struct {
+		name    string
+		request request
+		want    reconstruction
+	}{
+		{"omitted", request{}, reconstruction{Think: true, Temperature: 1}},
+		{"explicit zero", request{Temperature: &zero, MaxTokens: &tokens, Stream: true}, reconstruction{Think: true, Stream: true, Temperature: 0, MaxTokens: &tokens}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := reconstruct(tt.request, true)
+			if got != tt.want {
+				t.Fatalf("got %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMaxTokensParserRange(t *testing.T) {
+	data, err := os.ReadFile("testdata/qwen3-ollama-0.12.7.tmpl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := show{Template: string(data), Capabilities: []string{"thinking"}}
+	for _, tt := range []struct {
+		tokens uint64
+		valid  bool
+	}{
+		{0, true}, {32, true}, {1<<63 - 1, true}, {1 << 63, false}, {1<<64 - 1, false},
+	} {
+		r := request{Model: "qwen3:0.6b", Messages: []message{{"user", "hello"}}, MaxTokens: &tt.tokens}
+		_, _, err := render(s, r)
+		if (err == nil) != tt.valid {
+			t.Fatalf("tokens=%d err=%v", tt.tokens, err)
+		}
+	}
+}
