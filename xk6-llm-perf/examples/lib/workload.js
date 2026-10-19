@@ -303,3 +303,136 @@ export function distributionReceipt(rows) {
     }
     return {count: rows.length, pairCounts: pairs, meanRealizedInputTokens: inputSum / rows.length, minRealizedInputTokens: minInput, maxRealizedInputTokens: maxInput, meanOutputBudget: outputSum / rows.length};
 }
+
+// dagConversations runs a bounded, text-only forest of dag_jsonl conversations.
+// execute(request, identity) must return a Promise for one assistant message.
+// Use a genuinely asynchronous transport; a synchronous request blocks all
+// branches in this VU. The caller bounds transport and scenario duration.
+export async function dagConversations(sessions, execute) {
+    if (!Array.isArray(sessions) || !sessions.length || sessions.length > 256 || typeof execute !== 'function') throw new Error('invalid conversation forest');
+    const clone = value => JSON.parse(JSON.stringify(value));
+    const only = (value, keys) => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(key => keys.includes(key));
+    const messages = value => Array.isArray(value) && value.length > 0 && value.length <= 1000 && value.every(m => only(m, ['role', 'content']) && ['system', 'user', 'assistant'].includes(m.role) && typeof m.content === 'string' && m.content.length <= 262144);
+    const context = value => {
+        if (value.length > 1000 || JSON.stringify(value).length * 3 > 1024 * 1024) throw new Error('conversation context budget exceeded');
+        return value;
+    };
+    // Snapshot before dispatch, including callbacks that mutate their input.
+    let source;
+    try {
+        source = JSON.stringify(sessions);
+        if (source.length * 3 > 16 * 1024 * 1024) throw new Error('conversation asset budget exceeded');
+        sessions = JSON.parse(source);
+    } catch (error) { throw new Error('invalid bounded conversation asset: ' + String(error)); }
+    const graph = new Map();
+    let turns = 0;
+    for (const session of sessions) {
+        if (!only(session, ['session_id', 'turns']) || typeof session.session_id !== 'string' || !session.session_id.length || session.session_id.length > 256 || graph.has(session.session_id) || !Array.isArray(session.turns) || !session.turns.length || session.turns.length > 1000) throw new Error('invalid or unsupported conversation');
+        turns += session.turns.length;
+        if (turns > 4096) throw new Error('conversation turn budget exceeded');
+        graph.set(session.session_id, { session, branches: [], children: [], parent: null, inherits: false });
+    }
+    const referenced = new Set();
+    for (const [id, entry] of graph) {
+        for (let index = 0; index < entry.session.turns.length; index++) {
+            const turn = entry.session.turns[index];
+            if (!only(turn, ['messages', 'model', 'max_tokens', 'forks', 'spawns', 'delay']) || !messages(turn.messages) || (turn.model !== undefined && (typeof turn.model !== 'string' || !turn.model.length || turn.model.length > 256)) || (turn.max_tokens !== undefined && !tokenBudget(turn.max_tokens, 1)) || (turn.delay !== undefined && turn.delay !== 0)) throw new Error('invalid or unsupported conversation turn');
+            context(turn.messages);
+            const branches = [];
+            const attach = (child, inherit, join) => {
+                if (typeof child !== 'string' || !graph.has(child) || referenced.has(child)) throw new Error('unknown or reused conversation branch');
+                referenced.add(child);
+                graph.get(child).parent = id;
+                graph.get(child).inherits = inherit;
+                entry.children.push(child);
+                branches.push({ child, inherit, join });
+            };
+            if (turn.forks !== undefined) {
+                if (!Array.isArray(turn.forks) || turn.forks.length > 256) throw new Error('invalid forks');
+                for (const fork of turn.forks) {
+                    const object = typeof fork !== 'string';
+                    if (object && (!only(fork, ['child', 'background']) || (fork.background !== undefined && typeof fork.background !== 'boolean'))) throw new Error('invalid fork');
+                    const background = object && fork.background === true;
+                    if (!background && index !== entry.session.turns.length - 1) throw new Error('foreground fork must be terminal');
+                    attach(object ? fork.child : fork, true, null);
+                }
+            }
+            if (turn.spawns !== undefined) {
+                if (!Array.isArray(turn.spawns) || turn.spawns.length > 256) throw new Error('invalid spawns');
+                for (const spawn of turn.spawns) {
+                    const object = typeof spawn !== 'string';
+                    if (object && (!only(spawn, ['children', 'join_at']) || !Array.isArray(spawn.children) || !spawn.children.length || spawn.children.length > 256)) throw new Error('invalid spawn');
+                    const explicit = object && spawn.join_at !== undefined && spawn.join_at !== null;
+                    const join = explicit ? spawn.join_at : index + 1;
+                    if (explicit && (!Number.isSafeInteger(join) || join <= index || join >= entry.session.turns.length)) throw new Error('invalid spawn join_at');
+                    for (const child of object ? spawn.children : [spawn]) attach(child, false, join < entry.session.turns.length ? join : null);
+                }
+            }
+            entry.branches.push(branches);
+        }
+    }
+    for (const entry of graph.values()) {
+        for (let index = 0; index < entry.session.turns.length; index++) {
+            if ((index > 0 || entry.inherits) && entry.session.turns[index].messages.some(message => message.role === 'system')) throw new Error('system message must be on root or spawn turn zero');
+        }
+    }
+    const visited = new Set(), active = new Set();
+    function visit(id) {
+        if (active.has(id)) throw new Error('conversation branch cycle');
+        if (visited.has(id)) return;
+        active.add(id);
+        for (const child of graph.get(id).children) visit(child);
+        active.delete(id);
+        visited.add(id);
+    }
+    for (const id of graph.keys()) visit(id);
+    const results = new Map();
+    const running = [];
+    async function run(id, initial) {
+        const entry = graph.get(id);
+        let history = clone(initial);
+        const gates = new Map();
+        const receipt = { outcome: 'running', turns: [], parent: entry.parent };
+        results.set(id, receipt);
+        try {
+            for (let index = 0; index < entry.session.turns.length; index++) {
+                if (gates.has(index)) await Promise.all(gates.get(index));
+                const turn = entry.session.turns[index];
+                history = context(history.concat(clone(turn.messages)));
+                const request = { messages: clone(history) };
+                if (turn.model !== undefined) request.model = turn.model;
+                if (turn.max_tokens !== undefined) request.max_tokens = turn.max_tokens;
+                const pending = execute(request, { sessionId: id, turnIndex: index, parentId: entry.parent });
+                if (!pending || typeof pending.then !== 'function') throw new Error('conversation execute must return a Promise');
+                const response = await pending;
+                if (!messages([response]) || response.role !== 'assistant') throw new Error('conversation response must be an assistant text message');
+                history = context(history.concat(clone(response)));
+                receipt.turns.push({ turnIndex: index, outcome: 'success', response: clone(response) });
+                for (const branch of entry.branches[index]) {
+                    const child = run(branch.child, branch.inherit ? history : []);
+                    running.push(child);
+                    if (branch.join !== null) {
+                        if (!gates.has(branch.join)) gates.set(branch.join, []);
+                        gates.get(branch.join).push(child);
+                    }
+                }
+            }
+            receipt.outcome = 'success';
+        } catch (error) {
+            receipt.outcome = 'failure';
+            receipt.error = String(error);
+            receipt.turns.push({ turnIndex: receipt.turns.length, outcome: 'failure', error: receipt.error });
+        }
+        return receipt;
+    }
+    for (const id of graph.keys()) if (!referenced.has(id)) running.push(run(id, []));
+    // Parent joins wait for the child's own terminal turn, while final drain
+    // also retains background descendants spawned after roots have completed.
+    for (let offset = 0; offset < running.length;) {
+        const next = running.length;
+        await Promise.all(running.slice(offset, next));
+        offset = next;
+    }
+    for (const id of graph.keys()) if (!results.has(id)) results.set(id, { outcome: 'skipped', turns: [], parent: graph.get(id).parent });
+    return results;
+}
