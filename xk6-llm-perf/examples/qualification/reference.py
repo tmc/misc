@@ -49,8 +49,49 @@ def record(args):
             time.sleep(args.interval)
 
 
+def native_value(reading):
+    """Use the producer integer value, including omitted integer zero."""
+    is_int = reading.get("is_int", False)
+    if not isinstance(is_int, bool):
+        raise ValueError("invalid native integer flag")
+    if is_int:
+        value = reading.get("int_value", 0)
+        if type(value) is not int or not 0 <= value <= 2**64 - 1:
+            raise ValueError("invalid native integer reading")
+    else:
+        value = reading.get("value")
+        if type(value) not in (int, float) or not math.isfinite(value):
+            raise ValueError("invalid native numeric reading")
+    return value
+
+
+
+def validate_reference(records):
+    for record in records:
+        start = record.get("query_start_unix")
+        end = record.get("query_end_unix")
+        if (type(start) is not int or type(end) is not int or
+                not 0 < start <= end <= 2**63 - 1):
+            raise ValueError("invalid reference query interval")
+        for name, reading in record.get("readings", {}).items():
+            if name not in FIELDS:
+                continue
+            if reading.get("unit") != FIELDS[name][1]:
+                raise ValueError("reference unit mismatch: " + name)
+            value = reading.get("value")
+            if value is None:
+                continue
+            try:
+                valid = type(value) in (int, float) and math.isfinite(value)
+            except OverflowError:
+                valid = False
+            if not valid:
+                raise ValueError("invalid reference numeric reading")
+
+
 def compare(args):
     reference = [json.loads(s) for s in pathlib.Path(args.reference).read_text().splitlines()]
+    validate_reference(reference)
     observed = [json.loads(s) for s in pathlib.Path(args.native).read_text().splitlines()]
     manifests = [r["manifest"] for r in observed if "manifest" in r]
     if not manifests or not manifests[-1].get("is_complete") or manifests[-1].get("lost_records", 0):
@@ -68,7 +109,7 @@ def compare(args):
                 if reading.get("unit") != FIELDS[name][1]:
                     raise ValueError("native unit mismatch: " + name)
                 stamp = reading.get("timestamp_unix")
-                if not isinstance(stamp, int) or stamp <= 0:
+                if type(stamp) is not int or not 0 < stamp <= 2**63 - 1:
                     raise ValueError("native reading lacks wall timestamp")
                 candidates = [r for r in reference if r["device_uuid"] == check["device_uuid"]
                               and r["readings"][name]["value"] is not None]
@@ -80,15 +121,15 @@ def compare(args):
                     if skew > args.max_skew_ms * 1e6:
                         check.update(status="UNTESTED", reason="reference outside declared pairing interval")
                     else:
-                        value = reading.get("value", 0)
-                        if not isinstance(value, (int, float)) or not math.isfinite(value):
+                        value = native_value(reading)
+                        if not math.isfinite(value):
                             raise ValueError("invalid native numeric reading")
                         delta = abs(value - nearest["readings"][name]["value"])
                         check.update(status="PASS" if delta <= FIELDS[name][3] else "GAP",
                                      delta=delta, tolerance=FIELDS[name][3], pairing_skew_nanos=skew)
             checks.append(check)
-    if not checks:
-        raise ValueError("no comparable native readings")
+    if not any(r["status"] in ("PASS", "GAP") for r in checks):
+        raise ValueError("no comparable measured native readings")
     print(json.dumps({"qualification": "DIAGNOSTIC", "reference": "nvidia-smi; shared NVML backend",
                       "limitations": ["asynchronous queries; no independent sensor truth",
                                        "no MIG or sensor-exact energy qualification"],
