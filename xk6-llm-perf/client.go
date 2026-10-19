@@ -486,6 +486,11 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 
 	result.Status = resp.StatusCode
 	var providerwire providerwireStream
+	var responses responsesStream
+	if c.protocol == "openai-responses" && c.measurement != nil {
+		c.measurement.AIPerfContentPolicy = responsesContentPolicy
+		c.measurement.AIPerfContentEvents = new(int)
+	}
 	for {
 		event, err := reader.Read()
 		if err == io.EOF {
@@ -520,6 +525,8 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 		var terminal bool
 		if c.protocol == "providerwire-v4" {
 			chunk, terminal, err = providerwire.decode([]byte(event.Data))
+		} else if c.protocol == "openai-responses" {
+			chunk, terminal, err = responses.decode([]byte(event.Data))
 		} else {
 			chunk, terminal, err = decodeChunk([]byte(event.Data), c.protocol)
 		}
@@ -572,6 +579,9 @@ func (c *Client) handleStreamingResponse(resp *http.Response, startTime time.Tim
 		}
 		c.readSpecDecodePlacements(chunk.Metrics.SpeculativeDecoding, placements)
 		now := time.Now()
+		if chunk.aiperfContent && c.measurement != nil {
+			recordResponsesTiming(c.measurement, now, startTime)
+		}
 		if !lastEvent.IsZero() && now.After(lastEvent) {
 			c.recordMetric(recordMetrics, "llm_inter_chunk_latency", (float64(now.Sub(lastEvent)) / float64(time.Millisecond)))
 		}

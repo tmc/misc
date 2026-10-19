@@ -53,6 +53,12 @@ func sloLimit(v *float64) float64 {
 // Measurement is a sanitized request record. Durations are milliseconds;
 // timestamps are Unix milliseconds. No prompt, response text, or credential is stored.
 type Measurement struct {
+	// AIPerf fields retain the optional pinned Responses content_responses view.
+	// They do not change recognized-content timings, counts, or token estimates.
+	AIPerfTTFT                *float64     `json:"aiperf_ttft,omitempty"`
+	AIPerfLastContentLatency  *float64     `json:"aiperf_last_content_latency,omitempty"`
+	AIPerfContentEvents       *int         `json:"aiperf_content_events,omitempty"`
+	AIPerfContentPolicy       string       `json:"aiperf_content_policy,omitempty"`
 	RequestBodyBytes          int64        `json:"request_body_bytes,omitempty"`
 	ResponseBodyBytes         int64        `json:"response_body_bytes,omitempty"`
 	MaxConnsPerHost           int          `json:"max_connections_per_host,omitempty"`

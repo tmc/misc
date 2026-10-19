@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/tmc/misc/xk6-llm-perf/internal/jsoncheck"
 )
@@ -270,7 +271,7 @@ func checkOpenAIEnvelope(data []byte, responses bool) error {
 	}
 	fields := []string{"usage", "choices", "error", "id", "model", "metrics"}
 	if responses {
-		fields = append(fields, "response", "type", "status", "stop_reason", "delta", "item", "output", "output_index")
+		fields = append(fields, "response", "type", "status", "stop_reason", "delta", "item", "output", "output_index", "content_index", "item_id", "text")
 	}
 	v, err := providerFields(data, fields...)
 	if err != nil {
@@ -696,6 +697,14 @@ func decodeChunk(data []byte, protocol string) (ChatCompletionChunk, bool, error
 		return result, false, err
 	case "openai-responses":
 		switch raw.Type {
+		case "response.output_text.done":
+			var done struct {
+				Text string `json:"text"`
+			}
+			if err := json.Unmarshal(data, &done); err != nil {
+				return result, false, err
+			}
+			content = done.Text
 		case "response.output_text.delta":
 			if err := json.Unmarshal(raw.Delta, &content); err != nil {
 				return result, false, err
@@ -929,4 +938,144 @@ func terminalSpecDecode(root, terminal json.RawMessage) (json.RawMessage, string
 		return nil, "conflicting root and terminal speculative snapshots"
 	}
 	return terminal, ""
+}
+
+// responsesStream admits each text part once. The response byte limit bounds
+// stored text; a separate part limit bounds empty-event state.
+type responsesPart struct {
+	text   strings.Builder
+	itemID string
+	done   bool
+}
+
+type responsesStream struct {
+	parts     map[[2]int]*responsesPart
+	textBytes int
+	unindexed bool
+}
+
+func responsesIndex(raw json.RawMessage) (int, error) {
+	if len(raw) == 0 {
+		return -1, nil
+	}
+	var index int
+	if string(raw) == "null" {
+		return 0, fmt.Errorf("null responses part index")
+	}
+	if err := json.Unmarshal(raw, &index); err != nil || index < 0 {
+		return 0, fmt.Errorf("invalid responses part index")
+	}
+	return index, nil
+}
+
+func (s *responsesStream) decode(data []byte) (ChatCompletionChunk, bool, error) {
+	if len(data) > 16*1024*1024 {
+		return ChatCompletionChunk{}, false, fmt.Errorf("responses event exceeds 16 MiB")
+	}
+	chunk, terminal, err := decodeChunk(data, "openai-responses")
+	if err != nil {
+		return chunk, terminal, err
+	}
+	var event struct {
+		Type    string          `json:"type"`
+		Output  json.RawMessage `json:"output_index"`
+		Content json.RawMessage `json:"content_index"`
+		ItemID  string          `json:"item_id"`
+	}
+	if err := json.Unmarshal(data, &event); err != nil {
+		return chunk, false, err
+	}
+	if event.Type != "response.output_text.delta" && event.Type != "response.output_text.done" {
+		if event.Type == "response.reasoning_text.delta" || event.Type == "response.function_call_arguments.delta" {
+			var raw struct {
+				Delta string `json:"delta"`
+			}
+			if err := json.Unmarshal(data, &raw); err != nil {
+				return chunk, false, err
+			}
+			chunk.aiperfContent = raw.Delta != ""
+		}
+		return chunk, terminal, nil
+	}
+	output, err := responsesIndex(event.Output)
+	if err != nil {
+		return chunk, false, err
+	}
+	content, err := responsesIndex(event.Content)
+	if err != nil {
+		return chunk, false, err
+	}
+	if (output < 0) != (content < 0) {
+		return chunk, false, fmt.Errorf("incomplete responses part identity")
+	}
+	key := [2]int{output, content}
+	if s.parts == nil {
+		s.parts = make(map[[2]int]*responsesPart)
+	}
+	part := s.parts[key]
+	if part == nil {
+		if len(s.parts) >= 4096 {
+			return chunk, false, fmt.Errorf("responses text part limit exceeded")
+		}
+		// Missing indices are a separate single-part dialect, never a fallback for
+		// an indexed part whose identity was lost on a later event.
+		if len(s.parts) > 0 && s.unindexed != (output < 0) {
+			return chunk, false, fmt.Errorf("responses part identity changed")
+		}
+		s.unindexed = output < 0
+		part = &responsesPart{}
+		s.parts[key] = part
+	}
+	if part.done {
+		return chunk, false, fmt.Errorf("responses text after part done")
+	}
+	if len(event.ItemID) > 2048 {
+		return chunk, false, fmt.Errorf("responses item ID exceeds 2048 bytes")
+	}
+	if part.itemID != "" && event.ItemID != "" && part.itemID != event.ItemID {
+		return chunk, false, fmt.Errorf("responses item identity changed")
+	}
+	if event.ItemID != "" {
+		part.itemID = event.ItemID
+	}
+	text := chunk.Choices[0].Delta.Content
+	chunk.aiperfContent = text != ""
+	if event.Type == "response.output_text.delta" {
+		if s.textBytes+len(text) > 16*1024*1024 {
+			return chunk, false, fmt.Errorf("responses text exceeds 16 MiB")
+		}
+		s.textBytes += len(text)
+		part.text.WriteString(text)
+	} else {
+		if part.text.Len() == 0 {
+			if s.textBytes+len(text) > 16*1024*1024 {
+				return chunk, false, fmt.Errorf("responses text exceeds 16 MiB")
+			}
+			s.textBytes += len(text)
+		}
+		part.done = true
+		if part.text.Len() > 0 {
+			if text != part.text.String() {
+				return chunk, false, fmt.Errorf("responses done text disagrees with deltas")
+			}
+			chunk.Choices[0].Delta.Content = ""
+		}
+	}
+	return chunk, terminal, nil
+}
+
+const responsesContentPolicy = "aiperf-responses-content/f10eb50a"
+
+func recordResponsesTiming(m *Measurement, now, fallback time.Time) {
+	anchor := m.requestStart
+	if anchor.IsZero() {
+		anchor = fallback
+	}
+	value := ms(now.Sub(anchor))
+	if m.AIPerfTTFT == nil {
+		first := value
+		m.AIPerfTTFT = &first
+	}
+	m.AIPerfLastContentLatency = &value
+	*m.AIPerfContentEvents++
 }

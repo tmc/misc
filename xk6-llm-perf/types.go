@@ -136,6 +136,7 @@ type Usage struct {
 }
 
 type ChatCompletionChunk struct {
+	aiperfContent         bool
 	specDecodeUnavailable string
 	ProviderStatus        string          `json:"provider_status,omitempty"`
 	Sources               json.RawMessage `json:"sources,omitempty"`

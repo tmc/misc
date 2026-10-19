@@ -179,6 +179,9 @@ func validateRun(run RunSummary) error {
 				}
 				seen[m.RequestID] = true
 			}
+			if err := validateResponsesTiming(m); err != nil {
+				return err
+			}
 			for _, c := range []TokenCount{m.InputTokens, m.OutputTokens} {
 				if c.Value != nil && (*c.Value < 0 || (c.Source != "reported" && c.Source != "reported_derived" && c.Source != "client_declared" && c.Source != "estimated" && c.Source != "locally_tokenized")) {
 					return fmt.Errorf("invalid token count provenance")
@@ -931,6 +934,33 @@ func validateRecordTiming(m Measurement, run RunSummary) error {
 	}
 	if m.CacheWriteTokens != nil && *m.CacheWriteTokens < 0 || m.ReasoningTokens != nil && *m.ReasoningTokens < 0 || m.CachedTokens != nil && *m.CachedTokens < 0 || m.ProviderTotalTokens != nil && *m.ProviderTotalTokens < 0 {
 		return fmt.Errorf("negative auxiliary token count")
+	}
+	return nil
+}
+
+func validateResponsesTiming(m Measurement) error {
+	present := m.AIPerfContentPolicy != "" || m.AIPerfContentEvents != nil || m.AIPerfTTFT != nil || m.AIPerfLastContentLatency != nil
+	if !present {
+		return nil
+	}
+	if m.AIPerfContentPolicy != responsesContentPolicy || m.Protocol != "openai-responses" || !m.Stream || m.AIPerfContentEvents == nil || *m.AIPerfContentEvents < 0 {
+		return fmt.Errorf("invalid responses timing policy or population")
+	}
+	if *m.AIPerfContentEvents == 0 {
+		if m.AIPerfTTFT != nil || m.AIPerfLastContentLatency != nil {
+			return fmt.Errorf("zero responses timing population has observations")
+		}
+		return nil
+	}
+	if m.AIPerfTTFT == nil || m.AIPerfLastContentLatency == nil {
+		return fmt.Errorf("responses timing population lacks observations")
+	}
+	first, last := *m.AIPerfTTFT, *m.AIPerfLastContentLatency
+	if !finite(m.FullResponseLatency) || math.IsNaN(first) || math.IsInf(first, 0) || math.IsNaN(last) || math.IsInf(last, 0) || first < 0 || last < first || last > m.FullResponseLatency {
+		return fmt.Errorf("invalid responses content timing bounds")
+	}
+	if *m.AIPerfContentEvents == 1 && first != last {
+		return fmt.Errorf("single responses content timing span is nonzero")
 	}
 	return nil
 }

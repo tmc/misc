@@ -58,6 +58,8 @@ declare module 'k6/x/llm-perf' {
   }
   export interface TokenCount { value: number | null; source: string; }
   export interface Measurement {
+    aiperf_ttft?: number | null; aiperf_last_content_latency?: number | null;
+    aiperf_content_events?: number | null; aiperf_content_policy?: string;
     request_body_bytes?: number; response_body_bytes?: number; max_connections_per_host?: number; transport_profile?: string; stream?: boolean;
     serialization_latency_ms?: number; parsing_latency_ms?: number;
     work?: WorkReceipt;
