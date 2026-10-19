@@ -11,7 +11,9 @@ import (
 	"io"
 	"math"
 	"os"
+	"strings"
 	"text/template"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/tmc/misc/xk6-llm-perf/internal/jsoncheck"
@@ -41,6 +43,10 @@ type message struct {
 	Content string `json:"content"`
 }
 type show struct {
+	Renderer     string          `json:"renderer,omitempty"`
+	Parser       string          `json:"parser,omitempty"`
+	RemoteModel  string          `json:"remote_model,omitempty"`
+	RemoteHost   string          `json:"remote_host,omitempty"`
 	Template     string          `json:"template"`
 	Capabilities []string        `json:"capabilities"`
 	System       json.RawMessage `json:"system,omitempty"`
@@ -74,32 +80,28 @@ func (b *boundedBuffer) Write(p []byte) (int, error) {
 }
 
 func render(s show, r request) (string, bool, error) {
-	// This bounded lane reproduces retained one-user requests only. System/tool
-	// collation and context truncation must not be silently approximated.
+	// This reconstructs the pinned text renderer before context truncation.
+	// Engine tokenizer/options and alternate renderers are not reconstructed.
 	if fmt.Sprintf("%x", sha256.Sum256([]byte(s.Template))) != templateSHA256 {
 		return "", false, fmt.Errorf("unsupported serving template")
 	}
-	if r.Model != "qwen3:0.6b" || len(r.Messages) != 1 || r.Messages[0].Role != "user" || len(r.Messages[0].Content) > 65536 || len(r.Tools) > 0 && string(r.Tools) != "[]" {
+	if r.Model != "qwen3:0.6b" || len(r.Messages) == 0 || s.Renderer != "" || s.Parser != "" || s.RemoteModel != "" || s.RemoteHost != "" {
 		return "", false, fmt.Errorf("unsupported request population")
+	}
+	if len(r.Tools) > 0 {
+		var tools []json.RawMessage
+		if json.Unmarshal(r.Tools, &tools) != nil || tools == nil || len(tools) != 0 {
+			return "", false, fmt.Errorf("unsupported tools")
+		}
 	}
 	// The pinned OpenAI parser uses a signed int for max_tokens. A uint64
 	// declaration outside that range cannot identify the same accepted request.
 	if r.MaxTokens != nil && *r.MaxTokens > math.MaxInt64 {
 		return "", false, fmt.Errorf("unsupported max tokens")
 	}
-	// Model-level defaults are prepended by Ollama before request messages.
-	// This one-user lane can admit their absence or explicit empty values only.
-	if len(s.System) > 0 {
-		var system *string
-		if json.Unmarshal(s.System, &system) != nil || system == nil || *system != "" {
-			return "", false, fmt.Errorf("unsupported model system")
-		}
-	}
-	if len(s.Messages) > 0 {
-		var messages []json.RawMessage
-		if json.Unmarshal(s.Messages, &messages) != nil || messages == nil || len(messages) != 0 {
-			return "", false, fmt.Errorf("unsupported model messages")
-		}
+	messages, system, err := frameMessages(s, r)
+	if err != nil {
+		return "", false, err
 	}
 	if r.ReasoningEffort != "" && r.ReasoningEffort != "none" {
 		return "", false, fmt.Errorf("unsupported reasoning effort")
@@ -133,11 +135,85 @@ func render(s show, r request) (string, bool, error) {
 		return "", false, fmt.Errorf("parse template: %w", err)
 	}
 	var b boundedBuffer
-	values := map[string]any{"System": "", "Tools": []any(nil), "Messages": r.Messages, "Think": think, "IsThinkSet": true, "ThinkLevel": effort}
+	values := map[string]any{"System": system, "Tools": []any(nil), "Messages": messages, "Think": think, "IsThinkSet": true, "ThinkLevel": effort}
 	if err = t.Execute(&b, values); err != nil {
 		return "", false, fmt.Errorf("render template: %w", err)
 	}
 	return b.String(), think, nil
+}
+
+type templateMessage struct {
+	Role, Content, Thinking string
+	ToolCalls               []any
+}
+
+// frameMessages follows the pinned routes.go defaults/filterThinkTags and
+// template.go collate text paths. It deliberately does not truncate context.
+func frameMessages(s show, r request) ([]templateMessage, string, error) {
+	var system string
+	if len(s.System) > 0 && json.Unmarshal(s.System, &system) != nil {
+		return nil, "", fmt.Errorf("invalid model system")
+	}
+	var defaults []message
+	if len(s.Messages) > 0 && string(bytes.TrimSpace(s.Messages)) != "null" {
+		if decodeJSON(s.Messages, &defaults, true, false) != nil {
+			return nil, "", fmt.Errorf("invalid model messages")
+		}
+		// api.Message.UnmarshalJSON normalizes model-message roles.
+		for i := range defaults {
+			defaults[i].Role = strings.ToLower(defaults[i].Role)
+		}
+	}
+	messages := append(defaults, r.Messages...)
+	if r.Messages[0].Role != "system" && system != "" {
+		messages = append([]message{{"system", system}}, messages...)
+	}
+	if len(messages) > 64 || len(system) > 65536 {
+		return nil, "", fmt.Errorf("message budget exceeded")
+	}
+	lastUser := -1
+	for i, m := range messages {
+		if len(m.Content) > 65536 || m.Role != "system" && m.Role != "user" && m.Role != "assistant" {
+			return nil, "", fmt.Errorf("unsupported text message")
+		}
+		if m.Role == "user" {
+			lastUser = i
+		}
+	}
+	var systems []string
+	var collated []templateMessage
+	for i, m := range messages {
+		if m.Role == "assistant" && i < lastUser {
+			m.Content = filterThinking(m.Content)
+		}
+		if m.Role == "system" {
+			systems = append(systems, m.Content)
+		}
+		if len(collated) > 0 && collated[len(collated)-1].Role == m.Role {
+			collated[len(collated)-1].Content += "\n\n" + m.Content
+		} else {
+			collated = append(collated, templateMessage{Role: m.Role, Content: m.Content})
+		}
+	}
+	return collated, strings.Join(systems, "\n\n"), nil
+}
+
+// filterThinking is the one-shot result of the pinned thinking.Parser for the
+// complete assistant content, as called by filterThinkTags. Partial opening
+// tags and unterminated thinking yield no visible content.
+func filterThinking(content string) string {
+	trimmed := strings.TrimLeftFunc(content, unicode.IsSpace)
+	if rest, ok := strings.CutPrefix(trimmed, "<think>"); ok {
+		_, visible, closed := strings.Cut(rest, "</think>")
+		if !closed {
+			return ""
+		}
+		return strings.TrimLeftFunc(visible, unicode.IsSpace)
+	}
+	if strings.HasPrefix("<think>", trimmed) {
+		return ""
+	}
+	return content
 }
 
 func decodeJSON(data []byte, value any, strict, allowNull bool) error {
@@ -231,7 +307,7 @@ func run(args []string, out io.Writer) error {
 	}
 	h := sha256.Sum256([]byte(text))
 	th := sha256.Sum256([]byte(s.Template))
-	return json.NewEncoder(out).Encode(map[string]any{"schema_version": 2, "provider_version": *version, "source_revision": sourceRevision, "model": r.Model, "model_show_sha256": *sh, "request_sha256": *rh, "template_sha256": hex.EncodeToString(th[:]), "rendered_sha256": hex.EncodeToString(h[:]), "reconstructed": reconstruct(r, think), "engine_observation_status": "unobserved", "scope": "offline pinned-source/template reconstruction; actual engine prompt not captured"})
+	return json.NewEncoder(out).Encode(map[string]any{"schema_version": 2, "provider_version": *version, "source_revision": sourceRevision, "model": r.Model, "model_show_sha256": *sh, "request_sha256": *rh, "template_sha256": hex.EncodeToString(th[:]), "rendered_sha256": hex.EncodeToString(h[:]), "reconstructed": reconstruct(r, think), "engine_observation_status": "unobserved", "context_policy": "untruncated-renderer-reconstruction", "scope": "offline pinned-source/template reconstruction; actual engine prompt not captured"})
 }
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
