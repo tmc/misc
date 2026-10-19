@@ -5,9 +5,12 @@ import { readFile } from 'node:fs/promises';
 const file = new URL('../examples/lib/workload.js', import.meta.url);
 const source = (await readFile(file, 'utf8'))
     .replace("import { sleep } from 'k6';", 'function sleep() { throw new Error("unexpected sleep"); }')
-    .replace("import crypto from 'k6/crypto';", '');
+    .replace("import crypto from 'k6/crypto';", '')
+    .replace("import { setTimeout } from 'k6/timers';", 'const setTimeout = (fn, ms) => globalThis.dagTimer(fn, ms);');
+globalThis.dagTimer = (fn, ms) => queueMicrotask(fn);
 const { dagConversations } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const msg = content => ({ role: 'user', content });
+const get = (results, sessionId) => [...results.values()].find(result => result.sessionId === sessionId);
 const reply = content => ({ role: 'assistant', content });
 const turn = (content, fields = {}) => ({ messages: [msg(content)], ...fields });
 const session = (session_id, turns) => ({ session_id, turns });
@@ -32,7 +35,7 @@ test('delayed spawn overlaps parent and gates only join_at', async () => {
     release(reply('child-done'));
     const result = await pending;
     assert.deepEqual(calls.map(c => c.slice(0, 2)), [['root', 0], ['child', 0], ['root', 1], ['root', 2]]);
-    assert.equal(result.get('root').outcome, 'success');
+    assert.equal(get(result, 'root').outcome, 'success');
     assert.equal(calls[3][2].length, 5);
     assert(!calls[3][2].some(m => m.content === 'child-done'));
 });
@@ -62,7 +65,7 @@ test('background fork continues parent but final drain waits child', async () =>
     assert.deepEqual(calls, ['p0', 'c0', 'p1']);
     assert.equal(done, false);
     release(reply('done'));
-    assert.equal((await pending).get('c').outcome, 'success');
+    assert.equal(get(await pending, 'c').outcome, 'success');
 });
 test('default spawn blocks next turn; failed child releases join', async () => {
     const calls = [];
@@ -77,8 +80,8 @@ test('default spawn blocks next turn; failed child releases join', async () => {
     reject(new Error('child failure'));
     const result = await pending;
     assert.deepEqual(calls, ['p0', 'c0', 'p1']);
-    assert.equal(result.get('c').outcome, 'failure');
-    assert.equal(result.get('p').outcome, 'success');
+    assert.equal(get(result, 'c').outcome, 'failure');
+    assert.equal(get(result, 'p').outcome, 'success');
 });
 test('terminal spawn and nested background descendants drain', async () => {
     let release, done = false;
@@ -112,9 +115,9 @@ test('failed root skips unstarted descendants and preserves unrelated roots', as
         if (id.sessionId === 'p') throw new Error('root failure');
         return reply('ok');
     });
-    assert.equal(result.get('p').outcome, 'failure');
-    assert.equal(result.get('c').outcome, 'skipped');
-    assert.equal(result.get('other').outcome, 'success');
+    assert.equal(get(result, 'p').outcome, 'failure');
+    assert.equal(get(result, 'c').outcome, 'skipped');
+    assert.equal(get(result, 'other').outcome, 'success');
 });
 test('invalid graphs and unsupported policies refuse before dispatch', async () => {
     const invalid = [
@@ -123,10 +126,7 @@ test('invalid graphs and unsupported policies refuse before dispatch', async () 
         [session('a', [turn('a', { forks: ['b'] }), turn('late')]), session('b', [turn('b')])],
         [session('a', [turn('a', { spawns: [{ children: ['b'], join_at: 0 }] }), turn('late')]), session('b', [turn('b')])],
         [session('a', [turn('a', { spawns: [{ children: ['b'], join_at: 2 }] }), turn('late')]), session('b', [turn('b')])],
-        [session('a', [turn('a', { spawns: ['c'] })]), session('b', [turn('b', { spawns: ['c'] })]), session('c', [turn('c')])],
-        [session('a', [turn('a', { delay: 1 })])],
         [{ ...session('a', [turn('a')]), context_mode: 'message_array_with_responses' }],
-        [{ ...session('a', [turn('a')]), pre_session_spawns: ['b'] }, session('b', [turn('b')])],
         [session('a', [turn('a', { tools: [] })])],
         [session('a', [turn('a', { max_tokens: true })])],
         [session('a', [{ messages: [{ role: 'user', content: [] }] }])],
@@ -147,15 +147,15 @@ test('invalid graphs and unsupported policies refuse before dispatch', async () 
 test('context budget and malformed responses become retained failures', async () => {
     for (const response of [null, new Error('returned error'), { role: 'user', content: 'wrong' }, reply('x'.repeat(262145))]) {
         const result = await dagConversations([session('a', [turn('a')])], async () => response);
-        assert.equal(result.get('a').outcome, 'failure');
+        assert.equal(get(result, 'a').outcome, 'failure');
     }
     const result = await dagConversations([session('a', Array.from({ length: 4 }, () => turn('x'.repeat(100000))))], async () => reply('x'.repeat(100000)));
-    assert.equal(result.get('a').outcome, 'failure');
-    assert.match(result.get('a').error, /context budget/);
-    assert.equal(result.get('a').turns.at(-1).outcome, 'failure');
+    assert.equal(get(result, 'a').outcome, 'failure');
+    assert.match(get(result, 'a').error, /context budget/);
+    assert.equal(get(result, 'a').turns.at(-1).outcome, 'failure');
     const countLimit = await dagConversations([session('a', Array.from({ length: 501 }, () => turn('a')))], async () => reply('ok'));
-    assert.equal(countLimit.get('a').outcome, 'failure');
-    assert.match(countLimit.get('a').error, /context budget/);
+    assert.equal(get(countLimit, 'a').outcome, 'failure');
+    assert.match(get(countLimit, 'a').error, /context budget/);
 });
 test('root and spawn turn-zero systems are valid; forks inherit system', async () => {
     const system = { role: 'system', content: 'root system' };
@@ -186,8 +186,94 @@ test('later and fork-child system messages reject before dispatch', async () => 
 });
 test('synchronous callbacks are refused', async () => {
     const result = await dagConversations([session('a', [turn('a')])], () => reply('ok'));
-    assert.equal(result.get('a').outcome, 'failure');
-    assert.match(result.get('a').error, /Promise/);
+    assert.equal(get(result, 'a').outcome, 'failure');
+    assert.match(get(result, 'a').error, /Promise/);
+});
+test('repeated and multiparent spawns allocate fresh identities and histories', async () => {
+    const calls = [];
+    const results = await dagConversations([
+        session('a', [turn('a', { spawns: ['c'] }), turn('again', { spawns: ['c'] })]),
+        session('b', [turn('b', { spawns: ['c'] })]), session('c', [turn('child')]),
+    ], async (request, identity) => { calls.push({ request, identity }); return reply('ok'); });
+    const children = [...results.values()].filter(r => r.sessionId === 'c');
+    assert.equal(children.length, 3);
+    assert.equal(new Set(children.map(r => r.instanceId)).size, 3);
+    assert(children.every(r => r.parentInstanceId !== null));
+    assert(calls.filter(c => c.identity.sessionId === 'c').every(c => c.request.messages.length === 1));
+    assert.equal(results.size, 5);
+});
+test('pre-session spawn starts before parent zero and does not gate it', async () => {
+    let release;
+    const blocked = new Promise(resolve => { release = resolve; });
+    const calls = [];
+    const pending = dagConversations([{ ...session('p', [turn('parent')]), pre_session_spawns: ['c'] }, session('c', [turn('child')])], async (request, identity) => {
+        calls.push(identity);
+        return identity.sessionId === 'c' ? blocked : reply('ok');
+    });
+    await flush();
+    assert.deepEqual(calls.map(c => c.sessionId), ['c', 'p']);
+    assert.equal(calls[0].parentInstanceId, null);
+    release(reply('done'));
+    assert([...((await pending).values())].every(r => r.outcome === 'success'));
+});
+test('integer requestless rounds refire fresh children and wait between rounds', async () => {
+    const releases = [], calls = [], delays = [];
+    globalThis.dagTimer = (fn, ms) => { delays.push(ms); queueMicrotask(fn); };
+    const pending = dagConversations([{ session_id: 'o', orchestrator: true, spawns: ['c'], rounds: 2, think_time_ms: 7 }, session('c', [turn('child', { delay: 3 })])], async (request, identity) => {
+        calls.push({ request, identity });
+        return new Promise(resolve => releases.push(resolve));
+    });
+    await flush();
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].identity.sessionId, 'c');
+    releases[0](reply('first'));
+    await flush();
+    assert.equal(calls.length, 2);
+    assert.notEqual(calls[0].identity.instanceId, calls[1].identity.instanceId);
+    assert.deepEqual(calls.map(c => c.request.messages.length), [1, 1]);
+    releases[1](reply('second'));
+    const results = await pending;
+    assert.equal(get(results, 'o').turns.length, 3);
+    assert(get(results, 'o').turns.every(t => t.noRequest));
+    assert.deepEqual(delays, [7, 3, 7, 3]);
+});
+test('authored rounds honor per-round delays and terminal gate has none', async () => {
+    const delays = [], calls = [];
+    globalThis.dagTimer = (fn, ms) => { delays.push(ms); queueMicrotask(fn); };
+    const result = await dagConversations([{ session_id: 'o', orchestrator: true, rounds: [{ spawns: ['a'] }, { spawns: ['b'], think_time_ms: 9 }], think_time_ms: 4 }, session('a', [turn('a')]), session('b', [turn('b')])], async (_, identity) => { calls.push(identity.sessionId); return reply('ok'); });
+    assert.deepEqual(calls, ['a', 'b']);
+    assert.deepEqual(delays, [4, 9]);
+    assert.deepEqual(get(result, 'o').turns.map(t => t.delayMs), [4, 9, 0]);
+});
+test('nonzero delay waits asynchronously before dispatch', async () => {
+    const waits = [], calls = [];
+    globalThis.dagTimer = (fn, ms) => waits.push({ fn, ms });
+    const pending = dagConversations([session('p', [turn('later', { delay: 12 })])], async (_, identity) => { calls.push(identity); return reply('ok'); });
+    await flush();
+    assert.equal(calls.length, 0);
+    assert.equal(waits[0].ms, 12);
+    waits[0].fn();
+    assert.equal(get(await pending, 'p').outcome, 'success');
+    globalThis.dagTimer = (fn, ms) => queueMicrotask(fn);
+});
+test('invalid expansion and advanced fields reject before all callbacks', async () => {
+    const invalid = [
+        [{ session_id: 'o', orchestrator: true, spawns: ['c'], rounds: 1025 }, session('c', [turn('c')])],
+        [{ session_id: 'o', orchestrator: true, rounds: [{ spawns: ['c'] }, { spawns: ['c'] }] }, session('c', [turn('c')])],
+        [{ session_id: 'o', orchestrator: true, spawns: ['c'], pre_session_spawns: ['c'] }, session('c', [turn('c')])],
+        [session('p', [turn('p', { forks: ['c'] })]), { ...session('a', [turn('a')]), pre_session_spawns: ['c'] }, session('c', [turn('c')])],
+        [session('p', [turn('p', { forks: ['c'] })]), session('a', [turn('a', { forks: ['c'] })]), session('c', [turn('c')])],
+        [session('p', [turn('p', { spawns: ['c', 'c'] })]), session('c', [turn('c')])],
+        [session('p', [turn('p', { delay: 60001 })])],
+        [session('p', [turn('p', { delay: true })])],
+        [{ session_id: 'o', orchestrator: true, spawns: ['c'], rounds: 2, think_time_sigma: 1 }, session('c', [turn('c')])],
+        [{ session_id: 'a', orchestrator: true, spawns: ['b'], rounds: 40 }, { session_id: 'b', orchestrator: true, spawns: ['c'], rounds: 40 }, session('c', [turn('c')])],
+    ];
+    for (const graph of invalid) {
+        let calls = 0;
+        await assert.rejects(dagConversations(graph, async () => { calls++; return reply('ok'); }));
+        assert.equal(calls, 0);
+    }
 });
 for (const [name, run] of tests) { await run(); console.log('PASS ' + name); }
 console.log(`${tests.length} scheduling controls passed`);

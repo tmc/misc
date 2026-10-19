@@ -1,5 +1,6 @@
 // Deterministic workload helpers. The caller retains source assets and hashes.
 import { sleep } from 'k6';
+import { setTimeout } from 'k6/timers';
 import crypto from 'k6/crypto';
 
 const maxTokens = 1000000;
@@ -304,12 +305,12 @@ export function distributionReceipt(rows) {
     return {count: rows.length, pairCounts: pairs, meanRealizedInputTokens: inputSum / rows.length, minRealizedInputTokens: minInput, maxRealizedInputTokens: maxInput, meanOutputBudget: outputSum / rows.length};
 }
 
-// dagConversations runs a bounded, text-only forest of dag_jsonl conversations.
+// dagConversations runs bounded, text-only dag_jsonl conversation templates.
 // execute(request, identity) must return a Promise for one assistant message.
 // Use a genuinely asynchronous transport; a synchronous request blocks all
 // branches in this VU. The caller bounds transport and scenario duration.
 export async function dagConversations(sessions, execute) {
-    if (!Array.isArray(sessions) || !sessions.length || sessions.length > 256 || typeof execute !== 'function') throw new Error('invalid conversation forest');
+    if (!Array.isArray(sessions) || !sessions.length || sessions.length > 256 || typeof execute !== 'function') throw new Error('invalid conversation templates');
     const clone = value => JSON.parse(JSON.stringify(value));
     const only = (value, keys) => value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(key => keys.includes(key));
     const messages = value => Array.isArray(value) && value.length > 0 && value.length <= 1000 && value.every(m => only(m, ['role', 'content']) && ['system', 'user', 'assistant'].includes(m.role) && typeof m.content === 'string' && m.content.length <= 262144);
@@ -325,25 +326,67 @@ export async function dagConversations(sessions, execute) {
         sessions = JSON.parse(source);
     } catch (error) { throw new Error('invalid bounded conversation asset: ' + String(error)); }
     const graph = new Map();
+    const delayValue = value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 60000;
+    const childrenValue = value => Array.isArray(value) && value.length > 0 && value.length <= 256 && value.every(id => typeof id === 'string' && id.length > 0);
     let turns = 0;
     for (const session of sessions) {
-        if (!only(session, ['session_id', 'turns']) || typeof session.session_id !== 'string' || !session.session_id.length || session.session_id.length > 256 || graph.has(session.session_id) || !Array.isArray(session.turns) || !session.turns.length || session.turns.length > 1000) throw new Error('invalid or unsupported conversation');
-        turns += session.turns.length;
+        if (!only(session, ['session_id', 'turns', 'orchestrator', 'spawns', 'rounds', 'think_time_ms', 'pre_session_spawns']) || typeof session.session_id !== 'string' || !session.session_id.length || session.session_id.length > 256 || graph.has(session.session_id) || (session.orchestrator !== undefined && typeof session.orchestrator !== 'boolean')) throw new Error('invalid or unsupported conversation');
+        const pre = session.pre_session_spawns === undefined ? [] : session.pre_session_spawns;
+        if (!Array.isArray(pre) || pre.length > 256 || pre.some(id => typeof id !== 'string' || !id.length) || new Set(pre).size !== pre.length) throw new Error('invalid pre-session spawns');
+        let normalized = session.turns === undefined ? [] : session.turns;
+        if (!Array.isArray(normalized) || normalized.length > 1000) throw new Error('invalid conversation turns');
+        if (session.orchestrator) {
+            if (normalized.length || pre.length) throw new Error('orchestrator cannot author turns or pre-session spawns');
+            const rounds = session.rounds;
+            const hasRounds = rounds !== undefined && rounds !== null;
+            const think = session.think_time_ms === undefined || session.think_time_ms === null ? 0 : session.think_time_ms;
+            if (!delayValue(think) || (!hasRounds && session.think_time_ms !== undefined && session.think_time_ms !== null)) throw new Error('invalid orchestrator think-time');
+            let plans;
+            if (Array.isArray(rounds)) {
+                if (!rounds.length || rounds.length > 999 || (session.spawns !== undefined && (!Array.isArray(session.spawns) || session.spawns.length))) throw new Error('invalid authored rounds');
+                const seen = new Set();
+                plans = rounds.map(round => {
+                    if (!only(round, ['spawns', 'think_time_ms']) || !childrenValue(round.spawns)) throw new Error('invalid authored round');
+                    for (const child of round.spawns) {
+                        if (seen.has(child)) throw new Error('authored rounds must own distinct child sessions');
+                        seen.add(child);
+                    }
+                    const delay = round.think_time_ms === undefined || round.think_time_ms === null ? think : round.think_time_ms;
+                    if (!delayValue(delay)) throw new Error('invalid round think-time');
+                    return { children: round.spawns, delay };
+                });
+            } else {
+                if (!childrenValue(session.spawns) || (hasRounds && (!Number.isSafeInteger(rounds) || rounds < 1 || rounds > 999))) throw new Error('invalid orchestrator rounds');
+                plans = Array.from({ length: hasRounds ? rounds : 1 }, () => ({ children: session.spawns, delay: hasRounds ? think : 0 }));
+            }
+            normalized = plans.map((plan, index) => ({ no_request: true, delay: plan.delay, spawns: hasRounds ? [{ children: plan.children, join_at: index + 1 }] : plan.children }));
+            if (hasRounds) normalized.push({ no_request: true });
+        } else {
+            if (!normalized.length || (session.spawns !== undefined && (!Array.isArray(session.spawns) || session.spawns.length)) || (session.rounds !== undefined && session.rounds !== null) || (session.think_time_ms !== undefined && session.think_time_ms !== null)) throw new Error('invalid normal conversation');
+        }
+        turns += normalized.length;
         if (turns > 4096) throw new Error('conversation turn budget exceeded');
-        graph.set(session.session_id, { session, branches: [], children: [], parent: null, inherits: false });
+        graph.set(session.session_id, { turns: normalized, orchestrator: session.orchestrator === true, pre, branches: [], children: [...pre], forkParent: null });
     }
     const referenced = new Set();
     for (const [id, entry] of graph) {
-        for (let index = 0; index < entry.session.turns.length; index++) {
-            const turn = entry.session.turns[index];
-            if (!only(turn, ['messages', 'model', 'max_tokens', 'forks', 'spawns', 'delay']) || !messages(turn.messages) || (turn.model !== undefined && (typeof turn.model !== 'string' || !turn.model.length || turn.model.length > 256)) || (turn.max_tokens !== undefined && !tokenBudget(turn.max_tokens, 1)) || (turn.delay !== undefined && turn.delay !== 0)) throw new Error('invalid or unsupported conversation turn');
-            context(turn.messages);
-            const branches = [];
+        for (const child of entry.pre) {
+            if (!graph.has(child)) throw new Error('unknown pre-session spawn');
+            referenced.add(child);
+        }
+        for (let index = 0; index < entry.turns.length; index++) {
+            const turn = entry.turns[index];
+            if ((!entry.orchestrator && !only(turn, ['messages', 'model', 'max_tokens', 'forks', 'spawns', 'delay'])) || (!entry.orchestrator && !messages(turn.messages)) || (turn.model !== undefined && (typeof turn.model !== 'string' || !turn.model.length || turn.model.length > 256)) || (turn.max_tokens !== undefined && !tokenBudget(turn.max_tokens, 1)) || (turn.delay !== undefined && !delayValue(turn.delay))) throw new Error('invalid or unsupported conversation turn');
+            if (!entry.orchestrator) context(turn.messages);
+            const branches = [], onTurn = new Set();
             const attach = (child, inherit, join) => {
-                if (typeof child !== 'string' || !graph.has(child) || referenced.has(child)) throw new Error('unknown or reused conversation branch');
+                if (typeof child !== 'string' || !graph.has(child) || onTurn.has(child)) throw new Error('unknown or duplicate conversation branch');
+                onTurn.add(child);
                 referenced.add(child);
-                graph.get(child).parent = id;
-                graph.get(child).inherits = inherit;
+                if (inherit) {
+                    if (graph.get(child).forkParent !== null) throw new Error('fork child must have one parent');
+                    graph.get(child).forkParent = id;
+                }
                 entry.children.push(child);
                 branches.push({ child, inherit, join });
             };
@@ -353,7 +396,7 @@ export async function dagConversations(sessions, execute) {
                     const object = typeof fork !== 'string';
                     if (object && (!only(fork, ['child', 'background']) || (fork.background !== undefined && typeof fork.background !== 'boolean'))) throw new Error('invalid fork');
                     const background = object && fork.background === true;
-                    if (!background && index !== entry.session.turns.length - 1) throw new Error('foreground fork must be terminal');
+                    if (!background && index !== entry.turns.length - 1) throw new Error('foreground fork must be terminal');
                     attach(object ? fork.child : fork, true, null);
                 }
             }
@@ -361,19 +404,20 @@ export async function dagConversations(sessions, execute) {
                 if (!Array.isArray(turn.spawns) || turn.spawns.length > 256) throw new Error('invalid spawns');
                 for (const spawn of turn.spawns) {
                     const object = typeof spawn !== 'string';
-                    if (object && (!only(spawn, ['children', 'join_at']) || !Array.isArray(spawn.children) || !spawn.children.length || spawn.children.length > 256)) throw new Error('invalid spawn');
+                    if (object && (!only(spawn, ['children', 'join_at']) || !childrenValue(spawn.children))) throw new Error('invalid spawn');
                     const explicit = object && spawn.join_at !== undefined && spawn.join_at !== null;
                     const join = explicit ? spawn.join_at : index + 1;
-                    if (explicit && (!Number.isSafeInteger(join) || join <= index || join >= entry.session.turns.length)) throw new Error('invalid spawn join_at');
-                    for (const child of object ? spawn.children : [spawn]) attach(child, false, join < entry.session.turns.length ? join : null);
+                    if (explicit && (!Number.isSafeInteger(join) || join <= index || join >= entry.turns.length)) throw new Error('invalid spawn join_at');
+                    for (const child of object ? spawn.children : [spawn]) attach(child, false, join < entry.turns.length ? join : null);
                 }
             }
             entry.branches.push(branches);
         }
     }
     for (const entry of graph.values()) {
-        for (let index = 0; index < entry.session.turns.length; index++) {
-            if ((index > 0 || entry.inherits) && entry.session.turns[index].messages.some(message => message.role === 'system')) throw new Error('system message must be on root or spawn turn zero');
+        for (const child of entry.pre) if (graph.get(child).forkParent !== null) throw new Error('pre-session spawn cannot target a fork child');
+        for (let index = 0; index < entry.turns.length; index++) {
+            if (!entry.orchestrator && (index > 0 || entry.forkParent !== null) && entry.turns[index].messages.some(message => message.role === 'system')) throw new Error('system message must be on root or spawn turn zero');
         }
     }
     const visited = new Set(), active = new Set();
@@ -386,31 +430,61 @@ export async function dagConversations(sessions, execute) {
         visited.add(id);
     }
     for (const id of graph.keys()) visit(id);
-    const results = new Map();
-    const running = [];
-    async function run(id, initial) {
+    // Expand bounded instances before dispatch, so repeated templates cannot
+    // exhaust a runtime budget after earlier requests have already been sent.
+    const results = new Map(), counts = new Map();
+    let realizedTurns = 0, totalDelay = 0;
+    function instantiate(id, parent, pre = false) {
         const entry = graph.get(id);
+        const ordinal = counts.get(id) || 0;
+        counts.set(id, ordinal + 1);
+        const instanceId = JSON.stringify([id, ordinal]);
+        realizedTurns += entry.turns.length;
+        totalDelay += entry.turns.reduce((sum, turn) => sum + (turn.delay || 0), 0);
+        if (results.size >= 1024 || realizedTurns > 16384 || totalDelay > 300000) throw new Error('conversation expansion budget exceeded');
+        const receipt = { instanceId, sessionId: id, parent: parent ? parent.sessionId : null, parentInstanceId: parent && !pre ? parent.instanceId : null, outcome: 'skipped', turns: [] };
+        results.set(instanceId, receipt);
+        const instance = { id, instanceId, receipt, pre: [], branches: [] };
+        instance.pre = entry.pre.map(child => instantiate(child, receipt, true));
+        instance.branches = entry.branches.map(branches => branches.map(branch => ({ ...branch, instance: instantiate(branch.child, receipt) })));
+        return instance;
+    }
+    const roots = [];
+    for (const id of graph.keys()) if (!referenced.has(id)) roots.push(instantiate(id, null));
+    const running = [];
+    const wait = delay => new Promise(resolve => setTimeout(resolve, delay));
+    function start(instance, initial) {
+        const pending = run(instance, initial);
+        running.push(pending);
+        return pending;
+    }
+    async function run(instance, initial) {
+        const entry = graph.get(instance.id), receipt = instance.receipt;
         let history = clone(initial);
         const gates = new Map();
-        const receipt = { outcome: 'running', turns: [], parent: entry.parent };
-        results.set(id, receipt);
+        receipt.outcome = 'running';
         try {
-            for (let index = 0; index < entry.session.turns.length; index++) {
+            for (const child of instance.pre) start(child, []);
+            for (let index = 0; index < entry.turns.length; index++) {
                 if (gates.has(index)) await Promise.all(gates.get(index));
-                const turn = entry.session.turns[index];
-                history = context(history.concat(clone(turn.messages)));
-                const request = { messages: clone(history) };
-                if (turn.model !== undefined) request.model = turn.model;
-                if (turn.max_tokens !== undefined) request.max_tokens = turn.max_tokens;
-                const pending = execute(request, { sessionId: id, turnIndex: index, parentId: entry.parent });
-                if (!pending || typeof pending.then !== 'function') throw new Error('conversation execute must return a Promise');
-                const response = await pending;
-                if (!messages([response]) || response.role !== 'assistant') throw new Error('conversation response must be an assistant text message');
-                history = context(history.concat(clone(response)));
-                receipt.turns.push({ turnIndex: index, outcome: 'success', response: clone(response) });
-                for (const branch of entry.branches[index]) {
-                    const child = run(branch.child, branch.inherit ? history : []);
-                    running.push(child);
+                const turn = entry.turns[index];
+                if (turn.delay) await wait(turn.delay);
+                if (entry.orchestrator) {
+                    receipt.turns.push({ turnIndex: index, outcome: 'success', noRequest: true, delayMs: turn.delay || 0 });
+                } else {
+                    history = context(history.concat(clone(turn.messages)));
+                    const request = { messages: clone(history) };
+                    if (turn.model !== undefined) request.model = turn.model;
+                    if (turn.max_tokens !== undefined) request.max_tokens = turn.max_tokens;
+                    const pending = execute(request, { sessionId: instance.id, instanceId: instance.instanceId, turnIndex: index, parentId: receipt.parent, parentInstanceId: receipt.parentInstanceId });
+                    if (!pending || typeof pending.then !== 'function') throw new Error('conversation execute must return a Promise');
+                    const response = await pending;
+                    if (!messages([response]) || response.role !== 'assistant') throw new Error('conversation response must be an assistant text message');
+                    history = context(history.concat(clone(response)));
+                    receipt.turns.push({ turnIndex: index, outcome: 'success', response: clone(response), delayMs: turn.delay || 0 });
+                }
+                for (const branch of instance.branches[index]) {
+                    const child = start(branch.instance, branch.inherit ? history : []);
                     if (branch.join !== null) {
                         if (!gates.has(branch.join)) gates.set(branch.join, []);
                         gates.get(branch.join).push(child);
@@ -425,14 +499,11 @@ export async function dagConversations(sessions, execute) {
         }
         return receipt;
     }
-    for (const id of graph.keys()) if (!referenced.has(id)) running.push(run(id, []));
-    // Parent joins wait for the child's own terminal turn, while final drain
-    // also retains background descendants spawned after roots have completed.
+    for (const root of roots) start(root, []);
     for (let offset = 0; offset < running.length;) {
         const next = running.length;
         await Promise.all(running.slice(offset, next));
         offset = next;
     }
-    for (const id of graph.keys()) if (!results.has(id)) results.set(id, { outcome: 'skipped', turns: [], parent: graph.get(id).parent });
     return results;
 }

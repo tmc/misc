@@ -16,6 +16,7 @@ func TestConversationHelper(t *testing.T) {
 	// Execute the helper without network or timers. Other helper declarations
 	// remain present, so this exercises the shipped source directly.
 	text := strings.ReplaceAll(string(source), "import { sleep } from 'k6';", "function sleep() {}")
+	text = strings.ReplaceAll(text, "import { setTimeout } from 'k6/timers';", "function setTimeout() { throw new Error('unexpected timer'); }")
 	text = strings.ReplaceAll(text, "import crypto from 'k6/crypto';", "")
 	text = strings.ReplaceAll(text, "export function", "function")
 	text = strings.ReplaceAll(text, "export async function", "async function")

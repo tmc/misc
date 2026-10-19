@@ -12,12 +12,11 @@ const endpoint = __ENV.DAG_ENDPOINT_URL;
 if (!endpoint) throw new Error('DAG_ENDPOINT_URL required');
 const m = content => ({ role: 'user', content });
 const graph = [
-    { session_id: 'parent', turns: [
-        { messages: [m('start')], spawns: [{ children: ['child'], join_at: 2 }] },
-        { messages: [m('overlap')] },
-        { messages: [m('joined')] },
+    { session_id: 'rounds', orchestrator: true, spawns: ['parent'], rounds: 2, think_time_ms: 3 },
+    { session_id: 'parent', pre_session_spawns: ['child'], turns: [
+        { messages: [m('parent')], delay: 5 },
     ] },
-    { session_id: 'child', turns: [{ messages: [m('fresh child')] }] },
+    { session_id: 'child', turns: [{ messages: [m('fresh child')], delay: 2 }] },
 ];
 let receipt;
 export default async function () {
@@ -27,7 +26,7 @@ export default async function () {
         attempts.push(attempt);
         try {
             const response = await http.asyncRequest('POST', endpoint + '/chat/completions', JSON.stringify({ ...request, model: 'fixture', stream: false }), {
-                headers: { 'Content-Type': 'application/json', 'X-Session-Id': identity.sessionId, 'X-Turn-Index': String(identity.turnIndex) },
+                headers: { 'Content-Type': 'application/json', 'X-Session-Id': identity.sessionId, 'X-Turn-Index': String(identity.turnIndex), 'X-Instance-Id': identity.instanceId },
                 timeout: '5s', tags: { name: 'dag-turn' },
             });
             if (response.status !== 200) throw new Error('DAG HTTP status ' + response.status);
@@ -41,6 +40,8 @@ export default async function () {
     check(receipt, {
         'all sessions successful': r => Object.values(r.results).every(s => s.outcome === 'success'),
         'four attempts retained': r => r.attempts.length === 4,
+        'five instances retained': r => Object.keys(r.results).length === 5,
+        'coordinator sends no request': r => Object.values(r.results).find(s => s.sessionId === 'rounds').turns.every(t => t.noRequest),
     });
 }
 export function handleSummary(data) {
