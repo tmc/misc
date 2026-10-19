@@ -21,6 +21,7 @@ func main() {
 
 func run(args []string, out io.Writer) error {
 	flags := flag.NewFlagSet("llm-report", flag.ContinueOnError)
+	adjusted := flags.Bool("aiperf-adjusted-latencies", false, "separate failure-inflated latencies in the existing retained run window")
 	aiperf := flags.Bool("aiperf-statistics", false, "linear percentiles and dispatch-start half-open time slices (requires dispatch clock evidence)")
 	input := flags.String("input", "", "versioned run JSON file")
 	records := flags.String("records", "", "optional retained JSONL file to reconcile against run")
@@ -73,6 +74,14 @@ func run(args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	var adjustedReport *llmperf.AdjustedLatencyReport
+	if *adjusted {
+		result, err := llmperf.AnalyzeAdjustedLatencies(summary)
+		if err != nil {
+			return err
+		}
+		adjustedReport = &result
+	}
 	var energy *llmperf.EnergySummary
 	var confidence *llmperf.Confidence
 	if *bootstrap != 0 {
@@ -99,11 +108,12 @@ func run(args []string, out io.Writer) error {
 		energy = &result
 	}
 	return json.NewEncoder(out).Encode(struct {
-		SchemaVersion int                     `json:"schema_version"`
-		Distributions llmperf.RequestAnalysis `json:"request_distributions"`
-		Timeline      llmperf.Timeline        `json:"timeline"`
-		Slices        []llmperf.SliceSummary  `json:"slices"`
-		Energy        *llmperf.EnergySummary  `json:"energy,omitempty"`
-		Confidence    *llmperf.Confidence     `json:"latency_mean_confidence,omitempty"`
-	}{1, distributions, timeline, slices, energy, confidence})
+		AdjustedLatencies *llmperf.AdjustedLatencyReport `json:"aiperf_adjusted_latencies,omitempty"`
+		SchemaVersion     int                            `json:"schema_version"`
+		Distributions     llmperf.RequestAnalysis        `json:"request_distributions"`
+		Timeline          llmperf.Timeline               `json:"timeline"`
+		Slices            []llmperf.SliceSummary         `json:"slices"`
+		Energy            *llmperf.EnergySummary         `json:"energy,omitempty"`
+		Confidence        *llmperf.Confidence            `json:"latency_mean_confidence,omitempty"`
+	}{adjustedReport, 1, distributions, timeline, slices, energy, confidence})
 }
