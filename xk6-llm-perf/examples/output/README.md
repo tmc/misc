@@ -64,7 +64,10 @@ W&B uses its official Python SDK rather than a private HTTP protocol. Offline is
 the default; remote posting requires `--online` and separately provisioned SDK
 credentials. The supplied summary becomes a results table and a versioned run
 artifact. No recursive artifact-directory scan or implicit authored-text upload
-occurs. Source versions and statistic policy become run config.
+occurs. Source versions, statistic policy, optional work populations and sanitized
+serving receipts become run config. Work hashes identify declarations; they
+do not establish applied-engine or physical qualification. Work goodput retains
+its declared-window population, rather than a request-statistics population.
 
 ```sh
 python examples/output/wandb_export.py outputs/summary.json \

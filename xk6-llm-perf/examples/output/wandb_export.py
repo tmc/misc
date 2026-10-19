@@ -42,9 +42,42 @@ def main():
                      "missing_input_counts", "missing_output_counts", "estimated_input_counts",
                      "estimated_output_counts", "timeline", "ttst_policy", "content_interval_policy",
                      "content_interval_unavailable_requests", "content_interval_truncated_requests"}
-    allowed = required | ({"timeline_unavailable", "measurement_policy"} if document["schema_version"] == 2 else set())
+    work_counts = {"work_qualified", "work_accepted", "work_rejected", "work_unavailable", "work_good_requests"}
+    optional = {"timeline_unavailable", "measurement_policy", "work_policy", "serving_manifest"} | work_counts
+    allowed = required | (optional if document["schema_version"] == 2 else set())
     if not required <= set(document) or not set(document) <= allowed:
         p.error("unsupported summary schema")
+    if work_counts & set(document) or "work_policy" in document:
+        for key in work_counts:
+            if type(document.get(key, 0)) is not int or document.get(key, 0) < 0:
+                p.error("invalid work population")
+        qualified = document.get("work_qualified", 0)
+        accepted = document.get("work_accepted", 0)
+        if (type(document["attempts"]) is not int or type(document["successes"]) is not int
+                or qualified > document["attempts"] or accepted > document["successes"]
+                or qualified != accepted + document.get("work_rejected", 0) + document.get("work_unavailable", 0)
+                or document.get("work_good_requests", 0) > accepted):
+            p.error("invalid work population")
+        if qualified or "work_policy" in document:
+            policy = document.get("work_policy")
+            if not qualified or not isinstance(policy, str) or not policy or len(policy) > 1024:
+                p.error("invalid work policy")
+    if "serving_manifest" in document:
+        receipt = document["serving_manifest"]
+        if (not isinstance(receipt, dict) or "manifest_digest" not in receipt
+                or not set(receipt) <= {"manifest_digest", "work_hash", "work_unavailable"}):
+            p.error("invalid serving manifest receipt")
+        for key in ("manifest_digest", "work_hash"):
+            if key not in receipt:
+                continue
+            value = receipt[key]
+            if not isinstance(value, str) or len(value) != 64 or any(c not in "0123456789abcdef" for c in value):
+                p.error("invalid serving manifest digest")
+        reason = receipt.get("work_unavailable")
+        if "work_unavailable" in receipt and (not isinstance(reason, str) or not reason or len(reason) > 1024):
+            p.error("invalid serving work reason")
+        if ("work_hash" in receipt) == ("work_unavailable" in receipt):
+            p.error("serving work hash or unavailable reason required")
     if not isinstance(document["metrics"], list) or len(document["metrics"]) > 1000:
         p.error("too many metrics")
     columns = ["name", "unit", "count", "mean", "min", "max", "p50", "p90", "p99", "std"]
@@ -80,8 +113,10 @@ def main():
                 population = document["content_interval_policy"]
             elif metric["name"] == "ttst":
                 population += "; " + document["ttst_policy"]
-            elif metric["name"] in {"goodput", "input_throughput", "output_throughput"}:
+            elif metric["name"] in {"goodput", "work_goodput", "input_throughput", "output_throughput"}:
                 population = "aggregate counts divided by declared run window; idle time included"
+                if metric["name"] == "work_goodput":
+                    population += "; " + document.get("work_policy", "work policy unavailable")
                 percentile = deviation = "not applied"
         rows.append([metric[key] for key in value_columns] +
                     [population, percentile, deviation, json.dumps(metric.get("sources", {}), sort_keys=True)])
