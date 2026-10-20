@@ -47,24 +47,30 @@ type message struct {
 }
 
 // UnmarshalJSON decodes an OpenAI request message strictly. As in the pinned
-// openai.FromChatRequest, content may be omitted only with tool calls.
+// openai.FromChatRequest, content may be omitted only with tool calls, and
+// an empty tool call list leaves a plain message. OpenAI SDK echo fields that
+// the pinned conversion ignores are accepted where they cannot change the
+// prompt: a null assistant refusal, assistant annotations and a tool name.
 func (m *message) UnmarshalJSON(data []byte) error {
 	var v struct {
-		Role       string           `json:"role"`
-		Content    *string          `json:"content"`
-		ToolCalls  []openaiToolCall `json:"tool_calls"`
-		ToolCallID string           `json:"tool_call_id"`
+		Role        string             `json:"role"`
+		Content     *string            `json:"content"`
+		ToolCalls   []openaiToolCall   `json:"tool_calls"`
+		ToolCallID  string             `json:"tool_call_id"`
+		Name        *string            `json:"name"`
+		Refusal     *json.RawMessage   `json:"refusal"`
+		Annotations *[]json.RawMessage `json:"annotations"`
 	}
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.DisallowUnknownFields()
 	if err := d.Decode(&v); err != nil {
 		return err
 	}
-	if v.ToolCalls != nil && len(v.ToolCalls) == 0 {
-		return errEmptyToolCalls
-	}
 	if v.Content == nil && v.ToolCalls == nil {
 		return fmt.Errorf("message content required")
+	}
+	if v.Refusal != nil || v.Annotations != nil && v.Role != "assistant" || v.Name != nil && v.Role != "tool" {
+		return errEchoField
 	}
 	*m = message{Role: v.Role, ToolCalls: v.ToolCalls, ToolCallID: v.ToolCallID}
 	if v.Content != nil {
@@ -73,10 +79,10 @@ func (m *message) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// openaiToolCall is the pinned openai.ToolCall request shape, without the
-// streaming-only index.
+// openaiToolCall is the pinned openai.ToolCall request shape.
 type openaiToolCall struct {
 	ID       string `json:"id"`
+	Index    int    `json:"index"`
 	Type     string `json:"type"`
 	Function struct {
 		Name      string `json:"name"`
@@ -274,6 +280,128 @@ func filterThinking(content string) string {
 	return content
 }
 
+// decodeRequest admits an OpenAI chat request. Exact duplicate members are
+// refused everywhere, and members that encoding/json would fold together are
+// refused outside tools. Inside tools, admitTools refuses folded struct field
+// aliases, while map keys such as id and ID remain distinct, as in pinned
+// Ollama. Explicit null is refused outside tools except assistant content
+// beside nonempty tool calls and a null assistant refusal, which the pinned
+// conversion treats as absent.
+func decodeRequest(data []byte, r *request) error {
+	if !utf8.Valid(data) {
+		return fmt.Errorf("invalid UTF-8")
+	}
+	if loneSurrogate(data) {
+		return errLoneSurrogate
+	}
+	d := json.NewDecoder(bytes.NewReader(data))
+	d.UseNumber()
+	if err := jsoncheck.Check(d, jsoncheck.Options{}); err != nil {
+		return err
+	}
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal(data, &top); err != nil {
+		return err
+	}
+	tools := 0
+	for k := range top {
+		// strings.EqualFold matches encoding/json's field name folding.
+		if strings.EqualFold(k, "tools") {
+			delete(top, k)
+			tools++
+		}
+	}
+	if tools > 1 {
+		return jsoncheck.ErrDuplicate
+	}
+	rest, err := json.Marshal(top)
+	if err != nil {
+		return err
+	}
+	d = json.NewDecoder(bytes.NewReader(rest))
+	d.UseNumber()
+	if err := jsoncheck.Check(d, jsoncheck.Options{FoldNames: true}); err != nil {
+		return err
+	}
+	var v map[string]any
+	d = json.NewDecoder(bytes.NewReader(rest))
+	d.UseNumber()
+	if err := d.Decode(&v); err != nil {
+		return err
+	}
+	if err := admitNulls(v); err != nil {
+		return err
+	}
+	d = json.NewDecoder(bytes.NewReader(data))
+	d.DisallowUnknownFields()
+	return d.Decode(r)
+}
+
+func admitNulls(top map[string]any) error {
+	for k, v := range top {
+		ms, ok := v.([]any)
+		if !strings.EqualFold(k, "messages") || !ok {
+			if hasNull(v) {
+				return jsoncheck.ErrNull
+			}
+			continue
+		}
+		for _, m := range ms {
+			if err := admitMessageNulls(m); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func admitMessageNulls(v any) error {
+	m, ok := v.(map[string]any)
+	if !ok {
+		if hasNull(v) {
+			return jsoncheck.ErrNull
+		}
+		return nil
+	}
+	var role any
+	var calls []any
+	for k, v := range m {
+		switch {
+		case strings.EqualFold(k, "role"):
+			role = v
+		case strings.EqualFold(k, "tool_calls"):
+			calls, _ = v.([]any)
+		}
+	}
+	for k, v := range m {
+		switch {
+		case v == nil && role == "assistant" && strings.EqualFold(k, "content") && len(calls) > 0:
+		case v == nil && role == "assistant" && strings.EqualFold(k, "refusal"):
+		case strings.EqualFold(k, "annotations"):
+			// Ignored by the pinned conversion; admitted only on assistant messages.
+		case hasNull(v):
+			return jsoncheck.ErrNull
+		}
+	}
+	return nil
+}
+
+func hasNull(v any) bool {
+	switch v := v.(type) {
+	case nil:
+		return true
+	case []any:
+		return slices.ContainsFunc(v, hasNull)
+	case map[string]any:
+		for _, e := range v {
+			if hasNull(e) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func decodeJSON(data []byte, value any, strict, allowNull bool) error {
 	if !utf8.Valid(data) {
 		return fmt.Errorf("invalid UTF-8")
@@ -340,7 +468,7 @@ func run(args []string, out io.Writer) error {
 	}
 	var s show
 	var r request
-	if decodeJSON(sb, &s, false, true) != nil || decodeJSON(rb, &r, true, false) != nil {
+	if decodeJSON(sb, &s, false, true) != nil || decodeRequest(rb, &r) != nil {
 		return fmt.Errorf("invalid JSON input")
 	}
 	text, think, err := render(s, r)

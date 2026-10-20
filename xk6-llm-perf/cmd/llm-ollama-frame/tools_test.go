@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/tmc/misc/xk6-llm-perf/internal/jsoncheck"
 )
 
 // The tool-framing fixture holds OpenAI requests and the prompts emitted for
@@ -20,43 +22,51 @@ func TestPinnedSourceToolFraming(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := fmt.Sprintf("%x", sha256.Sum256(data)); got != "baaeb676ad7209d0be838a097a396ff5d17310728222bf42fd01091e4e2f6090" {
+	if got := fmt.Sprintf("%x", sha256.Sum256(data)); got != "2268def02ea646e4567238f8143ed1231a02d872cfe8eaca9b7993ebbe068b29" {
 		t.Fatalf("tool fixture sha256 %s", got)
 	}
 	tmpl, err := os.ReadFile("testdata/qwen3-ollama-0.12.7.tmpl")
 	if err != nil {
 		t.Fatal(err)
 	}
-	ids := loadPromptIDs(t, "testdata/qwen3-tool-prompt-ids.jsonl", "42034e3dbd0ac5abb71762e2c3cbccef3c045609707789d02ba806e95e84f898")
+	ids := loadPromptIDs(t, "testdata/qwen3-tool-prompt-ids.jsonl", "5cdab02686f477a2cf7e7ecc4c52ce20f6e06261c75c47642cab759a7738154d")
 	refusals := map[string]error{
-		"refuse-additional-properties":  errToolSchema,
-		"refuse-strict":                 errToolSchema,
-		"refuse-single-type-array":      errToolSchema,
-		"refuse-missing-required":       errToolSchema,
-		"refuse-nested-properties":      errToolSchema,
-		"refuse-format":                 errToolSchema,
-		"refuse-empty-description":      errToolSchema,
-		"refuse-folded-key":             errToolSchema,
-		"refuse-inexact-enum":           errInexactNumber,
-		"refuse-tool-type":              errToolType,
-		"refuse-tool-items":             errToolSchema,
-		"refuse-content-with-calls":     errContentWithCalls,
-		"refuse-merge-before-calls":     errMergedToolCalls,
-		"refuse-merge-after-calls":      errMergedToolCalls,
-		"refuse-user-calls":             errToolCallRole,
-		"refuse-tool-calls-on-tool":     errToolCallRole,
-		"refuse-inexact-argument":       errInexactNumber,
-		"refuse-large-integer-argument": errInexactNumber,
-		"refuse-empty-arguments":        errToolArguments,
-		"refuse-null-arguments":         errToolArguments,
-		"refuse-array-arguments":        errToolArguments,
-		"refuse-duplicate-arguments":    errToolArguments,
-		"refuse-surrogate-arguments":    errLoneSurrogate,
-		"refuse-call-type":              errToolCallType,
-		"refuse-empty-call-name":        errToolCallName,
-		"refuse-empty-calls":            errEmptyToolCalls,
+		"refuse-additional-properties":    errToolSchema,
+		"refuse-strict":                   errToolSchema,
+		"refuse-single-type-array":        errToolSchema,
+		"refuse-missing-required":         errToolSchema,
+		"refuse-nested-properties":        errToolSchema,
+		"refuse-format":                   errToolSchema,
+		"refuse-empty-description":        errToolSchema,
+		"refuse-folded-key":               errToolSchema,
+		"refuse-inexact-enum":             errInexactNumber,
+		"refuse-tool-type":                errToolType,
+		"refuse-tool-items":               errToolSchema,
+		"refuse-content-with-calls":       errContentWithCalls,
+		"refuse-merge-before-calls":       errMergedToolCalls,
+		"refuse-merge-after-calls":        errMergedToolCalls,
+		"refuse-user-calls":               errToolCallRole,
+		"refuse-tool-calls-on-tool":       errToolCallRole,
+		"refuse-inexact-argument":         errInexactNumber,
+		"refuse-large-integer-argument":   errInexactNumber,
+		"refuse-empty-arguments":          errToolArguments,
+		"refuse-null-arguments":           errToolArguments,
+		"refuse-array-arguments":          errToolArguments,
+		"refuse-duplicate-arguments":      errToolArguments,
+		"refuse-surrogate-arguments":      errLoneSurrogate,
+		"refuse-call-type":                errToolCallType,
+		"refuse-empty-call-name":          errToolCallName,
+		"refuse-null-content-no-calls":    jsoncheck.ErrNull,
+		"refuse-null-content-empty-calls": jsoncheck.ErrNull,
+		"refuse-null-tool-content":        jsoncheck.ErrNull,
+		"refuse-refusal-string":           errEchoField,
+		"refuse-name-on-user":             errEchoField,
+		"refuse-annotations-on-user":      errEchoField,
+		"refuse-duplicate-property":       jsoncheck.ErrDuplicate,
+		"refuse-folded-tools-member":      jsoncheck.ErrDuplicate,
 	}
 	var supported, refused int
+	shas := make(map[string]string)
 	for _, line := range strings.Split(strings.TrimSuffix(string(data), "\n"), "\n") {
 		var tt struct {
 			Name               string
@@ -74,7 +84,7 @@ func TestPinnedSourceToolFraming(t *testing.T) {
 			system, _ := json.Marshal(tt.System)
 			s := show{Template: string(tmpl), Capabilities: []string{"completion", "tools", "thinking"}, System: system, Messages: tt.Defaults}
 			var r request
-			err := decodeJSON(tt.Request, &r, true, false)
+			err := decodeRequest(tt.Request, &r)
 			var got string
 			if err == nil {
 				got, _, err = render(s, r)
@@ -97,7 +107,14 @@ func TestPinnedSourceToolFraming(t *testing.T) {
 				t.Fatalf("prompt sha256 %s, oracle %s", h, tt.OraclePromptSHA256)
 			}
 			checkPromptIDs(t, got, ids[tt.Name])
+			shas[tt.Name] = tt.OraclePromptSHA256
 		})
+	}
+	// OpenAI SDK echo fields leave the prompt unchanged.
+	for _, think := range []string{"default", "none"} {
+		if shas["sdk-echo-"+think] != shas["call-result-"+think] {
+			t.Errorf("sdk-echo-%s prompt differs from call-result-%s", think, think)
+		}
 	}
 	if supported != len(ids) || refused != len(refusals) {
 		t.Fatalf("ran %d supported and %d refused, want %d and %d", supported, refused, len(ids), len(refusals))
@@ -128,8 +145,17 @@ func TestToolAdmission(t *testing.T) {
 		{"argument budget", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"","tool_calls":[{"id":"c","type":"function","function":{"name":"f","arguments":"{\"a\":\"` + strings.Repeat("x", 65536) + `\"}"}}]}]}`, "", nil, true, errToolBudgetExceeded},
 		{"omitted content", `{"model":"qwen3:0.6b","messages":[{"role":"user"}]}`, "", nil, true, nil},
 		{"null tools", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"}],"tools":null}`, "", nil, true, nil},
-		{"call index", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"","tool_calls":[{"index":0,"type":"function","function":{"name":"f","arguments":"{}"}}]}]}`, "", nil, true, nil},
-		{"tool message name", `{"model":"qwen3:0.6b","messages":[{"role":"tool","content":"r","name":"f"}]}`, "", nil, true, nil},
+		{"call index", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"","tool_calls":[{"index":0,"type":"function","function":{"name":"f","arguments":"{}"}}]}]}`, "", nil, false, nil},
+		{"tool message name", `{"model":"qwen3:0.6b","messages":[{"role":"tool","content":"r","name":"f"}]}`, "", nil, false, nil},
+		{"call index not integer", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"","tool_calls":[{"index":1.5,"type":"function","function":{"name":"f","arguments":"{}"}}]}]}`, "", nil, true, nil},
+		{"annotations not array", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"a","annotations":{}}]}`, "", nil, true, nil},
+		{"null annotation entries", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"a","annotations":[null]}]}`, "", nil, false, nil},
+		{"null refusal on user", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi","refusal":null}]}`, "", nil, true, jsoncheck.ErrNull},
+		{"null name on tool", `{"model":"qwen3:0.6b","messages":[{"role":"tool","content":"r","name":null}]}`, "", nil, true, jsoncheck.ErrNull},
+		{"null temperature", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"}],"temperature":null}`, "", nil, true, jsoncheck.ErrNull},
+		{"folded content alias", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi","Content":"x"}]}`, "", nil, true, jsoncheck.ErrDuplicate},
+		{"folded tool call field", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"","tool_calls":[{"type":"function","Type":"function","function":{"name":"f","arguments":"{}"}}]}]}`, "", nil, true, jsoncheck.ErrDuplicate},
+		{"folded schema field", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"}],"tools":[{"type":"function","function":{"name":"f","Name":"g","parameters":{"type":"object","required":[],"properties":{}}}}]}`, "", nil, true, errToolSchema},
 		{"default tool role", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"}]}`, `[{"role":"TOOL","content":"r"}]`, nil, true, nil},
 		{"default tool calls", `{"model":"qwen3:0.6b","messages":[{"role":"user","content":"hi"}]}`, `[{"role":"assistant","content":"","tool_calls":[{"function":{"name":"f","arguments":{}}}]}]`, nil, true, nil},
 	} {
@@ -140,7 +166,7 @@ func TestToolAdmission(t *testing.T) {
 			}
 			s := show{Template: string(tmpl), Capabilities: caps, Messages: json.RawMessage(tt.defaults)}
 			var r request
-			err := decodeJSON([]byte(tt.request), &r, true, false)
+			err := decodeRequest([]byte(tt.request), &r)
 			if err == nil {
 				_, _, err = render(s, r)
 			}

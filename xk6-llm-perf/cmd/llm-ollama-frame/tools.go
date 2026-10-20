@@ -25,7 +25,7 @@ var (
 	errToolCallID         = errors.New("tool call id outside tool message")
 	errToolCallType       = errors.New("unsupported tool call type")
 	errToolCallName       = errors.New("empty tool call name")
-	errEmptyToolCalls     = errors.New("empty tool calls")
+	errEchoField          = errors.New("unsupported echo field")
 	errToolArguments      = errors.New("invalid tool call arguments")
 	errInexactNumber      = errors.New("number not exact in float64")
 	errLoneSurrogate      = errors.New("unpaired UTF-16 surrogate escape")

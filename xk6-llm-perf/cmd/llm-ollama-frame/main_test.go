@@ -73,17 +73,16 @@ func TestRequestAdmission(t *testing.T) {
 		`{"model":"qwen","messages":[{"role":"user","content":null}]}`,
 		`{"model":"qwen","messages":[{"role":"user","content":"a","images":["x"]}]}`,
 		`{"model":"qwen","messages":[{"role":"user","content":"a","name":"alias"}]}`,
-		`{"model":"qwen","messages":[{"role":"user","content":"a","tool_calls":[]}]}`,
 		`{"model":"qwen","messages":[{"role":"user","content":"a"}],"thinking":false}`,
 		`{"model":"qwen","messages":[{"role":"user","content":"a"}],"temperature":NaN}`,
 		"{\"model\":\"qwen\",\"messages\":[{\"role\":\"user\",\"content\":\"\xff\"}]}",
 	} {
-		if err := decodeJSON([]byte(input), new(request), true, false); err == nil {
+		if err := decodeRequest([]byte(input), new(request)); err == nil {
 			t.Fatal("unsupported request accepted")
 		}
 	}
 	valid := `{"model":"qwen","messages":[{"role":"user","content":"a"}],"max_tokens":256,"stream":true,"temperature":0,"stream_options":{"include_usage":true}}`
-	if err := decodeJSON([]byte(valid), new(request), true, false); err != nil {
+	if err := decodeRequest([]byte(valid), new(request)); err != nil {
 		t.Fatal(err)
 	}
 	s := show{Template: `{{printf "%1000000000s" "x"}}`, Capabilities: []string{"thinking"}}
