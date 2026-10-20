@@ -27,7 +27,7 @@ func TestRetainedQwenTemplate(t *testing.T) {
 		{"explicit none", "none", "<|im_start|>user\nSay hello in one short sentence. /no_think /no_think<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n", false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			r := request{Model: "qwen3:0.6b", Messages: []message{{"user", "Say hello in one short sentence. /no_think"}}, ReasoningEffort: tt.effort}
+			r := request{Model: "qwen3:0.6b", Messages: []message{{Role: "user", Content: "Say hello in one short sentence. /no_think"}}, ReasoningEffort: tt.effort}
 			got, think, err := render(s, r)
 			if err != nil || think != tt.think || got != tt.want {
 				t.Fatalf("prompt=%q think=%v err=%v", got, think, err)
@@ -48,20 +48,20 @@ func TestThinkingFraming(t *testing.T) {
 		suffix       string
 	}{{"default", "", true, " /no_think /think"}, {"disabled", "none", false, " /no_think /no_think"}} {
 		t.Run(tt.name, func(t *testing.T) {
-			r := request{Model: "qwen3:0.6b", Messages: []message{{"user", "hello /no_think"}}, ReasoningEffort: tt.effort}
+			r := request{Model: "qwen3:0.6b", Messages: []message{{Role: "user", Content: "hello /no_think"}}, ReasoningEffort: tt.effort}
 			text, think, err := render(s, r)
 			if err != nil || think != tt.think || !strings.Contains(text, tt.suffix) {
 				t.Fatalf("text=%q think=%v err=%v", text, think, err)
 			}
 		})
 	}
-	for _, r := range []request{{Model: "qwen", Messages: []message{{"user", "hello"}, {"user", "extra"}}}, {Model: "qwen", Messages: []message{{"system", "hello"}}}, {Model: "qwen", Messages: []message{{"user", "hello"}}, ReasoningEffort: "invalid"}} {
+	for _, r := range []request{{Model: "qwen", Messages: []message{{Role: "user", Content: "hello"}, {Role: "user", Content: "extra"}}}, {Model: "qwen", Messages: []message{{Role: "system", Content: "hello"}}}, {Model: "qwen", Messages: []message{{Role: "user", Content: "hello"}}, ReasoningEffort: "invalid"}} {
 		if _, _, err := render(s, r); err == nil {
 			t.Fatal("unsupported request accepted")
 		}
 	}
 	s.Capabilities = nil
-	if _, _, err := render(s, request{Model: "qwen", Messages: []message{{"user", "hello"}}}); err == nil {
+	if _, _, err := render(s, request{Model: "qwen", Messages: []message{{Role: "user", Content: "hello"}}}); err == nil {
 		t.Fatal("missing capability accepted")
 	}
 }
@@ -87,7 +87,7 @@ func TestRequestAdmission(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := show{Template: `{{printf "%1000000000s" "x"}}`, Capabilities: []string{"thinking"}}
-	if _, _, err := render(s, request{Model: "qwen", Messages: []message{{"user", "a"}}}); err == nil {
+	if _, _, err := render(s, request{Model: "qwen", Messages: []message{{Role: "user", Content: "a"}}}); err == nil {
 		t.Fatal("unrecognized template accepted")
 	}
 }
@@ -97,7 +97,7 @@ func TestModelDefaultsAdmission(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := request{Model: "qwen3:0.6b", Messages: []message{{"user", "hello /no_think"}}}
+	r := request{Model: "qwen3:0.6b", Messages: []message{{Role: "user", Content: "hello /no_think"}}}
 	base := show{Template: string(data), Capabilities: []string{"thinking"}}
 	for _, tt := range []struct {
 		name, system, messages string
@@ -128,7 +128,7 @@ func TestReasoningEffortAdmission(t *testing.T) {
 	s := show{Template: string(data), Capabilities: []string{"thinking"}}
 	for _, effort := range []string{"low", "medium", "high"} {
 		for _, nested := range []bool{false, true} {
-			r := request{Model: "qwen3:0.6b", Messages: []message{{"user", "hello"}}}
+			r := request{Model: "qwen3:0.6b", Messages: []message{{Role: "user", Content: "hello"}}}
 			if nested {
 				r.Reasoning = &struct {
 					Effort string `json:"effort"`
@@ -146,7 +146,7 @@ func TestReasoningEffortAdmission(t *testing.T) {
 		top, nested string
 		think       bool
 	}{{"", "", true}, {"", "none", false}, {"none", "", true}, {"none", "none", false}} {
-		r := request{Model: "qwen3:0.6b", Messages: []message{{"user", "hello"}}, ReasoningEffort: tt.top, Reasoning: &struct {
+		r := request{Model: "qwen3:0.6b", Messages: []message{{Role: "user", Content: "hello"}}, ReasoningEffort: tt.top, Reasoning: &struct {
 			Effort string `json:"effort"`
 		}{tt.nested}}
 		if _, think, err := render(s, r); err != nil || think != tt.think {
@@ -194,7 +194,7 @@ func TestMaxTokensParserRange(t *testing.T) {
 	}{
 		{0, true}, {32, true}, {1<<63 - 1, true}, {1 << 63, false}, {1<<64 - 1, false},
 	} {
-		r := request{Model: "qwen3:0.6b", Messages: []message{{"user", "hello"}}, MaxTokens: &tt.tokens}
+		r := request{Model: "qwen3:0.6b", Messages: []message{{Role: "user", Content: "hello"}}, MaxTokens: &tt.tokens}
 		_, _, err := render(s, r)
 		if (err == nil) != tt.valid {
 			t.Fatalf("tokens=%d err=%v", tt.tokens, err)
@@ -207,7 +207,7 @@ func TestUnsupportedServingPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := request{Model: "qwen3:0.6b", Messages: []message{{"user", "hello"}}}
+	r := request{Model: "qwen3:0.6b", Messages: []message{{Role: "user", Content: "hello"}}}
 	for _, extra := range []string{`"renderer":"qwen3"`, `"parser":"harmony"`, `"remote_host":"https://example.invalid"`, `"remote_model":"other"`} {
 		var s show
 		if err := json.Unmarshal([]byte("{"+extra+"}"), &s); err != nil {
@@ -233,13 +233,13 @@ func TestTextMessageAdmission(t *testing.T) {
 		valid    bool
 	}{
 		{"empty", nil, "", false},
-		{"tool role", []message{{"tool", "result"}}, "", false},
-		{"unknown role", []message{{"developer", "system"}}, "", false},
-		{"text history", []message{{"system", "policy"}, {"user", "hi"}, {"assistant", "answer"}, {"user", "new"}}, "", true},
-		{"empty tools", []message{{"user", "hi"}}, "[ ]", true},
-		{"tools", []message{{"user", "hi"}}, `[{"type":"function"}]`, false},
+		{"tool role", []message{{Role: "tool", Content: "result"}}, "", true},
+		{"unknown role", []message{{Role: "developer", Content: "system"}}, "", false},
+		{"text history", []message{{Role: "system", Content: "policy"}, {Role: "user", Content: "hi"}, {Role: "assistant", Content: "answer"}, {Role: "user", Content: "new"}}, "", true},
+		{"empty tools", []message{{Role: "user", Content: "hi"}}, "[ ]", true},
+		{"tools", []message{{Role: "user", Content: "hi"}}, `[{"type":"function"}]`, false},
 		{"message cap", make([]message, 65), "", false},
-		{"content cap", []message{{"user", strings.Repeat("x", 65537)}}, "", false},
+		{"content cap", []message{{Role: "user", Content: strings.Repeat("x", 65537)}}, "", false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, _, err := render(s, request{Model: "qwen3:0.6b", Messages: tt.messages, Tools: json.RawMessage(tt.tools)})
@@ -250,7 +250,7 @@ func TestTextMessageAdmission(t *testing.T) {
 	}
 	for _, defaults := range []string{`[{"role":"assistant","content":null}]`, `[{"role":"tool","content":"x"}]`, `[{"role":"assistant","content":"x","thinking":"hidden"}]`} {
 		s.Messages = json.RawMessage(defaults)
-		if _, _, err := render(s, request{Model: "qwen3:0.6b", Messages: []message{{"user", "hi"}}}); err == nil {
+		if _, _, err := render(s, request{Model: "qwen3:0.6b", Messages: []message{{Role: "user", Content: "hi"}}}); err == nil {
 			t.Fatalf("accepted unsupported defaults %s", defaults)
 		}
 	}

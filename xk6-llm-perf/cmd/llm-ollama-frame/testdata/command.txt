@@ -47,6 +47,17 @@ stdout 'visible'
 ! stdout 'hidden'
 ! stdout 'prior instruction'
 stdout 'new /no_think'
+exec $CLI -model-show $MODEL_TOOLS -model-show-sha256 $SHA_TOOLS -provider-version 0.12.7 -request tools.json -request-sha256 96716f1b1965bbea8849a7f502211f816b21f4f80808f3e55cddce373dac9253 -tokenizer-input tools-out.json
+stdout '"tool_policy":"lossless-typed-or-refused"'
+stdout '"engine_observation_status":"unobserved"'
+cat tools-out.json
+stdout 'get_weather'
+stdout 'tool_response'
+! exec $CLI -model-show $MODEL_SHOW -model-show-sha256 $MODEL_SHA -provider-version 0.12.7 -request tools.json -request-sha256 96716f1b1965bbea8849a7f502211f816b21f4f80808f3e55cddce373dac9253 -tokenizer-input tools-nocap-out.json
+stderr 'refused'
+! exec $CLI -model-show $MODEL_TOOLS -model-show-sha256 $SHA_TOOLS -provider-version 0.12.7 -request tools-lossy.json -request-sha256 2aeea86b132b33349da9848a334dbdf1e1a7d38142a58beadd56d6d1a09f318e -tokenizer-input tools-lossy-out.json
+stderr 'refused'
+! exists tools-lossy-out.json
 -- default.json --
 {"model":"qwen3:0.6b","messages":[{"role":"user","content":"Say hello in one short sentence. /no_think"}]}
 -- none.json --
@@ -67,3 +78,7 @@ stdout 'new /no_think'
 {"model":"qwen3:0.6b","messages":[{"role":"user","content":"Say hello in one short sentence. /no_think"}],"reasoning":{"effort":"high"}}
 -- multi.json --
 {"model":"qwen3:0.6b","messages":[{"role":"system","content":"request system"},{"role":"user","content":"old"},{"role":"assistant","content":"<think>hidden</think> visible"},{"role":"user","content":"new"}],"reasoning_effort":"none"}
+-- tools.json --
+{"model":"qwen3:0.6b","messages":[{"role":"user","content":"Weather in Paris?"},{"role":"assistant","tool_calls":[{"id":"c1","type":"function","function":{"name":"get_weather","arguments":"{\"city\":\"Paris\"}"}}]},{"role":"tool","tool_call_id":"c1","content":"18C"}],"tools":[{"type":"function","function":{"name":"get_weather","parameters":{"type":"object","required":["city"],"properties":{"city":{"type":"string"}}}}}]}
+-- tools-lossy.json --
+{"model":"qwen3:0.6b","messages":[{"role":"user","content":"Weather in Paris?"}],"tools":[{"type":"function","function":{"name":"get_weather","strict":true,"parameters":{"type":"object","required":["city"],"properties":{"city":{"type":"string"}}}}}]}

@@ -11,6 +11,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"slices"
 	"strings"
 	"text/template"
 	"unicode"
@@ -39,6 +40,53 @@ type request struct {
 	} `json:"stream_options"`
 }
 type message struct {
+	Role       string           `json:"role"`
+	Content    string           `json:"content"`
+	ToolCalls  []openaiToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string           `json:"tool_call_id,omitempty"`
+}
+
+// UnmarshalJSON decodes an OpenAI request message strictly. As in the pinned
+// openai.FromChatRequest, content may be omitted only with tool calls.
+func (m *message) UnmarshalJSON(data []byte) error {
+	var v struct {
+		Role       string           `json:"role"`
+		Content    *string          `json:"content"`
+		ToolCalls  []openaiToolCall `json:"tool_calls"`
+		ToolCallID string           `json:"tool_call_id"`
+	}
+	d := json.NewDecoder(bytes.NewReader(data))
+	d.DisallowUnknownFields()
+	if err := d.Decode(&v); err != nil {
+		return err
+	}
+	if v.ToolCalls != nil && len(v.ToolCalls) == 0 {
+		return errEmptyToolCalls
+	}
+	if v.Content == nil && v.ToolCalls == nil {
+		return fmt.Errorf("message content required")
+	}
+	*m = message{Role: v.Role, ToolCalls: v.ToolCalls, ToolCallID: v.ToolCallID}
+	if v.Content != nil {
+		m.Content = *v.Content
+	}
+	return nil
+}
+
+// openaiToolCall is the pinned openai.ToolCall request shape, without the
+// streaming-only index.
+type openaiToolCall struct {
+	ID       string `json:"id"`
+	Type     string `json:"type"`
+	Function struct {
+		Name      string `json:"name"`
+		Arguments string `json:"arguments"`
+	} `json:"function"`
+}
+
+// defaultMessage is a model-level message from /api/show. Defaults remain
+// text-only: api.Message tool calls and tool names are refused.
+type defaultMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
@@ -88,11 +136,12 @@ func render(s show, r request) (string, bool, error) {
 	if r.Model != "qwen3:0.6b" || len(r.Messages) == 0 || s.Renderer != "" || s.Parser != "" || s.RemoteModel != "" || s.RemoteHost != "" {
 		return "", false, fmt.Errorf("unsupported request population")
 	}
-	if len(r.Tools) > 0 {
-		var tools []json.RawMessage
-		if json.Unmarshal(r.Tools, &tools) != nil || tools == nil || len(tools) != 0 {
-			return "", false, fmt.Errorf("unsupported tools")
-		}
+	tools, err := admitTools(r.Tools)
+	if err != nil {
+		return "", false, err
+	}
+	if len(tools) > 0 && !slices.Contains(s.Capabilities, "tools") {
+		return "", false, errToolsCapability
 	}
 	// The pinned OpenAI parser uses a signed int for max_tokens. A uint64
 	// declaration outside that range cannot identify the same accepted request.
@@ -109,13 +158,7 @@ func render(s show, r request) (string, bool, error) {
 	if r.Reasoning != nil && r.Reasoning.Effort != "" && r.Reasoning.Effort != "none" {
 		return "", false, fmt.Errorf("unsupported reasoning effort")
 	}
-	thinking := false
-	for _, cap := range s.Capabilities {
-		if cap == "thinking" {
-			thinking = true
-		}
-	}
-	if !thinking {
+	if !slices.Contains(s.Capabilities, "thinking") {
 		return "", false, fmt.Errorf("thinking capability required")
 	}
 	effort := r.ReasoningEffort
@@ -135,16 +178,17 @@ func render(s show, r request) (string, bool, error) {
 		return "", false, fmt.Errorf("parse template: %w", err)
 	}
 	var b boundedBuffer
-	values := map[string]any{"System": system, "Tools": []any(nil), "Messages": messages, "Think": think, "IsThinkSet": true, "ThinkLevel": effort}
+	values := map[string]any{"System": system, "Tools": tools, "Messages": messages, "Think": think, "IsThinkSet": true, "ThinkLevel": effort}
 	if err = t.Execute(&b, values); err != nil {
 		return "", false, fmt.Errorf("render template: %w", err)
 	}
 	return b.String(), think, nil
 }
 
+// templateMessage mirrors the api.Message fields the pinned template reads.
 type templateMessage struct {
 	Role, Content, Thinking string
-	ToolCalls               []any
+	ToolCalls               []toolCall
 }
 
 // frameMessages follows the pinned routes.go defaults/filterThinkTags and
@@ -154,26 +198,31 @@ func frameMessages(s show, r request) ([]templateMessage, string, error) {
 	if len(s.System) > 0 && json.Unmarshal(s.System, &system) != nil {
 		return nil, "", fmt.Errorf("invalid model system")
 	}
-	var defaults []message
+	var defaults []defaultMessage
 	if len(s.Messages) > 0 && string(bytes.TrimSpace(s.Messages)) != "null" {
 		if decodeJSON(s.Messages, &defaults, true, false) != nil {
 			return nil, "", fmt.Errorf("invalid model messages")
 		}
-		// api.Message.UnmarshalJSON normalizes model-message roles.
-		for i := range defaults {
-			defaults[i].Role = strings.ToLower(defaults[i].Role)
-		}
 	}
-	messages := append(defaults, r.Messages...)
+	var messages []message
 	if r.Messages[0].Role != "system" && system != "" {
-		messages = append([]message{{"system", system}}, messages...)
+		messages = append(messages, message{Role: "system", Content: system})
 	}
+	for _, m := range defaults {
+		// api.Message.UnmarshalJSON normalizes model-message roles.
+		role := strings.ToLower(m.Role)
+		if role == "tool" {
+			return nil, "", fmt.Errorf("unsupported text message")
+		}
+		messages = append(messages, message{Role: role, Content: m.Content})
+	}
+	messages = append(messages, r.Messages...)
 	if len(messages) > 64 || len(system) > 65536 {
 		return nil, "", fmt.Errorf("message budget exceeded")
 	}
 	lastUser := -1
 	for i, m := range messages {
-		if len(m.Content) > 65536 || m.Role != "system" && m.Role != "user" && m.Role != "assistant" {
+		if len(m.Content) > 65536 || m.Role != "system" && m.Role != "user" && m.Role != "assistant" && m.Role != "tool" {
 			return nil, "", fmt.Errorf("unsupported text message")
 		}
 		if m.Role == "user" {
@@ -183,16 +232,25 @@ func frameMessages(s show, r request) ([]templateMessage, string, error) {
 	var systems []string
 	var collated []templateMessage
 	for i, m := range messages {
+		calls, err := admitToolCalls(m)
+		if err != nil {
+			return nil, "", err
+		}
 		if m.Role == "assistant" && i < lastUser {
 			m.Content = filterThinking(m.Content)
 		}
 		if m.Role == "system" {
 			systems = append(systems, m.Content)
 		}
-		if len(collated) > 0 && collated[len(collated)-1].Role == m.Role {
-			collated[len(collated)-1].Content += "\n\n" + m.Content
+		// Pinned collate merges consecutive non-tool messages of one role,
+		// keeping only the first message's tool calls, which content then hides.
+		if n := len(collated); n > 0 && collated[n-1].Role == m.Role && m.Role != "tool" {
+			if len(collated[n-1].ToolCalls) > 0 || len(calls) > 0 {
+				return nil, "", errMergedToolCalls
+			}
+			collated[n-1].Content += "\n\n" + m.Content
 		} else {
-			collated = append(collated, templateMessage{Role: m.Role, Content: m.Content})
+			collated = append(collated, templateMessage{Role: m.Role, Content: m.Content, ToolCalls: calls})
 		}
 	}
 	return collated, strings.Join(systems, "\n\n"), nil
@@ -219,6 +277,9 @@ func filterThinking(content string) string {
 func decodeJSON(data []byte, value any, strict, allowNull bool) error {
 	if !utf8.Valid(data) {
 		return fmt.Errorf("invalid UTF-8")
+	}
+	if loneSurrogate(data) {
+		return errLoneSurrogate
 	}
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.UseNumber()
@@ -307,7 +368,7 @@ func run(args []string, out io.Writer) error {
 	}
 	h := sha256.Sum256([]byte(text))
 	th := sha256.Sum256([]byte(s.Template))
-	return json.NewEncoder(out).Encode(map[string]any{"schema_version": 2, "provider_version": *version, "source_revision": sourceRevision, "model": r.Model, "model_show_sha256": *sh, "request_sha256": *rh, "template_sha256": hex.EncodeToString(th[:]), "rendered_sha256": hex.EncodeToString(h[:]), "reconstructed": reconstruct(r, think), "engine_observation_status": "unobserved", "context_policy": "untruncated-renderer-reconstruction", "scope": "offline pinned-source/template reconstruction; actual engine prompt not captured"})
+	return json.NewEncoder(out).Encode(map[string]any{"schema_version": 2, "provider_version": *version, "source_revision": sourceRevision, "model": r.Model, "model_show_sha256": *sh, "request_sha256": *rh, "template_sha256": hex.EncodeToString(th[:]), "rendered_sha256": hex.EncodeToString(h[:]), "reconstructed": reconstruct(r, think), "engine_observation_status": "unobserved", "context_policy": "untruncated-renderer-reconstruction", "tool_policy": "lossless-typed-or-refused", "scope": "offline pinned-source/template reconstruction; actual engine prompt not captured"})
 }
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {

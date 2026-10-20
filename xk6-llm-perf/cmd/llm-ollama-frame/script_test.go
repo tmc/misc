@@ -51,6 +51,15 @@ func TestCommand(t *testing.T) {
 		}
 		env = append(env, "MODEL_"+fixture.name+"="+path, "SHA_"+fixture.name+"="+fmt.Sprintf("%x", sha256.Sum256(data)))
 	}
+	toolsData, err := json.Marshal(show{Template: string(templateData), Capabilities: []string{"completion", "tools", "thinking"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	toolsPath := filepath.Join(t.TempDir(), "TOOLS.json")
+	if err := os.WriteFile(toolsPath, toolsData, 0600); err != nil {
+		t.Fatal(err)
+	}
+	env = append(env, "MODEL_TOOLS="+toolsPath, "SHA_TOOLS="+fmt.Sprintf("%x", sha256.Sum256(toolsData)))
 	engine := &script.Engine{Cmds: scripttest.DefaultCmds(), Conds: scripttest.DefaultConds()}
 	scripttest.Test(t, ctx, engine, env, "testdata/*.txt")
 }

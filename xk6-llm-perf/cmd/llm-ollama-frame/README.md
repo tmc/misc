@@ -2,16 +2,18 @@
 
 `llm-ollama-frame` reconstructs the pinned Ollama 0.12.7/Qwen3 text renderer
 offline, before context truncation. It accepts text system/user/assistant
-messages and model-level system/message defaults only when the request and
+messages, a lossless subset of OpenAI tool schemas, assistant tool calls and
+tool results, and model-level system/message defaults only when the request and
 `/api/show` metadata SHA-256 byte pins match. The captured Qwen3 template must
 have SHA-256
 `ae370d884f108d16e7cc8fd5259ebc5773a0afa6e078b11f4ed7e39a27e0dfc4`.
 
 Low/medium/high reasoning effort in either top-level or nested fields, other
-templates, nonempty tools, tool/image messages, structured reasoning fields,
+templates, image/content-part messages, structured reasoning fields,
 nonempty parser/renderer/remote overrides, unknown request/default-message
-fields, null request content, duplicate JSON members (including case-folded
-aliases) and invalid UTF-8 are refused. Model defaults may be absent, null or
+fields, null request content, omitted content without tool calls, duplicate
+JSON members (including case-folded aliases), invalid UTF-8 and unpaired UTF-16
+surrogate escapes (which encoding/json silently decodes as U+FFFD) are refused. Model defaults may be absent, null or
 empty: the pinned API represents system as a string and messages as a slice,
 so JSON null decodes to their zero values. Input is limited to 64 combined
 messages and 64 KiB per text/system value; output remains limited to 1 MiB.
@@ -94,7 +96,8 @@ schema 1 receipt is rewritten or promoted by this change.
 are refused before rendering. This is a parser compatibility bound, not a claim
 that the server can generate that many tokens. Model defaults, context truncation,
 tokenizer special tokens and effective generation settings still require separate
-observations. Nonempty tools, alternate renderers/parsers and modality processing remain unsupported.
+observations. Alternate renderers/parsers, response-side tool parsing and
+modality processing remain unsupported.
 
 The receipt keeps schema 2 and adds
 `context_policy: "untruncated-renderer-reconstruction"`. Existing single-user
@@ -134,7 +137,60 @@ are offline tokenizer IDs; GGUF engine IDs remain unobserved.
 `chatPrompt` can remove context using the engine tokenizer and resolved
 `NumCtx`. This command has neither observation and therefore does not claim to
 reconstruct that truncation. Matching these untruncated prompts cannot prove
-that the server retained every turn. Tools need processed tool/parser state and
-exact structured call serialization; modality processors need pinned assets and
-reference counts. These remain separate gaps, as do actual engine prompt/token
-IDs and effective generation settings.
+that the server retained every turn. Tool schemas make truncation more likely.
+Modality processors need pinned assets and reference counts. These remain
+separate gaps, as do actual engine prompt/token IDs and effective generation
+settings.
+
+## Tools
+
+The pinned path is `openai.FromChatRequest`, the `ChatMiddleware` JSON round
+trip into `api.ChatRequest`, model-default insertion and `filterThinkTags`,
+then `template.Execute` with `Tools`. The model must report the `tools`
+capability when request tools are nonempty. The command mirrors `api.Tool`,
+`ToolFunction`, `ToolFunctionParameters`, `ToolProperty`, `PropertyType` and
+`ToolCall`, including their marshaling and pointer `String` methods. The
+template prints each schema and argument object through `json.Marshal`: map
+keys are sorted, `<`, `>` and `&` are escaped, single-element type lists
+become strings and numbers are float64. Tool results become separate user
+`<tool_response>` blocks; they are never collated. `/think` or `/no_think`
+goes on the last user message, which may precede tool results, and the
+thinking filter applies to assistant history before that message.
+
+Admission refuses any request that pinned Ollama would accept but render
+differently from what was sent:
+
+| Input | Error |
+| --- | --- |
+| Tool function not preserved by the typed decode and re-marshal: unknown keys such as `strict`, `additionalProperties`, `format` or nested `properties`; omitted `required`; empty `description`; one-element `type` lists; case-folded keys | `tool schema not preserved by pinned decoding` |
+| Tool members other than `type` and `function`, such as `items` | `tool schema not preserved by pinned decoding` |
+| Tool `type` other than `function` (the template prints `function`) | `unsupported tool type` |
+| Nonempty tools without the model `tools` capability | `tools capability required` |
+| Nonempty assistant content with tool calls (the template prints only content) | `content with tool calls` |
+| Tool calls in an assistant message that collates with an adjacent assistant message | `tool calls in merged assistant message` |
+| Tool calls on a user, system or tool message (the template ignores them) | `tool calls outside assistant message` |
+| `tool_call_id` outside a tool message | `tool call id outside tool message` |
+| Tool call `type` other than `function` | `unsupported tool call type` |
+| Empty tool call name | `empty tool call name` |
+| `"tool_calls": []` | `empty tool calls` |
+| Arguments that are empty, `null`, not an object, malformed or have duplicate members | `invalid tool call arguments` |
+| Argument or schema numbers that float64 cannot represent exactly, such as `0.1` or `12345678901234567890` | `number not exact in float64` |
+| Unpaired surrogate escapes in the request or in arguments | `unpaired UTF-16 surrogate escape` |
+| More than 64 tools, or arguments over 64 KiB | `tool budget exceeded` |
+
+Exact numbers may still change spelling: `1.0` prints as `1` and `1e3` as
+`1000`, as in pinned Ollama. Tool call `id` and `tool_call_id` are accepted
+and ignored, as the template does; `name` on messages and the streaming
+`index` remain refused. Model-level default messages stay text-only. Receipts
+add `tool_policy: "lossless-typed-or-refused"`; schema 2 receipts without it
+were produced with tools refused.
+
+`testdata/tool-framing.jsonl` holds 22 accepted prompts (11 scenarios, default
+and none thinking) and 26 refusal requests. The actual pinned
+`openai.FromChatRequest`, middleware round trip and `template.Execute` emitted
+every prompt; refusal rows keep the oracle's own result, showing the silent
+change or its conversion error. `testdata/qwen3-tool-prompt-ids.jsonl` holds
+the pinned Go tokenizer IDs of the accepted prompts. The oracle built offline
+with Go 1.27.0 against cached dependencies, substituting the cached
+agnivade/levenshtein v1.2.1 for v1.1.1, which only template name matching
+uses.
