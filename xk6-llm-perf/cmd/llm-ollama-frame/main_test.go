@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -312,6 +313,15 @@ func TestPinnedSourceTextFraming(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ids := loadPromptIDs(t, "testdata/qwen3-prompt-ids.jsonl", "26c36203290bfbf78dccf73c030feb281c2073b4d759746ee0ca38e4bf09988d")
+	if len(ids) != len(cases) {
+		t.Fatalf("%d ID rows for %d prompts", len(ids), len(cases))
+	}
+	// "<|im_start|>system\n\nmodel system<|im_end|>\n<|im_start|>user\nhello /think<|im_end|>\n<|im_start|>assistant\n"
+	want := []int{151644, 8948, 271, 2528, 1849, 151645, 198, 151644, 872, 198, 14990, 608, 26865, 151645, 198, 151644, 77091, 198}
+	if !slices.Equal(ids["system-default"].IDs, want) {
+		t.Fatalf("system-default IDs = %v, want %v", ids["system-default"].IDs, want)
+	}
 	for _, tt := range cases {
 		t.Run(tt.Name, func(t *testing.T) {
 			system, _ := json.Marshal(tt.System)
@@ -325,6 +335,68 @@ func TestPinnedSourceTextFraming(t *testing.T) {
 			if err != nil || think != tt.Think || got != tt.Prompt {
 				t.Fatalf("got %q think=%v err=%v; want %q", got, think, err, tt.Prompt)
 			}
+			checkPromptIDs(t, got, ids[tt.Name])
 		})
+	}
+}
+
+// promptIDs is one row emitted by the pinned tools/llm-tokenize for the exact
+// rendered prompt bytes, with the Qwen3-0.6B tokenizer.json at revision
+// c1899de289a04d12100db370d81485cdf75e47ca and no added special tokens.
+type promptIDs struct {
+	Name         string `json:"name"`
+	PromptSHA256 string `json:"prompt_sha256"`
+	FramedSHA256 string `json:"framed_sha256"`
+	Count        int    `json:"count"`
+	IDs          []int  `json:"ids"`
+}
+
+func loadPromptIDs(t *testing.T, path, sum string) map[string]promptIDs {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := fmt.Sprintf("%x", sha256.Sum256(data)); got != sum {
+		t.Fatalf("%s: sha256 %s, want %s", path, got, sum)
+	}
+	rows := make(map[string]promptIDs)
+	for _, line := range strings.Split(strings.TrimSuffix(string(data), "\n"), "\n") {
+		var r promptIDs
+		if err := json.Unmarshal([]byte(line), &r); err != nil {
+			t.Fatal(err)
+		}
+		if _, dup := rows[r.Name]; dup {
+			t.Fatalf("duplicate ID row %s", r.Name)
+		}
+		rows[r.Name] = r
+	}
+	return rows
+}
+
+// checkPromptIDs binds a retained ID row to the rendered prompt: the row was
+// computed from these exact bytes, and each Qwen3 added token in the ID
+// sequence matches its literal occurrences in the text.
+func checkPromptIDs(t *testing.T, prompt string, r promptIDs) {
+	t.Helper()
+	h := fmt.Sprintf("%x", sha256.Sum256([]byte(prompt)))
+	if r.Name == "" || h != r.PromptSHA256 || h != r.FramedSHA256 || r.Count != len(r.IDs) || r.Count == 0 {
+		t.Fatalf("ID row %q does not identify prompt %s", r.Name, h)
+	}
+	for id, text := range map[int]string{
+		151644: "<|im_start|>", 151645: "<|im_end|>",
+		151657: "<tool_call>", 151658: "</tool_call>",
+		151665: "<tool_response>", 151666: "</tool_response>",
+		151667: "<think>", 151668: "</think>",
+	} {
+		n := 0
+		for _, v := range r.IDs {
+			if v == id {
+				n++
+			}
+		}
+		if want := strings.Count(prompt, text); n != want {
+			t.Fatalf("ID row %s has %d %s tokens, prompt has %d", r.Name, n, text, want)
+		}
 	}
 }

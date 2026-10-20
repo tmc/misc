@@ -120,6 +120,17 @@ including a different x/crypto version needed to compile unused authentication
 code. It is a renderer/parser source oracle, not a full upstream-runtime or
 server qualification. The project gained no dependency.
 
+`testdata/qwen3-prompt-ids.jsonl` retains the token IDs of those 36 prompts,
+computed offline by the pinned `tools/llm-tokenize`
+(hftokenizer v0.0.0-20261010162052-7e9483795cd2) from the Qwen3-0.6B
+`tokenizer.json` at revision c1899de289a04d12100db370d81485cdf75e47ca
+(SHA-256 aeb13307…), without added special tokens. The same tokenizer
+reproduces the retained 21-ID single-user control. Tests check that each row
+names the SHA-256 of the exact rendered prompt and that its Qwen3 added-token
+IDs match the literal markers in that text. A pinned Hugging Face runtime
+second oracle for these IDs is task-local and is not run by the tests. These
+are offline tokenizer IDs; GGUF engine IDs remain unobserved.
+
 `chatPrompt` can remove context using the engine tokenizer and resolved
 `NumCtx`. This command has neither observation and therefore does not claim to
 reconstruct that truncation. Matching these untruncated prompts cannot prove
