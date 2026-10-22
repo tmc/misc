@@ -78,7 +78,7 @@ var unambiguousOpenAIFields = []struct {
 	{"unary parts", "openai-chat", false, `{"choices":[{"index":0,"message":{"role":"assistant","content":[{"type":"text","text":"hi","Text":"x"}],"tool_calls":[{"id":"c","type":"function","function":{"name":"f","arguments":"{}","Extra":{"A":1,"a":2}}}]},"finish_reason":"tool_calls"}]}`},
 	{"completions", "openai-completions", true, `{"choices":[{"index":0,"text":"hi","finish_reason":"stop","logprobs":{"A":1,"a":2}}]}`},
 	{"metrics", "openai-chat", true, `{"metrics":{"speculative_decoding":{"A":1,"a":2},"ext":{"A":1,"a":2}},"choices":[{"index":0,"delta":{"content":"hi"}}]}`},
-	{"responses stream", "openai-responses", true, `{"type":"response.output_text.delta","output_index":0,"delta":"hi","ext":{"A":1,"a":2}}`},
+	{"responses stream", "openai-responses", true, `{"type":"response.output_text.delta","output_index":0,"content_index":0,"delta":"hi","ext":{"A":1,"a":2}}`},
 	{"responses tool", "openai-responses", true, `{"type":"response.output_item.added","output_index":0,"item":{"type":"function_call","id":"i","call_id":"c","name":"f","ext":{"A":1,"a":2}}}`},
 	{"responses terminal", "openai-responses", true, `{"type":"response.completed","response":{"status":"completed","usage":{"input_tokens":1,"output_tokens":1},"metadata":{"A":1,"a":2}}}`},
 	{"responses unary", "openai-responses", false, `{"status":"completed","output":[{"type":"reasoning","summary":[{"text":"r"}]},{"type":"message","content":[{"type":"output_text","text":"hi","annotations":[{"A":1,"a":2}]}]},{"type":"function_call","call_id":"c","name":"f","arguments":"{\"A\":1,\"a\":2}"}],"usage":{"input_tokens":1,"output_tokens":1}}`},
