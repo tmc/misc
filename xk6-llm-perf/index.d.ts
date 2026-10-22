@@ -6,6 +6,8 @@ declare module 'k6/x/llm-perf' {
     request: Record<string, unknown>;
   }): { result: { schema_version: number; operation: string; value: unknown; provenance: Record<string, unknown> }; elapsed_ms: number; script_sha256: string } | Error;
   export interface Config {
+    /** Create sampled roots; an explicit traceparent also enables tracing. */
+    tracing?: boolean; traceparent?: string; tracestate?: string;
     controlGroup?: string; apiKey?: string; baseURL?: string; baseURLs?: string[]; model?: string;
     maxConnsPerHost?: number; timeout?: string; networkRTT?: number; rttSource?: string;
     tokenMultiplier?: number; prefillConcurrency?: number;
@@ -57,7 +59,13 @@ declare module 'k6/x/llm-perf' {
     work?: WorkExpectation; measurement?: TokenCounts; scheduledAt?: number; cancelAfter?: string;
   }
   export interface TokenCount { value: number | null; source: string; }
+  /** Wire IDs for deferred span export; preserve the sampling decision. */
+  export interface TraceContext {
+    trace_id: string; span_id: string; parent_span_id?: string;
+    trace_flags: string; traceparent: string; tracestate?: string;
+  }
   export interface Measurement {
+    trace_context?: TraceContext;
     aiperf_ttft?: number | null; aiperf_last_content_latency?: number | null;
     aiperf_content_events?: number | null; aiperf_content_policy?: string;
     request_body_bytes?: number; response_body_bytes?: number; max_connections_per_host?: number; transport_profile?: string; stream?: boolean;

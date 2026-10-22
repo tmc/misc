@@ -387,3 +387,38 @@ whole-contained windows and identical recorded SLO limits; older workers
 without policy receipts must be rerun.
 
 Replay requires eligible count and first-chunk provenance for token-normalized timing, and reconciles ITL against its content span and full-response ITL against its response span. Exact first-chunk sources require the retained original count; unavailable metrics remain unavailable. Arrival lag requires a schedule anchor. Projected admission wait may cover only part of request preparation. Partial manifests cannot add tokens when every dropped successful count in that dimension is missing; incomplete request-level analyses remain refused.
+
+### Distributed trace context
+
+Set `tracing: true` on a Client to create a fresh sampled trace for each logical
+request, or set `traceparent` to join a W3C trace with a unique child span for
+each request. Optional `tracestate` is validated and forwarded. Explicit parent
+sampling is preserved, including unsampled parents. Invalid explicit context
+returns an error before network dispatch. With neither option, tracing is off.
+
+```javascript
+const client = new llm.Client({
+  baseURL: __ENV.ENDPOINT_URL, model: 'dev-model',
+  traceparent: __ENV.TRACEPARENT, tracestate: __ENV.TRACESTATE || '',
+});
+```
+
+`response.measurement.trace_context` (also retained on attempted failures and
+in run records) contains the exact `trace_id`, `span_id`, `parent_span_id`,
+`trace_flags`, `traceparent`, and optional `tracestate` chosen before dispatch.
+Export a CLIENT span using these IDs, `dispatched_at`, `finished_at`, and
+`outcome`; skip unsampled records. Collection/export is the caller's job and
+can run after the benchmark to avoid collector traffic during measurement.
+The extension's OTLP output command exports metrics, not spans.
+
+Both typed chat and raw protocol requests use this path, including streaming.
+A video lifecycle uses one logical client span for submission, same-origin
+polls and download. Calibration and serving probes are outside this scope.
+No prompt, response body, API key or baggage is added to trace records. Trace
+IDs are random and independent of workload seeds. Keep run record limits high
+enough to retain all client spans needed for later export.
+
+Run and JSONL replay validate retained IDs, flags and headers together; invalid
+or contradictory trace receipts are refused. Older records without trace
+context remain readable. Cancellation after dispatch retains the attempted
+context; cancellation during admission creates no client span.

@@ -253,6 +253,8 @@ func (c *Client) Complete(call sobek.FunctionCall) sobek.Value {
 		return rt.ToValue(err)
 	}
 
+	httpReq, m.TraceContext = attachTraceContext(httpReq, config)
+
 	// Make request
 	m.Attempted = true
 	m.ErrorStage = "transport"
@@ -966,6 +968,9 @@ func maxDuration(a, b time.Duration) time.Duration {
 }
 
 func validateConfig(config Config) error {
+	if _, err := configuredTraceContext(config); err != nil {
+		return err
+	}
 	if config.MaxConnsPerHost < 0 || config.MaxConnsPerHost > 65536 || config.UseK6Transport && config.MaxConnsPerHost != 0 {
 		return fmt.Errorf("maxConnsPerHost must be 0..65536 and excludes useK6Transport")
 	}

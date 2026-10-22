@@ -162,6 +162,11 @@ type ChatCompletionChunk struct {
 }
 
 type Config struct {
+	// Tracing creates sampled roots when no parent is supplied. TraceParent
+	// enables tracing by itself; children inherit its sampling decision.
+	Tracing              bool     `json:"tracing"`
+	TraceParent          string   `json:"traceparent"`
+	TraceState           string   `json:"tracestate"`
 	MaxConnsPerHost      int      `json:"maxConnsPerHost"`
 	ControlGroup         string   `json:"controlGroup"`
 	APIKey               string   `json:"apiKey"`

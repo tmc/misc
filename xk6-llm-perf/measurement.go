@@ -53,6 +53,7 @@ func sloLimit(v *float64) float64 {
 // Measurement is a sanitized request record. Durations are milliseconds;
 // timestamps are Unix milliseconds. No prompt, response text, or credential is stored.
 type Measurement struct {
+	TraceContext *TraceContext `json:"trace_context,omitempty"`
 	// AIPerf fields retain the optional pinned Responses content_responses view.
 	// They do not change recognized-content timings, counts, or token estimates.
 	AIPerfTTFT                *float64     `json:"aiperf_ttft,omitempty"`

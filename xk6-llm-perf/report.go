@@ -127,6 +127,9 @@ func validateRun(run RunSummary) error {
 		var input, output int64
 		seen := map[string]bool{}
 		for _, m := range run.Records {
+			if err := validateTraceContext(m.TraceContext); err != nil {
+				return err
+			}
 			if err := validateSpecDecodeRecord(m.SpecDecode); err != nil {
 				return fmt.Errorf("speculative record: %w", err)
 			}
@@ -725,6 +728,9 @@ func WriteRecords(w io.Writer, records []Measurement) error {
 		if m.SchemaVersion != 1 {
 			return fmt.Errorf("unsupported record schema")
 		}
+		if err := validateTraceContext(m.TraceContext); err != nil {
+			return err
+		}
 		row, err := json.Marshal(m)
 		if err != nil {
 			return fmt.Errorf("encode record: %w", err)
@@ -778,6 +784,9 @@ func ReadRecords(r io.Reader) ([]Measurement, error) {
 		}
 		if m.SchemaVersion != 1 {
 			return nil, fmt.Errorf("unsupported record schema")
+		}
+		if err := validateTraceContext(m.TraceContext); err != nil {
+			return nil, err
 		}
 		records = append(records, m)
 		if len(records) > 100000 {
