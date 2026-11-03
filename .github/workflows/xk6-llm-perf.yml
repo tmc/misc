@@ -27,9 +27,20 @@ jobs:
       run:
         working-directory: xk6-llm-perf
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
+      - name: Check out exact public source
+        working-directory: ${{ github.workspace }}
+        env:
+          GIT_TERMINAL_PROMPT: '0'
+        run: |
+          # checkout's auth cleanup traverses unrelated malformed gitlinks even
+          # with sparse checkout. This public fetch needs no stored credentials.
+          git init --quiet
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -c credential.helper= fetch --no-tags --no-recurse-submodules \
+            --depth=1 origin "$GITHUB_SHA"
+          git sparse-checkout set --cone .github xk6-llm-perf
+          git -c submodule.recurse=false checkout --quiet --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
         with:
           go-version: '1.27.3'
