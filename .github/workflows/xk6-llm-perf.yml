@@ -1,0 +1,76 @@
+name: xk6-llm-perf
+
+on:
+  push:
+    paths:
+      - 'xk6-llm-perf/**'
+      - '.github/workflows/xk6-llm-perf.yml'
+  pull_request:
+    paths:
+      - 'xk6-llm-perf/**'
+      - '.github/workflows/xk6-llm-perf.yml'
+
+permissions:
+  contents: read
+
+env:
+  GOWORK: 'off'
+  GOTOOLCHAIN: local
+  K6_NO_USAGE_REPORT: 'true'
+  K6_AUTO_EXTENSION_RESOLUTION: 'false'
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: xk6-llm-perf
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version: '1.27.3'
+          cache-dependency-path: |
+            xk6-llm-perf/go.sum
+            xk6-llm-perf/tools/llm-tokenize/go.sum
+      - name: Verify compiler
+        run: test "$(go env GOVERSION)" = go1.27.3
+      - name: Prepare pinned runtime-template dependencies
+        timeout-minutes: 5
+        run: |
+          python3 --version
+          python3 -m venv "$RUNNER_TEMP/xk6-template-venv"
+          "$RUNNER_TEMP/xk6-template-venv/bin/python" -m pip --isolated --disable-pip-version-check install \
+            --index-url https://pypi.org/simple --only-binary=:all: --no-deps \
+            --retries 2 --timeout 30 -r scripts/template-compat-requirements.txt
+          "$RUNNER_TEMP/xk6-template-venv/bin/python" -m pip --isolated --disable-pip-version-check check
+          printf 'RUNTIME_TEMPLATE_PYTHON=%s\n' "$RUNNER_TEMP/xk6-template-venv/bin/python" >> "$GITHUB_ENV"
+      - name: Test module, output adapters and CLIs
+        run: go test -race -count=1 ./...
+      - name: Vet and build module packages
+        run: |
+          go vet ./...
+          go build ./...
+      - name: Test, vet and build tokenizer module
+        working-directory: xk6-llm-perf/tools/llm-tokenize
+        run: |
+          go test -race -count=1 ./...
+          go vet ./...
+          go build -o "$RUNNER_TEMP/llm-tokenize" .
+      - name: Build registered extension
+        run: make build
+      - name: Test registered extension against loopback fixtures
+        run: |
+          # The runtime-template script fixture uses a clean environment.
+          # Preserve network guards even when it strips the workflow env.
+          printf '#!/bin/bash\nexport K6_NO_USAGE_REPORT=true\nexport K6_AUTO_EXTENSION_RESOLUTION=false\nexec %q "$@"\n' \
+            "$PWD/dist/k6" > "$RUNNER_TEMP/xk6-fixture"
+          chmod 0700 "$RUNNER_TEMP/xk6-fixture"
+          K6_SMOKE_BINARY="$PWD/dist/k6" K6_BINARY="$RUNNER_TEMP/xk6-fixture" \
+            go test -count=1 -timeout=10m \
+            -run 'TestBinary|TestBuiltK6|TestK6(Live|Trailing)|TestRuntimeTemplate' ./...
+      - name: Check module file drift
+        run: git diff --exit-code -- go.mod go.sum tools/llm-tokenize/go.mod tools/llm-tokenize/go.sum
